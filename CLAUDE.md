@@ -210,6 +210,266 @@ final favoritesNotifierProvider
 
 // Settings State (Dark Mode, OLED, Auto-Sunset)
 final settingsNotifierProvider
+
+// Route-Planner State (v1.2.2)
+final routePlannerProvider
+
+// Trip-State (v1.2.1+, keepAlive seit v1.2.3)
+final tripStateProvider
+
+// Random-Trip State (v1.2.3 - GPS Auto-Query)
+final randomTripNotifierProvider
+```
+
+## Random-Trip Flow (v1.2.3) ⭐ NEU
+
+### Problem (vor v1.2.3)
+- `confirmTrip()` setzte nur den Schritt auf `confirmed`, übergab aber Route nicht an tripStateProvider
+- Trip-Screen blieb leer nach AI-Trip-Generierung
+- Startfeld war Pflicht - User musste manuell Adresse eingeben oder GPS klicken
+
+### Lösung
+
+#### 1. Automatische GPS-Abfrage in generateTrip()
+
+```dart
+// lib/features/random_trip/providers/random_trip_provider.dart
+Future<void> generateTrip() async {
+  // NEU: Wenn kein Startpunkt gesetzt, automatisch GPS abfragen
+  if (!state.hasValidStart) {
+    await useCurrentLocation();
+
+    if (!state.hasValidStart) {
+      state = state.copyWith(
+        error: 'Bitte gib einen Startpunkt ein oder aktiviere GPS',
+      );
+      return;
+    }
+  }
+
+  // ... Rest der Trip-Generierung
+}
+```
+
+#### 2. canGenerate vereinfacht
+
+```dart
+// lib/features/random_trip/providers/random_trip_state.dart
+// VORHER: bool get canGenerate => hasValidStart && !isLoading;
+// NACHHER:
+bool get canGenerate => !isLoading;  // Startpunkt ist optional
+```
+
+#### 3. confirmTrip() übergibt Route an TripStateProvider
+
+```dart
+// lib/features/random_trip/providers/random_trip_provider.dart
+void confirmTrip() {
+  final generatedTrip = state.generatedTrip;
+  if (generatedTrip == null) return;
+
+  // NEU: Route und Stops an TripStateProvider übergeben
+  final tripStateNotifier = ref.read(tripStateProvider.notifier);
+  tripStateNotifier.setRoute(generatedTrip.trip.route);
+  tripStateNotifier.setStops(generatedTrip.selectedPOIs);
+
+  state = state.copyWith(step: RandomTripStep.confirmed);
+}
+```
+
+#### 4. TripStateProvider mit keepAlive
+
+```dart
+// lib/features/trip/providers/trip_state_provider.dart
+// VORHER: @riverpod (AutoDispose - State verloren bei Navigation)
+// NACHHER:
+@Riverpod(keepAlive: true)  // State bleibt erhalten
+class TripState extends _$TripState { ... }
+```
+
+### State-Flow (v1.2.3)
+
+```
+┌─────────────────────────────────────────────────────┐
+│     User klickt "Überrasch mich!" (ohne Start)      │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  generateTrip() prüft: hasValidStart? NEIN          │
+│  → useCurrentLocation() wird automatisch aufgerufen │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  GPS-Position ermittelt (oder München-Fallback)     │
+│  → state.startLocation + startAddress gesetzt       │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  Trip wird generiert (tripGeneratorRepository)      │
+│  → POIs geladen, Route optimiert, Stops erstellt    │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  User klickt "Bestätigen"                           │
+│  → confirmTrip() aufgerufen                         │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  tripStateProvider.setRoute(route)                  │
+│  tripStateProvider.setStops(pois)                   │
+│  → State wird persistent gespeichert (keepAlive)    │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  Navigation zu /trip                                │
+│  → TripScreen zeigt Route + Stops ✅                │
+└─────────────────────────────────────────────────────┘
+```
+
+### Geänderte Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `random_trip_provider.dart` | Import + generateTrip() + confirmTrip() |
+| `random_trip_state.dart` | canGenerate vereinfacht |
+| `trip_state_provider.dart` | @Riverpod(keepAlive: true) |
+| `trip_state_provider.g.dart` | NotifierProvider statt AutoDisposeNotifierProvider |
+
+---
+
+## Route-Planner Architektur (v1.2.2)
+
+### State-Flow
+
+```
+┌─────────────────────────────────────────────────────┐
+│              User wählt Standort                     │
+│                 (SearchScreen)                       │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│        routePlannerProvider.setStart() /             │
+│        routePlannerProvider.setEnd()                 │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│    routePlannerProvider._tryCalculateRoute()         │
+│    (automatisch wenn beide gesetzt)                  │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│      routingRepository.calculateFastRoute()          │
+│      (OSRM API Call)                                 │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│  tripStateProvider.setRoute(route) ← KEY CONNECTION  │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│        TripScreen zeigt Route an ✅                  │
+│        (Start, Ziel, Entfernung, Dauer)              │
+└─────────────────────────────────────────────────────┘
+```
+
+### Provider-Dateien
+
+| Datei | Beschreibung |
+|-------|--------------|
+| `lib/features/map/providers/route_planner_provider.dart` | Start/Ziel-Verwaltung + Auto-Berechnung |
+| `lib/features/trip/providers/trip_state_provider.dart` | Trip-State für Anzeige (Route + Stops) |
+
+### RoutePlannerData
+
+```dart
+@freezed
+class RoutePlannerData with _$RoutePlannerData {
+  const factory RoutePlannerData({
+    LatLng? startLocation,
+    String? startAddress,
+    LatLng? endLocation,
+    String? endAddress,
+    AppRoute? route,
+    @Default(false) bool isCalculating,
+    String? error,
+  }) = _RoutePlannerData;
+}
+```
+
+### TripStateData
+
+```dart
+@freezed
+class TripStateData with _$TripStateData {
+  const factory TripStateData({
+    AppRoute? route,
+    @Default([]) List<POI> stops,
+  }) = _TripStateData;
+
+  bool get hasRoute => route != null;
+  bool get hasStops => stops.isNotEmpty;
+  double get totalDistance => route?.distanceKm ?? 0;
+  int get totalDuration {
+    final baseDuration = route?.durationMinutes ?? 0;
+    final stopsDuration = stops.length * 45; // 45 Min pro Stop
+    return baseDuration + stopsDuration;
+  }
+}
+```
+
+### Integration in SearchScreen
+
+```dart
+// lib/features/search/search_screen.dart
+Future<void> _selectSuggestion(AutocompleteSuggestion suggestion) async {
+  // ... Geocoding ...
+
+  final routePlanner = ref.read(routePlannerProvider.notifier);
+  if (widget.isStartLocation) {
+    routePlanner.setStart(location, suggestion.displayName);
+  } else {
+    routePlanner.setEnd(location, suggestion.displayName);
+  }
+
+  context.pop();
+}
+```
+
+### Integration in MapScreen
+
+```dart
+// lib/features/map/map_screen.dart
+@override
+Widget build(BuildContext context) {
+  final routePlanner = ref.watch(routePlannerProvider);
+
+  return Scaffold(
+    body: Stack(
+      children: [
+        const MapView(),
+        _SearchBar(
+          startAddress: routePlanner.startAddress,     // NEU
+          endAddress: routePlanner.endAddress,         // NEU
+          isCalculating: routePlanner.isCalculating,   // NEU
+          onStartTap: () => context.push('/search?type=start'),
+          onEndTap: () => context.push('/search?type=end'),
+        ),
+        // ...
+      ],
+    ),
+  );
+}
 ```
 
 ## Konventionen
@@ -250,7 +510,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 3. **OpenAI**: Benötigt aktives Guthaben
 4. **GPS**: Nur mit HTTPS/Release Build zuverlässig
 
-## Feature-Übersicht (Version 1.2.0)
+## Feature-Übersicht (Version 1.2.3)
 
 ### Kern-Features
 - 🗺️ **Interaktive Karte** mit POI-Markern
@@ -271,11 +531,26 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 🎯 **Intelligente POI-Empfehlungen**
 - 📝 **Formatierte Trip-Pläne** mit Tages-Breakdown
 
-### UI-Verbesserungen (v1.2.0)
+### UI-Verbesserungen (v1.2.1+)
 - 🎨 **AppBar auf MapScreen** (Profil + Favoriten)
 - 🌙 **Dark Mode** mit Auto-Sunset
 - 🎯 **Transparente AppBar** mit `extendBodyBehindAppBar`
 - 📱 **Bottom Navigation** (Karte, POIs, Trip, AI)
+- ⚙️ **Settings-Button** über GPS-Button (v1.2.1)
+- 🎯 **AI-Trip-Dialog** Text-Fix (v1.2.1)
+
+### Route-Planner Integration (v1.2.2)
+- 🚗 **Automatische Routenberechnung** wenn Start + Ziel gesetzt
+- 📍 **Adressen-Anzeige** in Suchleiste
+- ⏳ **Loading-Indikator** während Berechnung
+- 🎯 **Trip-Screen** zeigt berechnete Routen korrekt an
+
+### Trip-Screen Fix (v1.2.3) ⭐ NEU
+- 🐛 **Trip-Screen zeigt Route nach AI-Trip** - confirmTrip() übergibt Route an tripStateProvider
+- 📍 **Automatische GPS-Abfrage** - Bei "Überrasch mich!" ohne Startpunkt wird GPS automatisch aktiviert
+- ✅ **Startfeld optional** - canGenerate prüft nur noch isLoading
+- 🔄 **keepAlive Provider** - TripStateProvider behält State beim Navigation
+- 🌙 **Dark Mode vollständig** für alle Hauptkomponenten
 
 ## Navigation-Struktur
 
@@ -353,3 +628,95 @@ aiService.getRecommendations(
 | Karte | MapLibre GL JS | flutter_map |
 | State | Vanilla JS | Riverpod |
 | Plattform | Web (PWA) | iOS/Android/Desktop |
+
+## Dark Mode Implementierung (v1.2.3)
+
+### Theme-Provider
+
+```dart
+// Settings Provider mit Theme-Modus
+@Riverpod(keepAlive: true)
+class SettingsNotifier extends _$SettingsNotifier {
+  Future<void> setThemeMode(AppThemeMode mode) async { ... }
+}
+
+// Effektiver Theme-Modus (berücksichtigt Auto-Sunset)
+@riverpod
+ThemeMode effectiveThemeMode(Ref ref) { ... }
+```
+
+### Korrekte Widget-Implementierung
+
+**MUSS verwendet werden in allen Widgets mit Hintergrund/Text:**
+
+```dart
+@override
+Widget build(BuildContext context) {
+  // Theme-Variablen IMMER am Anfang
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+  final isDark = theme.brightness == Brightness.dark;
+
+  return Container(
+    decoration: BoxDecoration(
+      // ✅ RICHTIG: Theme-Farbe
+      color: colorScheme.surface,
+      boxShadow: [
+        BoxShadow(
+          // ✅ RICHTIG: Stärkere Schatten im Dark Mode
+          color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+          blurRadius: 10,
+        ),
+      ],
+    ),
+    child: Text(
+      'Text',
+      style: TextStyle(
+        // ✅ RICHTIG: Theme-Textfarbe
+        color: colorScheme.onSurface,
+      ),
+    ),
+  );
+}
+```
+
+### VERBOTEN (verursacht Dark Mode Bugs)
+
+```dart
+// ❌ NIEMALS hart-codierte Farben:
+color: Colors.white,
+color: Colors.black,
+
+// ❌ NIEMALS statische AppTheme-Farben:
+color: AppTheme.textPrimary,
+color: AppTheme.textSecondary,
+color: AppTheme.backgroundColor,
+
+// ❌ NIEMALS statische Schatten:
+boxShadow: AppTheme.cardShadow,
+```
+
+### Geänderte Dateien (Referenz)
+
+| Datei | Fixes |
+|-------|-------|
+| `lib/app.dart` | Bottom Navigation, NavItems, System UI |
+| `lib/main.dart` | Statische SystemUI entfernt |
+| `lib/features/map/map_screen.dart` | AppBar, FABs, SearchBar, Toggle |
+| `lib/features/poi/widgets/poi_card.dart` | Card, Badge, Texte |
+| `lib/features/trip/widgets/trip_stop_tile.dart` | Tile, Icon-BG, Texte |
+
+### Theme-Farben (Referenz)
+
+```dart
+// Light Mode (aus app_theme.dart)
+surfaceColor: Color(0xFFFFFFFF)     // Weiß
+textPrimary: Color(0xFF1E293B)      // Dunkelgrau
+
+// Dark Mode
+darkSurfaceColor: Color(0xFF1E293B) // Dunkelgrau
+darkTextPrimary: Color(0xFFF1F5F9)  // Fast weiß
+
+// OLED Mode
+oledBackgroundColor: Color(0xFF000000) // True Black
+```
