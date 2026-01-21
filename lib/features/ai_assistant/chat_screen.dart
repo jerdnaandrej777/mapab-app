@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/categories.dart';
 import '../../data/services/ai_service.dart';
 import '../../data/models/trip.dart';
+import '../../data/repositories/geocoding_repo.dart';
+import '../../data/repositories/trip_generator_repo.dart';
+import '../../features/trip/providers/trip_state_provider.dart';
 import 'widgets/chat_message.dart';
 import 'widgets/suggestion_chips.dart';
 
@@ -443,23 +450,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Ziel
+                // Ziel (optional für Random Route)
                 TextField(
                   controller: destinationController,
                   decoration: const InputDecoration(
-                    labelText: 'Ziel',
-                    hintText: 'z.B. Prag, Amsterdam, Rom',
+                    labelText: 'Ziel (optional)',
+                    hintText: 'Leer = Zufällige Route um Startpunkt',
                     prefixIcon: Icon(Icons.location_on),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // Startpunkt (optional)
+                // Startpunkt (optional - GPS-Fallback)
                 TextField(
                   controller: startController,
                   decoration: const InputDecoration(
                     labelText: 'Startpunkt (optional)',
-                    hintText: 'z.B. München',
+                    hintText: 'Leer = GPS-Standort verwenden',
                     prefixIcon: Icon(Icons.home),
                   ),
                 ),
@@ -535,22 +542,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: const Text('Abbrechen'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (destinationController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bitte Ziel eingeben')),
-                  );
-                  return;
-                }
+              onPressed: () async {
+                final destination = destinationController.text.trim();
+                final startText = startController.text.trim();
+                final interestsList = selectedInterests.toList();
+                final daysInt = days.round();
+
+                // Dialog schließen
                 Navigator.pop(context);
-                _generateTrip(
-                  destination: destinationController.text.trim(),
-                  days: days.round(),
-                  interests: selectedInterests.toList(),
-                  startLocation: startController.text.trim().isNotEmpty
-                      ? startController.text.trim()
-                      : null,
-                );
+
+                // HYBRID-LOGIK:
+                // Wenn Ziel angegeben → AI-Text-Plan (wie bisher)
+                // Wenn Ziel leer → Random Route um Startpunkt/GPS
+
+                if (destination.isNotEmpty) {
+                  // ============ MIT ZIEL: AI-Text-Plan ============
+                  _generateTrip(
+                    destination: destination,
+                    days: daysInt,
+                    interests: interestsList,
+                    startLocation: startText.isNotEmpty ? startText : null,
+                  );
+                } else {
+                  // ============ OHNE ZIEL: Random Route ============
+                  // Standort ermitteln (manuell oder GPS)
+                  final location = await _getLocationIfNeeded(
+                    startText.isNotEmpty ? startText : null,
+                  );
+
+                  if (location == null) {
+                    // Fehler wurde bereits in _getLocationIfNeeded angezeigt
+                    setState(() {
+                      _messages.add({
+                        'content':
+                            '❌ Konnte keinen Standort ermitteln.\n\n'
+                            'Bitte gib einen Startpunkt ein oder aktiviere GPS.',
+                        'isUser': false,
+                      });
+                    });
+                    return;
+                  }
+
+                  // Random Trip generieren
+                  await _generateRandomTripFromLocation(
+                    lat: location.lat,
+                    lng: location.lng,
+                    address: location.address,
+                    interests: interestsList,
+                    days: daysInt,
+                  );
+                }
               },
               child: const Text('Generieren'),
             ),
@@ -646,6 +687,210 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _messages.add({
           'content':
               'Entschuldigung, es gab einen Fehler beim Generieren des Trips.\n\nFehler: $e',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    }
+  }
+
+  /// GPS-Standort oder Geocoding für manuelle Eingabe abrufen
+  Future<({double lat, double lng, String address})?> _getLocationIfNeeded(
+      String? startText) async {
+    // Wenn manueller Text eingegeben, Geocoding verwenden
+    if (startText != null && startText.isNotEmpty) {
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final results = await geocodingRepo.geocode(startText);
+        if (results.isNotEmpty) {
+          final result = results.first;
+          return (
+            lat: result.latitude,
+            lng: result.longitude,
+            address: result.displayName ?? startText
+          );
+        }
+      } catch (e) {
+        print('[AI-Trip] Geocoding Fehler: $e');
+      }
+      return null;
+    }
+
+    // GPS-Standort abfragen
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Bitte aktiviere die Ortungsdienste')),
+          );
+        }
+        return null;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Standort-Berechtigung verweigert')),
+            );
+          }
+          return null;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Standort-Berechtigung dauerhaft verweigert. '
+                      'Bitte in Einstellungen aktivieren.'),
+            ),
+          );
+        }
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      // Reverse Geocoding für Adresse
+      String address = 'Mein Standort';
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final result = await geocodingRepo.reverseGeocode(
+          LatLng(position.latitude, position.longitude),
+        );
+        if (result != null) {
+          address = result.shortName ?? result.displayName ?? address;
+        }
+      } catch (e) {
+        print('[AI-Trip] Reverse Geocoding Fehler: $e');
+      }
+
+      return (lat: position.latitude, lng: position.longitude, address: address);
+    } catch (e) {
+      print('[AI-Trip] GPS Fehler: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('GPS-Fehler: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  /// Interessen-Liste zu POI-Kategorien mappen
+  List<POICategory> _mapInterestsToCategories(List<String> interests) {
+    final mapping = <String, List<String>>{
+      'Kultur': ['museum', 'monument', 'unesco'],
+      'Natur': ['nature', 'park', 'lake', 'viewpoint'],
+      'Geschichte': ['castle', 'church', 'monument'],
+      'Essen': ['restaurant'],
+      'Nightlife': ['city'],
+      'Shopping': ['city'],
+      'Sport': ['activity'],
+    };
+
+    final categoryIds = <String>{};
+    for (final interest in interests) {
+      final ids = mapping[interest];
+      if (ids != null) {
+        categoryIds.addAll(ids);
+      }
+    }
+
+    // Wenn keine Interessen gewählt, alle Kategorien verwenden (außer Hotel)
+    if (categoryIds.isEmpty) {
+      return POICategory.values
+          .where((c) => c != POICategory.hotel)
+          .toList();
+    }
+
+    return POICategory.values
+        .where((c) => categoryIds.contains(c.id))
+        .toList();
+  }
+
+  /// Random Trip generieren und an Trip-Screen übergeben
+  Future<void> _generateRandomTripFromLocation({
+    required double lat,
+    required double lng,
+    required String address,
+    required List<String> interests,
+    required int days,
+  }) async {
+    // User-Nachricht hinzufügen
+    setState(() {
+      _messages.add({
+        'content':
+            '🎲 Generiere zufällige Route um "$address"\n'
+            '${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : "Alle Kategorien"}',
+        'isUser': true,
+      });
+      _isLoading = true;
+    });
+    _scrollToBottom();
+
+    try {
+      // Interessen zu Kategorien mappen
+      final categories = _mapInterestsToCategories(interests);
+
+      // TripGenerator aufrufen
+      final tripGenerator = ref.read(tripGeneratorRepositoryProvider);
+      final result = await tripGenerator.generateDayTrip(
+        startLocation: LatLng(lat, lng),
+        startAddress: address,
+        radiusKm: days == 1 ? 100 : (days * 80).clamp(100, 300).toDouble(),
+        categories: categories,
+        poiCount: (days * 3).clamp(3, 8),
+      );
+
+      if (!mounted) return;
+
+      // Erfolgsmeldung im Chat
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'content':
+              '✅ Route generiert!\n\n'
+              '📍 **${result.trip.name}**\n'
+              '📏 ${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
+              '⏱️ ${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
+              '🎯 ${result.selectedPOIs.length} Stops\n\n'
+              'Öffne Trip-Screen...',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+
+      // Route an TripStateProvider übergeben
+      final tripState = ref.read(tripStateProvider.notifier);
+      tripState.setRoute(result.trip.route);
+      tripState.setStops(result.selectedPOIs);
+
+      // Kurz warten, dann zum Trip-Screen navigieren
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        context.go('/trip');
+      }
+    } catch (e) {
+      print('[AI-Trip] Random Trip Fehler: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'content':
+              '❌ Fehler beim Generieren der Route:\n$e\n\n'
+              'Bitte versuche es erneut oder gib ein konkretes Ziel ein.',
           'isUser': false,
         });
       });
