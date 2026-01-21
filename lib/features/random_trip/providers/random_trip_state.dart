@@ -59,8 +59,8 @@ class RandomTripState with _$RandomTripState {
   /// Hat gültigen Startpunkt
   bool get hasValidStart => startLocation != null && startAddress != null;
 
-  /// Kann generieren
-  bool get canGenerate => hasValidStart && !isLoading;
+  /// Kann generieren (Startpunkt ist optional - wird automatisch per GPS ermittelt)
+  bool get canGenerate => !isLoading;
 
   /// Hat generierten Trip
   bool get hasTrip => generatedTrip != null;

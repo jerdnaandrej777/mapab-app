@@ -5,7 +5,8 @@ import '../../../data/models/poi.dart';
 part 'trip_state_provider.g.dart';
 
 /// Trip-State für aktuelle Route und Stops
-@riverpod
+/// keepAlive: true damit der State nicht verloren geht wenn zur Trip-Seite navigiert wird
+@Riverpod(keepAlive: true)
 class TripState extends _$TripState {
   @override
   TripStateData build() {

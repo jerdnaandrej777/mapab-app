@@ -6,6 +6,7 @@ import '../../../core/constants/categories.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
 import '../../../data/services/hotel_service.dart';
+import '../../trip/providers/trip_state_provider.dart';
 import 'random_trip_state.dart';
 
 part 'random_trip_provider.g.dart';
@@ -78,19 +79,13 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // NEU: Location Services Check hinzufügen
+      // Location Services Check
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('[RandomTrip] Location Services deaktiviert - verwende München');
-        // Fallback: München als Test-Standort
-        const munich = LatLng(48.1351, 11.5820);
-        const name = 'München, Deutschland (Test-Standort)';
-
+        print('[RandomTrip] Location Services deaktiviert');
         state = state.copyWith(
-          startLocation: munich,
-          startAddress: name,
-          useGPS: true,
           isLoading: false,
+          error: 'Bitte aktiviere die Ortungsdienste in den Einstellungen',
         );
         return;
       }
@@ -134,23 +129,28 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     } catch (e) {
       print('[RandomTrip] GPS-Fehler: $e');
 
-      // NEU: München-Fallback bei Fehler (wie map_screen.dart)
-      const munich = LatLng(48.1351, 11.5820);
-      const name = 'München, Deutschland (GPS nicht verfügbar)';
-
       state = state.copyWith(
-        startLocation: munich,
-        startAddress: name,
-        useGPS: true,
         isLoading: false,
-        error: 'Standort nicht verfügbar - nutze Test-Standort München',
+        error: 'Standort konnte nicht ermittelt werden: ${e.toString()}',
       );
     }
   }
 
   /// Generiert den Trip
+  /// Wenn kein Startpunkt gesetzt ist, wird automatisch GPS-Standort abgefragt
   Future<void> generateTrip() async {
-    if (!state.canGenerate) return;
+    // Wenn kein Startpunkt gesetzt ist, automatisch GPS-Standort abfragen
+    if (!state.hasValidStart) {
+      await useCurrentLocation();
+
+      // Prüfen ob GPS erfolgreich war
+      if (!state.hasValidStart) {
+        state = state.copyWith(
+          error: 'Bitte gib einen Startpunkt ein oder aktiviere GPS',
+        );
+        return;
+      }
+    }
 
     state = state.copyWith(
       step: RandomTripStep.generating,
@@ -239,8 +239,21 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     state = state.copyWith(selectedHotels: selected);
   }
 
-  /// Bestätigt den Trip
+  /// Bestätigt den Trip und übergibt ihn an TripStateProvider
   void confirmTrip() {
+    final generatedTrip = state.generatedTrip;
+    if (generatedTrip == null) return;
+
+    // Route und Stops an TripStateProvider übergeben
+    final tripStateNotifier = ref.read(tripStateProvider.notifier);
+
+    // Route setzen
+    tripStateNotifier.setRoute(generatedTrip.trip.route);
+
+    // Stops als POIs setzen (konvertieren von TripStop zu POI-ähnlichen Objekten)
+    final stops = generatedTrip.selectedPOIs;
+    tripStateNotifier.setStops(stops);
+
     state = state.copyWith(step: RandomTripStep.confirmed);
   }
 
