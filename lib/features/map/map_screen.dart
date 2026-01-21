@@ -73,6 +73,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             bottom: 100,
             child: Column(
               children: [
+                // Settings-Button
+                FloatingActionButton.small(
+                  heroTag: 'settings',
+                  onPressed: () => context.push('/settings'),
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.textPrimary,
+                  child: const Icon(Icons.settings),
+                ),
+                const SizedBox(height: 8),
                 // GPS-Button
                 FloatingActionButton.small(
                   heroTag: 'gps',
@@ -119,19 +128,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               foregroundColor: Colors.white,
               icon: const Text('🎲', style: TextStyle(fontSize: 18)),
               label: const Text('Zufalls-Trip'),
-            ),
-          ),
-
-          // Settings Button (rechts oben)
-          Positioned(
-            right: 16,
-            top: MediaQuery.of(context).padding.top + 16,
-            child: FloatingActionButton.small(
-              heroTag: 'settings',
-              onPressed: () => context.push('/settings'),
-              backgroundColor: Theme.of(context).cardColor,
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.settings),
             ),
           ),
         ],

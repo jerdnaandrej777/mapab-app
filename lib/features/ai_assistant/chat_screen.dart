@@ -466,7 +466,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(height: 16),
 
                 // Tage
-                Text('Tage: ${days.round()}'),
+                const Text(
+                  'Anzahl Tage',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${days.round()} ${days.round() == 1 ? "Tag" : "Tage"}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
                 Slider(
                   value: days,
                   min: 1,
@@ -482,7 +498,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(height: 16),
 
                 // Interessen
-                const Text('Interessen:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Interessen:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,

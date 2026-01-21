@@ -1,43 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/format_utils.dart';
+import 'providers/trip_state_provider.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
 
 /// Trip-Planungs-Screen
-class TripScreen extends ConsumerStatefulWidget {
+class TripScreen extends ConsumerWidget {
   const TripScreen({super.key});
 
   @override
-  ConsumerState<TripScreen> createState() => _TripScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tripState = ref.watch(tripStateProvider);
 
-class _TripScreenState extends ConsumerState<TripScreen> {
-  // Demo-Daten für Stops
-  final List<Map<String, dynamic>> _stops = [
-    {'name': 'Schloss Neuschwanstein', 'icon': '🏰', 'detour': 12, 'duration': 120},
-    {'name': 'Zugspitze', 'icon': '🏔️', 'detour': 25, 'duration': 180},
-    {'name': 'Partnachklamm', 'icon': '🌲', 'detour': 8, 'duration': 90},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Deine Route'),
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: _showMoreOptions,
+            onPressed: () => _showMoreOptions(context, ref),
           ),
         ],
       ),
-      body: _stops.isEmpty ? _buildEmptyState() : _buildTripContent(),
+      body: !tripState.hasRoute && !tripState.hasStops
+          ? _buildEmptyState(context)
+          : _buildTripContent(context, ref, tripState),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -49,7 +43,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Noch keine Stops geplant',
+            'Noch keine Route geplant',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -57,32 +51,40 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Füge Sehenswürdigkeiten zu deiner Route hinzu',
+            'Berechne eine Route auf der Karte oder nutze den AI-Trip-Generator',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.textSecondary,
             ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Zu POI-Liste navigieren
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Stops hinzufügen'),
+            onPressed: () => context.go('/'),
+            icon: const Icon(Icons.map),
+            label: const Text('Zur Karte'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/assistant'),
+            icon: const Text('🤖', style: TextStyle(fontSize: 18)),
+            label: const Text('AI-Trip generieren'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTripContent() {
+  Widget _buildTripContent(BuildContext context, WidgetRef ref, TripStateData tripState) {
+    final route = tripState.route;
+    final stops = tripState.stops;
+
     return Column(
       children: [
         // Trip-Zusammenfassung
-        const TripSummary(
-          totalDistance: 245,
-          totalDuration: 420,
-          stopCount: 3,
+        TripSummary(
+          totalDistance: tripState.totalDistance,
+          totalDuration: tripState.totalDuration,
+          stopCount: stops.length,
         ),
 
         const SizedBox(height: 8),
@@ -91,8 +93,18 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         Expanded(
           child: ReorderableListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: _stops.length + 2, // +2 für Start & Ziel
-            onReorder: _onReorderStops,
+            itemCount: stops.length + 2, // +2 für Start & Ziel
+            onReorder: (oldIndex, newIndex) {
+              // Start und Ziel nicht verschieben
+              if (oldIndex == 0 || oldIndex == stops.length + 1) return;
+              if (newIndex == 0 || newIndex > stops.length) return;
+
+              final adjustedOld = oldIndex - 1;
+              var adjustedNew = newIndex - 1;
+              if (newIndex > oldIndex) adjustedNew--;
+
+              ref.read(tripStateProvider.notifier).reorderStops(adjustedOld, adjustedNew);
+            },
             itemBuilder: (context, index) {
               // Start
               if (index == 0) {
@@ -100,35 +112,42 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                   key: const ValueKey('start'),
                   icon: Icons.trip_origin,
                   iconColor: AppTheme.successColor,
-                  title: 'München',
+                  title: route?.startAddress ?? 'Keine Route',
                   subtitle: 'Start',
                   isFirst: true,
                 );
               }
 
               // Ziel
-              if (index == _stops.length + 1) {
+              if (index == stops.length + 1) {
                 return _buildLocationTile(
                   key: const ValueKey('end'),
                   icon: Icons.place,
                   iconColor: AppTheme.errorColor,
-                  title: 'Innsbruck',
+                  title: route?.endAddress ?? 'Keine Route',
                   subtitle: 'Ziel',
                   isLast: true,
                 );
               }
 
               // Stops
-              final stop = _stops[index - 1];
+              final stop = stops[index - 1];
               return TripStopTile(
-                key: ValueKey('stop-$index'),
-                name: stop['name'],
-                icon: stop['icon'],
-                detourKm: stop['detour'],
-                durationMinutes: stop['duration'],
+                key: ValueKey('stop-${stop.id}'),
+                name: stop.name,
+                icon: stop.category?.icon ?? '📍',
+                detourKm: (stop.detourKm ?? 0).toInt(),
+                durationMinutes: (stop.detourMinutes ?? 0).toInt(),
                 index: index,
-                onRemove: () => _removeStop(index - 1),
-                onEdit: () => _editStop(index - 1),
+                onRemove: () {
+                  ref.read(tripStateProvider.notifier).removeStop(stop.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Stop entfernt')),
+                  );
+                },
+                onEdit: () {
+                  // TODO: Stop bearbeiten
+                },
               );
             },
           ),
@@ -142,7 +161,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _exportToGoogleMaps,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Export nach Google Maps...')),
+                      );
+                    },
                     icon: const Icon(Icons.map),
                     label: const Text('Google Maps'),
                   ),
@@ -150,7 +173,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _startNavigation,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Navigation wird gestartet...')),
+                      );
+                    },
                     icon: const Icon(Icons.navigation),
                     label: const Text('Navigation'),
                   ),
@@ -216,49 +243,12 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               ],
             ),
           ),
-          Icon(Icons.edit, color: AppTheme.textHint, size: 20),
         ],
       ),
     );
   }
 
-  void _onReorderStops(int oldIndex, int newIndex) {
-    // Start und Ziel nicht verschieben
-    if (oldIndex == 0 || oldIndex == _stops.length + 1) return;
-    if (newIndex == 0 || newIndex > _stops.length) return;
-
-    setState(() {
-      final adjustedOld = oldIndex - 1;
-      var adjustedNew = newIndex - 1;
-      if (newIndex > oldIndex) adjustedNew--;
-
-      final item = _stops.removeAt(adjustedOld);
-      _stops.insert(adjustedNew, item);
-    });
-  }
-
-  void _removeStop(int index) {
-    setState(() {
-      _stops.removeAt(index);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Stop entfernt'),
-        action: SnackBarAction(
-          label: 'Rückgängig',
-          onPressed: () {
-            // TODO: Undo
-          },
-        ),
-      ),
-    );
-  }
-
-  void _editStop(int index) {
-    // TODO: Stop bearbeiten
-  }
-
-  void _showMoreOptions() {
+  void _showMoreOptions(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -296,7 +286,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                   style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                _clearAllStops();
+                _clearAllStops(context, ref);
               },
             ),
           ],
@@ -305,7 +295,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     );
   }
 
-  void _clearAllStops() {
+  void _clearAllStops(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -319,26 +309,12 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              setState(() => _stops.clear());
+              ref.read(tripStateProvider.notifier).clearStops();
             },
             child: const Text('Löschen', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
-    );
-  }
-
-  void _exportToGoogleMaps() {
-    // TODO: Google Maps Export implementieren
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Export nach Google Maps...')),
-    );
-  }
-
-  void _startNavigation() {
-    // TODO: Navigation starten
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigation wird gestartet...')),
     );
   }
 }
