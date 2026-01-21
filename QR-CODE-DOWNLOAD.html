@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapAB App - Download QR-Code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .version {
+            color: #718096;
+            font-size: 18px;
+            margin-bottom: 32px;
+        }
+
+        .qr-container {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 32px 0;
+            display: inline-block;
+        }
+
+        #qrcode {
+            display: inline-block;
+        }
+
+        .download-link {
+            background: #667eea;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 24px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .download-link:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .info {
+            margin-top: 32px;
+            padding: 24px;
+            background: #edf2f7;
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .info h3 {
+            color: #2d3748;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info li {
+            padding: 8px 0;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+        }
+
+        .info li::before {
+            content: "✅";
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        .footer {
+            margin-top: 24px;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .instructions {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 24px;
+            text-align: left;
+        }
+
+        .instructions h4 {
+            color: #c53030;
+            margin-bottom: 8px;
+        }
+
+        .instructions p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+            .download-link {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🗺️</div>
+        <h1>MapAB Flutter App</h1>
+        <p class="version">Version 1.2.0 - Profil, Favoriten & AI-Trip-Generator</p>
+
+        <div class="qr-container">
+            <div id="qrcode"></div>
+        </div>
+
+        <p style="color: #4a5568; margin-bottom: 16px;">
+            Scanne den QR-Code mit deinem Android-Gerät<br>
+            oder klicke auf den Button unten
+        </p>
+
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.0"
+           class="download-link"
+           target="_blank">
+            📥 Direkt herunterladen
+        </a>
+
+        <div class="info">
+            <h3>📱 Enthaltene Features</h3>
+            <ul>
+                <li>👤 Profil-Button mit Account-System (XP & 21 Achievements)</li>
+                <li>❤️ Favoriten-Management mit Kategorien</li>
+                <li>🤖 AI-Trip-Generator (automatische Routenplanung)</li>
+                <li>💬 AI-Chat mit OpenAI GPT-4o</li>
+                <li>🌙 Dark Mode mit Auto-Sunset</li>
+                <li>🔔 Push-Benachrichtigungen</li>
+                <li>🚗 Echtzeit-Verkehrsdaten</li>
+                <li>📤 Trip-Sharing & QR-Codes</li>
+                <li>💰 Budget-Tracker</li>
+                <li>📔 Reisetagebuch mit Fotos</li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h4>🔧 Installation</h4>
+            <p>
+                1. QR-Code scannen oder Link öffnen<br>
+                2. "MapAB-v1.2.0-release.apk" herunterladen<br>
+                3. "Aus unbekannten Quellen installieren" erlauben<br>
+                4. APK öffnen und Installation bestätigen
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
+                <strong>Build-Datum:</strong> 21. Januar 2026<br>
+                <strong>Größe:</strong> 51.4 MB
+            </p>
+        </div>
+    </div>
+
+    <!-- QR Code Generator Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        // QR-Code generieren
+        new QRCode(document.getElementById("qrcode"), {
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.0",
+            width: 256,
+            height: 256,
+            colorDark: "#1a202c",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>
