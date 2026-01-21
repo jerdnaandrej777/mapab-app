@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:math' show cos, pi;
+import 'dart:math' show cos;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
-import '../../core/constants/categories.dart';
 import '../../core/utils/geo_utils.dart';
 import '../models/poi.dart';
 import '../models/route.dart';
@@ -354,11 +353,6 @@ out center;
   /// Berechnet Routen-bezogene Daten für alle POIs
   List<POI> _calculateRouteData(List<POI> pois, AppRoute route) {
     return pois.map((poi) {
-      final closest = GeoUtils.findClosestPointOnRoute(
-        poi.location,
-        route.coordinates,
-      );
-
       final routePosition = GeoUtils.calculateRoutePosition(
         poi.location,
         route.coordinates,
@@ -431,16 +425,76 @@ out center;
 
   /// Parst Wikipedia POI
   POI _parseWikipediaPOI(Map<String, dynamic> data) {
+    final title = data['title'] ?? 'Unbekannt';
     return POI(
       id: 'wiki-${data['pageid']}',
-      name: data['title'] ?? 'Unbekannt',
+      name: title,
       latitude: (data['lat'] as num).toDouble(),
       longitude: (data['lon'] as num).toDouble(),
-      categoryId: 'attraction', // Wikipedia kennt keine Kategorien
-      score: 60, // Mittlerer Score für Wikipedia-Artikel
+      categoryId: _inferCategoryFromTitle(title),
+      score: _inferScoreFromTitle(title),
       hasWikipedia: true,
-      wikipediaTitle: data['title'],
+      wikipediaTitle: title,
     );
+  }
+
+  /// Ermittelt Kategorie basierend auf Keywords im Titel
+  String _inferCategoryFromTitle(String title) {
+    final lowerTitle = title.toLowerCase();
+
+    // Kategorie-Patterns (Reihenfolge ist wichtig - spezifischere zuerst)
+    const patterns = <String, List<String>>{
+      'castle': ['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'],
+      'church': ['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'],
+      'museum': ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'],
+      'nature': ['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve'],
+      'lake': ['see', 'lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre'],
+      'viewpoint': ['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'turm', 'tower', 'gipfel', 'peak', 'berg'],
+      'park': ['park', 'garten', 'garden', 'botanical'],
+      'monument': ['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue'],
+      'city': ['altstadt', 'old town', 'stadt', 'city', 'marktplatz', 'market square', 'rathaus', 'town hall'],
+      'coast': ['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port'],
+    };
+
+    for (final entry in patterns.entries) {
+      for (final keyword in entry.value) {
+        if (lowerTitle.contains(keyword)) {
+          return entry.key;
+        }
+      }
+    }
+
+    return 'attraction'; // Fallback
+  }
+
+  /// Ermittelt Score basierend auf Keywords (bekannte Sehenswürdigkeiten höher)
+  int _inferScoreFromTitle(String title) {
+    final lowerTitle = title.toLowerCase();
+
+    // Bekannte Keywords für hochwertige Sehenswürdigkeiten
+    const highScoreKeywords = [
+      'schloss', 'castle', 'dom', 'cathedral', 'nationalpark', 'unesco',
+      'welterbe', 'heritage', 'museum', 'altstadt', 'old town'
+    ];
+
+    const mediumScoreKeywords = [
+      'burg', 'kirche', 'church', 'kloster', 'abbey', 'park', 'garten',
+      'denkmal', 'monument', 'turm', 'tower'
+    ];
+
+    for (final keyword in highScoreKeywords) {
+      if (lowerTitle.contains(keyword)) {
+        return 75; // Hoher Score
+      }
+    }
+
+    for (final keyword in mediumScoreKeywords) {
+      if (lowerTitle.contains(keyword)) {
+        return 65; // Mittlerer Score
+      }
+    }
+
+    return 55; // Basis-Score für Wikipedia-Artikel
   }
 
   /// Parst Overpass POI

@@ -68,6 +68,10 @@ flutter build apk
 | `lib/data/providers/account_provider.dart` | Account State Management |
 | `lib/data/services/ai_service.dart` | OpenAI GPT-4o Integration (Chat + Trip-Planning) |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Schichten: Curated → Wiki → Overpass) |
+| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikimedia/Wikidata POI-Anreicherung ⭐ v1.2.5 |
+| `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching ⭐ v1.2.5 |
+| `lib/features/poi/providers/poi_state_provider.dart` | Zentrales POI State Management ⭐ v1.2.5 |
+| `lib/features/map/widgets/map_view.dart` | Karte mit POI-Markern und Route-Polyline ⭐ v1.2.5 |
 | `lib/data/repositories/weather_repo.dart` | Open-Meteo Wetter-API |
 | `lib/data/services/hotel_service.dart` | Hotel-Suche mit Amenities & Booking.com |
 | `lib/core/constants/api_keys.dart` | API-Keys (OpenAI, TomTom, etc.) |
@@ -81,7 +85,9 @@ flutter build apk
 | OSRM | Fast Routing | - |
 | OpenRouteService | Scenic Routing | API-Key |
 | Overpass | POIs & Hotels | - |
-| Wikipedia DE | Geosearch | - |
+| Wikipedia DE | Geosearch + Extracts | - |
+| Wikimedia Commons | POI-Bilder (Geo-Suche) | - |
+| Wikidata SPARQL | Strukturierte POI-Daten | - |
 | Open-Meteo | Wetter | - |
 | OpenAI | AI-Chat | API-Key |
 
@@ -219,6 +225,15 @@ final tripStateProvider
 
 // Random-Trip State (v1.2.3 - GPS Auto-Query)
 final randomTripNotifierProvider
+
+// POI State (v1.2.5 - keepAlive)
+final pOIStateNotifierProvider
+
+// POI Enrichment Service (v1.2.5)
+final poiEnrichmentServiceProvider
+
+// POI Cache Service (v1.2.5 - keepAlive)
+final poiCacheServiceProvider
 ```
 
 ## Random-Trip Flow (v1.2.3) ⭐ NEU
@@ -484,6 +499,9 @@ Widget build(BuildContext context) {
 
 ### Debug-Logging aktiviert für:
 - `[POI]` - POI-Laden
+- `[Enrichment]` - POI Enrichment Service ⭐ v1.2.5
+- `[POICache]` - Cache Operationen ⭐ v1.2.5
+- `[POIState]` - State Änderungen ⭐ v1.2.5
 - `[Weather]` - Wetter-Laden
 - `[AI]` - AI-Anfragen (inkl. API-Key Präfix)
 - `[GPS]` - GPS-Funktionen
@@ -506,11 +524,13 @@ In `android/app/src/main/AndroidManifest.xml`:
 ## Bekannte Einschränkungen
 
 1. **Wikipedia API**: 10km Radius-Limit pro Anfrage
-2. **Overpass API**: Rate-Limiting, kann langsam sein
-3. **OpenAI**: Benötigt aktives Guthaben
-4. **GPS**: Nur mit HTTPS/Release Build zuverlässig
+2. **Wikipedia CORS**: Im Web-Modus blockiert (funktioniert auf Android/iOS) ⭐ v1.2.5
+3. **Wikimedia Rate-Limit**: Max 200 Anfragen/Minute ⭐ v1.2.5
+4. **Overpass API**: Rate-Limiting, kann langsam sein
+5. **OpenAI**: Benötigt aktives Guthaben
+6. **GPS**: Nur mit HTTPS/Release Build zuverlässig
 
-## Feature-Übersicht (Version 1.2.4)
+## Feature-Übersicht (Version 1.2.5)
 
 ### Kern-Features
 - 🗺️ **Interaktive Karte** mit POI-Markern
@@ -552,12 +572,20 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 🔄 **keepAlive Provider** - TripStateProvider behält State beim Navigation
 - 🌙 **Dark Mode vollständig** für alle Hauptkomponenten
 
-### AI-Trip ohne Ziel (v1.2.4) ⭐ NEU
+### AI-Trip ohne Ziel (v1.2.4)
 - 🎲 **Ziel optional** - AI-Trip-Dialog erlaubt leeres Ziel-Feld
 - 📍 **GPS-Fallback** - Ohne Startpunkt wird automatisch GPS-Standort abgefragt
 - 🎯 **Interessen-Mapping** - Gewählte Interessen werden zu POI-Kategorien gemappt
 - 🚗 **Direkt zu Trip-Screen** - Bei leerem Ziel wird Random Route generiert und angezeigt
 - 💬 **Hybrid-Modus** - Mit Ziel: AI-Text-Plan im Chat | Ohne Ziel: Random Route → Trip-Screen
+
+### POI-System Erweiterung (v1.2.5) ⭐ NEU
+- 🖼️ **POI Enrichment** - Wikipedia/Wikimedia/Wikidata Integration für Bilder & Beschreibungen
+- 🌍 **POI Highlights** - UNESCO, Must-See, Geheimtipp, Historisch automatisch erkannt
+- 📍 **Map-Marker** - POIs auf Karte mit Preview-Sheet bei Tap
+- 📋 **Echte POI-Liste** - Live-Daten statt Demo-Einträge
+- 💾 **POI Caching** - Hive-basiert mit 7-30 Tage Retention
+- 🗂️ **Kategorie-Mapping** - Wikipedia-POIs erhalten passende Kategorien
 
 ## Navigation-Struktur
 
@@ -746,3 +774,226 @@ darkTextPrimary: Color(0xFFF1F5F9)  // Fast weiß
 // OLED Mode
 oledBackgroundColor: Color(0xFF000000) // True Black
 ```
+
+---
+
+## POI Enrichment System (v1.2.5) ⭐ NEU
+
+### Architektur
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    UI Layer                          │
+│  POIListScreen │ POIDetailScreen │ MapView (Marker) │
+└────────────────────────┬────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│              POIStateNotifier (Riverpod)             │
+│  loadPOIs() │ enrichPOI() │ filterPOIs()            │
+└────────────────────────┬────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+┌─────────────┐ ┌─────────────────┐ ┌─────────────┐
+│ POIRepo     │ │ POIEnrichment   │ │ POICache    │
+│ (3-Layer)   │ │ Service         │ │ (Hive)      │
+└──────┬──────┘ └────────┬────────┘ └─────────────┘
+       │                 │
+       ▼                 ▼
+┌─────────────────────────────────────────────────────┐
+│                  Kostenlose APIs                     │
+│ Wikipedia Extracts │ Wikimedia Commons │ Wikidata   │
+└─────────────────────────────────────────────────────┘
+```
+
+### POI Enrichment Service
+
+```dart
+// lib/data/services/poi_enrichment_service.dart
+class POIEnrichmentService {
+  /// Enrichment-Flow:
+  /// 1. Cache prüfen → falls Treffer, gecachten POI zurückgeben
+  /// 2. Wikipedia Extracts API → Beschreibung + Hauptbild
+  /// 3. Wikimedia Commons API → Geo-basierte Bildsuche (Fallback)
+  /// 4. Wikidata SPARQL → UNESCO, Gründungsjahr, Architekturstil
+  /// 5. Ergebnis cachen + zurückgeben
+  Future<POI> enrichPOI(POI poi) async { ... }
+}
+```
+
+### API-Endpoints
+
+```dart
+// Wikipedia Extracts (Beschreibung + Bild)
+GET https://de.wikipedia.org/w/api.php
+  ?action=query&titles={title}
+  &prop=extracts|pageimages|pageprops
+  &exintro=true&explaintext=true
+
+// Wikimedia Commons (Geo-Suche)
+GET https://commons.wikimedia.org/w/api.php
+  ?action=query&generator=geosearch
+  &ggscoord={lat}|{lng}&ggsradius=500
+  &prop=imageinfo&iiprop=url
+
+// Wikidata SPARQL (Strukturierte Daten)
+GET https://query.wikidata.org/sparql
+  ?query={SPARQL}&format=json
+```
+
+### POI Highlights
+
+```dart
+enum POIHighlight {
+  unesco('🌍', 'UNESCO-Welterbe', 0xFF00CED1),
+  mustSee('⭐', 'Must-See', 0xFFFFD700),
+  secret('💎', 'Geheimtipp', 0xFF9370DB),
+  historic('🏛️', 'Historisch', 0xFFA0522D),
+  familyFriendly('👨‍👩‍👧‍👦', 'Familienfreundlich', 0xFF4CAF50);
+}
+
+// Computed im POI Model:
+List<POIHighlight> get highlights {
+  final result = <POIHighlight>[];
+  if (tags.contains('unesco')) result.add(POIHighlight.unesco);
+  if (isMustSee) result.add(POIHighlight.mustSee);
+  if (isSecret) result.add(POIHighlight.secret);
+  if (isHistoric) result.add(POIHighlight.historic);
+  return result;
+}
+```
+
+### Wikipedia Kategorie-Mapping
+
+```dart
+// lib/data/repositories/poi_repo.dart
+String _inferCategoryFromTitle(String title) {
+  final patterns = <String, List<String>>{
+    'castle': ['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast'],
+    'church': ['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'münster'],
+    'museum': ['museum', 'galerie', 'gallery', 'ausstellung'],
+    'nature': ['nationalpark', 'naturpark', 'naturschutz', 'biosphäre'],
+    'lake': ['see', 'lake', 'teich', 'weiher', 'stausee', 'talsperre'],
+    'viewpoint': ['aussicht', 'turm', 'tower', 'view', 'panorama'],
+    'monument': ['denkmal', 'memorial', 'monument', 'gedenkstätte'],
+  };
+  // Match keywords → return category
+}
+```
+
+### POI State Provider
+
+```dart
+// lib/features/poi/providers/poi_state_provider.dart
+@Riverpod(keepAlive: true)
+class POIStateNotifier extends _$POIStateNotifier {
+  // POIs laden
+  Future<void> loadPOIsInRadius({required LatLng center, required double radiusKm});
+  Future<void> loadPOIsForRoute(AppRoute route);
+
+  // On-Demand Enrichment
+  Future<void> enrichPOI(String poiId);
+
+  // Auswahl & Filter
+  void selectPOI(POI? poi);
+  void setFilter(POICategory? category);
+  void setSearchQuery(String query);
+
+  // Gefilterte POIs (für UI)
+  List<POI> get filteredPOIs;
+}
+```
+
+### POI Cache Service
+
+```dart
+// lib/data/services/poi_cache_service.dart
+class POICacheService {
+  static const Duration poiCacheDuration = Duration(days: 7);
+  static const Duration enrichmentCacheDuration = Duration(days: 30);
+
+  Future<void> cacheEnrichedPOI(POI poi);
+  Future<POI?> getCachedEnrichedPOI(String poiId);
+  Future<void> cachePOIs(List<POI> pois, String regionKey);
+  Future<List<POI>?> getCachedPOIs(String regionKey);
+  Future<void> cleanExpiredCache();
+}
+```
+
+### Map-Marker Implementierung
+
+```dart
+// lib/features/map/widgets/map_view.dart
+
+// POI-Marker Layer
+if (poiState.filteredPOIs.isNotEmpty)
+  MarkerLayer(
+    markers: poiState.filteredPOIs.map((poi) {
+      return Marker(
+        point: poi.location,
+        width: _selectedPOIId == poi.id ? 48 : (poi.isMustSee ? 40 : 32),
+        height: _selectedPOIId == poi.id ? 48 : (poi.isMustSee ? 40 : 32),
+        child: POIMarker(
+          icon: poi.categoryIcon,
+          isHighlight: poi.isMustSee,
+          isSelected: _selectedPOIId == poi.id,
+          onTap: () => _onPOITap(poi),
+        ),
+      );
+    }).toList(),
+  ),
+
+// Route-Polyline
+if (tripState.hasRoute || routePlanner.route != null)
+  PolylineLayer(
+    polylines: [
+      Polyline(
+        points: tripState.route?.coordinates ?? routePlanner.route?.coordinates ?? [],
+        color: Theme.of(context).colorScheme.primary,
+        strokeWidth: 5,
+      ),
+    ],
+  ),
+```
+
+### POI Model Erweiterungen
+
+```dart
+// lib/data/models/poi.dart
+@freezed
+class POI with _$POI {
+  const factory POI({
+    // ... bestehende Felder ...
+
+    // NEU v1.2.5
+    int? foundedYear,           // Gründungsjahr (Wikidata)
+    String? architectureStyle,  // Architekturstil (Wikidata)
+    @Default(false) bool isEnriched,
+    String? thumbnailUrl,
+  }) = _POI;
+
+  // Computed Properties
+  bool get isHistoric => tags.contains('historic') || tags.contains('unesco');
+  bool get isSecret => tags.contains('secret');
+  List<POIHighlight> get highlights { ... }
+  bool get hasHighlights => highlights.isNotEmpty;
+}
+```
+
+### Debug-Logging
+
+```
+[Enrichment] Starte Enrichment für: Brandenburger Tor
+[Enrichment] Wikipedia-Daten geladen: Bild ✓, Beschreibung ✓
+[Enrichment] Wikidata-Daten geladen: UNESCO=true
+[POICache] POI gecached: Brandenburger Tor
+[POICache] Cache-Treffer für: Brandenburger Tor
+```
+
+### Bekannte Einschränkungen (v1.2.5)
+
+1. **Wikipedia CORS** - Im Web-Modus blockiert, funktioniert auf Android/iOS
+2. **Wikimedia Rate-Limit** - Max 200 Anfragen/Minute
+3. **Wikidata SPARQL** - Kann bei komplexen Queries langsam sein
+4. **Cache-Größe** - Bei vielen POIs kann Hive-Box groß werden

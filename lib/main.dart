@@ -9,15 +9,7 @@ void main() async {
   // Flutter-Bindings initialisieren
   WidgetsFlutterBinding.ensureInitialized();
 
-  // System UI Overlay Style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
+  // System UI Overlay Style - wird dynamisch in TravelPlannerApp angepasst basierend auf Theme
 
   // Hive für lokale Datenbank initialisieren
   await Hive.initFlutter();

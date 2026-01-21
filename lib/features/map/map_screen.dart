@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/theme/app_theme.dart';
 import 'providers/map_controller_provider.dart';
+import 'providers/route_planner_provider.dart';
 import 'widgets/map_view.dart';
 
 /// Hauptscreen mit Karte
@@ -20,11 +21,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final routePlanner = ref.watch(routePlannerProvider);
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('MapAB'),
-        backgroundColor: Colors.white.withOpacity(0.9),
+        backgroundColor: colorScheme.surface.withOpacity(0.9),
         elevation: 0,
         actions: [
           // Favoriten-Button
@@ -54,6 +61,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 children: [
                   // Suchleiste
                   _SearchBar(
+                    startAddress: routePlanner.startAddress,
+                    endAddress: routePlanner.endAddress,
+                    isCalculating: routePlanner.isCalculating,
                     onStartTap: () => context.push('/search?type=start'),
                     onEndTap: () => context.push('/search?type=end'),
                   ),
@@ -77,8 +87,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 FloatingActionButton.small(
                   heroTag: 'settings',
                   onPressed: () => context.push('/settings'),
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.textPrimary,
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: colorScheme.onSurface,
                   child: const Icon(Icons.settings),
                 ),
                 const SizedBox(height: 8),
@@ -86,8 +96,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 FloatingActionButton.small(
                   heroTag: 'gps',
                   onPressed: _centerOnLocation,
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.primaryColor,
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: colorScheme.primary,
                   child: _isLoadingLocation
                       ? const SizedBox(
                           width: 20,
@@ -101,16 +111,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 FloatingActionButton.small(
                   heroTag: 'zoomIn',
                   onPressed: _zoomIn,
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.textPrimary,
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: colorScheme.onSurface,
                   child: const Icon(Icons.add),
                 ),
                 const SizedBox(height: 4),
                 FloatingActionButton.small(
                   heroTag: 'zoomOut',
                   onPressed: _zoomOut,
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.textPrimary,
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: colorScheme.onSurface,
                   child: const Icon(Icons.remove),
                 ),
               ],
@@ -229,21 +239,37 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
 /// Suchleiste Widget
 class _SearchBar extends StatelessWidget {
+  final String? startAddress;
+  final String? endAddress;
+  final bool isCalculating;
   final VoidCallback onStartTap;
   final VoidCallback onEndTap;
 
   const _SearchBar({
+    this.startAddress,
+    this.endAddress,
+    this.isCalculating = false,
     required this.onStartTap,
     required this.onEndTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -252,18 +278,44 @@ class _SearchBar extends StatelessWidget {
             icon: Icons.trip_origin,
             iconColor: AppTheme.successColor,
             hint: 'Startpunkt eingeben',
+            value: startAddress,
             onTap: onStartTap,
           ),
 
-          const Divider(height: 1, indent: 48),
+          Divider(height: 1, indent: 48, color: theme.dividerColor),
 
           // Ziel-Eingabe
           _SearchField(
             icon: Icons.place,
             iconColor: AppTheme.errorColor,
             hint: 'Ziel eingeben',
+            value: endAddress,
             onTap: onEndTap,
           ),
+
+          // Lade-Indikator wenn Route berechnet wird
+          if (isCalculating)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Route wird berechnet...',
+                    style: TextStyle(
+                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -288,6 +340,9 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -302,8 +357,8 @@ class _SearchField extends StatelessWidget {
                 value ?? hint,
                 style: TextStyle(
                   color: value != null
-                      ? AppTheme.textPrimary
-                      : AppTheme.textHint,
+                      ? colorScheme.onSurface
+                      : theme.hintColor,
                   fontSize: 16,
                 ),
                 maxLines: 1,
@@ -330,11 +385,21 @@ class _RouteToggleState extends State<_RouteToggle> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
@@ -374,13 +439,16 @@ class _ToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+          color: isSelected ? colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -389,13 +457,13 @@ class _ToggleButton extends StatelessWidget {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
+              color: isSelected ? colorScheme.onPrimary : theme.textTheme.bodySmall?.color,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
+                color: isSelected ? colorScheme.onPrimary : theme.textTheme.bodySmall?.color,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 14,
               ),

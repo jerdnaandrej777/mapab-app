@@ -705,8 +705,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         if (results.isNotEmpty) {
           final result = results.first;
           return (
-            lat: result.latitude,
-            lng: result.longitude,
+            lat: result.location.latitude,
+            lng: result.location.longitude,
             address: result.displayName ?? startText
           );
         }

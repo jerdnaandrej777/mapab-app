@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:latlong2/latlong.dart';
-import '../../core/constants/categories.dart';
+import '../../core/constants/categories.dart' show POICategory, POIHighlight;
 import '../../core/utils/scoring_utils.dart';
 
 part 'poi.freezed.dart';
@@ -72,6 +72,20 @@ class POI with _$POI {
     /// Hat echte Wikidata-Daten
     @Default(false) bool hasWikidataData,
 
+    // === Enrichment-Felder (v1.2.5) ===
+
+    /// Gründungsjahr (aus Wikidata)
+    int? foundedYear,
+
+    /// Architekturstil (aus Wikidata)
+    String? architectureStyle,
+
+    /// Ist bereits angereichert
+    @Default(false) bool isEnriched,
+
+    /// Thumbnail-URL (kleinere Version für Listen)
+    String? thumbnailUrl,
+
     // === Berechnete Routen-Felder ===
 
     /// Position auf der Route (0 = Start, 1 = Ende)
@@ -107,6 +121,31 @@ class POI with _$POI {
 
   /// Ist Indoor-POI
   bool get isIndoor => category?.isIndoor ?? false;
+
+  /// Ist historischer Ort (älter als 100 Jahre)
+  bool get isHistoric {
+    if (foundedYear != null && foundedYear! < 1925) return true;
+    return tags.contains('historic');
+  }
+
+  /// Ist Geheimtipp (niedriger Score aber gute Bewertung)
+  bool get isSecret {
+    if (tags.contains('secret')) return true;
+    return score >= 40 && score <= 60 && !isCurated && !hasWikipedia;
+  }
+
+  /// Alle Highlights dieses POIs
+  List<POIHighlight> get highlights {
+    final result = <POIHighlight>[];
+    if (isUnesco) result.add(POIHighlight.unesco);
+    if (isMustSee) result.add(POIHighlight.mustSee);
+    if (isHistoric) result.add(POIHighlight.historic);
+    if (isSecret) result.add(POIHighlight.secret);
+    return result;
+  }
+
+  /// Hat mindestens ein Highlight
+  bool get hasHighlights => highlights.isNotEmpty;
 
   /// Sterne-Bewertung (1.0 - 5.0)
   double get starRating => ScoringUtils.getStarRating(score);

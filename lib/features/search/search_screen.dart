@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/route.dart';
 import '../../data/repositories/geocoding_repo.dart';
+import '../map/providers/route_planner_provider.dart';
 
 /// Suchscreen für Start/Ziel-Eingabe
 class SearchScreen extends ConsumerStatefulWidget {
@@ -131,9 +132,43 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         .toList();
   }
 
-  void _selectSuggestion(AutocompleteSuggestion suggestion) {
-    // TODO: In State speichern und zurück navigieren
-    context.pop(suggestion);
+  Future<void> _selectSuggestion(AutocompleteSuggestion suggestion) async {
+    // Geocoding wenn keine Koordinaten vorhanden
+    LatLng? location = suggestion.location;
+
+    if (location == null && suggestion.placeId != null) {
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final result = await geocodingRepo.geocode(suggestion.displayName);
+        if (result.isNotEmpty) {
+          location = result.first.location;
+        }
+      } catch (e) {
+        debugPrint('[Search] Fehler beim Geocoding: $e');
+      }
+    }
+
+    if (location == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Standort konnte nicht gefunden werden')),
+        );
+      }
+      return;
+    }
+
+    // In RoutePlanner State speichern
+    final routePlanner = ref.read(routePlannerProvider.notifier);
+    if (widget.isStartLocation) {
+      routePlanner.setStart(location, suggestion.displayName);
+    } else {
+      routePlanner.setEnd(location, suggestion.displayName);
+    }
+
+    // Zurück navigieren
+    if (mounted) {
+      context.pop();
+    }
   }
 
   @override

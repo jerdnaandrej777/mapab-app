@@ -25,12 +25,22 @@ class TripStopTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -41,7 +51,7 @@ class TripStopTile extends StatelessWidget {
               index: index,
               child: Icon(
                 Icons.drag_handle,
-                color: AppTheme.textHint,
+                color: theme.hintColor,
               ),
             ),
           ),
@@ -51,7 +61,7 @@ class TripStopTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.backgroundColor,
+              color: isDark ? colorScheme.surfaceContainerHighest : AppTheme.backgroundColor,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
@@ -70,9 +80,10 @@ class TripStopTile extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
+                      color: colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -81,23 +92,23 @@ class TripStopTile extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.route,
-                          size: 14, color: AppTheme.textSecondary),
+                          size: 14, color: theme.textTheme.bodySmall?.color),
                       const SizedBox(width: 4),
                       Text(
                         '+$detourKm km',
                         style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: theme.textTheme.bodySmall?.color,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Icon(Icons.timer,
-                          size: 14, color: AppTheme.textSecondary),
+                          size: 14, color: theme.textTheme.bodySmall?.color),
                       const SizedBox(width: 4),
                       Text(
                         FormatUtils.formatDuration(durationMinutes),
                         style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: theme.textTheme.bodySmall?.color,
                           fontSize: 12,
                         ),
                       ),
@@ -110,7 +121,7 @@ class TripStopTile extends StatelessWidget {
 
           // Actions
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: AppTheme.textSecondary),
+            icon: Icon(Icons.more_vert, color: theme.textTheme.bodySmall?.color),
             onSelected: (value) {
               switch (value) {
                 case 'edit':

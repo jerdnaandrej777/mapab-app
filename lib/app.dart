@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
@@ -30,6 +31,21 @@ class TravelPlannerApp extends ConsumerWidget {
     final darkTheme = settings.isOledMode
         ? AppTheme.oledDarkTheme
         : AppTheme.darkTheme;
+
+    // Bestimme ob Dark Mode aktiv ist
+    final isDark = effectiveThemeMode == ThemeMode.dark ||
+        (effectiveThemeMode == ThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+
+    // System UI Overlay Style dynamisch anpassen
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: isDark ? AppTheme.darkSurfaceColor : Colors.white,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+    );
 
     return MaterialApp.router(
       title: 'Travel Planner',
@@ -216,12 +232,15 @@ class MainBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -287,9 +306,12 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final color = isSelected
-        ? AppTheme.primaryColor
-        : AppTheme.textSecondary;
+        ? colorScheme.primary
+        : theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface.withOpacity(0.6);
 
     return InkWell(
       onTap: onTap,
@@ -298,7 +320,7 @@ class _NavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isSelected
             ? BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               )
             : null,

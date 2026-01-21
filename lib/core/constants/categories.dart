@@ -139,6 +139,21 @@ enum WheelchairAccessibility {
   }
 }
 
+/// POI-Highlights für besondere Auszeichnungen
+enum POIHighlight {
+  unesco('🌍', 'UNESCO-Welterbe', 0xFF00CED1),
+  mustSee('⭐', 'Must-See', 0xFFFFD700),
+  secret('💎', 'Geheimtipp', 0xFF9370DB),
+  historic('🏛️', 'Historisch', 0xFFA0522D),
+  familyFriendly('👨‍👩‍👧‍👦', 'Familienfreundlich', 0xFF4CAF50);
+
+  final String icon;
+  final String label;
+  final int colorValue;
+
+  const POIHighlight(this.icon, this.label, this.colorValue);
+}
+
 /// Barrierefreiheits-Filter-Einstellungen
 class AccessibilityFilter {
   final bool requireWheelchair;
