@@ -29,7 +29,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ];
 
   final List<String> _suggestions = [
-    'Plane einen 3-Tage-Trip nach Prag',
+    '🤖 AI-Trip generieren',
     'Welche Sehenswürdigkeiten sind auf meiner Route?',
     'Zeige mir Naturhighlights',
     'Was ist das beste Restaurant unterwegs?',
@@ -96,7 +96,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (_messages.length <= 2)
             SuggestionChips(
               suggestions: _suggestions,
-              onSelected: _sendMessage,
+              onSelected: _handleSuggestionTap,
             ),
 
           // Eingabefeld
@@ -407,5 +407,240 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  void _handleSuggestionTap(String suggestion) {
+    if (suggestion == '🤖 AI-Trip generieren') {
+      _showTripGeneratorDialog();
+    } else {
+      _sendMessage(suggestion);
+    }
+  }
+
+  void _showTripGeneratorDialog() {
+    final destinationController = TextEditingController();
+    final startController = TextEditingController();
+    double days = 3;
+    final selectedInterests = <String>{};
+
+    final interests = [
+      'Kultur',
+      'Natur',
+      'Geschichte',
+      'Essen',
+      'Nightlife',
+      'Shopping',
+      'Sport',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('🤖 AI-Trip generieren'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Ziel
+                TextField(
+                  controller: destinationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ziel',
+                    hintText: 'z.B. Prag, Amsterdam, Rom',
+                    prefixIcon: Icon(Icons.location_on),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Startpunkt (optional)
+                TextField(
+                  controller: startController,
+                  decoration: const InputDecoration(
+                    labelText: 'Startpunkt (optional)',
+                    hintText: 'z.B. München',
+                    prefixIcon: Icon(Icons.home),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Tage
+                Text('Tage: ${days.round()}'),
+                Slider(
+                  value: days,
+                  min: 1,
+                  max: 7,
+                  divisions: 6,
+                  label: '${days.round()} Tage',
+                  onChanged: (value) {
+                    setDialogState(() {
+                      days = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Interessen
+                const Text('Interessen:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: interests.map((interest) {
+                    final isSelected = selectedInterests.contains(interest);
+                    return FilterChip(
+                      label: Text(interest),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setDialogState(() {
+                          if (selected) {
+                            selectedInterests.add(interest);
+                          } else {
+                            selectedInterests.remove(interest);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (destinationController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Bitte Ziel eingeben')),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                _generateTrip(
+                  destination: destinationController.text.trim(),
+                  days: days.round(),
+                  interests: selectedInterests.toList(),
+                  startLocation: startController.text.trim().isNotEmpty
+                      ? startController.text.trim()
+                      : null,
+                );
+              },
+              child: const Text('Generieren'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generateTrip({
+    required String destination,
+    required int days,
+    required List<String> interests,
+    String? startLocation,
+  }) async {
+    // User-Nachricht hinzufügen
+    setState(() {
+      _messages.add({
+        'content':
+            'Generiere einen $days-Tage Trip nach $destination\n${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : ""}',
+        'isUser': true,
+      });
+      _isLoading = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final aiService = ref.read(aiServiceProvider);
+
+      if (!aiService.isConfigured) {
+        // Demo-Response
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+          _messages.add({
+            'content': _generateDemoTripPlan(destination, days),
+            'isUser': false,
+          });
+        });
+        _scrollToBottom();
+        return;
+      }
+
+      // Echte AI-Anfrage
+      final plan = await aiService.generateTripPlan(
+        destination: destination,
+        days: days,
+        interests: interests,
+        startLocation: startLocation,
+      );
+
+      if (!mounted) return;
+
+      // Formatiere den Plan
+      final planText = StringBuffer();
+      planText.writeln('🗺️ ${plan.title}\n');
+      if (plan.description != null) {
+        planText.writeln('${plan.description}\n');
+      }
+
+      for (var day in plan.days) {
+        planText.writeln('**${day.title}**');
+        if (day.description != null) {
+          planText.writeln(day.description);
+        }
+        for (var stop in day.stops) {
+          planText.writeln(
+              '• ${stop.name} ${stop.duration != null ? "(${stop.duration})" : ""}');
+          if (stop.description != null) {
+            planText.writeln('  ${stop.description}');
+          }
+        }
+        planText.writeln();
+      }
+
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'content': planText.toString(),
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    } catch (e) {
+      print('[Trip Generator] Fehler: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'content':
+              'Entschuldigung, es gab einen Fehler beim Generieren des Trips.\n\nFehler: $e',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    }
+  }
+
+  String _generateDemoTripPlan(String destination, int days) {
+    return '🗺️ $days Tage in $destination\n\n'
+        '**Tag 1: Ankunft & Stadterkund**ung\n'
+        '• Hauptbahnhof (1h) - Ankunft und Check-in\n'
+        '• Altstadt (2h) - Historisches Zentrum erkunden\n'
+        '• Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
+        '**Tag 2: Kultur & Sehenswürdigkeiten**\n'
+        '• Schloss/Burg (2h) - Wahrzeichen der Stadt\n'
+        '• Kunstgalerie (1.5h) - Lokale Kunstszene\n'
+        '• Lokales Restaurant (1h) - Traditionelle Küche\n\n'
+        '${days > 2 ? "**Tag 3: Natur & Entspannung**\n• Park/Garten (2h) - Grüne Oase\n• Aussichtspunkt (1h) - Panoramablick\n• Café (1h) - Kaffee und Kuchen\n\n" : ""}'
+        '💡 Dies ist ein Demo-Plan. Mit OpenAI-Integration erhältst du personalisierte Empfehlungen!';
   }
 }

@@ -15,6 +15,7 @@ import 'features/settings/settings_screen.dart';
 import 'features/account/login_screen.dart';
 import 'features/account/profile_screen.dart';
 import 'features/account/splash_screen.dart';
+import 'features/favorites/favorites_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -149,6 +150,13 @@ final _router = GoRouter(
       path: '/profile',
       name: 'profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+
+    // Favoriten
+    GoRoute(
+      path: '/favorites',
+      name: 'favorites',
+      builder: (context, state) => const FavoritesScreen(),
     ),
   ],
 

@@ -21,6 +21,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('MapAB'),
+        backgroundColor: Colors.white.withOpacity(0.9),
+        elevation: 0,
+        actions: [
+          // Favoriten-Button
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () => context.push('/favorites'),
+            tooltip: 'Favoriten',
+          ),
+          // Profil-Button
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/profile'),
+            tooltip: 'Profil',
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           // Karte (Hintergrund)
