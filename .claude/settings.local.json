@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(flutter pub run build_runner build:*)",
+      "Bash(cmd /c \"flutter pub run build_runner build --delete-conflicting-outputs\")",
+      "Bash(where:*)",
+      "Bash(cmd /c \"where flutter\")",
+      "Bash(powershell -Command \"cd ''C:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP''; flutter pub run build_runner build --delete-conflicting-outputs\")",
+      "Bash(powershell -Command:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(cmd /c \"cd /d \"\"C:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP\"\" && \"\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\"\" pub get\")",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" pub get)",
+      "Bash(timeout:*)",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" run -d emulator)",
+      "Bash(cmd /c \"C:\\\\Users\\\\Gejer\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe\" -avd Pixel_5_API_33 -no-snapshot-load)",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" devices)",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" emulators)",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP && flutter run\")",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" emulators --launch Pixel_6)",
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" run)"
+    ]
+  }
+}

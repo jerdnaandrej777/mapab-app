@@ -1,0 +1,7356 @@
+[
+  {
+    "id": "de-1",
+    "n": "Brandenburger Tor",
+    "lat": 52.5163,
+    "lng": 13.3777,
+    "c": "monument",
+    "r": 98,
+    "tags": [
+      "monument",
+      "berlin",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-2",
+    "n": "Reichstagsgebäude",
+    "lat": 52.5186,
+    "lng": 13.3761,
+    "c": "monument",
+    "r": 96,
+    "tags": [
+      "monument",
+      "politics",
+      "berlin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-3",
+    "n": "East Side Gallery",
+    "lat": 52.5053,
+    "lng": 13.4397,
+    "c": "museum",
+    "r": 90,
+    "tags": [
+      "art",
+      "berlin",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-4",
+    "n": "Museumsinsel Berlin",
+    "lat": 52.5169,
+    "lng": 13.4019,
+    "c": "museum",
+    "r": 97,
+    "tags": [
+      "unesco",
+      "museum",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-5",
+    "n": "Schloss Sanssouci",
+    "lat": 52.4042,
+    "lng": 13.0385,
+    "c": "castle",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "rococo",
+      "potsdam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-6",
+    "n": "Sanssouci Park",
+    "lat": 52.4033,
+    "lng": 13.0286,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "garden",
+      "potsdam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-7",
+    "n": "Schloss Charlottenburg",
+    "lat": 52.5208,
+    "lng": 13.2956,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "baroque",
+      "berlin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-8",
+    "n": "Checkpoint Charlie",
+    "lat": 52.5075,
+    "lng": 13.3903,
+    "c": "monument",
+    "r": 85,
+    "tags": [
+      "history",
+      "berlin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-9",
+    "n": "Spreewald",
+    "lat": 51.8667,
+    "lng": 14.0333,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "unesco",
+      "nature",
+      "kayak"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-10",
+    "n": "Schloss Neuschwanstein",
+    "lat": 47.5576,
+    "lng": 10.7498,
+    "c": "castle",
+    "r": 99,
+    "tags": [
+      "castle",
+      "romantic",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-11",
+    "n": "Zugspitze",
+    "lat": 47.4211,
+    "lng": 10.9853,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "mountain",
+      "alps",
+      "highest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-12",
+    "n": "Partnachklamm",
+    "lat": 47.4672,
+    "lng": 11.1203,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "nature",
+      "gorge",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-13",
+    "n": "Berchtesgadener Nationalpark",
+    "lat": 47.553,
+    "lng": 12.918,
+    "c": "nature",
+    "r": 94,
+    "tags": [
+      "nature",
+      "alps",
+      "unesco"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-14",
+    "n": "Königssee",
+    "lat": 47.5448,
+    "lng": 12.9725,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "lake",
+      "alps",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-15",
+    "n": "Watzmann",
+    "lat": 47.555,
+    "lng": 12.9219,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "mountain",
+      "alps",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-16",
+    "n": "Schloss Herrenchiemsee",
+    "lat": 47.8617,
+    "lng": 12.4011,
+    "c": "castle",
+    "r": 91,
+    "tags": [
+      "castle",
+      "ludwig",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-17",
+    "n": "Walhalla",
+    "lat": 48.9997,
+    "lng": 12.2233,
+    "c": "monument",
+    "r": 87,
+    "tags": [
+      "monument",
+      "temple",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-18",
+    "n": "Regensburger Altstadt",
+    "lat": 49.0195,
+    "lng": 12.0975,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "medieval",
+      "danube"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-19",
+    "n": "Rothenburg ob der Tauber",
+    "lat": 49.3769,
+    "lng": 10.1789,
+    "c": "attraction",
+    "r": 92,
+    "tags": [
+      "medieval",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-20",
+    "n": "Würzburger Residenz",
+    "lat": 49.7933,
+    "lng": 9.9397,
+    "c": "castle",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "baroque",
+      "palace"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-21",
+    "n": "Bamberger Altstadt",
+    "lat": 49.8988,
+    "lng": 10.9028,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "medieval",
+      "beer"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-22",
+    "n": "Deutsches Museum München",
+    "lat": 48.1298,
+    "lng": 11.5833,
+    "c": "museum",
+    "r": 91,
+    "tags": [
+      "museum",
+      "science"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-23",
+    "n": "Marienplatz München",
+    "lat": 48.1374,
+    "lng": 11.5755,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "square",
+      "city"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-24",
+    "n": "Schloss Nymphenburg",
+    "lat": 48.1583,
+    "lng": 11.5033,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-25",
+    "n": "BMW Welt München",
+    "lat": 48.1769,
+    "lng": 11.5569,
+    "c": "museum",
+    "r": 86,
+    "tags": [
+      "museum",
+      "cars"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-26",
+    "n": "Frauenkirche Dresden",
+    "lat": 51.0519,
+    "lng": 13.7414,
+    "c": "church",
+    "r": 94,
+    "tags": [
+      "church",
+      "baroque",
+      "rebuilt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-27",
+    "n": "Semperoper Dresden",
+    "lat": 51.0544,
+    "lng": 13.7353,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "opera",
+      "architecture"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-28",
+    "n": "Zwinger Dresden",
+    "lat": 51.0533,
+    "lng": 13.7344,
+    "c": "museum",
+    "r": 92,
+    "tags": [
+      "museum",
+      "baroque",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-29",
+    "n": "Basteibrücke",
+    "lat": 50.9614,
+    "lng": 14.0722,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "nature",
+      "viewpoint",
+      "rocks"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-30",
+    "n": "Sächsische Schweiz",
+    "lat": 50.9125,
+    "lng": 14.0797,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "nature",
+      "rocks",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-31",
+    "n": "Schloss Moritzburg",
+    "lat": 51.1678,
+    "lng": 13.6794,
+    "c": "castle",
+    "r": 88,
+    "tags": [
+      "castle",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-32",
+    "n": "Völkerschlachtdenkmal Leipzig",
+    "lat": 51.3125,
+    "lng": 12.4131,
+    "c": "monument",
+    "r": 87,
+    "tags": [
+      "monument",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-33",
+    "n": "Kölner Dom",
+    "lat": 50.9413,
+    "lng": 6.9583,
+    "c": "church",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "gothic",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-34",
+    "n": "Aachener Dom",
+    "lat": 50.7747,
+    "lng": 6.0839,
+    "c": "church",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "church",
+      "charlemagne"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-35",
+    "n": "Burg Eltz",
+    "lat": 50.2053,
+    "lng": 7.3367,
+    "c": "castle",
+    "r": 94,
+    "tags": [
+      "castle",
+      "medieval",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-36",
+    "n": "Loreley",
+    "lat": 50.1422,
+    "lng": 7.7319,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "nature",
+      "rhine",
+      "legend"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-37",
+    "n": "Mittelrheintal",
+    "lat": 50.2,
+    "lng": 7.6,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "rhine",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-38",
+    "n": "Schloss Drachenburg",
+    "lat": 50.6681,
+    "lng": 7.2086,
+    "c": "castle",
+    "r": 88,
+    "tags": [
+      "castle",
+      "rhine",
+      "viewpoint"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-39",
+    "n": "Monschau Altstadt",
+    "lat": 50.5544,
+    "lng": 6.2428,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "medieval",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-40",
+    "n": "Zeche Zollverein",
+    "lat": 51.4864,
+    "lng": 7.0467,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "industry",
+      "ruhr"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-41",
+    "n": "Gasometer Oberhausen",
+    "lat": 51.4947,
+    "lng": 6.8631,
+    "c": "museum",
+    "r": 85,
+    "tags": [
+      "museum",
+      "industry"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-42",
+    "n": "Phantasialand",
+    "lat": 50.7989,
+    "lng": 6.8792,
+    "c": "attraction",
+    "r": 89,
+    "tags": [
+      "theme_park"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-43",
+    "n": "Movie Park Germany",
+    "lat": 51.6231,
+    "lng": 6.9728,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "theme_park"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-44",
+    "n": "Externsteine",
+    "lat": 51.8686,
+    "lng": 8.9167,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "nature",
+      "rocks",
+      "mystical"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-45",
+    "n": "Porta Nigra Trier",
+    "lat": 49.7596,
+    "lng": 6.6439,
+    "c": "monument",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "roman"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-46",
+    "n": "Völklinger Hütte",
+    "lat": 49.2514,
+    "lng": 6.8472,
+    "c": "unesco",
+    "r": 89,
+    "tags": [
+      "unesco",
+      "industry"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-47",
+    "n": "Hambacher Schloss",
+    "lat": 49.3289,
+    "lng": 8.1147,
+    "c": "castle",
+    "r": 86,
+    "tags": [
+      "castle",
+      "democracy",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-48",
+    "n": "Marksburg",
+    "lat": 50.2706,
+    "lng": 7.6503,
+    "c": "castle",
+    "r": 88,
+    "tags": [
+      "castle",
+      "rhine",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-49",
+    "n": "Cochem Reichsburg",
+    "lat": 50.1469,
+    "lng": 7.1667,
+    "c": "castle",
+    "r": 87,
+    "tags": [
+      "castle",
+      "mosel"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-50",
+    "n": "Wartburg",
+    "lat": 50.9667,
+    "lng": 10.3067,
+    "c": "castle",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "medieval",
+      "luther"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-51",
+    "n": "Quedlinburger Altstadt",
+    "lat": 51.7892,
+    "lng": 11.1497,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "medieval",
+      "fachwerk"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-52",
+    "n": "Brocken",
+    "lat": 51.7994,
+    "lng": 10.6153,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "mountain",
+      "harz",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-53",
+    "n": "Harzer Schmalspurbahn",
+    "lat": 51.75,
+    "lng": 10.55,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "train",
+      "historic",
+      "steam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-54",
+    "n": "Speicherstadt Hamburg",
+    "lat": 53.5436,
+    "lng": 9.9936,
+    "c": "unesco",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "architecture",
+      "hamburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-55",
+    "n": "Elbphilharmonie",
+    "lat": 53.5413,
+    "lng": 9.9842,
+    "c": "attraction",
+    "r": 93,
+    "tags": [
+      "architecture",
+      "concert",
+      "hamburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-56",
+    "n": "Miniatur Wunderland",
+    "lat": 53.5439,
+    "lng": 9.9886,
+    "c": "museum",
+    "r": 91,
+    "tags": [
+      "museum",
+      "model"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-57",
+    "n": "Lübecker Altstadt",
+    "lat": 53.8655,
+    "lng": 10.6866,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "medieval",
+      "hanseatic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-58",
+    "n": "Schweriner Schloss",
+    "lat": 53.6253,
+    "lng": 11.4178,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "fairytale",
+      "lake"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-59",
+    "n": "Heidelberger Schloss",
+    "lat": 49.4105,
+    "lng": 8.7155,
+    "c": "castle",
+    "r": 94,
+    "tags": [
+      "castle",
+      "ruin",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-60",
+    "n": "Nationalpark Schwarzwald",
+    "lat": 48.55,
+    "lng": 8.2167,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "nature",
+      "forest",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-61",
+    "n": "Triberg Wasserfälle",
+    "lat": 48.1333,
+    "lng": 8.2333,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "waterfall",
+      "blackforest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-62",
+    "n": "Mainau Insel",
+    "lat": 47.705,
+    "lng": 9.1919,
+    "c": "nature",
+    "r": 90,
+    "tags": [
+      "garden",
+      "island",
+      "flowers"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-63",
+    "n": "Meersburg Altstadt",
+    "lat": 47.6944,
+    "lng": 9.2714,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "medieval",
+      "lake",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-64",
+    "n": "Konstanzer Münster",
+    "lat": 47.6631,
+    "lng": 9.1756,
+    "c": "church",
+    "r": 84,
+    "tags": [
+      "church",
+      "bodensee"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-65",
+    "n": "Pfahlbauten Unteruhldingen",
+    "lat": 47.7267,
+    "lng": 9.2317,
+    "c": "museum",
+    "r": 85,
+    "tags": [
+      "museum",
+      "prehistoric",
+      "unesco"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-66",
+    "n": "Europa-Park",
+    "lat": 48.2661,
+    "lng": 7.7219,
+    "c": "attraction",
+    "r": 92,
+    "tags": [
+      "theme_park"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-67",
+    "n": "Müritz Nationalpark",
+    "lat": 53.3667,
+    "lng": 12.7833,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "nature",
+      "lake",
+      "birds"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-68",
+    "n": "Rügen Kreidefelsen",
+    "lat": 54.5564,
+    "lng": 13.6583,
+    "c": "nature",
+    "r": 90,
+    "tags": [
+      "nature",
+      "coast",
+      "cliffs"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-69",
+    "n": "Usedom Seebrücke Ahlbeck",
+    "lat": 53.9356,
+    "lng": 14.1903,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "coast",
+      "pier"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-70",
+    "n": "Wattenmeer Nationalpark",
+    "lat": 53.8903,
+    "lng": 8.65,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "nature",
+      "coast"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-71",
+    "n": "Sylt Rotes Kliff",
+    "lat": 54.9333,
+    "lng": 8.3167,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "nature",
+      "coast"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-1",
+    "n": "Bodensee",
+    "lat": 47.65,
+    "lng": 9.4,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "lake",
+      "alps",
+      "border"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-2",
+    "n": "Chiemsee",
+    "lat": 47.8667,
+    "lng": 12.4,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "lake",
+      "alps",
+      "bavaria"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-3",
+    "n": "Starnberger See",
+    "lat": 47.9,
+    "lng": 11.3167,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "lake",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-4",
+    "n": "Ammersee",
+    "lat": 48,
+    "lng": 11.1167,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "lake",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-5",
+    "n": "Tegernsee",
+    "lat": 47.7167,
+    "lng": 11.75,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "lake",
+      "alps",
+      "bavaria"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-6",
+    "n": "Walchensee",
+    "lat": 47.5833,
+    "lng": 11.35,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "lake",
+      "alps",
+      "clear"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-7",
+    "n": "Eibsee",
+    "lat": 47.4558,
+    "lng": 10.9711,
+    "c": "nature",
+    "r": 90,
+    "tags": [
+      "lake",
+      "alps",
+      "zugspitze"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-8",
+    "n": "Schluchsee",
+    "lat": 47.8167,
+    "lng": 8.1833,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "blackforest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-9",
+    "n": "Titisee",
+    "lat": 47.9,
+    "lng": 8.15,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "lake",
+      "blackforest",
+      "tourism"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-10",
+    "n": "Müritz",
+    "lat": 53.4167,
+    "lng": 12.6833,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "lake",
+      "largest",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-11",
+    "n": "Plauer See",
+    "lat": 53.45,
+    "lng": 12.3167,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "mecklenburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-12",
+    "n": "Schweriner See",
+    "lat": 53.6333,
+    "lng": 11.45,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "lake",
+      "castle"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-13",
+    "n": "Kummerower See",
+    "lat": 53.8333,
+    "lng": 12.8333,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "lake",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-14",
+    "n": "Steinhuder Meer",
+    "lat": 52.4667,
+    "lng": 9.3333,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "hannover"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-15",
+    "n": "Zwischenahner Meer",
+    "lat": 53.1833,
+    "lng": 8,
+    "c": "nature",
+    "r": 81,
+    "tags": [
+      "lake",
+      "spa"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-16",
+    "n": "Biggesee",
+    "lat": 51.1,
+    "lng": 7.8833,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "sauerland",
+      "dam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-17",
+    "n": "Edersee",
+    "lat": 51.1833,
+    "lng": 9.0667,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "lake",
+      "dam",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-18",
+    "n": "Rursee",
+    "lat": 50.6372,
+    "lng": 6.4419,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "eifel",
+      "dam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-19",
+    "n": "Laacher See",
+    "lat": 50.4017,
+    "lng": 7.2525,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "lake",
+      "volcanic",
+      "monastery"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-20",
+    "n": "Brombachsee",
+    "lat": 49.1333,
+    "lng": 10.8833,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "franconia"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-21",
+    "n": "Altmühlsee",
+    "lat": 49.1333,
+    "lng": 10.7167,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "lake",
+      "franconia"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-22",
+    "n": "Forggensee",
+    "lat": 47.5833,
+    "lng": 10.7333,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "lake",
+      "alps",
+      "neuschwanstein"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-23",
+    "n": "Kochelsee",
+    "lat": 47.65,
+    "lng": 11.3667,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "lake",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-24",
+    "n": "Staffelsee",
+    "lat": 47.7167,
+    "lng": 11.1333,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "islands"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-25",
+    "n": "Pilsensee",
+    "lat": 48.0333,
+    "lng": 11.2,
+    "c": "nature",
+    "r": 78,
+    "tags": [
+      "lake",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-26",
+    "n": "Wörthsee",
+    "lat": 48.0667,
+    "lng": 11.1167,
+    "c": "nature",
+    "r": 79,
+    "tags": [
+      "lake",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-27",
+    "n": "Schaalsee",
+    "lat": 53.5833,
+    "lng": 10.9167,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "lake",
+      "unesco",
+      "biosphere"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-28",
+    "n": "Plöner See",
+    "lat": 54.15,
+    "lng": 10.4167,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "holstein"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-29",
+    "n": "Großer Wannsee",
+    "lat": 52.4333,
+    "lng": 13.1667,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "lake",
+      "berlin",
+      "beach"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-30",
+    "n": "Liepnitzsee",
+    "lat": 52.7333,
+    "lng": 13.45,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "berlin",
+      "clear"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-31",
+    "n": "Scharmützelsee",
+    "lat": 52.2667,
+    "lng": 14.05,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "brandenburg",
+      "spa"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-32",
+    "n": "Senftenberger See",
+    "lat": 51.5,
+    "lng": 14.0167,
+    "c": "nature",
+    "r": 81,
+    "tags": [
+      "lake",
+      "lausitz",
+      "mining"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-33",
+    "n": "Geierswalder See",
+    "lat": 51.4833,
+    "lng": 14.0833,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "lake",
+      "lausitz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-34",
+    "n": "Zwenkauer See",
+    "lat": 51.2333,
+    "lng": 12.3167,
+    "c": "nature",
+    "r": 79,
+    "tags": [
+      "lake",
+      "leipzig"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-35",
+    "n": "Partwitzer See",
+    "lat": 51.5333,
+    "lng": 14.1333,
+    "c": "nature",
+    "r": 78,
+    "tags": [
+      "lake",
+      "lausitz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-36",
+    "n": "Tollensesee",
+    "lat": 53.5167,
+    "lng": 13.2667,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "mecklenburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-37",
+    "n": "Malchiner See",
+    "lat": 53.75,
+    "lng": 12.4167,
+    "c": "nature",
+    "r": 79,
+    "tags": [
+      "lake",
+      "mecklenburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-38",
+    "n": "Hennesee",
+    "lat": 51.2,
+    "lng": 8.2333,
+    "c": "nature",
+    "r": 81,
+    "tags": [
+      "lake",
+      "sauerland",
+      "dam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-39",
+    "n": "Sorpesee",
+    "lat": 51.35,
+    "lng": 7.9667,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "sauerland",
+      "dam"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b1",
+    "n": "Teufelsberg Berlin",
+    "lat": 52.4972,
+    "lng": 13.2411,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "viewpoint",
+      "history",
+      "abandoned"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b2",
+    "n": "Pfaueninsel",
+    "lat": 52.4339,
+    "lng": 13.1281,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "unesco",
+      "island",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b3",
+    "n": "Spreeufer Berlin",
+    "lat": 52.5069,
+    "lng": 13.4028,
+    "c": "nature",
+    "r": 78,
+    "tags": [
+      "river",
+      "promenade",
+      "city"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b4",
+    "n": "Spreepark Plänterwald",
+    "lat": 52.4833,
+    "lng": 13.4922,
+    "c": "attraction",
+    "r": 80,
+    "tags": [
+      "abandoned",
+      "park"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b5",
+    "n": "Müggelsee",
+    "lat": 52.4333,
+    "lng": 13.65,
+    "c": "nature",
+    "r": 81,
+    "tags": [
+      "lake",
+      "berlin",
+      "beach"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b6",
+    "n": "Rakotzbrücke",
+    "lat": 51.5361,
+    "lng": 14.6361,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "bridge",
+      "romantic",
+      "photo"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b7",
+    "n": "Fürst-Pückler-Park Bad Muskau",
+    "lat": 51.55,
+    "lng": 14.7167,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "unesco",
+      "garden",
+      "landscape"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-b8",
+    "n": "Uckermärkische Seenlandschaft",
+    "lat": 53.1,
+    "lng": 13.6,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "lake",
+      "nature",
+      "biosphere"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e1",
+    "n": "Teufelsschlucht",
+    "lat": 49.8477,
+    "lng": 6.4383,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "gorge",
+      "hiking",
+      "rocks"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e2",
+    "n": "Moseltal",
+    "lat": 50.05,
+    "lng": 7.2,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "river",
+      "wine",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e3",
+    "n": "Geierlay Hängeseilbrücke",
+    "lat": 50.0989,
+    "lng": 7.3428,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "bridge",
+      "hiking",
+      "adventure"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e4",
+    "n": "Saarschleife",
+    "lat": 49.5019,
+    "lng": 6.5408,
+    "c": "nature",
+    "r": 90,
+    "tags": [
+      "viewpoint",
+      "river",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e5",
+    "n": "Nationalpark Eifel",
+    "lat": 50.584,
+    "lng": 6.4422,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "nature",
+      "hiking",
+      "wildlife"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e6",
+    "n": "Rurtalsperre",
+    "lat": 50.6372,
+    "lng": 6.4419,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "lake",
+      "dam",
+      "water"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e7",
+    "n": "Urfttalsperre",
+    "lat": 50.601,
+    "lng": 6.4189,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "dam",
+      "historic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-e8",
+    "n": "Monschau Fachwerkhäuser",
+    "lat": 50.5544,
+    "lng": 6.2428,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "medieval",
+      "fachwerk",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by1",
+    "n": "Baumwipfelpfad Bayerischer Wald",
+    "lat": 48.8944,
+    "lng": 13.4833,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "treetop",
+      "nature",
+      "family"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by2",
+    "n": "Nationalpark Bayerischer Wald",
+    "lat": 48.95,
+    "lng": 13.4,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "nature",
+      "forest",
+      "wildlife"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by3",
+    "n": "Bayerwald Nationalparkzentrum Lusen",
+    "lat": 48.9333,
+    "lng": 13.4667,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "nature",
+      "visitor_center"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by4",
+    "n": "Kehlsteinhaus",
+    "lat": 47.6119,
+    "lng": 13.0417,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "history",
+      "viewpoint",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by5",
+    "n": "Rossfeld Panoramastraße",
+    "lat": 47.6333,
+    "lng": 13.0667,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "scenic_road",
+      "alps",
+      "viewpoint"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by6",
+    "n": "Ramsau Pfarrkirche St. Sebastian",
+    "lat": 47.6069,
+    "lng": 12.9017,
+    "c": "church",
+    "r": 86,
+    "tags": [
+      "church",
+      "photo",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by7",
+    "n": "Alpsee Schwangau",
+    "lat": 47.5667,
+    "lng": 10.7333,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "lake",
+      "alps",
+      "neuschwanstein"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by8",
+    "n": "Murnauer Moos",
+    "lat": 47.6667,
+    "lng": 11.2,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "nature",
+      "moorland",
+      "birds"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by9",
+    "n": "Ammergauer Alpen",
+    "lat": 47.5,
+    "lng": 10.9,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "alps",
+      "hiking",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by10",
+    "n": "Schloss Hohenschwangau",
+    "lat": 47.5556,
+    "lng": 10.7364,
+    "c": "castle",
+    "r": 88,
+    "tags": [
+      "castle",
+      "ludwig",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by11",
+    "n": "Mittenwald Lüftlmalerei",
+    "lat": 47.4422,
+    "lng": 11.2631,
+    "c": "attraction",
+    "r": 83,
+    "tags": [
+      "painting",
+      "traditional",
+      "village"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by12",
+    "n": "Garmisch-Partenkirchen Altstadt",
+    "lat": 47.5,
+    "lng": 11.0833,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "alps",
+      "town",
+      "skiing"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-by13",
+    "n": "Alpenpanorama Karwendel",
+    "lat": 47.4167,
+    "lng": 11.4167,
+    "c": "nature",
+    "r": 90,
+    "tags": [
+      "alps",
+      "viewpoint",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw1",
+    "n": "Altmühltal",
+    "lat": 48.9,
+    "lng": 11.2,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "river",
+      "nature",
+      "cycling"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw2",
+    "n": "Felsformationen Altmühltal",
+    "lat": 48.9167,
+    "lng": 11.1833,
+    "c": "nature",
+    "r": 83,
+    "tags": [
+      "rocks",
+      "nature",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw3",
+    "n": "Schloss Lichtenstein",
+    "lat": 48.4075,
+    "lng": 9.2597,
+    "c": "castle",
+    "r": 88,
+    "tags": [
+      "castle",
+      "fairytale",
+      "cliff"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw4",
+    "n": "Uracher Wasserfall",
+    "lat": 48.4917,
+    "lng": 9.4,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "waterfall",
+      "hiking",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw5",
+    "n": "Blautopf",
+    "lat": 48.4167,
+    "lng": 9.7833,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "spring",
+      "blue",
+      "karst"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw6",
+    "n": "Schloss Sigmaringen",
+    "lat": 48.0875,
+    "lng": 9.2133,
+    "c": "castle",
+    "r": 87,
+    "tags": [
+      "castle",
+      "danube",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw7",
+    "n": "Donauversickerung",
+    "lat": 47.9333,
+    "lng": 8.75,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "nature",
+      "karst",
+      "unique"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-bw8",
+    "n": "Burg Hohenzollern",
+    "lat": 48.3233,
+    "lng": 8.9675,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "castle",
+      "hilltop",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-ns1",
+    "n": "Weserbergland",
+    "lat": 51.95,
+    "lng": 9.4,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "hills",
+      "river",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-ns2",
+    "n": "Hann. Münden Altstadt",
+    "lat": 51.4167,
+    "lng": 9.65,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "fachwerk",
+      "medieval",
+      "rivers"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-hz1",
+    "n": "Brockenbahn",
+    "lat": 51.7994,
+    "lng": 10.6153,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "train",
+      "steam",
+      "historic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-hz2",
+    "n": "Nationalpark Harz",
+    "lat": 51.8,
+    "lng": 10.6,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "nature",
+      "forest",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-hz3",
+    "n": "Kyffhäuser Denkmal",
+    "lat": 51.4167,
+    "lng": 11.1,
+    "c": "monument",
+    "r": 85,
+    "tags": [
+      "monument",
+      "history",
+      "viewpoint"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-hz4",
+    "n": "Saaletal",
+    "lat": 50.9333,
+    "lng": 11.5833,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "river",
+      "nature",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-hz5",
+    "n": "Naumburger Dom",
+    "lat": 51.1522,
+    "lng": 11.8094,
+    "c": "church",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "church",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn1",
+    "n": "Meißen Altstadt",
+    "lat": 51.1633,
+    "lng": 13.475,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "porcelain",
+      "medieval",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn2",
+    "n": "Albrechtsburg Meißen",
+    "lat": 51.1656,
+    "lng": 13.4706,
+    "c": "castle",
+    "r": 87,
+    "tags": [
+      "castle",
+      "gothic",
+      "porcelain"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn3",
+    "n": "Elbsandsteingebirge",
+    "lat": 50.92,
+    "lng": 14.1,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "rocks",
+      "nature",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn4",
+    "n": "Schrammsteine",
+    "lat": 50.9083,
+    "lng": 14.2083,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "rocks",
+      "climbing",
+      "viewpoint"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn5",
+    "n": "Kuhstall Felsen",
+    "lat": 50.9167,
+    "lng": 14.2333,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "rocks",
+      "cave",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn6",
+    "n": "Festung Königstein",
+    "lat": 50.9192,
+    "lng": 14.0567,
+    "c": "castle",
+    "r": 90,
+    "tags": [
+      "fortress",
+      "hilltop",
+      "history"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sn7",
+    "n": "Görlitz Altstadt",
+    "lat": 51.1528,
+    "lng": 14.9872,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "architecture",
+      "medieval",
+      "film"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv1",
+    "n": "Nationalpark Jasmund",
+    "lat": 54.55,
+    "lng": 13.65,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "nature",
+      "cliffs"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv2",
+    "n": "Kreidefelsen Rügen",
+    "lat": 54.5564,
+    "lng": 13.6583,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "cliffs",
+      "nature",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv3",
+    "n": "Kap Arkona",
+    "lat": 54.6778,
+    "lng": 13.4333,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "lighthouse",
+      "coast",
+      "north"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv4",
+    "n": "Nationalpark Vorpommersche Boddenlandschaft",
+    "lat": 54.4167,
+    "lng": 12.75,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "nature",
+      "coast",
+      "birds"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv5",
+    "n": "Darß Weststrand",
+    "lat": 54.45,
+    "lng": 12.5,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "beach",
+      "nature",
+      "wild"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv6",
+    "n": "Wismar Altstadt",
+    "lat": 53.8917,
+    "lng": 11.465,
+    "c": "unesco",
+    "r": 88,
+    "tags": [
+      "unesco",
+      "hanseatic",
+      "brick"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv7",
+    "n": "Stralsund Altstadt",
+    "lat": 54.3139,
+    "lng": 13.09,
+    "c": "unesco",
+    "r": 89,
+    "tags": [
+      "unesco",
+      "hanseatic",
+      "brick"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv8",
+    "n": "Hanseviertel Rostock",
+    "lat": 54.0887,
+    "lng": 12.14,
+    "c": "attraction",
+    "r": 83,
+    "tags": [
+      "hanseatic",
+      "city",
+      "harbor"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-mv9",
+    "n": "Warnemünder Leuchtturm",
+    "lat": 54.1833,
+    "lng": 12.0833,
+    "c": "attraction",
+    "r": 82,
+    "tags": [
+      "lighthouse",
+      "coast",
+      "beach"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sh1",
+    "n": "Helgoland Lange Anna",
+    "lat": 54.1853,
+    "lng": 7.8833,
+    "c": "nature",
+    "r": 87,
+    "tags": [
+      "island",
+      "rock",
+      "north_sea"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sh2",
+    "n": "Sankt Peter-Ording Pfahlbauten",
+    "lat": 54.3167,
+    "lng": 8.6333,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "beach",
+      "pfahlbauten",
+      "north_sea"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sh3",
+    "n": "Hallig Hooge",
+    "lat": 54.575,
+    "lng": 8.55,
+    "c": "nature",
+    "r": 85,
+    "tags": [
+      "island",
+      "wattenmeer",
+      "unique"
+    ],
+    "curated": true
+  },
+  {
+    "id": "de-sh4",
+    "n": "Sylt Ellenbogen",
+    "lat": 55.05,
+    "lng": 8.4,
+    "c": "nature",
+    "r": 86,
+    "tags": [
+      "beach",
+      "nature",
+      "north"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-b1",
+    "n": "Fernsehturm Berlin",
+    "lat": 52.5208,
+    "lng": 13.4094,
+    "c": "monument",
+    "r": 94,
+    "tags": [
+      "tower",
+      "viewpoint",
+      "berlin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-b2",
+    "n": "Berliner Dom",
+    "lat": 52.5191,
+    "lng": 13.4011,
+    "c": "church",
+    "r": 91,
+    "tags": [
+      "church",
+      "baroque",
+      "berlin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hh1",
+    "n": "St. Michaelis Kirche Hamburg",
+    "lat": 53.5484,
+    "lng": 9.9789,
+    "c": "church",
+    "r": 88,
+    "tags": [
+      "church",
+      "landmark",
+      "hamburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hh2",
+    "n": "Landungsbrücken Hamburg",
+    "lat": 53.5461,
+    "lng": 9.9664,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "harbor",
+      "promenade",
+      "hamburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-m1",
+    "n": "Frauenkirche München",
+    "lat": 48.1386,
+    "lng": 11.5736,
+    "c": "church",
+    "r": 89,
+    "tags": [
+      "church",
+      "gothic",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-m2",
+    "n": "Englischer Garten München",
+    "lat": 48.1642,
+    "lng": 11.6056,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "park",
+      "garden",
+      "munich"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-k1",
+    "n": "Hohenzollernbrücke Köln",
+    "lat": 50.9414,
+    "lng": 6.9653,
+    "c": "monument",
+    "r": 84,
+    "tags": [
+      "bridge",
+      "locks",
+      "cologne"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-k2",
+    "n": "Altstadt Köln",
+    "lat": 50.9375,
+    "lng": 6.9603,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "oldtown",
+      "cologne"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-f1",
+    "n": "Römer Frankfurt",
+    "lat": 50.1106,
+    "lng": 8.6822,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "townhall",
+      "historic",
+      "frankfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-f2",
+    "n": "Frankfurter Skyline",
+    "lat": 50.1109,
+    "lng": 8.6821,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "skyline",
+      "modern",
+      "frankfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-f3",
+    "n": "Paulskirche Frankfurt",
+    "lat": 50.1114,
+    "lng": 8.6797,
+    "c": "monument",
+    "r": 87,
+    "tags": [
+      "church",
+      "democracy",
+      "frankfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-f4",
+    "n": "Main Tower Frankfurt",
+    "lat": 50.1128,
+    "lng": 8.6722,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "tower",
+      "viewpoint",
+      "frankfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-s1",
+    "n": "Schlossplatz Stuttgart",
+    "lat": 48.7784,
+    "lng": 9.1797,
+    "c": "attraction",
+    "r": 83,
+    "tags": [
+      "square",
+      "palace",
+      "stuttgart"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-s2",
+    "n": "Fernsehturm Stuttgart",
+    "lat": 48.7556,
+    "lng": 9.1906,
+    "c": "monument",
+    "r": 86,
+    "tags": [
+      "tower",
+      "viewpoint",
+      "stuttgart"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-s3",
+    "n": "Mercedes-Benz Museum",
+    "lat": 48.7881,
+    "lng": 9.2339,
+    "c": "museum",
+    "r": 89,
+    "tags": [
+      "museum",
+      "cars",
+      "stuttgart"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-d1",
+    "n": "Rheinturm Düsseldorf",
+    "lat": 51.2175,
+    "lng": 6.7625,
+    "c": "monument",
+    "r": 84,
+    "tags": [
+      "tower",
+      "viewpoint",
+      "duesseldorf"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-d2",
+    "n": "Altstadt Düsseldorf",
+    "lat": 51.2269,
+    "lng": 6.7728,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "oldtown",
+      "nightlife",
+      "duesseldorf"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-d3",
+    "n": "MedienHafen Düsseldorf",
+    "lat": 51.2167,
+    "lng": 6.7583,
+    "c": "attraction",
+    "r": 83,
+    "tags": [
+      "architecture",
+      "modern",
+      "duesseldorf"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-l1",
+    "n": "Nikolaikirche Leipzig",
+    "lat": 51.3406,
+    "lng": 12.3792,
+    "c": "church",
+    "r": 87,
+    "tags": [
+      "church",
+      "revolution",
+      "leipzig"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-l2",
+    "n": "Marktplatz Leipzig",
+    "lat": 51.3403,
+    "lng": 12.3747,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "square",
+      "oldtown",
+      "leipzig"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-n1",
+    "n": "Kaiserburg Nürnberg",
+    "lat": 49.4578,
+    "lng": 11.0756,
+    "c": "castle",
+    "r": 90,
+    "tags": [
+      "castle",
+      "medieval",
+      "nuremberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-n2",
+    "n": "Altstadt Nürnberg",
+    "lat": 49.4539,
+    "lng": 11.0775,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "oldtown",
+      "medieval",
+      "nuremberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-n3",
+    "n": "Hauptmarkt Nürnberg",
+    "lat": 49.4536,
+    "lng": 11.0778,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "market",
+      "christmas",
+      "nuremberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-br1",
+    "n": "Bremer Stadtmusikanten",
+    "lat": 53.0758,
+    "lng": 8.8072,
+    "c": "monument",
+    "r": 86,
+    "tags": [
+      "statue",
+      "fairytale",
+      "bremen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-br2",
+    "n": "Rathaus Bremen",
+    "lat": 53.0758,
+    "lng": 8.8072,
+    "c": "monument",
+    "r": 89,
+    "tags": [
+      "unesco",
+      "townhall",
+      "bremen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-br3",
+    "n": "Marktplatz Bremen",
+    "lat": 53.0759,
+    "lng": 8.8074,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "square",
+      "historic",
+      "bremen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-h1",
+    "n": "Neues Rathaus Hannover",
+    "lat": 52.3667,
+    "lng": 9.7386,
+    "c": "monument",
+    "r": 86,
+    "tags": [
+      "townhall",
+      "viewpoint",
+      "hannover"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-h2",
+    "n": "Herrenhäuser Gärten",
+    "lat": 52.3919,
+    "lng": 9.6989,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "garden",
+      "baroque",
+      "hannover"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-h3",
+    "n": "Maschsee Hannover",
+    "lat": 52.3536,
+    "lng": 9.745,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "lake",
+      "recreation",
+      "hannover"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-bn1",
+    "n": "Beethoven-Haus Bonn",
+    "lat": 50.7328,
+    "lng": 7.0989,
+    "c": "museum",
+    "r": 87,
+    "tags": [
+      "museum",
+      "beethoven",
+      "bonn"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-bn2",
+    "n": "Altes Rathaus Bonn",
+    "lat": 50.7347,
+    "lng": 7.0997,
+    "c": "monument",
+    "r": 82,
+    "tags": [
+      "townhall",
+      "rococo",
+      "bonn"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-bn3",
+    "n": "Rheinufer Bonn",
+    "lat": 50.7347,
+    "lng": 7.1081,
+    "c": "nature",
+    "r": 80,
+    "tags": [
+      "river",
+      "promenade",
+      "bonn"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ac1",
+    "n": "Rathaus Aachen",
+    "lat": 50.7762,
+    "lng": 6.0836,
+    "c": "monument",
+    "r": 85,
+    "tags": [
+      "townhall",
+      "gothic",
+      "aachen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hd1",
+    "n": "Alte Brücke Heidelberg",
+    "lat": 49.4133,
+    "lng": 8.7106,
+    "c": "monument",
+    "r": 87,
+    "tags": [
+      "bridge",
+      "historic",
+      "heidelberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hd2",
+    "n": "Altstadt Heidelberg",
+    "lat": 49.4108,
+    "lng": 8.7058,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "oldtown",
+      "romantic",
+      "heidelberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ka1",
+    "n": "Schloss Karlsruhe",
+    "lat": 49.0139,
+    "lng": 8.4044,
+    "c": "castle",
+    "r": 85,
+    "tags": [
+      "castle",
+      "baroque",
+      "karlsruhe"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ka2",
+    "n": "ZKM Karlsruhe",
+    "lat": 48.9942,
+    "lng": 8.3831,
+    "c": "museum",
+    "r": 84,
+    "tags": [
+      "museum",
+      "art",
+      "media",
+      "karlsruhe"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ma1",
+    "n": "Mannheimer Wasserturm",
+    "lat": 49.4836,
+    "lng": 8.4772,
+    "c": "monument",
+    "r": 83,
+    "tags": [
+      "tower",
+      "landmark",
+      "mannheim"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ma2",
+    "n": "Barockschloss Mannheim",
+    "lat": 49.4833,
+    "lng": 8.4628,
+    "c": "castle",
+    "r": 85,
+    "tags": [
+      "castle",
+      "baroque",
+      "mannheim"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr1",
+    "n": "Freiburger Münster",
+    "lat": 47.9958,
+    "lng": 7.8522,
+    "c": "church",
+    "r": 89,
+    "tags": [
+      "church",
+      "gothic",
+      "freiburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr2",
+    "n": "Altstadt Freiburg",
+    "lat": 47.995,
+    "lng": 7.8494,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "oldtown",
+      "baechle",
+      "freiburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr3",
+    "n": "Schlossberg Freiburg",
+    "lat": 47.9972,
+    "lng": 7.8583,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "hill",
+      "viewpoint",
+      "freiburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ul1",
+    "n": "Ulmer Münster",
+    "lat": 48.3984,
+    "lng": 9.9916,
+    "c": "church",
+    "r": 92,
+    "tags": [
+      "church",
+      "tallest",
+      "ulm"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ul2",
+    "n": "Fischerviertel Ulm",
+    "lat": 48.3956,
+    "lng": 9.9906,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "oldtown",
+      "fachwerk",
+      "ulm"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-au1",
+    "n": "Fuggerei Augsburg",
+    "lat": 48.3686,
+    "lng": 10.9033,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "historic",
+      "social",
+      "augsburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-au2",
+    "n": "Augsburger Dom",
+    "lat": 48.3719,
+    "lng": 10.8953,
+    "c": "church",
+    "r": 85,
+    "tags": [
+      "church",
+      "romanesque",
+      "augsburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-au3",
+    "n": "Rathaus Augsburg",
+    "lat": 48.3689,
+    "lng": 10.8981,
+    "c": "monument",
+    "r": 86,
+    "tags": [
+      "townhall",
+      "renaissance",
+      "augsburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-r1",
+    "n": "Steinerne Brücke Regensburg",
+    "lat": 49.0222,
+    "lng": 12.0972,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "bridge",
+      "medieval",
+      "regensburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-r2",
+    "n": "Dom St. Peter Regensburg",
+    "lat": 49.0194,
+    "lng": 12.0997,
+    "c": "church",
+    "r": 87,
+    "tags": [
+      "church",
+      "gothic",
+      "regensburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-w1",
+    "n": "Festung Marienberg Würzburg",
+    "lat": 49.7878,
+    "lng": 9.9219,
+    "c": "castle",
+    "r": 87,
+    "tags": [
+      "fortress",
+      "viewpoint",
+      "wuerzburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ro1",
+    "n": "Plönlein Rothenburg",
+    "lat": 49.3758,
+    "lng": 10.1792,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "fachwerk",
+      "photo",
+      "rothenburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-tr1",
+    "n": "Dom St. Peter Trier",
+    "lat": 49.7561,
+    "lng": 6.6431,
+    "c": "church",
+    "r": 89,
+    "tags": [
+      "unesco",
+      "church",
+      "trier"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-mz1",
+    "n": "Mainzer Dom",
+    "lat": 50,
+    "lng": 8.2744,
+    "c": "church",
+    "r": 88,
+    "tags": [
+      "church",
+      "romanesque",
+      "mainz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-mz2",
+    "n": "Altstadt Mainz",
+    "lat": 50.0008,
+    "lng": 8.2722,
+    "c": "attraction",
+    "r": 83,
+    "tags": [
+      "oldtown",
+      "wine",
+      "mainz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-wi1",
+    "n": "Kurhaus Wiesbaden",
+    "lat": 50.0847,
+    "lng": 8.245,
+    "c": "monument",
+    "r": 85,
+    "tags": [
+      "spa",
+      "casino",
+      "wiesbaden"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-wi2",
+    "n": "Wilhelmstraße Wiesbaden",
+    "lat": 50.0814,
+    "lng": 8.2453,
+    "c": "attraction",
+    "r": 81,
+    "tags": [
+      "boulevard",
+      "shopping",
+      "wiesbaden"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ko1",
+    "n": "Deutsches Eck Koblenz",
+    "lat": 50.3647,
+    "lng": 7.6058,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "monument",
+      "rivers",
+      "koblenz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ko2",
+    "n": "Festung Ehrenbreitstein",
+    "lat": 50.3639,
+    "lng": 7.6167,
+    "c": "castle",
+    "r": 87,
+    "tags": [
+      "fortress",
+      "viewpoint",
+      "koblenz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-sb1",
+    "n": "Ludwigskirche Saarbrücken",
+    "lat": 49.2306,
+    "lng": 6.9978,
+    "c": "church",
+    "r": 84,
+    "tags": [
+      "church",
+      "baroque",
+      "saarbruecken"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-sb2",
+    "n": "Deutsch-Französischer Garten",
+    "lat": 49.2167,
+    "lng": 7.0333,
+    "c": "nature",
+    "r": 82,
+    "tags": [
+      "park",
+      "garden",
+      "saarbruecken"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ef1",
+    "n": "Dom St. Marien Erfurt",
+    "lat": 50.9758,
+    "lng": 11.0231,
+    "c": "church",
+    "r": 88,
+    "tags": [
+      "church",
+      "gothic",
+      "erfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ef2",
+    "n": "Krämerbrücke Erfurt",
+    "lat": 50.9783,
+    "lng": 11.03,
+    "c": "monument",
+    "r": 89,
+    "tags": [
+      "bridge",
+      "medieval",
+      "erfurt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-we1",
+    "n": "Goethe-Nationalmuseum Weimar",
+    "lat": 50.9792,
+    "lng": 11.3289,
+    "c": "museum",
+    "r": 88,
+    "tags": [
+      "museum",
+      "goethe",
+      "weimar"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-we2",
+    "n": "Schloss Weimar",
+    "lat": 50.98,
+    "lng": 11.3333,
+    "c": "castle",
+    "r": 85,
+    "tags": [
+      "castle",
+      "unesco",
+      "weimar"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-md1",
+    "n": "Magdeburger Dom",
+    "lat": 52.1244,
+    "lng": 11.6361,
+    "c": "church",
+    "r": 88,
+    "tags": [
+      "church",
+      "gothic",
+      "magdeburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-md2",
+    "n": "Grüne Zitadelle Magdeburg",
+    "lat": 52.1283,
+    "lng": 11.635,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "hundertwasser",
+      "architecture",
+      "magdeburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ha1",
+    "n": "Marktkirche Halle",
+    "lat": 51.4828,
+    "lng": 11.9689,
+    "c": "church",
+    "r": 84,
+    "tags": [
+      "church",
+      "towers",
+      "halle"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ha2",
+    "n": "Burg Giebichenstein",
+    "lat": 51.5,
+    "lng": 11.95,
+    "c": "castle",
+    "r": 82,
+    "tags": [
+      "castle",
+      "ruin",
+      "halle"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-rs1",
+    "n": "Altstadt Rostock",
+    "lat": 54.0887,
+    "lng": 12.14,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "oldtown",
+      "hanseatic",
+      "rostock"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-st1",
+    "n": "Ozeaneum Stralsund",
+    "lat": 54.3147,
+    "lng": 13.0919,
+    "c": "museum",
+    "r": 88,
+    "tags": [
+      "museum",
+      "aquarium",
+      "stralsund"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-lu1",
+    "n": "Holstentor Lübeck",
+    "lat": 53.8664,
+    "lng": 10.6797,
+    "c": "monument",
+    "r": 91,
+    "tags": [
+      "gate",
+      "unesco",
+      "luebeck"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-lu2",
+    "n": "Altstadt Lübeck",
+    "lat": 53.8672,
+    "lng": 10.6864,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "unesco",
+      "hanseatic",
+      "luebeck"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-wm1",
+    "n": "Marktplatz Wismar",
+    "lat": 53.8917,
+    "lng": 11.465,
+    "c": "attraction",
+    "r": 85,
+    "tags": [
+      "square",
+      "hanseatic",
+      "wismar"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-sn1",
+    "n": "Schlossgarten Schwerin",
+    "lat": 53.6239,
+    "lng": 11.4186,
+    "c": "nature",
+    "r": 84,
+    "tags": [
+      "garden",
+      "palace",
+      "schwerin"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ch1",
+    "n": "Karl-Marx-Monument Chemnitz",
+    "lat": 50.8322,
+    "lng": 12.9197,
+    "c": "monument",
+    "r": 83,
+    "tags": [
+      "monument",
+      "socialist",
+      "chemnitz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ch2",
+    "n": "Opernhaus Chemnitz",
+    "lat": 50.8361,
+    "lng": 12.9278,
+    "c": "attraction",
+    "r": 81,
+    "tags": [
+      "opera",
+      "architecture",
+      "chemnitz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-go1",
+    "n": "Untermarkt Görlitz",
+    "lat": 51.1528,
+    "lng": 14.9869,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "square",
+      "renaissance",
+      "goerlitz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-pa1",
+    "n": "Dom St. Stephan Passau",
+    "lat": 48.575,
+    "lng": 13.4667,
+    "c": "church",
+    "r": 89,
+    "tags": [
+      "church",
+      "organ",
+      "passau"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-pa2",
+    "n": "Altstadt Passau",
+    "lat": 48.5744,
+    "lng": 13.4647,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "oldtown",
+      "rivers",
+      "passau"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-la1",
+    "n": "Burg Trausnitz Landshut",
+    "lat": 48.5375,
+    "lng": 12.1458,
+    "c": "castle",
+    "r": 86,
+    "tags": [
+      "castle",
+      "medieval",
+      "landshut"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-la2",
+    "n": "Altstadt Landshut",
+    "lat": 48.5361,
+    "lng": 12.1522,
+    "c": "attraction",
+    "r": 84,
+    "tags": [
+      "oldtown",
+      "gothic",
+      "landshut"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ba1",
+    "n": "Bamberger Dom",
+    "lat": 49.8919,
+    "lng": 10.8831,
+    "c": "church",
+    "r": 89,
+    "tags": [
+      "church",
+      "romanesque",
+      "bamberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-ba2",
+    "n": "Altes Rathaus Bamberg",
+    "lat": 49.8917,
+    "lng": 10.8864,
+    "c": "monument",
+    "r": 90,
+    "tags": [
+      "townhall",
+      "bridge",
+      "bamberg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-by1",
+    "n": "Markgräfliches Opernhaus Bayreuth",
+    "lat": 49.9439,
+    "lng": 11.5775,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "unesco",
+      "opera",
+      "bayreuth"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-by2",
+    "n": "Festspielhaus Bayreuth",
+    "lat": 49.9608,
+    "lng": 11.5781,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "wagner",
+      "opera",
+      "bayreuth"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-1",
+    "n": "Eiffel Tower",
+    "lat": 48.8584,
+    "lng": 2.2945,
+    "c": "monument",
+    "r": 99,
+    "tags": [
+      "iconic",
+      "paris"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-2",
+    "n": "Mont-Saint-Michel",
+    "lat": 48.6361,
+    "lng": -1.5114,
+    "c": "unesco",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "abbey"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-3",
+    "n": "Palace of Versailles",
+    "lat": 48.8049,
+    "lng": 2.1204,
+    "c": "castle",
+    "r": 99,
+    "tags": [
+      "unesco",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-4",
+    "n": "Louvre Museum",
+    "lat": 48.8606,
+    "lng": 2.3376,
+    "c": "museum",
+    "r": 99,
+    "tags": [
+      "museum",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-5",
+    "n": "Château de Chambord",
+    "lat": 47.6161,
+    "lng": 1.5172,
+    "c": "castle",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "renaissance"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-6",
+    "n": "Straßburger Münster",
+    "lat": 48.5818,
+    "lng": 7.751,
+    "c": "church",
+    "r": 94,
+    "tags": [
+      "gothic",
+      "cathedral"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-7",
+    "n": "Reims Cathedral",
+    "lat": 49.2538,
+    "lng": 4.0336,
+    "c": "church",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "gothic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-8",
+    "n": "Château de Fontainebleau",
+    "lat": 48.401,
+    "lng": 2.7006,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-9",
+    "n": "Lyon Old Town",
+    "lat": 45.764,
+    "lng": 4.8357,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "renaissance"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-10",
+    "n": "Côte d'Azur (Nice)",
+    "lat": 43.7102,
+    "lng": 7.262,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "coast",
+      "riviera"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-1",
+    "n": "Colosseum",
+    "lat": 41.8902,
+    "lng": 12.4922,
+    "c": "monument",
+    "r": 99,
+    "tags": [
+      "unesco",
+      "roman"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-2",
+    "n": "Venice",
+    "lat": 45.4408,
+    "lng": 12.3155,
+    "c": "unesco",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "canal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-3",
+    "n": "Leaning Tower of Pisa",
+    "lat": 43.723,
+    "lng": 10.3966,
+    "c": "monument",
+    "r": 97,
+    "tags": [
+      "unesco",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-4",
+    "n": "Vatican Museums",
+    "lat": 41.9065,
+    "lng": 12.4536,
+    "c": "museum",
+    "r": 98,
+    "tags": [
+      "museum",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-5",
+    "n": "Dolomites",
+    "lat": 46.4102,
+    "lng": 11.844,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-6",
+    "n": "Florence (Firenze)",
+    "lat": 43.7696,
+    "lng": 11.2558,
+    "c": "unesco",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "renaissance"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-7",
+    "n": "Lake Como",
+    "lat": 45.987,
+    "lng": 9.257,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "lake",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-8",
+    "n": "Pompeii",
+    "lat": 40.7508,
+    "lng": 14.4867,
+    "c": "monument",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "roman"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-9",
+    "n": "Cinque Terre",
+    "lat": 44.1461,
+    "lng": 9.6439,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "coast"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-10",
+    "n": "Milan Cathedral",
+    "lat": 45.4641,
+    "lng": 9.1919,
+    "c": "church",
+    "r": 95,
+    "tags": [
+      "gothic",
+      "cathedral"
+    ],
+    "curated": true
+  },
+  {
+    "id": "es-1",
+    "n": "Alhambra",
+    "lat": 37.176,
+    "lng": -3.5881,
+    "c": "castle",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "moorish"
+    ],
+    "curated": true
+  },
+  {
+    "id": "es-2",
+    "n": "Sagrada Familia",
+    "lat": 41.4036,
+    "lng": 2.1744,
+    "c": "church",
+    "r": 98,
+    "tags": [
+      "unesco",
+      "gaudi"
+    ],
+    "curated": true
+  },
+  {
+    "id": "es-3",
+    "n": "Park Güell",
+    "lat": 41.4145,
+    "lng": 2.1527,
+    "c": "unesco",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "gaudi"
+    ],
+    "curated": true
+  },
+  {
+    "id": "es-4",
+    "n": "Royal Palace of Madrid",
+    "lat": 40.418,
+    "lng": -3.7144,
+    "c": "castle",
+    "r": 94,
+    "tags": [
+      "baroque",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-1",
+    "n": "Schönbrunn Palace",
+    "lat": 48.1845,
+    "lng": 16.3122,
+    "c": "castle",
+    "r": 97,
+    "tags": [
+      "unesco",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-2",
+    "n": "Salzburg Old Town",
+    "lat": 47.8,
+    "lng": 13.045,
+    "c": "unesco",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "mozart"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-3",
+    "n": "Hallstatt",
+    "lat": 47.5622,
+    "lng": 13.6493,
+    "c": "unesco",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "lake"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-4",
+    "n": "Vienna State Opera",
+    "lat": 48.2035,
+    "lng": 16.369,
+    "c": "attraction",
+    "r": 93,
+    "tags": [
+      "opera",
+      "vienna"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-5",
+    "n": "Melk Abbey",
+    "lat": 48.2286,
+    "lng": 15.3321,
+    "c": "church",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-6",
+    "n": "Innsbruck Old Town",
+    "lat": 47.2682,
+    "lng": 11.3933,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "alps",
+      "tyrol"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-1",
+    "n": "Matterhorn",
+    "lat": 45.9766,
+    "lng": 7.6586,
+    "c": "nature",
+    "r": 97,
+    "tags": [
+      "mountain",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-2",
+    "n": "Rhine Falls",
+    "lat": 47.6778,
+    "lng": 8.6156,
+    "c": "nature",
+    "r": 89,
+    "tags": [
+      "waterfall"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-3",
+    "n": "Lucerne Old Town",
+    "lat": 47.0502,
+    "lng": 8.3093,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "medieval",
+      "lake"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-4",
+    "n": "Jungfraujoch",
+    "lat": 46.5472,
+    "lng": 7.9847,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "alps",
+      "glacier"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-5",
+    "n": "Bern Old Town",
+    "lat": 46.948,
+    "lng": 7.4474,
+    "c": "unesco",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-1",
+    "n": "Anne Frank House",
+    "lat": 52.3752,
+    "lng": 4.884,
+    "c": "museum",
+    "r": 94,
+    "tags": [
+      "museum",
+      "wwii"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-2",
+    "n": "Kinderdijk",
+    "lat": 51.8839,
+    "lng": 4.6381,
+    "c": "unesco",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "windmills"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-3",
+    "n": "Van Gogh Museum",
+    "lat": 52.3584,
+    "lng": 4.8811,
+    "c": "museum",
+    "r": 95,
+    "tags": [
+      "museum",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-4",
+    "n": "Keukenhof",
+    "lat": 52.2697,
+    "lng": 4.5462,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "flowers",
+      "garden"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-5",
+    "n": "Rijksmuseum",
+    "lat": 52.36,
+    "lng": 4.8852,
+    "c": "museum",
+    "r": 96,
+    "tags": [
+      "museum",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-1",
+    "n": "Grand Place Brussels",
+    "lat": 50.8467,
+    "lng": 4.3525,
+    "c": "unesco",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "square"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-2",
+    "n": "Bruges Old Town",
+    "lat": 51.2093,
+    "lng": 3.2247,
+    "c": "unesco",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-3",
+    "n": "Ghent Old Town",
+    "lat": 51.0543,
+    "lng": 3.7174,
+    "c": "unesco",
+    "r": 92,
+    "tags": [
+      "medieval",
+      "canal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-1",
+    "n": "Prague Castle",
+    "lat": 50.0911,
+    "lng": 14.4003,
+    "c": "castle",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "castle"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-2",
+    "n": "Český Krumlov",
+    "lat": 48.8127,
+    "lng": 14.3175,
+    "c": "unesco",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-3",
+    "n": "Charles Bridge",
+    "lat": 50.0865,
+    "lng": 14.4114,
+    "c": "monument",
+    "r": 94,
+    "tags": [
+      "prague",
+      "gothic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-4",
+    "n": "Karlovy Vary",
+    "lat": 50.2298,
+    "lng": 12.8713,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "spa",
+      "architecture"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-1",
+    "n": "Wieliczka Salt Mine",
+    "lat": 49.9833,
+    "lng": 20.0556,
+    "c": "unesco",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "underground"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-2",
+    "n": "Kraków Old Town",
+    "lat": 50.0617,
+    "lng": 19.9375,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-3",
+    "n": "Wawel Castle",
+    "lat": 50.054,
+    "lng": 19.9352,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-4",
+    "n": "Warsaw Old Town",
+    "lat": 52.2495,
+    "lng": 21.0118,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "rebuilt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-5",
+    "n": "Gdańsk Old Town",
+    "lat": 54.352,
+    "lng": 18.6466,
+    "c": "unesco",
+    "r": 90,
+    "tags": [
+      "hanseatic",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hu-1",
+    "n": "Buda Castle",
+    "lat": 47.4961,
+    "lng": 19.0399,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "budapest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hu-2",
+    "n": "Hungarian Parliament",
+    "lat": 47.5074,
+    "lng": 19.0456,
+    "c": "monument",
+    "r": 95,
+    "tags": [
+      "gothic",
+      "danube"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hu-3",
+    "n": "Fisherman's Bastion",
+    "lat": 47.5021,
+    "lng": 19.0346,
+    "c": "monument",
+    "r": 91,
+    "tags": [
+      "budapest",
+      "viewpoint"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gb-1",
+    "n": "Stonehenge",
+    "lat": 51.1789,
+    "lng": -1.8262,
+    "c": "monument",
+    "r": 97,
+    "tags": [
+      "unesco",
+      "prehistoric"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gb-2",
+    "n": "Tower of London",
+    "lat": 51.5081,
+    "lng": -0.0759,
+    "c": "castle",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gb-3",
+    "n": "Big Ben",
+    "lat": 51.5007,
+    "lng": -0.1246,
+    "c": "monument",
+    "r": 95,
+    "tags": [
+      "iconic",
+      "london"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gb-4",
+    "n": "Edinburgh Castle",
+    "lat": 55.9486,
+    "lng": -3.1999,
+    "c": "castle",
+    "r": 95,
+    "tags": [
+      "scottish",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-1",
+    "n": "Kronborg Castle",
+    "lat": 56.0391,
+    "lng": 12.6218,
+    "c": "castle",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "hamlet"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-2",
+    "n": "Tivoli Gardens",
+    "lat": 55.6737,
+    "lng": 12.5681,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "amusement",
+      "copenhagen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-3",
+    "n": "Nyhavn",
+    "lat": 55.68,
+    "lng": 12.5897,
+    "c": "attraction",
+    "r": 89,
+    "tags": [
+      "iconic",
+      "copenhagen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "se-1",
+    "n": "Stockholm Old Town",
+    "lat": 59.3251,
+    "lng": 18.0711,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "medieval",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "se-2",
+    "n": "Vasa Museum",
+    "lat": 59.328,
+    "lng": 18.0914,
+    "c": "museum",
+    "r": 94,
+    "tags": [
+      "ship",
+      "museum"
+    ],
+    "curated": true
+  },
+  {
+    "id": "no-1",
+    "n": "Geirangerfjord",
+    "lat": 62.1008,
+    "lng": 7.0942,
+    "c": "nature",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "fjord"
+    ],
+    "curated": true
+  },
+  {
+    "id": "no-2",
+    "n": "Bergen Bryggen",
+    "lat": 60.3972,
+    "lng": 5.324,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "hanseatic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hr-1",
+    "n": "Plitvice Lakes",
+    "lat": 44.8654,
+    "lng": 15.582,
+    "c": "nature",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "waterfalls"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hr-2",
+    "n": "Dubrovnik Old Town",
+    "lat": 42.6507,
+    "lng": 18.0944,
+    "c": "unesco",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hr-3",
+    "n": "Split (Diocletian's Palace)",
+    "lat": 43.5081,
+    "lng": 16.4402,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "roman"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gr-1",
+    "n": "Acropolis of Athens",
+    "lat": 37.9715,
+    "lng": 23.7267,
+    "c": "monument",
+    "r": 99,
+    "tags": [
+      "unesco",
+      "parthenon"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gr-2",
+    "n": "Santorini",
+    "lat": 36.3932,
+    "lng": 25.4615,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "island",
+      "volcano"
+    ],
+    "curated": true
+  },
+  {
+    "id": "gr-3",
+    "n": "Meteora",
+    "lat": 39.7217,
+    "lng": 21.6306,
+    "c": "unesco",
+    "r": 96,
+    "tags": [
+      "unesco",
+      "monasteries"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pt-1",
+    "n": "Tower of Belém",
+    "lat": 38.6916,
+    "lng": -9.216,
+    "c": "monument",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "lisbon"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pt-2",
+    "n": "Sintra",
+    "lat": 38.7872,
+    "lng": -9.3906,
+    "c": "unesco",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "palaces"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pt-3",
+    "n": "Porto Old Town",
+    "lat": 41.1496,
+    "lng": -8.611,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "douro"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-1",
+    "n": "Lake Bled",
+    "lat": 46.3632,
+    "lng": 14.0943,
+    "c": "nature",
+    "r": 94,
+    "tags": [
+      "lake",
+      "island"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-2",
+    "n": "Postojna Cave",
+    "lat": 45.7822,
+    "lng": 14.2044,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "cave",
+      "underground"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-3",
+    "n": "Ljubljana Old Town",
+    "lat": 46.0511,
+    "lng": 14.5051,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "castle",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "sk-1",
+    "n": "Bratislava Castle",
+    "lat": 48.1422,
+    "lng": 17.1,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "danube"
+    ],
+    "curated": true
+  },
+  {
+    "id": "sk-2",
+    "n": "High Tatras",
+    "lat": 49.1795,
+    "lng": 20.1358,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "mountains",
+      "national park"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lu-1",
+    "n": "Altstadt Luxemburg",
+    "lat": 49.6117,
+    "lng": 6.1319,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "fortress"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lu-2",
+    "n": "Kasematten Luxemburg",
+    "lat": 49.6114,
+    "lng": 6.1347,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "fortress",
+      "underground"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lu-3",
+    "n": "Schloss Vianden",
+    "lat": 49.935,
+    "lng": 6.2092,
+    "c": "castle",
+    "r": 90,
+    "tags": [
+      "castle",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lu-4",
+    "n": "Altstadt Echternach",
+    "lat": 49.8117,
+    "lng": 6.4217,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "medieval",
+      "abbey"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-7",
+    "n": "Stephansdom Wien",
+    "lat": 48.2085,
+    "lng": 16.3731,
+    "c": "church",
+    "r": 96,
+    "tags": [
+      "gothic",
+      "cathedral",
+      "vienna"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-8",
+    "n": "Hofburg Wien",
+    "lat": 48.2069,
+    "lng": 16.3656,
+    "c": "castle",
+    "r": 95,
+    "tags": [
+      "imperial",
+      "palace",
+      "vienna"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-9",
+    "n": "Schloss Belvedere",
+    "lat": 48.1914,
+    "lng": 16.3808,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "baroque",
+      "museum",
+      "vienna"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-10",
+    "n": "Festung Hohensalzburg",
+    "lat": 47.795,
+    "lng": 13.0475,
+    "c": "castle",
+    "r": 94,
+    "tags": [
+      "fortress",
+      "medieval",
+      "salzburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-11",
+    "n": "Krimmler Wasserfälle",
+    "lat": 47.2097,
+    "lng": 12.1722,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "waterfall",
+      "alps",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-12",
+    "n": "Goldenes Dachl Innsbruck",
+    "lat": 47.2683,
+    "lng": 11.3933,
+    "c": "monument",
+    "r": 89,
+    "tags": [
+      "gothic",
+      "landmark",
+      "tyrol"
+    ],
+    "curated": true
+  },
+  {
+    "id": "at-13",
+    "n": "Großglockner Hochalpenstraße",
+    "lat": 47.0742,
+    "lng": 12.8428,
+    "c": "nature",
+    "r": 95,
+    "tags": [
+      "scenic",
+      "alps",
+      "driving"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-6",
+    "n": "Kapellbrücke Luzern",
+    "lat": 47.0516,
+    "lng": 8.3074,
+    "c": "monument",
+    "r": 92,
+    "tags": [
+      "bridge",
+      "medieval",
+      "landmark"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-7",
+    "n": "Pilatus",
+    "lat": 46.9789,
+    "lng": 8.2547,
+    "c": "nature",
+    "r": 91,
+    "tags": [
+      "mountain",
+      "cable car",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-8",
+    "n": "Altstadt Bern",
+    "lat": 46.948,
+    "lng": 7.4474,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "medieval",
+      "capital"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-9",
+    "n": "Zytglogge Bern",
+    "lat": 46.9479,
+    "lng": 7.4476,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "clock",
+      "medieval",
+      "landmark"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-10",
+    "n": "Schloss Chillon",
+    "lat": 46.4142,
+    "lng": 6.9275,
+    "c": "castle",
+    "r": 93,
+    "tags": [
+      "castle",
+      "lake",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-11",
+    "n": "Altstadt Zürich",
+    "lat": 47.3717,
+    "lng": 8.5422,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "historic",
+      "shopping",
+      "lake"
+    ],
+    "curated": true
+  },
+  {
+    "id": "ch-12",
+    "n": "Vierwaldstättersee",
+    "lat": 47.0167,
+    "lng": 8.4333,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "lake",
+      "scenic",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-11",
+    "n": "Petite France Straßburg",
+    "lat": 48.58,
+    "lng": 7.74,
+    "c": "attraction",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "canal",
+      "historic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-12",
+    "n": "Altstadt Colmar",
+    "lat": 48.0794,
+    "lng": 7.3558,
+    "c": "attraction",
+    "r": 92,
+    "tags": [
+      "medieval",
+      "alsace",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-13",
+    "n": "Unterlinden Museum Colmar",
+    "lat": 48.0808,
+    "lng": 7.3547,
+    "c": "museum",
+    "r": 90,
+    "tags": [
+      "museum",
+      "art",
+      "isenheim"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-14",
+    "n": "Altstadt Annecy",
+    "lat": 45.8992,
+    "lng": 6.1294,
+    "c": "attraction",
+    "r": 91,
+    "tags": [
+      "canal",
+      "alps",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-15",
+    "n": "Lac d'Annecy",
+    "lat": 45.8614,
+    "lng": 6.1694,
+    "c": "nature",
+    "r": 92,
+    "tags": [
+      "lake",
+      "alps",
+      "swimming"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-16",
+    "n": "Place Stanislas Nancy",
+    "lat": 48.6936,
+    "lng": 6.1833,
+    "c": "unesco",
+    "r": 93,
+    "tags": [
+      "unesco",
+      "baroque",
+      "square"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-17",
+    "n": "Kathedrale Metz",
+    "lat": 49.12,
+    "lng": 6.1756,
+    "c": "church",
+    "r": 91,
+    "tags": [
+      "gothic",
+      "stained glass",
+      "cathedral"
+    ],
+    "curated": true
+  },
+  {
+    "id": "fr-18",
+    "n": "Basilika Notre-Dame de Fourvière",
+    "lat": 45.7625,
+    "lng": 4.8228,
+    "c": "church",
+    "r": 90,
+    "tags": [
+      "basilica",
+      "viewpoint",
+      "lyon"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-11",
+    "n": "Gardasee",
+    "lat": 45.65,
+    "lng": 10.6833,
+    "c": "nature",
+    "r": 94,
+    "tags": [
+      "lake",
+      "alps",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-12",
+    "n": "Sirmione Altstadt",
+    "lat": 45.4958,
+    "lng": 10.6067,
+    "c": "attraction",
+    "r": 91,
+    "tags": [
+      "peninsula",
+      "thermal",
+      "garda"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-13",
+    "n": "Castello Scaligero Sirmione",
+    "lat": 45.4961,
+    "lng": 10.6069,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "medieval",
+      "garda"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-14",
+    "n": "Arena di Verona",
+    "lat": 45.439,
+    "lng": 10.9942,
+    "c": "monument",
+    "r": 95,
+    "tags": [
+      "roman",
+      "amphitheater",
+      "opera"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-15",
+    "n": "Galleria Vittorio Emanuele II",
+    "lat": 45.4658,
+    "lng": 9.19,
+    "c": "attraction",
+    "r": 91,
+    "tags": [
+      "shopping",
+      "architecture",
+      "milan"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-16",
+    "n": "Bergamo Altstadt",
+    "lat": 45.705,
+    "lng": 9.6625,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "medieval",
+      "hilltop",
+      "walls"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-17",
+    "n": "Pragser Wildsee",
+    "lat": 46.6944,
+    "lng": 12.0856,
+    "c": "nature",
+    "r": 93,
+    "tags": [
+      "lake",
+      "dolomites",
+      "instagram"
+    ],
+    "curated": true
+  },
+  {
+    "id": "it-18",
+    "n": "Südtiroler Weinstraße",
+    "lat": 46.3333,
+    "lng": 11.3167,
+    "c": "nature",
+    "r": 88,
+    "tags": [
+      "wine",
+      "scenic",
+      "driving"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-5",
+    "n": "Altstadt Prag",
+    "lat": 50.0875,
+    "lng": 14.4214,
+    "c": "unesco",
+    "r": 95,
+    "tags": [
+      "unesco",
+      "medieval",
+      "square"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-6",
+    "n": "Astronomische Uhr Prag",
+    "lat": 50.087,
+    "lng": 14.4208,
+    "c": "monument",
+    "r": 93,
+    "tags": [
+      "clock",
+      "gothic",
+      "landmark"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-7",
+    "n": "Schloss Český Krumlov",
+    "lat": 48.8128,
+    "lng": 14.3153,
+    "c": "castle",
+    "r": 92,
+    "tags": [
+      "unesco",
+      "baroque",
+      "castle"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-8",
+    "n": "Karlsbad Kolonnaden",
+    "lat": 50.2297,
+    "lng": 12.8714,
+    "c": "attraction",
+    "r": 89,
+    "tags": [
+      "spa",
+      "architecture",
+      "thermal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "cz-9",
+    "n": "Pilsner Urquell Brauerei",
+    "lat": 49.7472,
+    "lng": 13.3878,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "brewery",
+      "beer",
+      "tour"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-6",
+    "n": "Marktplatz Krakau",
+    "lat": 50.0619,
+    "lng": 19.9372,
+    "c": "attraction",
+    "r": 93,
+    "tags": [
+      "square",
+      "medieval",
+      "market"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-7",
+    "n": "Altstadt Breslau",
+    "lat": 51.11,
+    "lng": 17.0319,
+    "c": "attraction",
+    "r": 90,
+    "tags": [
+      "historic",
+      "market",
+      "dwarfs"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-8",
+    "n": "Dominsel Breslau",
+    "lat": 51.1142,
+    "lng": 17.0461,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "cathedral",
+      "island",
+      "gothic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "pl-9",
+    "n": "Marienkirche Danzig",
+    "lat": 54.35,
+    "lng": 18.6528,
+    "c": "church",
+    "r": 91,
+    "tags": [
+      "gothic",
+      "brick",
+      "largest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-6",
+    "n": "Grachten Amsterdam",
+    "lat": 52.3676,
+    "lng": 4.9041,
+    "c": "unesco",
+    "r": 94,
+    "tags": [
+      "unesco",
+      "canal",
+      "historic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-7",
+    "n": "Domturm Utrecht",
+    "lat": 52.0907,
+    "lng": 5.1214,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "tower",
+      "gothic",
+      "climb"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-8",
+    "n": "Markthalle Rotterdam",
+    "lat": 51.92,
+    "lng": 4.4867,
+    "c": "attraction",
+    "r": 87,
+    "tags": [
+      "market",
+      "architecture",
+      "modern"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-9",
+    "n": "Binnenhof Den Haag",
+    "lat": 52.0797,
+    "lng": 4.3133,
+    "c": "monument",
+    "r": 89,
+    "tags": [
+      "parliament",
+      "historic",
+      "politics"
+    ],
+    "curated": true
+  },
+  {
+    "id": "nl-10",
+    "n": "Altstadt Maastricht",
+    "lat": 50.8514,
+    "lng": 5.691,
+    "c": "attraction",
+    "r": 88,
+    "tags": [
+      "historic",
+      "shops",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-4",
+    "n": "Atomium Brüssel",
+    "lat": 50.8947,
+    "lng": 4.3414,
+    "c": "monument",
+    "r": 91,
+    "tags": [
+      "landmark",
+      "expo",
+      "modern"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-5",
+    "n": "Belfried Brügge",
+    "lat": 51.2086,
+    "lng": 3.2247,
+    "c": "unesco",
+    "r": 91,
+    "tags": [
+      "unesco",
+      "tower",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-6",
+    "n": "Gravensteen Gent",
+    "lat": 51.0575,
+    "lng": 3.7208,
+    "c": "castle",
+    "r": 90,
+    "tags": [
+      "castle",
+      "medieval",
+      "fortress"
+    ],
+    "curated": true
+  },
+  {
+    "id": "be-7",
+    "n": "Kathedrale Antwerpen",
+    "lat": 51.2203,
+    "lng": 4.4014,
+    "c": "church",
+    "r": 92,
+    "tags": [
+      "gothic",
+      "rubens",
+      "cathedral"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-4",
+    "n": "Insel Bled",
+    "lat": 46.3619,
+    "lng": 14.0906,
+    "c": "attraction",
+    "r": 93,
+    "tags": [
+      "island",
+      "church",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-5",
+    "n": "Burg Bled",
+    "lat": 46.3694,
+    "lng": 14.0931,
+    "c": "castle",
+    "r": 90,
+    "tags": [
+      "castle",
+      "viewpoint",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-6",
+    "n": "Drachenbrücke Ljubljana",
+    "lat": 46.0519,
+    "lng": 14.5103,
+    "c": "monument",
+    "r": 87,
+    "tags": [
+      "bridge",
+      "art nouveau",
+      "dragons"
+    ],
+    "curated": true
+  },
+  {
+    "id": "si-7",
+    "n": "Altstadt Piran",
+    "lat": 45.5283,
+    "lng": 13.5683,
+    "c": "attraction",
+    "r": 89,
+    "tags": [
+      "venetian",
+      "coast",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hu-4",
+    "n": "Kettenbrücke Budapest",
+    "lat": 47.4989,
+    "lng": 19.0436,
+    "c": "monument",
+    "r": 92,
+    "tags": [
+      "bridge",
+      "danube",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "hu-5",
+    "n": "Thermalbad Széchenyi",
+    "lat": 47.5186,
+    "lng": 19.0822,
+    "c": "attraction",
+    "r": 91,
+    "tags": [
+      "thermal",
+      "spa",
+      "art nouveau"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-4",
+    "n": "Kleine Meerjungfrau",
+    "lat": 55.6929,
+    "lng": 12.5994,
+    "c": "monument",
+    "r": 88,
+    "tags": [
+      "statue",
+      "landmark",
+      "copenhagen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-5",
+    "n": "Schloss Rosenborg",
+    "lat": 55.6858,
+    "lng": 12.5775,
+    "c": "castle",
+    "r": 89,
+    "tags": [
+      "castle",
+      "royal",
+      "garden"
+    ],
+    "curated": true
+  },
+  {
+    "id": "dk-6",
+    "n": "Altstadt Ribe",
+    "lat": 55.3308,
+    "lng": 8.765,
+    "c": "attraction",
+    "r": 86,
+    "tags": [
+      "viking",
+      "medieval",
+      "oldest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-1",
+    "n": "Bodensee",
+    "lat": 47.65,
+    "lng": 9.4,
+    "c": "lake",
+    "r": 93,
+    "tags": [
+      "lake",
+      "alps",
+      "border",
+      "swim"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-2",
+    "n": "Königssee",
+    "lat": 47.55,
+    "lng": 12.9833,
+    "c": "lake",
+    "r": 95,
+    "tags": [
+      "lake",
+      "alps",
+      "scenic",
+      "pristine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-3",
+    "n": "Eibsee",
+    "lat": 47.4558,
+    "lng": 10.9711,
+    "c": "lake",
+    "r": 94,
+    "tags": [
+      "lake",
+      "alps",
+      "zugspitze",
+      "crystal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-4",
+    "n": "Walchensee",
+    "lat": 47.5833,
+    "lng": 11.35,
+    "c": "lake",
+    "r": 92,
+    "tags": [
+      "lake",
+      "alps",
+      "clear",
+      "diving"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-5",
+    "n": "Chiemsee",
+    "lat": 47.8667,
+    "lng": 12.4,
+    "c": "lake",
+    "r": 91,
+    "tags": [
+      "lake",
+      "bavarian_sea",
+      "islands"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-6",
+    "n": "Müritz",
+    "lat": 53.4167,
+    "lng": 12.6833,
+    "c": "lake",
+    "r": 89,
+    "tags": [
+      "lake",
+      "largest",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-7",
+    "n": "Tegernsee",
+    "lat": 47.7167,
+    "lng": 11.75,
+    "c": "lake",
+    "r": 90,
+    "tags": [
+      "lake",
+      "alps",
+      "bavaria"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-8",
+    "n": "Starnberger See",
+    "lat": 47.9,
+    "lng": 11.3167,
+    "c": "lake",
+    "r": 88,
+    "tags": [
+      "lake",
+      "munich",
+      "royal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-9",
+    "n": "Titisee",
+    "lat": 47.9,
+    "lng": 8.15,
+    "c": "lake",
+    "r": 87,
+    "tags": [
+      "lake",
+      "blackforest",
+      "tourism"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-de-10",
+    "n": "Forggensee",
+    "lat": 47.5833,
+    "lng": 10.7333,
+    "c": "lake",
+    "r": 88,
+    "tags": [
+      "lake",
+      "alps",
+      "neuschwanstein"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-it-1",
+    "n": "Gardasee",
+    "lat": 45.65,
+    "lng": 10.6833,
+    "c": "lake",
+    "r": 96,
+    "tags": [
+      "lake",
+      "alps",
+      "scenic",
+      "largest_italy"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-it-2",
+    "n": "Comer See",
+    "lat": 45.987,
+    "lng": 9.257,
+    "c": "lake",
+    "r": 94,
+    "tags": [
+      "lake",
+      "alps",
+      "villas",
+      "clooney"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-it-3",
+    "n": "Lago Maggiore",
+    "lat": 45.95,
+    "lng": 8.6333,
+    "c": "lake",
+    "r": 92,
+    "tags": [
+      "lake",
+      "border",
+      "islands"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-it-4",
+    "n": "Pragser Wildsee",
+    "lat": 46.6944,
+    "lng": 12.0856,
+    "c": "lake",
+    "r": 95,
+    "tags": [
+      "lake",
+      "dolomites",
+      "instagram",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-it-5",
+    "n": "Reschensee",
+    "lat": 46.8,
+    "lng": 10.5333,
+    "c": "lake",
+    "r": 90,
+    "tags": [
+      "lake",
+      "tower",
+      "church"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-at-1",
+    "n": "Wolfgangsee",
+    "lat": 47.75,
+    "lng": 13.4,
+    "c": "lake",
+    "r": 93,
+    "tags": [
+      "lake",
+      "salzkammergut",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-at-2",
+    "n": "Achensee",
+    "lat": 47.45,
+    "lng": 11.7167,
+    "c": "lake",
+    "r": 91,
+    "tags": [
+      "lake",
+      "tyrol",
+      "fjord"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-at-3",
+    "n": "Wörthersee",
+    "lat": 46.6333,
+    "lng": 14.15,
+    "c": "lake",
+    "r": 90,
+    "tags": [
+      "lake",
+      "swimming",
+      "warm"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-at-4",
+    "n": "Zeller See",
+    "lat": 47.3167,
+    "lng": 12.8,
+    "c": "lake",
+    "r": 89,
+    "tags": [
+      "lake",
+      "alps",
+      "ski"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-at-5",
+    "n": "Traunsee",
+    "lat": 47.8833,
+    "lng": 13.7833,
+    "c": "lake",
+    "r": 88,
+    "tags": [
+      "lake",
+      "deepest",
+      "salzkammergut"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-ch-1",
+    "n": "Vierwaldstättersee",
+    "lat": 47.0167,
+    "lng": 8.4333,
+    "c": "lake",
+    "r": 94,
+    "tags": [
+      "lake",
+      "scenic",
+      "alps",
+      "historic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-ch-2",
+    "n": "Genfersee",
+    "lat": 46.4333,
+    "lng": 6.5,
+    "c": "lake",
+    "r": 93,
+    "tags": [
+      "lake",
+      "largest",
+      "alps",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-ch-3",
+    "n": "Brienzersee",
+    "lat": 46.7167,
+    "lng": 7.9667,
+    "c": "lake",
+    "r": 92,
+    "tags": [
+      "lake",
+      "turquoise",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-ch-4",
+    "n": "Thunersee",
+    "lat": 46.7,
+    "lng": 7.7,
+    "c": "lake",
+    "r": 91,
+    "tags": [
+      "lake",
+      "castle",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-ch-5",
+    "n": "Zürichsee",
+    "lat": 47.25,
+    "lng": 8.7,
+    "c": "lake",
+    "r": 89,
+    "tags": [
+      "lake",
+      "city",
+      "cruise"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-fr-1",
+    "n": "Lac d'Annecy",
+    "lat": 45.8614,
+    "lng": 6.1694,
+    "c": "lake",
+    "r": 93,
+    "tags": [
+      "lake",
+      "alps",
+      "cleanest",
+      "swimming"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-si-1",
+    "n": "Bleder See",
+    "lat": 46.3632,
+    "lng": 14.0943,
+    "c": "lake",
+    "r": 95,
+    "tags": [
+      "lake",
+      "island",
+      "iconic",
+      "instagram"
+    ],
+    "curated": true
+  },
+  {
+    "id": "lake-hr-1",
+    "n": "Plitvicer Seen",
+    "lat": 44.8654,
+    "lng": 15.582,
+    "c": "lake",
+    "r": 97,
+    "tags": [
+      "lake",
+      "unesco",
+      "waterfalls",
+      "16lakes"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-1",
+    "n": "Kreidefelsen Rügen",
+    "lat": 54.5564,
+    "lng": 13.6583,
+    "c": "coast",
+    "r": 94,
+    "tags": [
+      "coast",
+      "cliffs",
+      "white",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-2",
+    "n": "Darß Weststrand",
+    "lat": 54.45,
+    "lng": 12.5,
+    "c": "coast",
+    "r": 92,
+    "tags": [
+      "coast",
+      "wild",
+      "dunes",
+      "pristine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-3",
+    "n": "Sylt Ellenbogen",
+    "lat": 55.05,
+    "lng": 8.4,
+    "c": "coast",
+    "r": 90,
+    "tags": [
+      "coast",
+      "beach",
+      "north_sea",
+      "luxury"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-4",
+    "n": "St. Peter-Ording Strand",
+    "lat": 54.3167,
+    "lng": 8.6333,
+    "c": "coast",
+    "r": 89,
+    "tags": [
+      "coast",
+      "beach",
+      "pfahlbauten",
+      "wide"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-5",
+    "n": "Usedom Strände",
+    "lat": 53.9356,
+    "lng": 14.1903,
+    "c": "coast",
+    "r": 88,
+    "tags": [
+      "coast",
+      "pier",
+      "baltic",
+      "badekultur"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-de-6",
+    "n": "Kap Arkona",
+    "lat": 54.6778,
+    "lng": 13.4333,
+    "c": "coast",
+    "r": 87,
+    "tags": [
+      "coast",
+      "lighthouse",
+      "cliffs",
+      "north"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-it-1",
+    "n": "Amalfiküste",
+    "lat": 40.6333,
+    "lng": 14.6,
+    "c": "coast",
+    "r": 98,
+    "tags": [
+      "coast",
+      "unesco",
+      "dramatic",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-it-2",
+    "n": "Cinque Terre",
+    "lat": 44.1461,
+    "lng": 9.6439,
+    "c": "coast",
+    "r": 97,
+    "tags": [
+      "coast",
+      "unesco",
+      "villages",
+      "colorful"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-it-3",
+    "n": "Sorrent",
+    "lat": 40.6263,
+    "lng": 14.3758,
+    "c": "coast",
+    "r": 93,
+    "tags": [
+      "coast",
+      "cliffs",
+      "lemons"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-fr-1",
+    "n": "Côte d'Azur Nice",
+    "lat": 43.7102,
+    "lng": 7.262,
+    "c": "coast",
+    "r": 95,
+    "tags": [
+      "coast",
+      "riviera",
+      "glamour",
+      "promenade"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-fr-2",
+    "n": "Étretat Klippen",
+    "lat": 49.7086,
+    "lng": 0.205,
+    "c": "coast",
+    "r": 94,
+    "tags": [
+      "coast",
+      "cliffs",
+      "arch",
+      "monet"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-fr-3",
+    "n": "Calanques Marseille",
+    "lat": 43.2119,
+    "lng": 5.4481,
+    "c": "coast",
+    "r": 93,
+    "tags": [
+      "coast",
+      "cliffs",
+      "hiking",
+      "turquoise"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-fr-4",
+    "n": "Biarritz",
+    "lat": 43.4832,
+    "lng": -1.5586,
+    "c": "coast",
+    "r": 91,
+    "tags": [
+      "coast",
+      "surf",
+      "basque",
+      "beach"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-es-1",
+    "n": "Costa Brava",
+    "lat": 41.85,
+    "lng": 3.0667,
+    "c": "coast",
+    "r": 94,
+    "tags": [
+      "coast",
+      "coves",
+      "dali",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-es-2",
+    "n": "Mallorca Cala",
+    "lat": 39.5667,
+    "lng": 2.65,
+    "c": "coast",
+    "r": 92,
+    "tags": [
+      "coast",
+      "beach",
+      "balearic",
+      "turquoise"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-hr-1",
+    "n": "Dubrovnik Küste",
+    "lat": 42.6507,
+    "lng": 18.0944,
+    "c": "coast",
+    "r": 95,
+    "tags": [
+      "coast",
+      "medieval",
+      "walls",
+      "got"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-hr-2",
+    "n": "Plitvice Coast",
+    "lat": 45.5283,
+    "lng": 13.5683,
+    "c": "coast",
+    "r": 91,
+    "tags": [
+      "coast",
+      "venetian",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-pt-1",
+    "n": "Algarve Küste",
+    "lat": 37.0179,
+    "lng": -8.9389,
+    "c": "coast",
+    "r": 94,
+    "tags": [
+      "coast",
+      "cliffs",
+      "caves",
+      "scenic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-pt-2",
+    "n": "Praia da Marinha",
+    "lat": 37.09,
+    "lng": -8.41,
+    "c": "coast",
+    "r": 93,
+    "tags": [
+      "coast",
+      "beach",
+      "cliffs",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-gr-1",
+    "n": "Santorini Küste",
+    "lat": 36.3932,
+    "lng": 25.4615,
+    "c": "coast",
+    "r": 97,
+    "tags": [
+      "coast",
+      "volcano",
+      "sunset",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "coast-gr-2",
+    "n": "Navagio Beach Zakynthos",
+    "lat": 37.8597,
+    "lng": 20.6244,
+    "c": "coast",
+    "r": 96,
+    "tags": [
+      "coast",
+      "shipwreck",
+      "cliffs",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-1",
+    "n": "Zugspitze Gipfel",
+    "lat": 47.4211,
+    "lng": 10.9853,
+    "c": "viewpoint",
+    "r": 98,
+    "tags": [
+      "viewpoint",
+      "highest",
+      "alps",
+      "panorama"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-2",
+    "n": "Basteibrücke Aussicht",
+    "lat": 50.9614,
+    "lng": 14.0722,
+    "c": "viewpoint",
+    "r": 95,
+    "tags": [
+      "viewpoint",
+      "rocks",
+      "elbe",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-3",
+    "n": "Saarschleife Aussicht",
+    "lat": 49.5,
+    "lng": 6.5333,
+    "c": "viewpoint",
+    "r": 93,
+    "tags": [
+      "viewpoint",
+      "river",
+      "iconic",
+      "meander"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-4",
+    "n": "Geierlay Brücke",
+    "lat": 50.0989,
+    "lng": 7.3428,
+    "c": "viewpoint",
+    "r": 91,
+    "tags": [
+      "viewpoint",
+      "bridge",
+      "hiking",
+      "hunsrueck"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-5",
+    "n": "Externsteine Aussicht",
+    "lat": 51.8686,
+    "lng": 8.9167,
+    "c": "viewpoint",
+    "r": 88,
+    "tags": [
+      "viewpoint",
+      "rocks",
+      "mystical",
+      "teutoburg"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-6",
+    "n": "Fernsehturm Berlin Aussicht",
+    "lat": 52.5208,
+    "lng": 13.4094,
+    "c": "viewpoint",
+    "r": 92,
+    "tags": [
+      "viewpoint",
+      "tower",
+      "city",
+      "360"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-7",
+    "n": "Kehlsteinhaus Aussicht",
+    "lat": 47.6119,
+    "lng": 13.0417,
+    "c": "viewpoint",
+    "r": 94,
+    "tags": [
+      "viewpoint",
+      "alps",
+      "history",
+      "berchtesgaden"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-de-8",
+    "n": "Loreley Aussicht",
+    "lat": 50.1422,
+    "lng": 7.7319,
+    "c": "viewpoint",
+    "r": 90,
+    "tags": [
+      "viewpoint",
+      "rhine",
+      "legend",
+      "romantic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-at-1",
+    "n": "Großglockner Panorama",
+    "lat": 47.0742,
+    "lng": 12.8428,
+    "c": "viewpoint",
+    "r": 97,
+    "tags": [
+      "viewpoint",
+      "alps",
+      "glacier",
+      "scenic_road"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-at-2",
+    "n": "Dachstein Skywalk",
+    "lat": 47.4494,
+    "lng": 13.6061,
+    "c": "viewpoint",
+    "r": 95,
+    "tags": [
+      "viewpoint",
+      "glass",
+      "alps",
+      "vertigo"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-at-3",
+    "n": "5 Fingers Dachstein",
+    "lat": 47.4494,
+    "lng": 13.6061,
+    "c": "viewpoint",
+    "r": 94,
+    "tags": [
+      "viewpoint",
+      "platform",
+      "iconic",
+      "instagram"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-ch-1",
+    "n": "Jungfraujoch Sphinx",
+    "lat": 46.5472,
+    "lng": 7.9847,
+    "c": "viewpoint",
+    "r": 98,
+    "tags": [
+      "viewpoint",
+      "highest_europe",
+      "glacier",
+      "snow"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-ch-2",
+    "n": "Pilatus Aussicht",
+    "lat": 46.9789,
+    "lng": 8.2547,
+    "c": "viewpoint",
+    "r": 94,
+    "tags": [
+      "viewpoint",
+      "alps",
+      "luzern",
+      "dragon"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-ch-3",
+    "n": "Matterhorn Aussicht",
+    "lat": 45.9766,
+    "lng": 7.6586,
+    "c": "viewpoint",
+    "r": 97,
+    "tags": [
+      "viewpoint",
+      "iconic",
+      "mountain",
+      "zermatt"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-it-1",
+    "n": "Tre Cime Aussicht",
+    "lat": 46.6183,
+    "lng": 12.3019,
+    "c": "viewpoint",
+    "r": 96,
+    "tags": [
+      "viewpoint",
+      "dolomites",
+      "hiking",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-no-1",
+    "n": "Preikestolen",
+    "lat": 58.9867,
+    "lng": 6.1889,
+    "c": "viewpoint",
+    "r": 98,
+    "tags": [
+      "viewpoint",
+      "cliff",
+      "fjord",
+      "iconic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "view-no-2",
+    "n": "Trolltunga",
+    "lat": 60.1239,
+    "lng": 6.74,
+    "c": "viewpoint",
+    "r": 97,
+    "tags": [
+      "viewpoint",
+      "rock",
+      "instagram",
+      "hike"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-1",
+    "n": "Nationalpark Berchtesgaden",
+    "lat": 47.553,
+    "lng": 12.918,
+    "c": "park",
+    "r": 96,
+    "tags": [
+      "park",
+      "alps",
+      "nature",
+      "unesco"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-2",
+    "n": "Nationalpark Bayerischer Wald",
+    "lat": 48.95,
+    "lng": 13.4,
+    "c": "park",
+    "r": 93,
+    "tags": [
+      "park",
+      "forest",
+      "wildlife",
+      "oldest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-3",
+    "n": "Nationalpark Schwarzwald",
+    "lat": 48.55,
+    "lng": 8.2167,
+    "c": "park",
+    "r": 91,
+    "tags": [
+      "park",
+      "forest",
+      "hiking",
+      "trails"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-4",
+    "n": "Nationalpark Eifel",
+    "lat": 50.55,
+    "lng": 6.4,
+    "c": "park",
+    "r": 89,
+    "tags": [
+      "park",
+      "hiking",
+      "wildcat",
+      "dark_sky"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-5",
+    "n": "Nationalpark Sächsische Schweiz",
+    "lat": 50.9125,
+    "lng": 14.0797,
+    "c": "park",
+    "r": 94,
+    "tags": [
+      "park",
+      "rocks",
+      "elbe",
+      "climbing"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-6",
+    "n": "Nationalpark Harz",
+    "lat": 51.8,
+    "lng": 10.6,
+    "c": "park",
+    "r": 90,
+    "tags": [
+      "park",
+      "mountain",
+      "brocken",
+      "lynx"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-7",
+    "n": "Nationalpark Müritz",
+    "lat": 53.3667,
+    "lng": 12.7833,
+    "c": "park",
+    "r": 88,
+    "tags": [
+      "park",
+      "lake",
+      "birds",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-8",
+    "n": "Nationalpark Jasmund",
+    "lat": 54.55,
+    "lng": 13.65,
+    "c": "park",
+    "r": 92,
+    "tags": [
+      "park",
+      "unesco",
+      "cliffs",
+      "beech"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-de-9",
+    "n": "Nationalpark Wattenmeer",
+    "lat": 53.8903,
+    "lng": 8.65,
+    "c": "park",
+    "r": 95,
+    "tags": [
+      "park",
+      "unesco",
+      "coast",
+      "tidal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-at-1",
+    "n": "Nationalpark Hohe Tauern",
+    "lat": 47.0742,
+    "lng": 12.8428,
+    "c": "park",
+    "r": 96,
+    "tags": [
+      "park",
+      "alps",
+      "glacier",
+      "largest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-ch-1",
+    "n": "Schweizer Nationalpark",
+    "lat": 46.6667,
+    "lng": 10.25,
+    "c": "park",
+    "r": 93,
+    "tags": [
+      "park",
+      "alps",
+      "wildlife",
+      "oldest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-hr-1",
+    "n": "Nationalpark Plitvicer Seen",
+    "lat": 44.8654,
+    "lng": 15.582,
+    "c": "park",
+    "r": 98,
+    "tags": [
+      "park",
+      "unesco",
+      "waterfalls",
+      "lakes"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-si-1",
+    "n": "Triglav Nationalpark",
+    "lat": 46.3781,
+    "lng": 13.8372,
+    "c": "park",
+    "r": 94,
+    "tags": [
+      "park",
+      "alps",
+      "julian",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "park-no-1",
+    "n": "Jotunheimen Nationalpark",
+    "lat": 61.6167,
+    "lng": 8.3,
+    "c": "park",
+    "r": 95,
+    "tags": [
+      "park",
+      "highest",
+      "norway",
+      "hiking"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-1",
+    "n": "Rothenburg ob der Tauber",
+    "lat": 49.3769,
+    "lng": 10.1789,
+    "c": "city",
+    "r": 94,
+    "tags": [
+      "city",
+      "medieval",
+      "romantic",
+      "walls"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-2",
+    "n": "Bamberg Altstadt",
+    "lat": 49.8988,
+    "lng": 10.9028,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "unesco",
+      "beer",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-3",
+    "n": "Quedlinburg",
+    "lat": 51.7892,
+    "lng": 11.1497,
+    "c": "city",
+    "r": 91,
+    "tags": [
+      "city",
+      "unesco",
+      "fachwerk",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-4",
+    "n": "Heidelberg",
+    "lat": 49.4108,
+    "lng": 8.7058,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "romantic",
+      "castle",
+      "university"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-5",
+    "n": "Regensburg",
+    "lat": 49.0195,
+    "lng": 12.0975,
+    "c": "city",
+    "r": 92,
+    "tags": [
+      "city",
+      "unesco",
+      "medieval",
+      "danube"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-6",
+    "n": "Lübeck Altstadt",
+    "lat": 53.8672,
+    "lng": 10.6864,
+    "c": "city",
+    "r": 92,
+    "tags": [
+      "city",
+      "unesco",
+      "hanseatic",
+      "marzipan"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-7",
+    "n": "Dresden Altstadt",
+    "lat": 51.0519,
+    "lng": 13.7414,
+    "c": "city",
+    "r": 94,
+    "tags": [
+      "city",
+      "baroque",
+      "rebuilt",
+      "elbflorenz"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-8",
+    "n": "Monschau",
+    "lat": 50.5544,
+    "lng": 6.2428,
+    "c": "city",
+    "r": 88,
+    "tags": [
+      "city",
+      "fachwerk",
+      "romantic",
+      "eifel"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-9",
+    "n": "Meersburg",
+    "lat": 47.6944,
+    "lng": 9.2714,
+    "c": "city",
+    "r": 87,
+    "tags": [
+      "city",
+      "lake",
+      "medieval",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-de-10",
+    "n": "Cochem",
+    "lat": 50.1469,
+    "lng": 7.1667,
+    "c": "city",
+    "r": 86,
+    "tags": [
+      "city",
+      "mosel",
+      "castle",
+      "wine"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-at-1",
+    "n": "Salzburg Altstadt",
+    "lat": 47.8,
+    "lng": 13.045,
+    "c": "city",
+    "r": 96,
+    "tags": [
+      "city",
+      "unesco",
+      "mozart",
+      "baroque"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-at-2",
+    "n": "Hallstatt",
+    "lat": 47.5622,
+    "lng": 13.6493,
+    "c": "city",
+    "r": 95,
+    "tags": [
+      "city",
+      "unesco",
+      "lake",
+      "instagram"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-at-3",
+    "n": "Innsbruck Altstadt",
+    "lat": 47.2682,
+    "lng": 11.3933,
+    "c": "city",
+    "r": 92,
+    "tags": [
+      "city",
+      "alps",
+      "tyrol",
+      "olympic"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-cz-1",
+    "n": "Český Krumlov",
+    "lat": 48.8127,
+    "lng": 14.3175,
+    "c": "city",
+    "r": 95,
+    "tags": [
+      "city",
+      "unesco",
+      "medieval",
+      "fairytale"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-cz-2",
+    "n": "Karlovy Vary",
+    "lat": 50.2298,
+    "lng": 12.8713,
+    "c": "city",
+    "r": 89,
+    "tags": [
+      "city",
+      "spa",
+      "architecture",
+      "thermal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-be-1",
+    "n": "Brügge",
+    "lat": 51.2093,
+    "lng": 3.2247,
+    "c": "city",
+    "r": 95,
+    "tags": [
+      "city",
+      "unesco",
+      "medieval",
+      "canal"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-be-2",
+    "n": "Gent",
+    "lat": 51.0543,
+    "lng": 3.7174,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "medieval",
+      "canal",
+      "student"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr-1",
+    "n": "Colmar",
+    "lat": 48.0794,
+    "lng": 7.3558,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "alsace",
+      "romantic",
+      "fairytale"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr-2",
+    "n": "Annecy",
+    "lat": 45.8992,
+    "lng": 6.1294,
+    "c": "city",
+    "r": 92,
+    "tags": [
+      "city",
+      "canal",
+      "alps",
+      "venice"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-fr-3",
+    "n": "Straßburg Altstadt",
+    "lat": 48.58,
+    "lng": 7.74,
+    "c": "city",
+    "r": 94,
+    "tags": [
+      "city",
+      "unesco",
+      "canal",
+      "christmas"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-it-1",
+    "n": "Venedig",
+    "lat": 45.4408,
+    "lng": 12.3155,
+    "c": "city",
+    "r": 98,
+    "tags": [
+      "city",
+      "unesco",
+      "canal",
+      "unique"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-it-2",
+    "n": "Florenz",
+    "lat": 43.7696,
+    "lng": 11.2558,
+    "c": "city",
+    "r": 97,
+    "tags": [
+      "city",
+      "unesco",
+      "renaissance",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-it-3",
+    "n": "Verona",
+    "lat": 45.439,
+    "lng": 10.9942,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "roman",
+      "romeo",
+      "opera"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-it-4",
+    "n": "Bergamo Città Alta",
+    "lat": 45.705,
+    "lng": 9.6625,
+    "c": "city",
+    "r": 91,
+    "tags": [
+      "city",
+      "hilltop",
+      "walls",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-nl-1",
+    "n": "Amsterdam Grachten",
+    "lat": 52.3676,
+    "lng": 4.9041,
+    "c": "city",
+    "r": 95,
+    "tags": [
+      "city",
+      "unesco",
+      "canal",
+      "bikes"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-si-1",
+    "n": "Ljubljana",
+    "lat": 46.0511,
+    "lng": 14.5051,
+    "c": "city",
+    "r": 90,
+    "tags": [
+      "city",
+      "castle",
+      "dragons",
+      "green"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-si-2",
+    "n": "Piran",
+    "lat": 45.5283,
+    "lng": 13.5683,
+    "c": "city",
+    "r": 89,
+    "tags": [
+      "city",
+      "venetian",
+      "coast",
+      "medieval"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hr-1",
+    "n": "Dubrovnik",
+    "lat": 42.6507,
+    "lng": 18.0944,
+    "c": "city",
+    "r": 96,
+    "tags": [
+      "city",
+      "unesco",
+      "walls",
+      "got"
+    ],
+    "curated": true
+  },
+  {
+    "id": "city-hr-2",
+    "n": "Split",
+    "lat": 43.5081,
+    "lng": 16.4402,
+    "c": "city",
+    "r": 93,
+    "tags": [
+      "city",
+      "unesco",
+      "roman",
+      "palace"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-1",
+    "n": "Europa-Park",
+    "lat": 48.2661,
+    "lng": 7.7219,
+    "c": "activity",
+    "r": 95,
+    "tags": [
+      "activity",
+      "theme_park",
+      "family",
+      "rides"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-2",
+    "n": "Phantasialand",
+    "lat": 50.7989,
+    "lng": 6.8792,
+    "c": "activity",
+    "r": 93,
+    "tags": [
+      "activity",
+      "theme_park",
+      "themed",
+      "coasters"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-3",
+    "n": "Tropical Islands",
+    "lat": 52.0378,
+    "lng": 13.7494,
+    "c": "activity",
+    "r": 88,
+    "tags": [
+      "activity",
+      "waterpark",
+      "tropical",
+      "indoor"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-4",
+    "n": "Therme Erding",
+    "lat": 48.2856,
+    "lng": 11.9111,
+    "c": "activity",
+    "r": 90,
+    "tags": [
+      "activity",
+      "spa",
+      "waterpark",
+      "sauna"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-5",
+    "n": "Legoland Deutschland",
+    "lat": 48.4311,
+    "lng": 10.3014,
+    "c": "activity",
+    "r": 89,
+    "tags": [
+      "activity",
+      "theme_park",
+      "lego",
+      "family"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-6",
+    "n": "Heide Park Resort",
+    "lat": 53.0253,
+    "lng": 9.8728,
+    "c": "activity",
+    "r": 87,
+    "tags": [
+      "activity",
+      "theme_park",
+      "coasters"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-7",
+    "n": "Movie Park Germany",
+    "lat": 51.6231,
+    "lng": 6.9728,
+    "c": "activity",
+    "r": 86,
+    "tags": [
+      "activity",
+      "theme_park",
+      "movies",
+      "hollywood"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-8",
+    "n": "Miniatur Wunderland Hamburg",
+    "lat": 53.5439,
+    "lng": 9.9886,
+    "c": "activity",
+    "r": 94,
+    "tags": [
+      "activity",
+      "model",
+      "unique",
+      "indoor"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-9",
+    "n": "Skywalk Allgäu",
+    "lat": 47.6003,
+    "lng": 10.0511,
+    "c": "activity",
+    "r": 85,
+    "tags": [
+      "activity",
+      "treetop",
+      "adventure",
+      "nature"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-de-10",
+    "n": "Baumwipfelpfad Schwarzwald",
+    "lat": 47.8594,
+    "lng": 8.0503,
+    "c": "activity",
+    "r": 86,
+    "tags": [
+      "activity",
+      "treetop",
+      "nature",
+      "family"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-at-1",
+    "n": "Swarovski Kristallwelten",
+    "lat": 47.2933,
+    "lng": 11.6,
+    "c": "activity",
+    "r": 90,
+    "tags": [
+      "activity",
+      "museum",
+      "crystal",
+      "art"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-at-2",
+    "n": "Eisriesenwelt Werfen",
+    "lat": 47.5022,
+    "lng": 13.1906,
+    "c": "activity",
+    "r": 91,
+    "tags": [
+      "activity",
+      "cave",
+      "ice",
+      "largest"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-at-3",
+    "n": "Zipline Stoderzinken",
+    "lat": 47.4522,
+    "lng": 14.0683,
+    "c": "activity",
+    "r": 88,
+    "tags": [
+      "activity",
+      "zipline",
+      "adventure",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-ch-1",
+    "n": "Glacier Express Route",
+    "lat": 46.4908,
+    "lng": 7.8497,
+    "c": "activity",
+    "r": 95,
+    "tags": [
+      "activity",
+      "train",
+      "scenic",
+      "alps"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-ch-2",
+    "n": "Titlis Cliff Walk",
+    "lat": 46.7708,
+    "lng": 8.4308,
+    "c": "activity",
+    "r": 93,
+    "tags": [
+      "activity",
+      "bridge",
+      "vertigo",
+      "glacier"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-dk-1",
+    "n": "Tivoli Gardens",
+    "lat": 55.6737,
+    "lng": 12.5681,
+    "c": "activity",
+    "r": 92,
+    "tags": [
+      "activity",
+      "amusement",
+      "historic",
+      "copenhagen"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-nl-1",
+    "n": "Keukenhof",
+    "lat": 52.2697,
+    "lng": 4.5462,
+    "c": "activity",
+    "r": 93,
+    "tags": [
+      "activity",
+      "flowers",
+      "garden",
+      "spring"
+    ],
+    "curated": true
+  },
+  {
+    "id": "act-es-1",
+    "n": "PortAventura",
+    "lat": 41.0861,
+    "lng": 1.1561,
+    "c": "activity",
+    "r": 91,
+    "tags": [
+      "activity",
+      "theme_park",
+      "coasters",
+      "spain"
+    ],
+    "curated": true
+  }
+]

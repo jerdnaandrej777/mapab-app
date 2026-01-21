@@ -1,0 +1,69 @@
+═══════════════════════════════════════════════════════════════
+  MapAB APK Build - SCHNELLSTART
+═══════════════════════════════════════════════════════════════
+
+EINFACHSTE METHODE - 1 Doppelklick:
+
+  → Doppelklick auf: build-apk-fixed.bat
+
+  Das Script findet Flutter automatisch und baut die APK.
+  Dauer: 5-10 Minuten
+
+═══════════════════════════════════════════════════════════════
+
+NACH DEM BUILD:
+
+  Die APK findest du hier:
+  C:\Users\Gejer\Desktop\Apps\Mapab APP\build\app\outputs\flutter-apk\
+
+  Hauptdatei für moderne Handys:
+  → app-arm64-v8a-release.apk
+
+═══════════════════════════════════════════════════════════════
+
+APK HOCHLADEN & TEILEN:
+
+  Option 1: GitHub Releases
+    1. Gehe zu: https://github.com
+    2. Erstelle Repository
+    3. Releases → Create new release
+    4. APK hochladen
+    5. Link teilen
+
+  Option 2: Google Drive
+    1. drive.google.com
+    2. APK hochladen
+    3. Rechtsklick → Link abrufen
+    4. "Jeder mit dem Link" einstellen
+    5. Link teilen
+
+  Option 3: Dropbox
+    1. dropbox.com
+    2. APK hochladen
+    3. Link erstellen
+    4. ?dl=0 zu ?dl=1 ändern (direkter Download)
+    5. Link teilen
+
+═══════════════════════════════════════════════════════════════
+
+PROBLEME?
+
+  "Java not found"
+    → Android Studio installieren (enthält Java JDK)
+    → https://developer.android.com/studio
+
+  "Android SDK not found"
+    → In Android Studio: Tools → SDK Manager
+    → Android SDK installieren
+
+  Build dauert ewig
+    → Normal! Erster Build: 10-15 Minuten
+    → Weitere Builds: 2-5 Minuten
+
+═══════════════════════════════════════════════════════════════
+
+VOLLSTÄNDIGE ANLEITUNG:
+
+  Siehe: DEPLOYMENT-GUIDE.md
+
+═══════════════════════════════════════════════════════════════
