@@ -1,30 +1,89 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.0.0 (Januar 2026)
+Version: 1.2.0 (21. Januar 2026)
 
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Account-System](#account-system-neu)
-3. [Dark Mode & Themes](#dark-mode--themes)
-4. [Push-Benachrichtigungen](#push-benachrichtigungen)
-5. [Echtzeit-Verkehrsdaten](#echtzeit-verkehrsdaten)
-6. [Trip-Sharing & QR-Codes](#trip-sharing--qr-codes)
-7. [KI-Personalisierung](#ki-personalisierung)
-8. [Budget-Tracker](#budget-tracker)
-9. [Höhenprofil](#höhenprofil)
-10. [Reisetagebuch](#reisetagebuch)
-11. [Barrierefreiheit](#barrierefreiheit)
-12. [Gamification](#gamification)
-13. [Sprachsteuerung](#sprachsteuerung)
-14. [Services](#services)
-15. [Emulator-Optimierungen](#emulator-optimierungen)
+2. [Neu in v1.2.0](#neu-in-v120) ⭐
+3. [Account-System](#account-system)
+4. [Favoriten-Management](#favoriten-management) ⭐ NEU
+5. [AI-Trip-Generator](#ai-trip-generator) ⭐ NEU
+6. [Dark Mode & Themes](#dark-mode--themes)
+7. [Push-Benachrichtigungen](#push-benachrichtigungen)
+8. [Echtzeit-Verkehrsdaten](#echtzeit-verkehrsdaten)
+9. [Trip-Sharing & QR-Codes](#trip-sharing--qr-codes)
+10. [KI-Personalisierung](#ki-personalisierung)
+11. [Budget-Tracker](#budget-tracker)
+12. [Höhenprofil](#höhenprofil)
+13. [Reisetagebuch](#reisetagebuch)
+14. [Barrierefreiheit](#barrierefreiheit)
+15. [Gamification](#gamification)
+16. [Sprachsteuerung](#sprachsteuerung)
+17. [Services](#services)
+18. [Emulator-Optimierungen](#emulator-optimierungen)
 
 ---
 
 ## Übersicht
 
-Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Android und Desktop mit 14 implementierten Haupt-Features.
+Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Android und Desktop mit 16 implementierten Haupt-Features.
+
+### Download & Installation
+
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.0
+
+**Direkter APK-Download:**
+```
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.0/app-release.apk
+```
+
+**Installationsschritte:**
+1. APK herunterladen (51.4 MB)
+2. "Aus unbekannten Quellen installieren" erlauben
+3. APK öffnen und Installation bestätigen
+4. App öffnen und loslegen
+
+---
+
+## Neu in v1.2.0
+
+**Release-Datum:** 21. Januar 2026
+
+### 🎯 Haupt-Features
+
+#### 1. Profil-Button in MapScreen
+- ✅ **AppBar auf MapScreen** mit transparentem Hintergrund
+- 👤 **Profil-Button** → Direkter Zugriff auf Account-System
+- ❤️ **Favoriten-Button** → Favoriten-Management
+- 🎨 **UI-Verbesserung** mit `extendBodyBehindAppBar`
+
+#### 2. Favoriten-Management
+- 📑 **Tab-View**: Routen | POIs
+- 🗂️ **Kategorien**: Eigene Listen erstellen
+- ❤️ **Quick-Actions**: Favorit hinzufügen/entfernen
+- 🗑️ **Batch-Delete**: Alle löschen Funktion
+
+#### 3. AI-Trip-Generator
+- 🤖 **Automatische Routenplanung** via OpenAI GPT-4o
+- 📅 **1-7 Tage Trips** mit flexiblen Parametern
+- 🎯 **Interessen-Filter** (Kultur, Natur, Geschichte, Essen, etc.)
+- 📝 **Formatierte Ausgabe** mit Tages-Breakdown
+
+#### 4. AI-Chat Erweiterungen
+- 💬 **Kontext-bewusst**: Route & Stops werden mitgesendet
+- 🎯 **POI-Empfehlungen**: "Was gibt es auf meiner Route?"
+- 🗺️ **Route-Optimierung**: Intelligente Vorschläge
+
+### 🐛 Bugfixes
+- ✅ **FavoritesScreen**: `startAddress`/`endAddress` statt `startName`/`endName`
+- ✅ **Routing**: `/favorites` Route in `app.dart` registriert
+
+### 📦 Build-Details
+- **Größe**: 51.4 MB (Tree-shaking: 99.7% Icon-Reduktion)
+- **Min SDK**: Android 21 (Lollipop)
+- **Target SDK**: Android 34
+- **Build-Zeit**: ~145s
 
 ### Tech-Stack
 
@@ -63,11 +122,24 @@ lib/
 
 ---
 
-## Account-System (NEU)
+## Account-System
 
-**Feature #14 - Januar 2026**
+**Feature #14 - Januar 2026 | UI-Zugriff: v1.2.0**
 
 Local-First Account-Management mit Multi-Profilen, Gamification und Statistik-Tracking.
+
+### Zugriff (v1.2.0)
+
+**MapScreen → AppBar → Profil-Icon (👤)**
+
+```dart
+// lib/features/map/map_screen.dart
+IconButton(
+  icon: const Icon(Icons.person_outline),
+  onPressed: () => context.push('/profile'),
+  tooltip: 'Profil',
+)
+```
 
 ### Features
 
@@ -710,6 +782,425 @@ await accountNotifier.updateTripStatistics(poisVisited: 1);
 await accountNotifier.addXp(25);
 await accountNotifier.unlockAchievement('spontaneous');
 ```
+
+---
+
+## Favoriten-Management
+
+**Feature #15 - v1.2.0 (21. Januar 2026)**
+
+Vollständiges Favoriten-System mit Kategorisierung für Routen und POIs.
+
+### Zugriff (v1.2.0)
+
+**MapScreen → AppBar → Favoriten-Icon (❤️)**
+
+```dart
+// lib/features/map/map_screen.dart
+IconButton(
+  icon: const Icon(Icons.favorite_border),
+  onPressed: () => context.push('/favorites'),
+  tooltip: 'Favoriten',
+)
+```
+
+### Features
+
+- **Tab-View:** Routen | POIs
+- **Kategorien:** Eigene Listen erstellen
+- **Quick-Actions:** Favorit hinzufügen/entfernen
+- **Batch-Delete:** Alle löschen Funktion
+- **Persistierung:** Hive-basiert
+
+### Dateien
+
+```
+lib/
+├── data/
+│   ├── models/
+│   │   └── favorites.dart             # Freezed Favorites-Model
+│   └── providers/
+│       └── favorites_provider.dart    # Riverpod Favorites State
+└── features/
+    └── favorites/
+        └── favorites_screen.dart      # UI: Tab-View & Listen
+```
+
+### Favorites Model
+
+```dart
+@freezed
+class Favorites with _$Favorites {
+  const factory Favorites({
+    @Default([]) List<Trip> savedRoutes,
+    @Default([]) List<POI> favoritePOIs,
+  }) = _Favorites;
+}
+```
+
+### FavoritesProvider
+
+```dart
+@riverpod
+class FavoritesNotifier extends _$FavoritesNotifier {
+  @override
+  Future<Favorites> build() async {
+    // Lade aus Hive
+    return Favorites();
+  }
+
+  // Routen
+  Future<void> saveRoute(Trip trip) async { ... }
+  Future<void> removeRoute(String tripId) async { ... }
+
+  // POIs
+  Future<void> addPOI(POI poi) async { ... }
+  Future<void> removePOI(String poiId) async { ... }
+
+  // Bulk
+  Future<void> clearAll() async { ... }
+}
+```
+
+### UI-Komponenten
+
+#### Routen-Tab
+
+**Liste mit Karten:**
+- Trip-Name
+- Start → Ziel
+- Distanz, Dauer, Stops
+- Delete-Button (🗑️)
+- Tap to Load
+
+```dart
+ListTile(
+  leading: Icon(Icons.route, color: AppTheme.primaryColor),
+  title: Text(trip.name),
+  subtitle: Text('${trip.route.startAddress} → ${trip.route.endAddress}'),
+  trailing: IconButton(
+    icon: Icon(Icons.delete_outline),
+    onPressed: () => _confirmRemoveRoute(trip),
+  ),
+  onTap: () => _loadRoute(trip),
+)
+```
+
+#### POIs-Tab
+
+**Grid-Layout:**
+- POI-Bild (falls vorhanden)
+- POI-Name
+- Kategorie-Label
+- Favorit-Button (❤️)
+
+```dart
+GridView.builder(
+  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    childAspectRatio: 0.75,
+  ),
+  itemBuilder: (context, index) {
+    final poi = pois[index];
+    return _buildPOICard(poi);
+  },
+)
+```
+
+### Hive Storage
+
+**Box:** `favorites`
+
+```dart
+final favoritesBox = await Hive.openBox('favorites');
+
+// Speichern
+await favoritesBox.put('data', favorites.toJson());
+
+// Laden
+final json = favoritesBox.get('data');
+final favorites = Favorites.fromJson(json);
+```
+
+### Beispiel-Flow
+
+```dart
+// POI zu Favoriten hinzufügen
+final favoritesNotifier = ref.read(favoritesNotifierProvider.notifier);
+await favoritesNotifier.addPOI(poi);
+
+// Toast-Benachrichtigung
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(content: Text('${poi.name} zu Favoriten hinzugefügt')),
+);
+
+// Route speichern
+await favoritesNotifier.saveRoute(currentTrip);
+
+// Favoriten öffnen
+context.push('/favorites');
+```
+
+---
+
+## AI-Trip-Generator
+
+**Feature #16 - v1.2.0 (21. Januar 2026)**
+
+Automatische Routenplanung via OpenAI GPT-4o mit Interessen-basierten Vorschlägen.
+
+### Zugriff (v1.2.0)
+
+**Bottom Navigation → AI-Tab → Suggestion Chip "🤖 AI-Trip generieren"**
+
+```dart
+// lib/features/ai_assistant/chat_screen.dart
+ChipSuggestion(
+  label: '🤖 AI-Trip generieren',
+  onTap: () => _showTripGeneratorDialog(),
+)
+```
+
+### Features
+
+- **1-7 Tage Trips:** Slider für Reisedauer
+- **Ziel-Eingabe:** Flexible Stadt/Land-Auswahl
+- **Interessen-Filter:** 7 Kategorien (Kultur, Natur, etc.)
+- **Startpunkt (optional):** Automatische Distanz-Berechnung
+- **Formatierte Ausgabe:** Tages-Breakdown mit POIs, Zeiten, Beschreibungen
+- **Demo-Modus:** Fallback wenn kein API-Key
+
+### Dateien
+
+```
+lib/
+├── data/
+│   └── services/
+│       └── ai_service.dart            # OpenAI GPT-4o Integration
+└── features/
+    └── ai_assistant/
+        └── chat_screen.dart           # UI: Dialog + Chat-Anzeige
+```
+
+### Trip-Generator Dialog
+
+```dart
+void _showTripGeneratorDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('🤖 AI-Trip generieren'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Ziel
+              TextField(
+                controller: destinationController,
+                decoration: InputDecoration(
+                  labelText: 'Wohin möchtest du reisen?',
+                  hintText: 'z.B. Prag, Amsterdam, Rom',
+                ),
+              ),
+
+              // Tage-Slider
+              Slider(
+                value: days,
+                min: 1,
+                max: 7,
+                divisions: 6,
+                label: '${days.round()} Tage',
+                onChanged: (value) => setDialogState(() => days = value),
+              ),
+
+              // Interessen-Chips
+              Wrap(
+                spacing: 8,
+                children: interests.map((interest) {
+                  return FilterChip(
+                    label: Text(interest),
+                    selected: selectedInterests.contains(interest),
+                    onSelected: (selected) {
+                      setDialogState(() {
+                        if (selected) {
+                          selectedInterests.add(interest);
+                        } else {
+                          selectedInterests.remove(interest);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+
+              // Startpunkt (optional)
+              TextField(
+                controller: startController,
+                decoration: InputDecoration(
+                  labelText: 'Startpunkt (optional)',
+                  hintText: 'z.B. München',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _generateTrip(...);
+            },
+            child: const Text('Generieren'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+```
+
+### AI-Service Integration
+
+```dart
+Future<void> _generateTrip({
+  required String destination,
+  required int days,
+  required List<String> interests,
+  String? startLocation,
+}) async {
+  setState(() => _isLoading = true);
+
+  try {
+    final aiService = ref.read(aiServiceProvider);
+
+    final response = await aiService.generateTripPlan(
+      destination: destination,
+      days: days,
+      interests: interests,
+      startLocation: startLocation,
+    );
+
+    setState(() {
+      _messages.add({
+        'content': response,
+        'isUser': false,
+        'isTrip': true, // Markiert als Trip-Plan
+      });
+      _isLoading = false;
+    });
+  } catch (e) {
+    // Fallback: Demo-Modus
+    final demoResponse = _generateDemoTrip(destination, days);
+    setState(() {
+      _messages.add({
+        'content': demoResponse,
+        'isUser': false,
+        'isTrip': true,
+      });
+      _isLoading = false;
+    });
+  }
+}
+```
+
+### Beispiel-Output
+
+```
+🗺️ AI-Trip-Plan: 3 Tage in Prag
+
+Tag 1: Historisches Zentrum (8h)
+───────────────────────────────
+• 09:00 - 11:00 | Prager Burg
+  📍 UNESCO Welterbe
+  💰 250 CZK Eintritt
+  ⏱️ 2 Stunden empfohlen
+
+• 11:30 - 12:30 | Karlsbrücke
+  📍 Gotische Brücke mit 30 Statuen
+  💰 Kostenlos
+  ⏱️ 1 Stunde
+
+• 13:00 - 14:00 | Mittagspause
+  🍽️ U Fleků (seit 1499)
+  💰 €€ | Böhmische Küche
+
+• 14:30 - 16:00 | Altstädter Ring
+  📍 Astronomische Uhr + Rathaus
+  💰 200 CZK
+  ⏱️ 1.5 Stunden
+
+Tag 2: Kleinseite & Vyšehrad (7h)
+──────────────────────────────────
+[...]
+
+💡 Insider-Tipps:
+• Prag Card: 3 Tage für €58 (spart ~€40)
+• Öffentliche Verkehrsmittel: 24h-Ticket €5
+• Beste Reisezeit: Mai-September
+
+🏨 Hotel-Empfehlung:
+• Zentrum, nähe Altstädter Ring
+• Budget: €50-80/Nacht
+• Tipp: Booking.com 2 Monate vorher
+
+🚗 Anreise:
+• Von München: 380 km (4h Auto)
+• Alternativ: Flixbus ab €15
+
+[Übernehmen-Button] 🚧 Coming Soon
+```
+
+### Demo-Modus
+
+Falls kein OpenAI API-Key konfiguriert:
+
+```dart
+String _generateDemoTrip(String destination, int days) {
+  return '''
+⚠️ Demo-Modus (kein API-Key konfiguriert)
+
+🗺️ AI-Trip-Plan: $days Tage in $destination
+
+Dies ist ein Beispiel-Trip. Für echte AI-generierte
+Routen benötigst du einen OpenAI API-Key.
+
+Konfiguriere den Key in:
+lib/core/constants/api_keys.dart
+
+Tag 1: Stadtbesichtigung
+• Hauptsehenswürdigkeit A (2h)
+• Mittagspause (1h)
+• Museum B (2h)
+• Altstadt erkunden (2h)
+
+Tag 2: Umgebung
+• Ausflug C (4h)
+• Natur & Wandern (3h)
+• Restaurant-Empfehlung (1h)
+
+[...]
+  ''';
+}
+```
+
+### OpenAI API-Konfiguration
+
+**Datei:** `lib/core/constants/api_keys.dart`
+
+```dart
+class ApiKeys {
+  static const String openAiApiKey = 'sk-proj-...';
+}
+```
+
+**Kosten-Schätzung:**
+- Pro Trip-Generierung: ~1000 Tokens
+- Kosten: ~$0.01-0.03 (GPT-4o)
+- Empfehlung: $10 Guthaben = ~300-1000 Trips
 
 ---
 
