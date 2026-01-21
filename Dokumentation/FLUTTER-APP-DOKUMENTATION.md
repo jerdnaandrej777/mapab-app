@@ -1,13 +1,14 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.2.3 (21. Januar 2026)
+Version: 1.2.4 (21. Januar 2026)
 
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Neu in v1.2.3](#neu-in-v123) ⭐ AKTUELL
-3. [Neu in v1.2.2](#neu-in-v122)
-4. [Neu in v1.2.1](#neu-in-v121)
+2. [Neu in v1.2.4](#neu-in-v124) ⭐ AKTUELL
+3. [Neu in v1.2.3](#neu-in-v123)
+4. [Neu in v1.2.2](#neu-in-v122)
+5. [Neu in v1.2.1](#neu-in-v121)
 5. [Neu in v1.2.0](#neu-in-v120)
 6. [Account-System](#account-system)
 7. [Favoriten-Management](#favoriten-management)
@@ -35,11 +36,11 @@ Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Androi
 
 ### Download & Installation
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.3
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.4
 
 **Direkter APK-Download:**
 ```
-https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.3/MapAB-v1.2.3.apk
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.4/MapAB-v1.2.4.apk
 ```
 
 **Installationsschritte:**
@@ -47,6 +48,148 @@ https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.3/MapAB-v1.2
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
+
+---
+
+## Neu in v1.2.4
+
+**Release-Datum:** 21. Januar 2026
+
+### 🎲 Haupt-Feature: AI-Trip ohne Ziel generiert Random Route
+
+**Neues Verhalten:** Im AI-Trip-Dialog ist das Ziel-Feld jetzt optional. Wenn kein Ziel angegeben wird, wird automatisch eine zufällige Route um den Startpunkt generiert.
+
+#### Hybrid-Modus
+
+| Start | Ziel | Ergebnis |
+|-------|------|----------|
+| leer | leer | GPS-Abfrage → Random Route → Trip-Screen |
+| "Berlin" | leer | Geocode Berlin → Random Route → Trip-Screen |
+| beliebig | "Prag" | AI-Text-Plan im Chat (wie bisher) |
+
+#### Neue Methoden in `chat_screen.dart`
+
+**1. GPS-Abfrage bei leerem Start:**
+```dart
+Future<({double lat, double lng, String address})?> _getLocationIfNeeded(String? startText) async {
+  // Wenn Start eingegeben: Geocoding
+  if (startText != null && startText.isNotEmpty) {
+    final results = await geocodingRepo.geocode(startText);
+    return (lat: results.first.latitude, lng: results.first.longitude, ...);
+  }
+
+  // Sonst: GPS-Standort abfragen
+  final position = await Geolocator.getCurrentPosition();
+  final address = await geocodingRepo.reverseGeocode(position);
+  return (lat: position.latitude, lng: position.longitude, address: address);
+}
+```
+
+**2. Interessen → POI-Kategorien Mapping:**
+```dart
+List<POICategory> _mapInterestsToCategories(List<String> interests) {
+  final mapping = {
+    'Kultur': ['museum', 'monument', 'unesco'],
+    'Natur': ['nature', 'park', 'lake', 'viewpoint'],
+    'Geschichte': ['castle', 'church', 'monument'],
+    'Essen': ['restaurant'],
+    'Nightlife': ['city'],
+    'Shopping': ['city'],
+    'Sport': ['activity'],
+  };
+  // ...
+}
+```
+
+**3. Random Trip → Trip-Screen:**
+```dart
+Future<void> _generateRandomTripFromLocation({...}) async {
+  // 1. Kategorien aus Interessen
+  final categories = _mapInterestsToCategories(interests);
+
+  // 2. Trip generieren
+  final result = await tripGenerator.generateDayTrip(
+    startLocation: LatLng(lat, lng),
+    radiusKm: days == 1 ? 100 : (days * 80).clamp(100, 300),
+    categories: categories,
+  );
+
+  // 3. An TripStateProvider übergeben
+  tripState.setRoute(result.trip.route);
+  tripState.setStops(result.selectedPOIs);
+
+  // 4. Zum Trip-Screen navigieren
+  context.go('/trip');
+}
+```
+
+#### Geänderte Dialog-Labels
+
+```dart
+// Vorher:
+labelText: 'Ziel'
+hintText: 'z.B. Prag, Amsterdam, Rom'
+
+// Nachher:
+labelText: 'Ziel (optional)'
+hintText: 'Leer = Zufällige Route um Startpunkt'
+
+// Vorher:
+labelText: 'Startpunkt (optional)'
+hintText: 'z.B. München'
+
+// Nachher:
+labelText: 'Startpunkt (optional)'
+hintText: 'Leer = GPS-Standort verwenden'
+```
+
+#### Flow-Diagramm
+
+```
+User klickt "Generieren"
+         │
+         ▼
+    ┌────────────┐
+    │ Ziel leer? │
+    └────────────┘
+         │
+    ┌────┴────┐
+    │         │
+   Ja        Nein
+    │         │
+    ▼         ▼
+┌─────────┐ ┌─────────────────┐
+│Start    │ │ AI-Text-Plan    │
+│leer?    │ │ im Chat         │
+└─────────┘ │ (wie bisher)    │
+    │       └─────────────────┘
+┌───┴───┐
+│       │
+Ja     Nein
+│       │
+▼       ▼
+┌──────────┐ ┌───────────────┐
+│GPS-Abfr. │ │Geocode Start  │
+└──────────┘ └───────────────┘
+    │              │
+    └──────┬───────┘
+           ▼
+    ┌─────────────────┐
+    │TripGenerator    │
+    │.generateDayTrip │
+    └─────────────────┘
+           │
+           ▼
+    ┌─────────────────┐
+    │tripStateProvider│
+    │.setRoute/Stops  │
+    └─────────────────┘
+           │
+           ▼
+    ┌─────────────────┐
+    │context.go('/trip')│
+    └─────────────────┘
+```
 
 ---
 

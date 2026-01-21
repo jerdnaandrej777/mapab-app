@@ -510,7 +510,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 3. **OpenAI**: Benötigt aktives Guthaben
 4. **GPS**: Nur mit HTTPS/Release Build zuverlässig
 
-## Feature-Übersicht (Version 1.2.3)
+## Feature-Übersicht (Version 1.2.4)
 
 ### Kern-Features
 - 🗺️ **Interaktive Karte** mit POI-Markern
@@ -545,12 +545,19 @@ In `android/app/src/main/AndroidManifest.xml`:
 - ⏳ **Loading-Indikator** während Berechnung
 - 🎯 **Trip-Screen** zeigt berechnete Routen korrekt an
 
-### Trip-Screen Fix (v1.2.3) ⭐ NEU
+### Trip-Screen Fix (v1.2.3)
 - 🐛 **Trip-Screen zeigt Route nach AI-Trip** - confirmTrip() übergibt Route an tripStateProvider
 - 📍 **Automatische GPS-Abfrage** - Bei "Überrasch mich!" ohne Startpunkt wird GPS automatisch aktiviert
 - ✅ **Startfeld optional** - canGenerate prüft nur noch isLoading
 - 🔄 **keepAlive Provider** - TripStateProvider behält State beim Navigation
 - 🌙 **Dark Mode vollständig** für alle Hauptkomponenten
+
+### AI-Trip ohne Ziel (v1.2.4) ⭐ NEU
+- 🎲 **Ziel optional** - AI-Trip-Dialog erlaubt leeres Ziel-Feld
+- 📍 **GPS-Fallback** - Ohne Startpunkt wird automatisch GPS-Standort abgefragt
+- 🎯 **Interessen-Mapping** - Gewählte Interessen werden zu POI-Kategorien gemappt
+- 🚗 **Direkt zu Trip-Screen** - Bei leerem Ziel wird Random Route generiert und angezeigt
+- 💬 **Hybrid-Modus** - Mit Ziel: AI-Text-Plan im Chat | Ohne Ziel: Random Route → Trip-Screen
 
 ## Navigation-Struktur
 
@@ -605,12 +612,31 @@ aiService.getRecommendations(
 );
 ```
 
-### Trip-Generator Dialog (ChatScreen)
-- **Ziel**: TextField mit Städte-Eingabe
+### Trip-Generator Dialog (ChatScreen) - v1.2.4 Update
+
+**Eingabefelder:**
+- **Ziel (optional)**: TextField - Leer = Random Route um Startpunkt
+- **Start (optional)**: TextField - Leer = GPS-Standort abfragen
 - **Tage**: Slider (1-7 Tage)
 - **Interessen**: FilterChips (Kultur, Natur, Geschichte, Essen, Nightlife, Shopping, Sport)
-- **Start**: Optional TextField für Startpunkt
-- **Output**: Formatierter Tagesplan mit POIs, Zeiten, Beschreibungen
+
+**Hybrid-Verhalten:**
+| Start | Ziel | Ergebnis |
+|-------|------|----------|
+| leer | leer | GPS → Random Route → Trip-Screen |
+| "Berlin" | leer | Geocode Berlin → Random Route → Trip-Screen |
+| beliebig | "Prag" | AI-Text-Plan im Chat (wie bisher) |
+
+**Interessen → Kategorien Mapping:**
+```dart
+'Kultur' → ['museum', 'monument', 'unesco']
+'Natur' → ['nature', 'park', 'lake', 'viewpoint']
+'Geschichte' → ['castle', 'church', 'monument']
+'Essen' → ['restaurant']
+'Nightlife' → ['city']
+'Shopping' → ['city']
+'Sport' → ['activity']
+```
 
 ## Vergleich mit Web-Version (Mobi/)
 
