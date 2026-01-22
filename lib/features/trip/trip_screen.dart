@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/categories.dart';
 import '../../data/models/trip.dart';
@@ -102,6 +104,84 @@ class TripScreen extends ConsumerWidget {
         ),
       );
     }
+  }
+
+  /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints
+  Future<void> _openInGoogleMaps(BuildContext context, TripStateData tripState) async {
+    final route = tripState.route;
+    if (route == null) return;
+
+    // Google Maps URL mit Waypoints
+    // Format: https://www.google.com/maps/dir/?api=1&origin=LAT,LNG&destination=LAT,LNG&waypoints=LAT,LNG|LAT,LNG
+    final origin = '${route.start.latitude},${route.start.longitude}';
+    final destination = '${route.end.latitude},${route.end.longitude}';
+
+    var url = 'https://www.google.com/maps/dir/?api=1'
+        '&origin=$origin'
+        '&destination=$destination'
+        '&travelmode=driving';
+
+    // Waypoints hinzufügen (max 10 für Google Maps)
+    if (tripState.stops.isNotEmpty) {
+      final waypoints = tripState.stops
+          .take(10)
+          .map((poi) => '${poi.latitude},${poi.longitude}')
+          .join('|');
+      url += '&waypoints=$waypoints';
+    }
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Maps konnte nicht geöffnet werden'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Teilt die Route über WhatsApp, Email, etc.
+  Future<void> _shareRoute(BuildContext context, TripStateData tripState) async {
+    final route = tripState.route;
+    if (route == null) return;
+
+    // Google Maps Link generieren
+    final origin = '${route.start.latitude},${route.start.longitude}';
+    final destination = '${route.end.latitude},${route.end.longitude}';
+    var mapsUrl = 'https://www.google.com/maps/dir/?api=1'
+        '&origin=$origin'
+        '&destination=$destination'
+        '&travelmode=driving';
+
+    if (tripState.stops.isNotEmpty) {
+      final waypoints = tripState.stops
+          .take(10)
+          .map((poi) => '${poi.latitude},${poi.longitude}')
+          .join('|');
+      mapsUrl += '&waypoints=$waypoints';
+    }
+
+    // Share-Text erstellen
+    final stopNames = tripState.stops.map((s) => '• ${s.name}').join('\n');
+    final shareText = '''
+🗺️ Meine Route mit MapAB
+
+📍 Start: ${route.startAddress ?? 'Unbekannt'}
+🏁 Ziel: ${route.endAddress ?? 'Unbekannt'}
+📏 Distanz: ${tripState.totalDistance.toStringAsFixed(1)} km
+⏱️ Dauer: ${tripState.totalDuration} Min
+
+${tripState.stops.isNotEmpty ? '📌 Stops:\n$stopNames\n' : ''}
+🔗 In Google Maps öffnen:
+$mapsUrl
+''';
+
+    await Share.share(shareText, subject: 'Meine Route');
   }
 
   Widget _buildEmptyState(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
@@ -244,11 +324,9 @@ class TripScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Export nach Google Maps...')),
-                      );
-                    },
+                    onPressed: route != null
+                        ? () => _openInGoogleMaps(context, tripState)
+                        : null,
                     icon: const Icon(Icons.map),
                     label: const Text('Google Maps'),
                   ),
@@ -256,13 +334,11 @@ class TripScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Navigation wird gestartet...')),
-                      );
-                    },
-                    icon: const Icon(Icons.navigation),
-                    label: const Text('Navigation'),
+                    onPressed: route != null
+                        ? () => _shareRoute(context, tripState)
+                        : null,
+                    icon: const Icon(Icons.share),
+                    label: const Text('Route Teilen'),
                   ),
                 ),
               ],

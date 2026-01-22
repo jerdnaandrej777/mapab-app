@@ -668,12 +668,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${poi.name} zur Route hinzugefügt'),
-        action: SnackBarAction(
-          label: 'Rückgängig',
-          onPressed: () {
-            tripNotifier.removeStop(poi.id);
-          },
-        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
       ),
     );
     context.pop();
