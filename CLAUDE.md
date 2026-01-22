@@ -91,6 +91,9 @@ flutter build apk
 | `lib/features/onboarding/widgets/animated_route.dart` | CustomPainter Route-Animation ⭐ v1.2.8 |
 | `lib/features/onboarding/widgets/animated_ai_circle.dart` | Pulsierende AI-Kreise ⭐ v1.2.8 |
 | `lib/features/onboarding/widgets/animated_sync.dart` | Cloud-Sync Animation ⭐ v1.2.8 |
+| `lib/features/map/providers/route_session_provider.dart` | Route-Session Management (POIs + Wetter) ⭐ v1.2.9 |
+| `lib/features/map/widgets/weather_bar.dart` | WeatherBar mit Warnungen ⭐ v1.2.9 |
+| `lib/features/trip/trip_screen.dart` | Trip-Screen mit Google Maps Export & Route Teilen ⭐ v1.3.0 |
 
 ## API-Abhängigkeiten
 
@@ -267,8 +270,23 @@ final isRouteSavedProvider(String tripId)   // Prüft einzelne Route
 final favoritePOIsProvider                  // Liste aller POI-Favoriten
 final savedRoutesProvider                   // Liste aller gespeicherten Routen
 
-// Onboarding Provider (v1.2.8) ⭐ NEU
+// Onboarding Provider (v1.2.8)
 final onboardingNotifierProvider            // Hive-basiertes First-Time-Flag
+
+// Route Session Provider (v1.2.9) ⭐ NEU
+final routeSessionProvider                  // Aktive Route-Session (POIs + Wetter)
+
+// WICHTIG: keepAlive Provider (v1.2.9) ⭐ NEU
+// Diese Provider verwenden @Riverpod(keepAlive: true) damit der State
+// bei Navigation nicht verloren geht:
+// - accountNotifierProvider
+// - favoritesNotifierProvider
+// - authNotifierProvider
+// - settingsNotifierProvider
+// - tripStateProvider
+// - pOIStateNotifierProvider
+// - onboardingNotifierProvider
+// - routeSessionProvider
 ```
 
 ## Random-Trip Flow (v1.2.3) ⭐ NEU
@@ -544,6 +562,9 @@ Widget build(BuildContext context) {
 - `[AI]` - AI-Anfragen (inkl. API-Key Präfix)
 - `[GPS]` - GPS-Funktionen
 - `[Sharing]` - Trip-Sharing & Deep Links ⭐ v1.2.7
+- `[Splash]` - Splash-Screen Navigation ⭐ v1.2.9
+- `[Account]` - Account-Laden und -Speichern ⭐ v1.2.9
+- `[Onboarding]` - Onboarding-Status ⭐ v1.2.8
 
 ### AI-Fehler prüfen
 Bei AI-Problemen zeigt das Logging:
@@ -569,7 +590,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 5. **OpenAI**: Benötigt aktives Guthaben
 6. **GPS**: Nur mit HTTPS/Release Build zuverlässig
 
-## Feature-Übersicht (Version 1.2.8)
+## Feature-Übersicht (Version 1.3.0)
 
 ### Kern-Features
 - 🗺️ **Interaktive Karte** mit POI-Markern
@@ -645,7 +666,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 🚀 **Non-blocking Enrichment** - POI-Detail lädt ohne UI-Blockade
 - 🌙 **Dark Mode Fixes** - AppTheme.* → colorScheme.* Migration komplett
 
-### Animiertes Onboarding (v1.2.8) ⭐ NEU
+### Animiertes Onboarding (v1.2.8)
 - 🎬 **3 animierte Seiten** - POI-Route, KI-Assistent, Cloud-Sync Vorstellung
 - ✨ **Native Flutter Animationen** - AnimationController, CustomPainter, Staggered Animations
 - 🎨 **Dunkles Design** - Inspiriert vom Referenzbild mit pulsierenden Kreisen
@@ -653,6 +674,23 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 🔄 **First-Time Detection** - Hive-basiertes Flag für einmalige Anzeige
 - 🎯 **Text-Highlights** - Farbige Wörter im Titel (RichText)
 - ⏭️ **Überspringen-Option** - Header-Button für erfahrene Nutzer
+
+### Route Starten & Wetter-Warnungen (v1.2.9)
+- 🚗 **Route Starten Button** - Erscheint wenn Start + Ziel gewählt, lädt POIs & Wetter
+- 🌤️ **WeatherBar** - Wetter-Zusammenfassung mit 5 Messpunkten entlang der Route
+- ⚠️ **Wetter-Warnungen** - Unwetter, Regen, Schnee, Sturm mit Empfehlungen
+- 🏠 **Indoor-Filter** - Bei schlechtem Wetter Indoor-POIs bevorzugen
+- 📍 **Route-Only-Modus** - Nur POIs entlang der Route anzeigen (routeOnlyMode)
+- 🔧 **RouteSessionProvider** - Neuer Provider für aktive Routen-Sessions
+- 🔧 **FavoritesNotifier keepAlive** - State bleibt erhalten bei Navigation
+- 🔧 **AccountNotifier keepAlive** - Gast-Account wird nicht mehr disposed
+- ⚡ **Splash-Screen Überarbeitung** - Rekursive Schleife behoben, schneller Start
+- 🐛 **Gast-Modus Fix** - "Als Gast fortfahren" funktioniert jetzt korrekt
+
+### Google Maps Export & Route Teilen (v1.3.0) ⭐ NEU
+- 🗺️ **Google Maps Export** - Route mit Start, Ziel und Waypoints direkt in Google Maps öffnen
+- 📤 **Route Teilen** - Share-Funktion für WhatsApp, Email, SMS etc. mit Google Maps Link
+- ⚡ **SnackBar Verbesserung** - "Zur Route hinzugefügt" verschwindet nach 2s automatisch (floating)
 
 ## Navigation-Struktur
 
@@ -1687,3 +1725,143 @@ class PageIndicator extends StatelessWidget {
 | `lib/features/onboarding/` (NEU) | Komplettes Onboarding-Feature |
 | `lib/app.dart` | `/onboarding` Route hinzugefügt |
 | `lib/features/account/splash_screen.dart` | Onboarding-Check vor Auth-Check |
+
+---
+
+## Provider & Splash-Screen Fixes (v1.2.9) ⭐ NEU
+
+### Problem: Gast-Modus und Favoriten funktionierten nicht
+
+**Symptome:**
+- "Als Gast fortfahren" führte nicht zur Hauptseite
+- POI-Favoriten wurden nicht gespeichert
+- Routen-Speichern funktionierte nicht
+- App startete sehr langsam nach Logout
+
+**Ursachen:**
+
+1. **AutoDispose Provider**: `AccountNotifier` und `FavoritesNotifier` verwendeten `@riverpod` (AutoDispose). Der State wurde beim Verlassen des Screens gelöscht.
+
+2. **Early-Return bei null State**: Die Favoriten-Methoden hatten `if (state.value == null) return;` - wenn der State noch lädt, passierte nichts.
+
+3. **Rekursive Schleife im Splash-Screen**: Bei `loading` rief sich `_checkAuthAndNavigate()` endlos selbst auf.
+
+### Lösung 1: keepAlive für kritische Provider
+
+```dart
+// VORHER - State wird bei Navigation gelöscht
+@riverpod
+class AccountNotifier extends _$AccountNotifier { ... }
+
+// NACHHER - State bleibt erhalten
+@Riverpod(keepAlive: true)
+class AccountNotifier extends _$AccountNotifier { ... }
+```
+
+**Betroffene Provider:**
+- `lib/data/providers/account_provider.dart` → `@Riverpod(keepAlive: true)`
+- `lib/data/providers/favorites_provider.dart` → `@Riverpod(keepAlive: true)`
+
+### Lösung 2: _ensureLoaded() für Favoriten
+
+```dart
+// lib/data/providers/favorites_provider.dart
+
+/// Wartet bis der State geladen ist und gibt ihn zurück
+Future<FavoritesState> _ensureLoaded() async {
+  // Wenn bereits geladen, direkt zurückgeben
+  if (state.hasValue && state.value != null) {
+    return state.value!;
+  }
+
+  // Warte auf das Laden
+  debugPrint('[Favorites] Warte auf State-Laden...');
+  final currentState = await future;
+  debugPrint('[Favorites] State geladen: ${currentState.routeCount} Routen, ${currentState.poiCount} POIs');
+  return currentState;
+}
+
+// Verwendung in allen Mutations-Methoden:
+Future<void> saveRoute(Trip trip) async {
+  final current = await _ensureLoaded();  // Wartet auf State
+  // ... Rest der Logik
+}
+
+Future<void> addPOI(POI poi) async {
+  final current = await _ensureLoaded();  // Wartet auf State
+  // ... Rest der Logik
+}
+```
+
+### Lösung 3: Splash-Screen Überarbeitung
+
+```dart
+// VORHER - Rekursive Schleife!
+loading: () {
+  Future.delayed(const Duration(milliseconds: 500), () {
+    _checkAuthAndNavigate();  // Ruft sich endlos selbst auf
+  });
+},
+
+// NACHHER - Reaktiv mit ref.watch()
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _hasNavigated = false;
+  bool _initialDelayDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialDelayDone) return _buildSplashUI();
+
+    // Reaktiv auf Provider-Änderungen reagieren
+    final hasSeenOnboarding = ref.watch(onboardingNotifierProvider);
+    final authState = ref.watch(authNotifierProvider);
+    final accountAsync = ref.watch(accountNotifierProvider);
+
+    // Navigation mit _hasNavigated Flag (verhindert mehrfache Navigation)
+    // ...
+  }
+}
+```
+
+### Geänderte Dateien (v1.2.9)
+
+| Datei | Änderung |
+|-------|----------|
+| `lib/data/providers/account_provider.dart` | `@Riverpod(keepAlive: true)` |
+| `lib/data/providers/favorites_provider.dart` | `@Riverpod(keepAlive: true)` + `_ensureLoaded()` |
+| `lib/features/account/splash_screen.dart` | Komplett überarbeitet, reaktiv mit `ref.watch()` |
+| `*.g.dart` | Neu generiert (AsyncNotifierProvider statt AutoDisposeAsyncNotifierProvider) |
+
+### Debug-Logging (v1.2.9)
+
+```
+[Splash] Navigiere zu: /login
+[Splash] Lokaler Account: Gast
+[Favorites] Warte auf State-Laden...
+[Favorites] State geladen: 0 Routen, 0 POIs
+[Favorites] POI favorisiert: Brandenburger Tor
+[Favorites] Route gespeichert: Berlin Tagestrip
+```
+
+### Riverpod: AutoDispose vs keepAlive
+
+| Aspekt | `@riverpod` (AutoDispose) | `@Riverpod(keepAlive: true)` |
+|--------|---------------------------|------------------------------|
+| State-Lebensdauer | Bis kein Widget mehr watched | Bis App beendet |
+| Memory | Automatisch freigegeben | Bleibt im Speicher |
+| Anwendungsfall | Temporäre UI-States | Persistente App-States |
+| Beispiele | Form-Input, Suche | Account, Favoriten, Settings |
+
+### Wann keepAlive verwenden?
+
+✅ **Verwende keepAlive für:**
+- Account/Auth State
+- Favoriten/Gespeicherte Daten
+- App-weite Settings
+- States die über Navigation hinweg erhalten bleiben sollen
+
+❌ **Verwende AutoDispose für:**
+- Screen-spezifische States
+- Form-Eingaben
+- Temporäre Filter/Suchen
+- States die bei Screen-Verlassen zurückgesetzt werden sollen

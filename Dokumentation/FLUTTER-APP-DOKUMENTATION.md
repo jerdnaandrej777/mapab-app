@@ -1,19 +1,21 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.2.8 (22. Januar 2026)
+Version: 1.3.0 (22. Januar 2026)
 
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Neu in v1.2.8](#neu-in-v128) ⭐ AKTUELL
-3. [Neu in v1.2.7](#neu-in-v127)
-4. [Neu in v1.2.6](#neu-in-v126)
-5. [Neu in v1.2.5](#neu-in-v125)
-6. [Neu in v1.2.4](#neu-in-v124)
-7. [Neu in v1.2.3](#neu-in-v123)
-8. [Neu in v1.2.2](#neu-in-v122)
-9. [Neu in v1.2.1](#neu-in-v121)
-10. [Neu in v1.2.0](#neu-in-v120)
+2. [Neu in v1.3.0](#neu-in-v130) ⭐ AKTUELL
+3. [Neu in v1.2.9](#neu-in-v129)
+4. [Neu in v1.2.8](#neu-in-v128)
+5. [Neu in v1.2.7](#neu-in-v127)
+6. [Neu in v1.2.6](#neu-in-v126)
+7. [Neu in v1.2.5](#neu-in-v125)
+8. [Neu in v1.2.4](#neu-in-v124)
+9. [Neu in v1.2.3](#neu-in-v123)
+10. [Neu in v1.2.2](#neu-in-v122)
+11. [Neu in v1.2.1](#neu-in-v121)
+12. [Neu in v1.2.0](#neu-in-v120)
 6. [Account-System](#account-system)
 7. [Favoriten-Management](#favoriten-management)
 8. [AI-Trip-Generator](#ai-trip-generator)
@@ -40,18 +42,185 @@ Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Androi
 
 ### Download & Installation
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.2.4
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.3.0
 
 **Direkter APK-Download:**
 ```
-https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.4/MapAB-v1.2.4.apk
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.3.0/MapAB-v1.3.0.apk
 ```
 
 **Installationsschritte:**
-1. APK herunterladen (52 MB)
+1. APK herunterladen (56.5 MB)
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
+
+---
+
+## Neu in v1.3.0
+
+**Release-Datum:** 22. Januar 2026
+
+### 🗺️ Haupt-Feature: Google Maps Export & Route Teilen
+
+Die Route kann jetzt direkt in Google Maps geöffnet oder über WhatsApp, Email etc. geteilt werden.
+
+#### Features
+
+- **Google Maps Export** - Route mit Start, Ziel und allen Waypoints direkt in Google Maps öffnen
+- **Route Teilen** - Share-Funktion für WhatsApp, Email, SMS etc.
+- **SnackBar Verbesserung** - "Zur Route hinzugefügt" verschwindet nach 2s automatisch
+
+#### UI-Design
+
+```
+┌────────────────────────────────────┐
+│  🗺️ Google Maps  │  📤 Route Teilen │
+└────────────────────────────────────┘
+```
+
+#### Geänderte Dateien
+
+```
+lib/features/trip/trip_screen.dart     # Google Maps Export & Route Teilen
+lib/features/poi/poi_detail_screen.dart # SnackBar Fix
+```
+
+#### Google Maps URL-Format
+
+```dart
+https://www.google.com/maps/dir/?api=1
+  &origin=LAT,LNG
+  &destination=LAT,LNG
+  &waypoints=LAT,LNG|LAT,LNG|...
+  &travelmode=driving
+```
+
+#### Share-Text Format
+
+```
+🗺️ Meine Route mit MapAB
+
+📍 Start: Berlin, Alexanderplatz
+🏁 Ziel: München, Marienplatz
+📏 Distanz: 584.2 km
+⏱️ Dauer: 5h 30min
+
+📌 Stops:
+• Schloss Neuschwanstein
+• Nürnberger Altstadt
+
+🔗 In Google Maps öffnen:
+https://www.google.com/maps/dir/...
+```
+
+---
+
+## Neu in v1.2.9
+
+**Release-Datum:** 22. Januar 2026
+
+### 🚗 Haupt-Feature: Route Starten & Wetter-Warnungen
+
+Wenn Start und Ziel auf der Karte ausgewählt wurden, erscheint ein "Route Starten" Button, der POIs und Wetter-Daten entlang der Route lädt.
+
+#### Features
+
+- **Route Starten Button** - Prominenter Button mit Gradient, zeigt Distanz und Dauer
+- **WeatherBar** - Wetter-Zusammenfassung mit 5 Messpunkten entlang der Route
+- **Wetter-Warnungen** - Unwetter, Regen, Schnee, Sturm mit Empfehlungen
+- **Indoor-Filter** - Bei schlechtem Wetter werden Indoor-POIs empfohlen
+- **Route-Only-Modus** - Nur POIs entlang der Route werden angezeigt
+
+#### UI-Design
+
+```
+┌────────────────────────────────────────────────┐
+│  ▶️  Route starten                             │
+│      142 km · 1h 45min                        →│
+└────────────────────────────────────────────────┘
+```
+
+#### Neue Dateien
+
+```
+lib/features/map/providers/
+└── route_session_provider.dart     # Route-Session Management
+    └── route_session_provider.g.dart  # Generiert
+```
+
+#### RouteSessionState
+
+```dart
+class RouteSessionState {
+  final bool isActive;        // Session aktiv?
+  final bool isLoading;       // Laden läuft?
+  final AppRoute? route;      // Aktive Route
+  final bool poisLoaded;      // POIs geladen?
+  final bool weatherLoaded;   // Wetter geladen?
+  final String? error;        // Fehlermeldung
+
+  bool get isReady => isActive && poisLoaded && weatherLoaded && !isLoading;
+}
+```
+
+#### RouteSession Provider
+
+```dart
+@Riverpod(keepAlive: true)
+class RouteSession extends _$RouteSession {
+  /// Startet Route-Session (lädt POIs + Wetter parallel)
+  Future<void> startRoute(AppRoute route) async {
+    state = RouteSessionState(isActive: true, isLoading: true, route: route);
+
+    final results = await Future.wait<bool>([
+      _loadPOIs(route),
+      _loadWeather(route),
+    ]);
+
+    state = state.copyWith(
+      isLoading: false,
+      poisLoaded: results[0],
+      weatherLoaded: results[1],
+    );
+  }
+
+  /// Stoppt Session und setzt State zurück
+  void stopRoute() {
+    ref.read(pOIStateNotifierProvider.notifier).setRouteOnlyMode(false);
+    ref.read(routeWeatherNotifierProvider.notifier).clear();
+    state = const RouteSessionState();
+  }
+}
+```
+
+#### POI State Erweiterung
+
+```dart
+// lib/features/poi/providers/poi_state_provider.dart
+@freezed
+class POIState with _$POIState {
+  const factory POIState({
+    // ... bestehende Felder ...
+    @Default(false) bool routeOnlyMode,  // NEU: Nur Route-POIs
+  }) = _POIState;
+}
+```
+
+#### Wetter-Warnungen
+
+| Bedingung | Warnung | Empfehlung |
+|-----------|---------|------------|
+| Wind > 60 km/h | "Sturmwarnung!" | Indoor-Filter |
+| Gewitter | "Unwetterwarnung!" | Fahrt verschieben |
+| Schnee | "Winterwetter!" | Indoor-Filter |
+| Regen | "Regen erwartet." | Indoor-Filter |
+
+#### Bugfixes
+
+- **Gast-Modus Fix** - "Als Gast fortfahren" funktioniert wieder korrekt
+- **Favoriten-Speicherung** - POIs und Routen werden zuverlässig gespeichert
+- **Splash-Screen** - Rekursive Schleife behoben, schnellerer Start
 
 ---
 
