@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'app.dart';
+import 'core/supabase/supabase_client.dart';
 
 /// Entry Point der Travel Planner App
 void main() async {
@@ -22,6 +23,9 @@ void main() async {
     Hive.openBox('cache'),
     Hive.openBox('user_accounts'), // Account-System
   ]);
+
+  // Supabase initialisieren (falls konfiguriert)
+  await initializeSupabase();
 
   // App starten mit Riverpod Provider
   runApp(

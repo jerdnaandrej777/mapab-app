@@ -1,10 +1,10 @@
 name: travel_planner
 description: Eine europäische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.2.3+4
+version: 1.2.8+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -28,6 +28,9 @@ dependencies:
   # Lokale Datenbank
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # Cloud Backend (Auth & Sync)
+  supabase_flutter: ^2.8.0
 
   # GPS & Location
   geolocator: ^11.1.0
@@ -59,7 +62,7 @@ dependencies:
   fl_chart: ^0.66.0
 
   # Voice & TTS
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.0.0
   flutter_tts: ^4.0.2
 
   # Image Picker (für Reisetagebuch)
@@ -83,7 +86,8 @@ dev_dependencies:
   json_serializable: ^6.7.1
   hive_generator: ^2.0.1
 
-# dependency_overrides entfernt für bessere Geolocator-Kompatibilität
+# Hinweis: supabase_flutter erfordert Flutter 3.27+ (Dart 3.6+)
+# Falls Build fehlschlägt, führe `flutter upgrade` aus
 
 flutter:
   uses-material-design: true

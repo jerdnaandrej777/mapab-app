@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/providers/settings_provider.dart';
-import 'data/providers/account_provider.dart';
 import 'features/map/map_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/poi/poi_list_screen.dart';
@@ -13,10 +12,14 @@ import 'features/trip/trip_screen.dart';
 import 'features/ai_assistant/chat_screen.dart';
 import 'features/random_trip/random_trip_screen.dart';
 import 'features/settings/settings_screen.dart';
-import 'features/account/login_screen.dart';
+import 'features/account/login_screen.dart' as account_login;
 import 'features/account/profile_screen.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
+import 'features/auth/forgot_password_screen.dart';
 import 'features/account/splash_screen.dart';
 import 'features/favorites/favorites_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -68,7 +71,7 @@ class TravelPlannerApp extends ConsumerWidget {
 
 /// GoRouter Konfiguration mit Account-Check
 final _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/splash',
   debugLogDiagnostics: true,
 
   // Redirect zu Login wenn nicht eingeloggt
@@ -80,11 +83,41 @@ final _router = GoRouter(
   },
 
   routes: [
-    // Login Screen
+    // Splash Screen (prüft Auth-Status)
+    GoRoute(
+      path: '/splash',
+      name: 'splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
+
+    // Onboarding (für neue User)
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
+
+    // Auth Screens
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      name: 'register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      name: 'forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
+    ),
+    // Legacy Login (lokales Profil)
+    GoRoute(
+      path: '/login-local',
+      name: 'login-local',
+      builder: (context, state) => const account_login.LoginScreen(),
     ),
     // Shell Route für Bottom Navigation
     ShellRoute(

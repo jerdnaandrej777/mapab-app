@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/providers/account_provider.dart';
+import '../../data/providers/auth_provider.dart';
+import '../onboarding/providers/onboarding_provider.dart';
 
-/// Splash Screen mit Account-Check
+/// Splash Screen mit Auth-Check
+/// Prüft sowohl Cloud-Auth (Supabase) als auch lokale Accounts
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,39 +19,80 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAccountAndNavigate();
+    _checkAuthAndNavigate();
   }
 
-  Future<void> _checkAccountAndNavigate() async {
+  Future<void> _checkAuthAndNavigate() async {
     // Warte kurz für Splash-Animation
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
-    // Prüfe ob Account vorhanden
+    // 0. Prüfe ob Onboarding bereits gesehen wurde
+    final hasSeenOnboarding = ref.read(onboardingNotifierProvider);
+
+    if (!hasSeenOnboarding) {
+      debugPrint('[Splash] Onboarding nicht gesehen → /onboarding');
+      if (mounted) {
+        context.go('/onboarding');
+      }
+      return;
+    }
+
+    // 1. Prüfe Cloud-Auth (Supabase) - hat Priorität
+    final authState = ref.read(authNotifierProvider);
+
+    // Warte kurz falls Auth noch lädt
+    if (authState.status == AuthStatus.loading) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+    }
+
+    // Erneut lesen nach potenziellem Laden
+    final currentAuthState = ref.read(authNotifierProvider);
+
+    // Cloud-User eingeloggt → direkt zur Hauptseite
+    if (currentAuthState.isAuthenticated) {
+      debugPrint('[Splash] Cloud-User eingeloggt: ${currentAuthState.userEmail}');
+      if (mounted) {
+        context.go('/');
+      }
+      return;
+    }
+
+    // 2. Prüfe lokalen Account (Gast-Modus)
     final accountAsync = ref.read(accountNotifierProvider);
 
     accountAsync.when(
       data: (account) {
         if (account != null) {
-          // Account vorhanden → Main Screen
-          context.go('/');
+          // Lokaler Account vorhanden → Main Screen
+          debugPrint('[Splash] Lokaler Account gefunden: ${account.displayName}');
+          if (mounted) {
+            context.go('/');
+          }
         } else {
           // Kein Account → Login Screen
-          context.go('/login');
+          debugPrint('[Splash] Kein Account gefunden → Login');
+          if (mounted) {
+            context.go('/login');
+          }
         }
       },
       loading: () {
         // Warten bis geladen
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            _checkAccountAndNavigate();
+            _checkAuthAndNavigate();
           }
         });
       },
       error: (_, __) {
         // Bei Fehler zum Login
-        context.go('/login');
+        debugPrint('[Splash] Fehler beim Account-Laden → Login');
+        if (mounted) {
+          context.go('/login');
+        }
       },
     );
   }
@@ -105,6 +149,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             // Loading Indicator
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Status Text
+            Text(
+              'Lade...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.7),
+              ),
             ),
           ],
         ),

@@ -9,14 +9,15 @@ Basiert auf dem Konzept der MapAB Web-App (`../Mobi/`).
 
 ## Tech Stack
 
-- **Flutter**: 3.24.5+
+- **Flutter**: 3.38.7+
 - **State Management**: Riverpod 2.x mit Code-Generierung
 - **Routing**: GoRouter mit Bottom Navigation
 - **Karte**: flutter_map mit MapLibre
 - **HTTP**: Dio mit Cache
 - **Lokale Daten**: Hive (Favoriten, Settings, Account)
+- **Cloud-Backend**: Supabase (PostgreSQL + Auth) ⭐ v1.2.6
 - **Models**: Freezed für immutable Klassen
-- **AI**: OpenAI GPT-4o Integration
+- **AI**: OpenAI GPT-4o via Backend-Proxy ⭐ v1.2.6
 
 ## Entwicklung
 
@@ -66,7 +67,16 @@ flutter build apk
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit Trip-Generator Dialog |
 | `lib/data/providers/favorites_provider.dart` | Favoriten State Management |
 | `lib/data/providers/account_provider.dart` | Account State Management |
-| `lib/data/services/ai_service.dart` | OpenAI GPT-4o Integration (Chat + Trip-Planning) |
+| `lib/data/services/ai_service.dart` | AI via Backend-Proxy (kein API-Key im Client) ⭐ v1.2.6 |
+| `lib/core/constants/api_config.dart` | Backend-URL Konfiguration ⭐ v1.2.6 |
+| `lib/core/supabase/supabase_config.dart` | Supabase Project URL + Anon Key ⭐ v1.2.6 |
+| `lib/core/supabase/supabase_client.dart` | Supabase Client Provider ⭐ v1.2.6 |
+| `lib/data/providers/auth_provider.dart` | Auth State Management ⭐ v1.2.6 |
+| `lib/data/services/auth_service.dart` | Supabase Auth Service ⭐ v1.2.6 |
+| `lib/data/services/sync_service.dart` | Cloud-Sync für Trips/Favoriten ⭐ v1.2.6 |
+| `lib/features/auth/login_screen.dart` | Cloud-Login mit Email/Passwort ⭐ v1.2.6 |
+| `lib/features/auth/register_screen.dart` | Registrierung ⭐ v1.2.6 |
+| `lib/features/auth/forgot_password_screen.dart` | Passwort-Reset ⭐ v1.2.6 |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Schichten: Curated → Wiki → Overpass) |
 | `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikimedia/Wikidata POI-Anreicherung ⭐ v1.2.5 |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching ⭐ v1.2.5 |
@@ -76,6 +86,11 @@ flutter build apk
 | `lib/data/services/hotel_service.dart` | Hotel-Suche mit Amenities & Booking.com |
 | `lib/core/constants/api_keys.dart` | API-Keys (OpenAI, TomTom, etc.) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
+| `lib/features/onboarding/onboarding_screen.dart` | Haupt-Onboarding mit PageView ⭐ v1.2.8 |
+| `lib/features/onboarding/providers/onboarding_provider.dart` | Hive-basiertes First-Time-Flag ⭐ v1.2.8 |
+| `lib/features/onboarding/widgets/animated_route.dart` | CustomPainter Route-Animation ⭐ v1.2.8 |
+| `lib/features/onboarding/widgets/animated_ai_circle.dart` | Pulsierende AI-Kreise ⭐ v1.2.8 |
+| `lib/features/onboarding/widgets/animated_sync.dart` | Cloud-Sync Animation ⭐ v1.2.8 |
 
 ## API-Abhängigkeiten
 
@@ -89,7 +104,9 @@ flutter build apk
 | Wikimedia Commons | POI-Bilder (Geo-Suche) | - |
 | Wikidata SPARQL | Strukturierte POI-Daten | - |
 | Open-Meteo | Wetter | - |
-| OpenAI | AI-Chat | API-Key |
+| OpenAI | AI-Chat | via Backend-Proxy ⭐ v1.2.6 |
+| Supabase | Cloud-DB + Auth | Anon Key ⭐ v1.2.6 |
+| Backend-Proxy | AI + Rate-Limiting | - ⭐ v1.2.6 |
 
 ## POI-Datenstruktur
 
@@ -234,6 +251,24 @@ final poiEnrichmentServiceProvider
 
 // POI Cache Service (v1.2.5 - keepAlive)
 final poiCacheServiceProvider
+
+// Auth State (v1.2.6 - Supabase)
+final authNotifierProvider
+
+// Supabase Client (v1.2.6)
+final supabaseClientProvider
+
+// Sync Service (v1.2.6)
+final syncServiceProvider
+
+// Favoriten Helper Provider (v1.2.7)
+final isPOIFavoriteProvider(String poiId)   // Prüft einzelnen POI
+final isRouteSavedProvider(String tripId)   // Prüft einzelne Route
+final favoritePOIsProvider                  // Liste aller POI-Favoriten
+final savedRoutesProvider                   // Liste aller gespeicherten Routen
+
+// Onboarding Provider (v1.2.8) ⭐ NEU
+final onboardingNotifierProvider            // Hive-basiertes First-Time-Flag
 ```
 
 ## Random-Trip Flow (v1.2.3) ⭐ NEU
@@ -502,9 +537,13 @@ Widget build(BuildContext context) {
 - `[Enrichment]` - POI Enrichment Service ⭐ v1.2.5
 - `[POICache]` - Cache Operationen ⭐ v1.2.5
 - `[POIState]` - State Änderungen ⭐ v1.2.5
+- `[POIList]` - POI-Liste Pre-Enrichment ⭐ v1.2.7
+- `[Favorites]` - Favoriten-Operationen ⭐ v1.2.7
+- `[Sync]` - Cloud-Sync ⭐ v1.2.6
 - `[Weather]` - Wetter-Laden
 - `[AI]` - AI-Anfragen (inkl. API-Key Präfix)
 - `[GPS]` - GPS-Funktionen
+- `[Sharing]` - Trip-Sharing & Deep Links ⭐ v1.2.7
 
 ### AI-Fehler prüfen
 Bei AI-Problemen zeigt das Logging:
@@ -530,7 +569,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 5. **OpenAI**: Benötigt aktives Guthaben
 6. **GPS**: Nur mit HTTPS/Release Build zuverlässig
 
-## Feature-Übersicht (Version 1.2.5)
+## Feature-Übersicht (Version 1.2.8)
 
 ### Kern-Features
 - 🗺️ **Interaktive Karte** mit POI-Markern
@@ -579,7 +618,7 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 🚗 **Direkt zu Trip-Screen** - Bei leerem Ziel wird Random Route generiert und angezeigt
 - 💬 **Hybrid-Modus** - Mit Ziel: AI-Text-Plan im Chat | Ohne Ziel: Random Route → Trip-Screen
 
-### POI-System Erweiterung (v1.2.5) ⭐ NEU
+### POI-System Erweiterung (v1.2.5)
 - 🖼️ **POI Enrichment** - Wikipedia/Wikimedia/Wikidata Integration für Bilder & Beschreibungen
 - 🌍 **POI Highlights** - UNESCO, Must-See, Geheimtipp, Historisch automatisch erkannt
 - 📍 **Map-Marker** - POIs auf Karte mit Preview-Sheet bei Tap
@@ -587,21 +626,54 @@ In `android/app/src/main/AndroidManifest.xml`:
 - 💾 **POI Caching** - Hive-basiert mit 7-30 Tage Retention
 - 🗂️ **Kategorie-Mapping** - Wikipedia-POIs erhalten passende Kategorien
 
+### Supabase Cloud Integration (v1.2.6)
+- ☁️ **Cloud-Sync** - Trips, Favoriten und Achievements in der Cloud gespeichert
+- 🔐 **Account-System** - Email/Passwort Registrierung und Login
+- 🛡️ **Backend-Proxy** - AI-Features laufen über sicheres Backend (kein API-Key im Client)
+- 🔄 **Passwort-Reset** - Email-basiertes Zurücksetzen
+- 👤 **Gast-Modus** - Weiterhin offline nutzbar ohne Registrierung
+- 📊 **Server-seitige XP-Validierung** - Gamification-Daten serverseitig verifiziert
+- 🔒 **Row Level Security** - Jeder User sieht nur eigene Daten
+
+### Favoriten-System & POI-Bilder Fix (v1.2.7)
+- ❤️ **POI-Favoriten funktionieren** - Toggle-Button mit dynamischem Icon (war TODO)
+- 💾 **Route-Speichern-Button** - Bookmark-Icon im TripScreen mit Benennungs-Dialog
+- 🖼️ **POI-Bilder in Liste** - Pre-Enrichment lädt Bilder für Top 20 POIs automatisch
+- ☁️ **Cloud-Sync integriert** - Favoriten werden bei Login synchronisiert
+- 🔧 **LatLng Serialisierung** - Custom JsonConverters für Freezed-Kompatibilität
+- 📷 **CachedNetworkImage** - Effizientes Bilder-Caching in Favoriten-Screen
+- 🚀 **Non-blocking Enrichment** - POI-Detail lädt ohne UI-Blockade
+- 🌙 **Dark Mode Fixes** - AppTheme.* → colorScheme.* Migration komplett
+
+### Animiertes Onboarding (v1.2.8) ⭐ NEU
+- 🎬 **3 animierte Seiten** - POI-Route, KI-Assistent, Cloud-Sync Vorstellung
+- ✨ **Native Flutter Animationen** - AnimationController, CustomPainter, Staggered Animations
+- 🎨 **Dunkles Design** - Inspiriert vom Referenzbild mit pulsierenden Kreisen
+- 📍 **Page-Indicator** - Animierte Punkte (aktiv = breiter Balken)
+- 🔄 **First-Time Detection** - Hive-basiertes Flag für einmalige Anzeige
+- 🎯 **Text-Highlights** - Farbige Wörter im Titel (RichText)
+- ⏭️ **Überspringen-Option** - Header-Button für erfahrene Nutzer
+
 ## Navigation-Struktur
 
 ### Routen (GoRouter)
 ```dart
+/splash             → SplashScreen (Auth + Onboarding Check)
+/onboarding         → OnboardingScreen (3 animierte Seiten) ⭐ v1.2.8
 /                    → MapScreen (mit AppBar)
 /pois               → POIListScreen
 /poi/:id            → POIDetailScreen
 /trip               → TripScreen
 /assistant          → ChatScreen (AI)
-/profile            → ProfileScreen ⭐ NEU v1.2.0
-/favorites          → FavoritesScreen ⭐ NEU v1.2.0
+/profile            → ProfileScreen
+/favorites          → FavoritesScreen
 /settings           → SettingsScreen
 /search             → SearchScreen
 /random-trip        → RandomTripScreen
-/login              → LoginScreen
+/login              → LoginScreen (Supabase Auth) ⭐ v1.2.6
+/register           → RegisterScreen ⭐ v1.2.6
+/forgot-password    → ForgotPasswordScreen ⭐ v1.2.6
+/login-local        → Legacy LoginScreen (lokales Profil)
 ```
 
 ### Bottom Navigation Tabs
@@ -997,3 +1069,621 @@ class POI with _$POI {
 2. **Wikimedia Rate-Limit** - Max 200 Anfragen/Minute
 3. **Wikidata SPARQL** - Kann bei komplexen Queries langsam sein
 4. **Cache-Größe** - Bei vielen POIs kann Hive-Box groß werden
+
+---
+
+## Supabase Cloud Integration (v1.2.6) ⭐ NEU
+
+### Architektur
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Flutter App                        │
+│  Login │ Register │ Trips │ Favorites │ AI-Chat     │
+└────────────────────────┬────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+┌─────────────┐ ┌─────────────────┐ ┌─────────────┐
+│ Supabase    │ │ Backend-Proxy   │ │ Lokaler     │
+│ (Auth + DB) │ │ (Vercel)        │ │ Storage     │
+└──────┬──────┘ └────────┬────────┘ └──────┬──────┘
+       │                 │                 │
+       ▼                 ▼                 ▼
+┌─────────────┐ ┌─────────────────┐ ┌─────────────┐
+│ PostgreSQL  │ │ OpenAI API      │ │ Hive        │
+│ + RLS       │ │ (Rate-Limited)  │ │ (Offline)   │
+└─────────────┘ └─────────────────┘ └─────────────┘
+```
+
+### Supabase Konfiguration
+
+```dart
+// lib/core/supabase/supabase_config.dart
+class SupabaseConfig {
+  static const String supabaseUrl = 'https://kcjgnctfjodggpvqwgil.supabase.co';
+  static const String supabaseAnonKey = 'eyJhbGci...'; // Öffentlicher Key
+
+  static bool get isConfigured =>
+    supabaseUrl.isNotEmpty && !supabaseUrl.contains('your-project');
+}
+```
+
+### Backend API-Config
+
+```dart
+// lib/core/constants/api_config.dart
+class ApiConfig {
+  static const String backendBaseUrl = 'https://backend-gules-gamma-30.vercel.app';
+  static const Duration connectTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 60);
+
+  static const String aiChatEndpoint = '/api/ai/chat';
+  static const String aiTripPlanEndpoint = '/api/ai/trip-plan';
+}
+```
+
+### Auth Provider
+
+```dart
+// lib/data/providers/auth_provider.dart
+@Riverpod(keepAlive: true)
+class AuthNotifier extends _$AuthNotifier {
+  Future<bool> signIn(String email, String password);
+  Future<bool> signUp(String email, String password, {String? username});
+  Future<void> signOut();
+  Future<void> resetPassword(String email);
+  void clearError();
+}
+
+// Auth State
+@freezed
+class AppAuthState with _$AppAuthState {
+  const factory AppAuthState({
+    User? user,
+    @Default(false) bool isLoading,
+    @Default(false) bool isAuthenticated,
+    String? error,
+  }) = _AppAuthState;
+}
+```
+
+### AI Service (Backend-Proxy)
+
+```dart
+// lib/data/services/ai_service.dart
+class AIService {
+  // VORHER: Direkte OpenAI API Calls mit API-Key im Client
+  // NACHHER: Alle Calls gehen über Backend-Proxy
+
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: ApiConfig.backendBaseUrl,  // Backend statt OpenAI
+    // Kein Authorization Header mehr nötig!
+  ));
+
+  Future<String> chat({...}) async {
+    final response = await _dio.post('/api/ai/chat', data: {...});
+    return response.data['message'];
+  }
+}
+```
+
+### Datenbank-Schema (Supabase)
+
+```sql
+-- Kern-Tabellen
+users              -- Erweitert auth.users mit Profil-Daten
+trips              -- Gespeicherte Routen
+trip_stops         -- POI-Stops pro Trip
+favorite_pois      -- Favorisierte POIs
+journal_entries    -- Reisetagebuch
+user_achievements  -- Achievements & XP
+ai_requests        -- Rate-Limiting Tracking
+
+-- Wichtige Funktionen
+calculate_level(xp)     -- Level aus XP berechnen
+award_xp(user, xp)      -- XP vergeben + Level-Check
+complete_trip(trip_id)  -- Trip abschließen + XP
+```
+
+### Row Level Security (RLS)
+
+```sql
+-- Jeder User sieht nur eigene Daten
+CREATE POLICY "Users can view own trips" ON public.trips
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own trips" ON public.trips
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+```
+
+### Login-Screen Features
+
+```dart
+// lib/features/auth/login_screen.dart
+class LoginScreen extends ConsumerStatefulWidget {
+  // Features:
+  // - Email/Passwort Login (wenn Supabase konfiguriert)
+  // - "Als Gast fortfahren" (immer verfügbar)
+  // - "Passwort vergessen?" Link
+  // - "Registrieren" Link
+  // - Fehler-Anzeige mit Dismiss
+}
+```
+
+### Gast-Modus vs Cloud-Modus
+
+| Feature | Gast-Modus | Cloud-Modus |
+|---------|------------|-------------|
+| Trips speichern | Lokal (Hive) | Cloud (Supabase) |
+| Favoriten | Lokal | Cloud + Sync |
+| Achievements | Lokal | Cloud + Validierung |
+| AI-Chat | ✅ Ja | ✅ Ja |
+| Geräte-Sync | ❌ Nein | ✅ Ja |
+| Offline-Nutzung | ✅ Ja | ⚠️ Eingeschränkt |
+
+### Backend-Endpoints
+
+```
+# AI-Proxy (öffentlich, Rate-Limited)
+POST /api/ai/chat        - AI-Chat (100 req/Tag)
+POST /api/ai/trip-plan   - Trip-Generator (20 req/Tag)
+GET  /api/health         - Health-Check
+
+# REST API (Auth erforderlich)
+GET/POST   /api/v1/trips
+GET/PATCH/DELETE /api/v1/trips/:id
+POST       /api/v1/trips/:id/complete
+GET/POST   /api/v1/favorites/pois
+DELETE     /api/v1/favorites/pois/:id
+GET/PATCH  /api/v1/users/me
+```
+
+### Debug-Logging (v1.2.6)
+
+```
+[Auth] Login erfolgreich: user@example.com
+[Auth] Fehler: Invalid login credentials
+[AI] Sende Chat-Anfrage an Backend...
+[AI] Backend-Antwort erhalten (200)
+[Sync] Synchronisiere 5 Trips...
+[Sync] Upload erfolgreich
+```
+
+### Bekannte Einschränkungen (v1.2.6)
+
+1. **Lokale Daten nicht migriert** - Bestehende Hive-Daten werden nicht automatisch in die Cloud übertragen
+2. **Offline-Modus eingeschränkt** - Cloud-Features erfordern Internetverbindung
+3. **Rate-Limiting** - AI-Anfragen sind auf 100 Chat / 20 Trip-Pläne pro Tag begrenzt
+
+---
+
+## Favoriten-System (v1.2.7) ⭐ NEU
+
+### LatLng Serialisierung für Freezed
+
+**Problem:** Das `latlong2` Package hat keine JSON-Serialisierung. Routes mit LatLng konnten nicht in Hive gespeichert werden.
+
+**Lösung:** Custom `JsonConverter` für Freezed:
+
+```dart
+// lib/data/models/route.dart
+
+/// Konvertiert einzelne LatLng-Objekte
+class LatLngConverter implements JsonConverter<LatLng, Map<String, dynamic>> {
+  const LatLngConverter();
+
+  @override
+  LatLng fromJson(Map<String, dynamic> json) {
+    return LatLng(
+      (json['lat'] as num).toDouble(),
+      (json['lng'] as num).toDouble(),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson(LatLng latLng) {
+    return {'lat': latLng.latitude, 'lng': latLng.longitude};
+  }
+}
+
+/// Konvertiert Listen von LatLng (z.B. Route-Koordinaten)
+class LatLngListConverter implements JsonConverter<List<LatLng>, List<dynamic>> {
+  const LatLngListConverter();
+
+  @override
+  List<LatLng> fromJson(List<dynamic> json) {
+    return json.map((e) {
+      final map = e as Map<String, dynamic>;
+      return LatLng(
+        (map['lat'] as num).toDouble(),
+        (map['lng'] as num).toDouble(),
+      );
+    }).toList();
+  }
+
+  @override
+  List<dynamic> toJson(List<LatLng> list) {
+    return list.map((latLng) => {
+      'lat': latLng.latitude,
+      'lng': latLng.longitude,
+    }).toList();
+  }
+}
+
+/// Für nullable LatLng-Felder
+class NullableLatLngConverter implements JsonConverter<LatLng?, Map<String, dynamic>?> { ... }
+```
+
+**Anwendung in Freezed-Models:**
+```dart
+@freezed
+class AppRoute with _$AppRoute {
+  const factory AppRoute({
+    @LatLngConverter() required LatLng start,
+    @LatLngConverter() required LatLng end,
+    @LatLngListConverter() required List<LatLng> coordinates,
+    // ...
+  }) = _AppRoute;
+
+  factory AppRoute.fromJson(Map<String, dynamic> json) => _$AppRouteFromJson(json);
+}
+```
+
+### Favoriten-Provider Helper
+
+```dart
+// lib/data/providers/favorites_provider.dart
+
+// Prüft ob POI favorisiert ist (reaktiv)
+@riverpod
+bool isPOIFavorite(IsPOIFavoriteRef ref, String poiId) {
+  return ref.watch(favoritesNotifierProvider.notifier).isPOIFavorite(poiId);
+}
+
+// Prüft ob Route gespeichert ist (reaktiv)
+@riverpod
+bool isRouteSaved(IsRouteSavedRef ref, String tripId) {
+  return ref.watch(favoritesNotifierProvider.notifier).isRouteSaved(tripId);
+}
+
+// Gibt alle favorisierten POIs zurück
+@riverpod
+List<POI> favoritePOIs(FavoritePOIsRef ref) {
+  final favorites = ref.watch(favoritesNotifierProvider);
+  return favorites.value?.favoritePOIs ?? [];
+}
+
+// Gibt alle gespeicherten Routen zurück
+@riverpod
+List<Trip> savedRoutes(SavedRoutesRef ref) {
+  final favorites = ref.watch(favoritesNotifierProvider);
+  return favorites.value?.savedRoutes ?? [];
+}
+```
+
+### Cloud-Sync Integration
+
+```dart
+// Automatische Cloud-Sync in FavoritesNotifier
+
+Future<void> addPOI(POI poi) async {
+  // 1. Lokales Speichern in Hive
+  final updated = [poi, ...current.favoritePOIs];
+  await _favoritesBox.put('favorite_pois', updated.map((p) => p.toJson()).toList());
+
+  // 2. Cloud-Sync (wenn eingeloggt)
+  if (isAuthenticated) {
+    final syncService = ref.read(syncServiceProvider);
+    await syncService.saveFavoritePOI(poi);
+  }
+}
+
+Future<void> saveRoute(Trip trip) async {
+  // 1. Lokales Speichern
+  // ...
+
+  // 2. Cloud-Sync
+  if (isAuthenticated) {
+    await syncService.saveTrip(
+      name: trip.name,
+      route: trip.route,
+      stops: trip.stops,
+      isFavorite: true,
+    );
+  }
+}
+```
+
+### Pre-Enrichment für POI-Bilder
+
+```dart
+// lib/features/poi/poi_list_screen.dart
+
+/// Lädt Bilder für sichtbare POIs im Hintergrund
+void _preEnrichVisiblePOIs() {
+  final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+  final poiState = ref.read(pOIStateNotifierProvider);
+
+  // Top 20 POIs ohne Bilder auswählen
+  final poisToEnrich = poiState.filteredPOIs
+      .where((poi) => !poi.isEnriched && poi.imageUrl == null)
+      .take(20)
+      .toList();
+
+  // Nicht-blockierend im Hintergrund enrichen
+  for (final poi in poisToEnrich) {
+    unawaited(poiNotifier.enrichPOI(poi.id));
+  }
+}
+```
+
+### Debug-Logging (v1.2.7)
+
+```
+[Favorites] POI favorisiert: Brandenburger Tor
+[Favorites] Route gespeichert: Berlin Tagestrip
+[Favorites] Cloud-Sync gestartet...
+[Sync] Upload erfolgreich
+[POIList] Pre-Enrichment für 20 POIs starten
+[Enrichment] Nicht-blockierend: Neuschwanstein
+```
+
+---
+
+## Animiertes Onboarding-System (v1.2.8) ⭐ NEU
+
+### Konzept
+
+Ein anspruchsvolles Onboarding mit 3 animierten Seiten, die MapAB's Kernfeatures vorstellen:
+- **Seite 1:** POI-Entdeckung (animierte Route mit Markern)
+- **Seite 2:** KI-Reiseplanung (pulsierende AI-Kreise)
+- **Seite 3:** Cloud-Sync (Geräte-Synchronisation)
+
+### Architektur
+
+```
+lib/features/onboarding/
+├── onboarding_screen.dart              # PageView-Container mit Header, Buttons
+├── models/
+│   └── onboarding_page_data.dart       # Page-Konfiguration (Titel, Animation)
+├── providers/
+│   └── onboarding_provider.dart        # Hive First-Time-Flag
+└── widgets/
+    ├── onboarding_page.dart            # Einzelne Seite Layout
+    ├── page_indicator.dart             # Animierte 3-Punkte-Anzeige
+    ├── animated_route.dart             # Seite 1: Route-Animation
+    ├── animated_ai_circle.dart         # Seite 2: AI-Pulse
+    └── animated_sync.dart              # Seite 3: Cloud-Sync
+```
+
+### Onboarding Provider
+
+```dart
+// lib/features/onboarding/providers/onboarding_provider.dart
+@Riverpod(keepAlive: true)
+class OnboardingNotifier extends _$OnboardingNotifier {
+  static const String _key = 'hasSeenOnboarding';
+
+  @override
+  bool build() {
+    final box = Hive.box('settings');
+    return box.get(_key, defaultValue: false);
+  }
+
+  Future<void> completeOnboarding() async {
+    final box = Hive.box('settings');
+    await box.put(_key, true);
+    state = true;
+  }
+
+  Future<void> resetOnboarding() async {
+    final box = Hive.box('settings');
+    await box.put(_key, false);
+    state = false;
+  }
+}
+```
+
+### Splash Screen Integration
+
+```dart
+// lib/features/account/splash_screen.dart
+Future<void> _checkAuthAndNavigate() async {
+  await Future.delayed(const Duration(seconds: 2));
+
+  // 0. Prüfe ob Onboarding bereits gesehen wurde
+  final hasSeenOnboarding = ref.read(onboardingNotifierProvider);
+
+  if (!hasSeenOnboarding) {
+    debugPrint('[Splash] Onboarding nicht gesehen → /onboarding');
+    context.go('/onboarding');
+    return;
+  }
+
+  // 1. Prüfe Cloud-Auth (Supabase)
+  // 2. Prüfe lokalen Account
+  // ...
+}
+```
+
+### Animations-Implementierungen
+
+#### AnimatedRoute (Seite 1)
+
+```dart
+// CustomPainter für Route mit POI-Markern
+class _RoutePainter extends CustomPainter {
+  final double pathProgress;      // 0.0 - 1.0
+  final double marker1Progress;   // Staggered
+  final double marker2Progress;
+  final double marker3Progress;
+  final double pulseProgress;     // Endlos-Loop
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Route als Bezier-Kurve zeichnen (partiell)
+    final pathMetrics = path.computeMetrics().first;
+    final extractPath = pathMetrics.extractPath(0, length * pathProgress);
+    canvas.drawPath(extractPath, linePaint);
+
+    // 2. POI-Marker mit Bounce-Effekt
+    _drawMarker(canvas, poi1, marker1Progress, Icons.castle);
+    _drawMarker(canvas, poi2, marker2Progress, Icons.museum);
+    _drawMarker(canvas, poi3, marker3Progress, Icons.water);
+
+    // 3. Pulsierende Ringe
+    _drawPulseRing(canvas, position, pulseProgress, primaryColor);
+  }
+}
+```
+
+#### AnimatedAICircle (Seite 2)
+
+```dart
+// Pulsierende konzentrische Ringe (wie im Referenzbild)
+class AnimatedAICircle extends StatefulWidget {
+  // 5 AnimationControllers:
+  // - _pulse1Controller (2500ms) - Innerer Ring
+  // - _pulse2Controller (3000ms) - Mittlerer Ring
+  // - _pulse3Controller (3500ms) - Äußerer Ring
+  // - _glowController (2000ms, reverse) - Hintergrund-Glow
+  // - _iconController (1500ms, reverse) - Smiley "Atmen"
+}
+
+// Custom Smiley-Painter
+class _SmileyPainter extends CustomPainter {
+  void paint(Canvas canvas, Size size) {
+    // Lächeln als Bezier-Kurve
+    smilePath.quadraticBezierTo(center.dx, center.dy + smileHeight, ...);
+
+    // Augen als Kreise
+    canvas.drawCircle(Offset(center.dx - eyeSpacing, eyeY), 3, eyePaint);
+    canvas.drawCircle(Offset(center.dx + eyeSpacing, eyeY), 3, eyePaint);
+  }
+}
+```
+
+#### AnimatedSync (Seite 3)
+
+```dart
+// Daten-Partikel zwischen Phone und Cloud
+class _DataParticlesPainter extends CustomPainter {
+  final double progress;
+
+  void paint(Canvas canvas, Size size) {
+    // Phone-Position links, Cloud-Position rechts
+    final phoneCenter = Offset(size.width * 0.25, size.height * 0.5);
+    final cloudCenter = Offset(size.width * 0.75, size.height * 0.5);
+
+    // Partikel entlang der Linie
+    for (int i = 0; i < 5; i++) {
+      final particleProgress = (progress + i * 0.2) % 1.0;
+      final particleX = phoneCenter.dx + (cloudCenter.dx - phoneCenter.dx) * particleProgress;
+      canvas.drawCircle(Offset(particleX, particleY), radius, paint);
+    }
+  }
+}
+```
+
+### Page Indicator
+
+```dart
+// Animierte Punkte (aktiv = breiter Balken)
+class PageIndicator extends StatelessWidget {
+  final int currentPage;
+  final int pageCount;
+
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(pageCount, (index) {
+        final isActive = index == currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: isActive ? 28 : 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : inactiveColor.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(5),
+          ),
+        );
+      }),
+    );
+  }
+}
+```
+
+### App-Flow mit Onboarding
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    App Start                         │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   v
+┌─────────────────────────────────────────────────────┐
+│              SplashScreen (2s)                       │
+│   ref.read(onboardingNotifierProvider)              │
+└──────────────────┬──────────────────────────────────┘
+                   │
+         ┌────────┴────────┐
+         │                 │
+    hasSeenOnboarding   !hasSeenOnboarding
+         │                 │
+         v                 v
+┌─────────────┐   ┌─────────────────────────────────┐
+│ Auth-Check  │   │        OnboardingScreen          │
+│ → /login    │   │   PageView (3 animierte Seiten) │
+│ → /         │   │   "Überspringen" oder "Weiter"  │
+└─────────────┘   └──────────────┬──────────────────┘
+                                 │
+                                 v
+                  ┌─────────────────────────────────┐
+                  │    completeOnboarding()          │
+                  │    Hive: hasSeenOnboarding=true  │
+                  │    context.go('/login')          │
+                  └─────────────────────────────────┘
+```
+
+### Design-Farben
+
+| Element | Wert |
+|---------|------|
+| Hintergrund | `#0F172A` (immer dunkel) |
+| Primary (Route) | `#3B82F6` (Blue) |
+| Secondary (AI) | `#06B6D4` (Cyan) |
+| Tertiary (Sync) | `#22C55E` (Green) |
+| Text | `#FFFFFF` / `#FFFFFF70` |
+| Aktiver Dot | `#3B82F6` |
+| Inaktiver Dot | `#475569` |
+
+### Test-Anleitung
+
+1. **Erstmaliger Start:**
+   - App-Daten löschen / frische Installation
+   - App starten
+   - ✅ Onboarding erscheint mit Animationen
+
+2. **Seiten-Navigation:**
+   - Links/rechts wischen
+   - ✅ Seiten wechseln flüssig, Indicator aktualisiert
+
+3. **"Weiter" Buttons:**
+   - Auf Seite 1-2: "Weiter" → nächste Seite
+   - Auf Seite 3: "Los geht's" → /login
+
+4. **"Überspringen":**
+   - Header-Button klicken
+   - ✅ Direkt zu /login
+
+5. **Wiederholter Start:**
+   - App schließen und neu starten
+   - ✅ Kein Onboarding, direkt zu Splash → Auth-Check
+
+### Geänderte Dateien (v1.2.8)
+
+| Datei | Änderung |
+|-------|----------|
+| `lib/features/onboarding/` (NEU) | Komplettes Onboarding-Feature |
+| `lib/app.dart` | `/onboarding` Route hinzugefügt |
+| `lib/features/account/splash_screen.dart` | Onboarding-Check vor Auth-Check |

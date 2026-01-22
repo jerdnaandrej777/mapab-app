@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
@@ -82,6 +82,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -89,7 +93,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
           Icon(
             Icons.favorite_border,
             size: 80,
-            color: Colors.grey.shade300,
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
           ),
           const SizedBox(height: 16),
           const Text(
@@ -104,7 +108,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             'Speichere Routen und POIs für schnellen Zugriff',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: colorScheme.onSurfaceVariant,
               fontSize: 14,
             ),
           ),
@@ -120,12 +124,19 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildRoutesList(List<Trip> routes) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (routes.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.route, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.route,
+              size: 64,
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
             const Text('Keine gespeicherten Routen'),
             const SizedBox(height: 24),
@@ -150,6 +161,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildRouteTile(Trip trip) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -157,10 +171,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.route, color: AppTheme.primaryColor),
+          child: Icon(Icons.route, color: colorScheme.primary),
         ),
         title: Text(
           trip.name,
@@ -176,32 +190,32 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             Text(
               '${trip.route.startAddress} → ${trip.route.endAddress}',
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.straighten, size: 14, color: AppTheme.textHint),
+                Icon(Icons.straighten, size: 14, color: colorScheme.outline),
                 const SizedBox(width: 4),
                 Text(
                   '${trip.totalDistanceKm.toStringAsFixed(0)} km',
-                  style: TextStyle(color: AppTheme.textHint, fontSize: 12),
+                  style: TextStyle(color: colorScheme.outline, fontSize: 12),
                 ),
                 const SizedBox(width: 16),
-                Icon(Icons.access_time, size: 14, color: AppTheme.textHint),
+                Icon(Icons.access_time, size: 14, color: colorScheme.outline),
                 const SizedBox(width: 4),
                 Text(
                   trip.formattedTotalDuration,
-                  style: TextStyle(color: AppTheme.textHint, fontSize: 12),
+                  style: TextStyle(color: colorScheme.outline, fontSize: 12),
                 ),
                 const SizedBox(width: 16),
-                Icon(Icons.place, size: 14, color: AppTheme.textHint),
+                Icon(Icons.place, size: 14, color: colorScheme.outline),
                 const SizedBox(width: 4),
                 Text(
                   '${trip.stops.length} Stops',
-                  style: TextStyle(color: AppTheme.textHint, fontSize: 12),
+                  style: TextStyle(color: colorScheme.outline, fontSize: 12),
                 ),
               ],
             ),
@@ -222,17 +236,24 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildPOIsList(List<POI> pois) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (pois.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.place, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.place,
+              size: 64,
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
             const Text('Keine favorisierten POIs'),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => context.go('/poi'),
+              onPressed: () => context.go('/pois'),
               icon: const Icon(Icons.add),
               label: const Text('POIs entdecken'),
             ),
@@ -258,81 +279,98 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   }
 
   Widget _buildPOICard(POI poi) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Bild oder Platzhalter
-              Expanded(
-                flex: 2,
-                child: poi.imageUrl != null
-                    ? Image.network(
-                        poi.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stack) =>
-                            _buildPOIPlaceholder(poi.categoryIcon),
-                      )
-                    : _buildPOIPlaceholder(poi.categoryIcon),
-              ),
+      child: InkWell(
+        onTap: () => context.push('/poi/${poi.id}'),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Bild oder Platzhalter (mit CachedNetworkImage)
+                Expanded(
+                  flex: 2,
+                  child: poi.imageUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: poi.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              _buildPOIPlaceholder(poi.categoryIcon),
+                          errorWidget: (context, url, error) =>
+                              _buildPOIPlaceholder(poi.categoryIcon),
+                        )
+                      : _buildPOIPlaceholder(poi.categoryIcon),
+                ),
 
-              // Info
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        poi.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                // Info
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          poi.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        poi.categoryLabel,
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
+                        const SizedBox(height: 4),
+                        Text(
+                          poi.categoryLabel,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
 
-          // Favorit-Button
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: AppTheme.cardShadow,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.favorite, color: Colors.red, size: 20),
-                onPressed: () => _confirmRemovePOI(poi),
+            // Favorit-Button
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.favorite, color: Colors.red, size: 20),
+                  onPressed: () => _confirmRemovePOI(poi),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPOIPlaceholder(String icon) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      color: AppTheme.primaryColor.withOpacity(0.1),
+      color: colorScheme.primary.withOpacity(0.1),
       child: Center(
         child: Text(
           icon,

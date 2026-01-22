@@ -4,6 +4,54 @@ import 'package:latlong2/latlong.dart';
 part 'route.freezed.dart';
 part 'route.g.dart';
 
+/// Custom JSON-Konverter für LatLng (latlong2 hat kein eingebautes fromJson/toJson)
+class LatLngConverter implements JsonConverter<LatLng, Map<String, dynamic>> {
+  const LatLngConverter();
+
+  @override
+  LatLng fromJson(Map<String, dynamic> json) {
+    return LatLng(
+      (json['lat'] as num).toDouble(),
+      (json['lng'] as num).toDouble(),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson(LatLng latLng) {
+    return {
+      'lat': latLng.latitude,
+      'lng': latLng.longitude,
+    };
+  }
+}
+
+/// Custom JSON-Konverter für List<LatLng>
+class LatLngListConverter
+    implements JsonConverter<List<LatLng>, List<dynamic>> {
+  const LatLngListConverter();
+
+  @override
+  List<LatLng> fromJson(List<dynamic> json) {
+    return json.map((e) {
+      final map = e as Map<String, dynamic>;
+      return LatLng(
+        (map['lat'] as num).toDouble(),
+        (map['lng'] as num).toDouble(),
+      );
+    }).toList();
+  }
+
+  @override
+  List<dynamic> toJson(List<LatLng> list) {
+    return list
+        .map((latLng) => {
+              'lat': latLng.latitude,
+              'lng': latLng.longitude,
+            })
+        .toList();
+  }
+}
+
 /// Routen-Datenmodell
 /// Übernommen von MapAB Routing-Logik
 @freezed
@@ -12,10 +60,10 @@ class AppRoute with _$AppRoute {
 
   const factory AppRoute({
     /// Start-Koordinaten
-    required LatLng start,
+    @LatLngConverter() required LatLng start,
 
     /// Ziel-Koordinaten
-    required LatLng end,
+    @LatLngConverter() required LatLng end,
 
     /// Start-Adresse (Display)
     required String startAddress,
@@ -24,7 +72,7 @@ class AppRoute with _$AppRoute {
     required String endAddress,
 
     /// Routen-Koordinaten (Polyline)
-    required List<LatLng> coordinates,
+    @LatLngListConverter() required List<LatLng> coordinates,
 
     /// Distanz in Kilometern
     required double distanceKm,
@@ -36,7 +84,7 @@ class AppRoute with _$AppRoute {
     @Default(RouteType.fast) RouteType type,
 
     /// Waypoints (Zwischenstopps)
-    @Default([]) List<LatLng> waypoints,
+    @LatLngListConverter() @Default([]) List<LatLng> waypoints,
 
     /// OSRM Routen-Geometrie (für Export)
     String? geometry,
@@ -127,7 +175,7 @@ class RouteComparison with _$RouteComparison {
 class GeocodingResult with _$GeocodingResult {
   const factory GeocodingResult({
     /// Koordinaten
-    required LatLng location,
+    @LatLngConverter() required LatLng location,
 
     /// Anzeige-Name
     required String displayName,
@@ -149,6 +197,30 @@ class GeocodingResult with _$GeocodingResult {
       _$GeocodingResultFromJson(json);
 }
 
+/// Nullable LatLng Converter
+class NullableLatLngConverter
+    implements JsonConverter<LatLng?, Map<String, dynamic>?> {
+  const NullableLatLngConverter();
+
+  @override
+  LatLng? fromJson(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    return LatLng(
+      (json['lat'] as num).toDouble(),
+      (json['lng'] as num).toDouble(),
+    );
+  }
+
+  @override
+  Map<String, dynamic>? toJson(LatLng? latLng) {
+    if (latLng == null) return null;
+    return {
+      'lat': latLng.latitude,
+      'lng': latLng.longitude,
+    };
+  }
+}
+
 /// Autocomplete-Vorschlag
 @freezed
 class AutocompleteSuggestion with _$AutocompleteSuggestion {
@@ -157,7 +229,7 @@ class AutocompleteSuggestion with _$AutocompleteSuggestion {
     required String displayName,
 
     /// Koordinaten (falls verfügbar)
-    LatLng? location,
+    @NullableLatLngConverter() LatLng? location,
 
     /// Icon basierend auf Typ
     String? icon,

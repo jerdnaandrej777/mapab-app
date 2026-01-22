@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/categories.dart';
 import '../../data/models/poi.dart';
+import '../../data/providers/favorites_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'providers/poi_state_provider.dart';
 
@@ -34,10 +36,11 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     try {
       notifier.selectPOIById(widget.poiId);
 
-      // Enrichment triggern wenn noch nicht angereichert
+      // Enrichment triggern wenn noch nicht angereichert (NICHT-BLOCKIEREND)
       final state = ref.read(pOIStateNotifierProvider);
       if (state.selectedPOI != null && !state.selectedPOI!.isEnriched) {
-        await notifier.enrichPOI(widget.poiId);
+        // unawaited: Enrichment läuft im Hintergrund, UI wird über State-Änderungen aktualisiert
+        unawaited(notifier.enrichPOI(widget.poiId));
       }
     } catch (e) {
       debugPrint('[POIDetail] POI nicht gefunden: ${widget.poiId}');
@@ -129,6 +132,9 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
   }
 
   Widget _buildSliverAppBar(POI poi, ColorScheme colorScheme) {
+    // Favoriten-Status überwachen
+    final isFavorite = ref.watch(isPOIFavoriteProvider(poi.id));
+
     return SliverAppBar(
       expandedHeight: 250,
       pinned: true,
@@ -151,13 +157,32 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               color: colorScheme.surface,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.favorite_border, color: colorScheme.onSurface),
+            child: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? Colors.red : colorScheme.onSurface,
+            ),
           ),
-          onPressed: () {
-            // TODO: Zu Favoriten hinzufügen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Zu Favoriten hinzugefügt')),
-            );
+          onPressed: () async {
+            final notifier = ref.read(favoritesNotifierProvider.notifier);
+            await notifier.togglePOI(poi);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isFavorite
+                        ? '${poi.name} aus Favoriten entfernt'
+                        : '${poi.name} zu Favoriten hinzugefügt',
+                  ),
+                  action: SnackBarAction(
+                    label: 'Rückgängig',
+                    onPressed: () async {
+                      await notifier.togglePOI(poi);
+                    },
+                  ),
+                ),
+              );
+            }
           },
         ),
         IconButton(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/utils/format_utils.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/constants/categories.dart';
+import '../../data/models/trip.dart';
+import '../../data/providers/favorites_provider.dart';
 import 'providers/trip_state_provider.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
@@ -14,11 +16,20 @@ class TripScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tripState = ref.watch(tripStateProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Deine Route'),
         actions: [
+          // Speichern-Button (nur wenn Route vorhanden)
+          if (tripState.hasRoute)
+            IconButton(
+              icon: const Icon(Icons.bookmark_add),
+              tooltip: 'Route speichern',
+              onPressed: () => _saveRoute(context, ref, tripState),
+            ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () => _showMoreOptions(context, ref),
@@ -26,12 +37,76 @@ class TripScreen extends ConsumerWidget {
         ],
       ),
       body: !tripState.hasRoute && !tripState.hasStops
-          ? _buildEmptyState(context)
-          : _buildTripContent(context, ref, tripState),
+          ? _buildEmptyState(context, theme, colorScheme)
+          : _buildTripContent(context, ref, tripState, theme, colorScheme),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Future<void> _saveRoute(BuildContext context, WidgetRef ref, TripStateData tripState) async {
+    final route = tripState.route;
+    if (route == null) return;
+
+    // Dialog für Trip-Namen
+    final nameController = TextEditingController(
+      text: '${route.startAddress} → ${route.endAddress}',
+    );
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Route speichern'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Name der Route',
+            hintText: 'z.B. Wochenendausflug',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, nameController.text),
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    // Trip erstellen
+    final trip = Trip(
+      id: const Uuid().v4(),
+      name: result,
+      type: TripType.daytrip,
+      route: route,
+      stops: tripState.stops.map((poi) => TripStop.fromPOI(poi)).toList(),
+      createdAt: DateTime.now(),
+    );
+
+    // In Favoriten speichern
+    await ref.read(favoritesNotifierProvider.notifier).saveRoute(trip);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Route "$result" gespeichert'),
+          action: SnackBarAction(
+            label: 'Anzeigen',
+            onPressed: () => context.push('/favorites'),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildEmptyState(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
+    final isDark = theme.brightness == Brightness.dark;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -39,7 +114,7 @@ class TripScreen extends ConsumerWidget {
           Icon(
             Icons.route,
             size: 80,
-            color: Colors.grey.shade300,
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
           ),
           const SizedBox(height: 16),
           const Text(
@@ -54,7 +129,7 @@ class TripScreen extends ConsumerWidget {
             'Berechne eine Route auf der Karte oder nutze den AI-Trip-Generator',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 24),
@@ -74,7 +149,13 @@ class TripScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTripContent(BuildContext context, WidgetRef ref, TripStateData tripState) {
+  Widget _buildTripContent(
+    BuildContext context,
+    WidgetRef ref,
+    TripStateData tripState,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
     final route = tripState.route;
     final stops = tripState.stops;
 
@@ -109,9 +190,10 @@ class TripScreen extends ConsumerWidget {
               // Start
               if (index == 0) {
                 return _buildLocationTile(
+                  context: context,
                   key: const ValueKey('start'),
                   icon: Icons.trip_origin,
-                  iconColor: AppTheme.successColor,
+                  iconColor: Colors.green,
                   title: route?.startAddress ?? 'Keine Route',
                   subtitle: 'Start',
                   isFirst: true,
@@ -121,9 +203,10 @@ class TripScreen extends ConsumerWidget {
               // Ziel
               if (index == stops.length + 1) {
                 return _buildLocationTile(
+                  context: context,
                   key: const ValueKey('end'),
                   icon: Icons.place,
-                  iconColor: AppTheme.errorColor,
+                  iconColor: Colors.red,
                   title: route?.endAddress ?? 'Keine Route',
                   subtitle: 'Ziel',
                   isLast: true,
@@ -191,6 +274,7 @@ class TripScreen extends ConsumerWidget {
   }
 
   Widget _buildLocationTile({
+    required BuildContext context,
     required Key key,
     required IconData icon,
     required Color iconColor,
@@ -199,6 +283,10 @@ class TripScreen extends ConsumerWidget {
     bool isFirst = false,
     bool isLast = false,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       key: key,
       margin: EdgeInsets.only(
@@ -207,9 +295,15 @@ class TripScreen extends ConsumerWidget {
       ),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -236,7 +330,7 @@ class TripScreen extends ConsumerWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),

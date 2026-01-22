@@ -1,15 +1,19 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.2.4 (21. Januar 2026)
+Version: 1.2.8 (22. Januar 2026)
 
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Neu in v1.2.4](#neu-in-v124) ⭐ AKTUELL
-3. [Neu in v1.2.3](#neu-in-v123)
-4. [Neu in v1.2.2](#neu-in-v122)
-5. [Neu in v1.2.1](#neu-in-v121)
-5. [Neu in v1.2.0](#neu-in-v120)
+2. [Neu in v1.2.8](#neu-in-v128) ⭐ AKTUELL
+3. [Neu in v1.2.7](#neu-in-v127)
+4. [Neu in v1.2.6](#neu-in-v126)
+5. [Neu in v1.2.5](#neu-in-v125)
+6. [Neu in v1.2.4](#neu-in-v124)
+7. [Neu in v1.2.3](#neu-in-v123)
+8. [Neu in v1.2.2](#neu-in-v122)
+9. [Neu in v1.2.1](#neu-in-v121)
+10. [Neu in v1.2.0](#neu-in-v120)
 6. [Account-System](#account-system)
 7. [Favoriten-Management](#favoriten-management)
 8. [AI-Trip-Generator](#ai-trip-generator)
@@ -48,6 +52,346 @@ https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.2.4/MapAB-v1.2
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
+
+---
+
+## Neu in v1.2.8
+
+**Release-Datum:** 22. Januar 2026
+
+### 🎬 Haupt-Feature: Animiertes Onboarding
+
+Ein anspruchsvolles Onboarding mit 3 animierten Seiten vor dem Login, das neue Nutzer durch die Kernfeatures von MapAB führt.
+
+#### Features
+
+- **3 animierte Seiten** mit nativen Flutter-Animationen
+- **Seite 1:** Animierte Route mit POI-Markern (CustomPainter)
+- **Seite 2:** Pulsierende KI-Kreise (5 AnimationControllers)
+- **Seite 3:** Cloud-Sync mit Daten-Partikeln
+- **Page-Indicator** mit animierten Punkten
+- **First-Time Detection** via Hive (Settings-Box)
+- **Überspringen-Option** im Header
+
+#### Neue Dateien
+
+```
+lib/features/onboarding/
+├── onboarding_screen.dart              # PageView-Container
+├── models/
+│   └── onboarding_page_data.dart       # Page-Konfiguration
+├── providers/
+│   └── onboarding_provider.dart        # Hive First-Time-Flag
+│   └── onboarding_provider.g.dart      # Generiert
+└── widgets/
+    ├── onboarding_page.dart            # Einzelne Seite
+    ├── page_indicator.dart             # 3-Punkte-Anzeige
+    ├── animated_route.dart             # Route-Animation
+    ├── animated_ai_circle.dart         # AI-Pulse
+    └── animated_sync.dart              # Cloud-Sync
+```
+
+#### Animations-Übersicht
+
+| Seite | Titel | Animation | Farbe |
+|-------|-------|-----------|-------|
+| 1 | "Entdecke Sehenswürdigkeiten" | Route + POI-Marker | `#3B82F6` Blue |
+| 2 | "Dein KI-Reiseassistent" | Pulsierende Kreise | `#06B6D4` Cyan |
+| 3 | "Deine Reisen in der Cloud" | Phone ↔ Cloud Sync | `#22C55E` Green |
+
+#### Onboarding Provider
+
+```dart
+// lib/features/onboarding/providers/onboarding_provider.dart
+@Riverpod(keepAlive: true)
+class OnboardingNotifier extends _$OnboardingNotifier {
+  static const String _key = 'hasSeenOnboarding';
+
+  @override
+  bool build() {
+    final box = Hive.box('settings');
+    return box.get(_key, defaultValue: false);
+  }
+
+  Future<void> completeOnboarding() async {
+    final box = Hive.box('settings');
+    await box.put(_key, true);
+    state = true;
+  }
+}
+```
+
+#### Splash Screen Integration
+
+```dart
+// lib/features/account/splash_screen.dart
+Future<void> _checkAuthAndNavigate() async {
+  // Prüfe ob Onboarding bereits gesehen wurde
+  final hasSeenOnboarding = ref.read(onboardingNotifierProvider);
+
+  if (!hasSeenOnboarding) {
+    context.go('/onboarding');  // Zeige Onboarding
+    return;
+  }
+
+  // ... bestehender Auth-Check
+}
+```
+
+#### AnimatedRoute (Seite 1)
+
+```dart
+// Staggered Animations mit CustomPainter
+_pathAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+  CurvedAnimation(
+    parent: _pathController,
+    curve: const Interval(0.0, 0.6, curve: Curves.easeInOut),
+  ),
+);
+
+_marker1Animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+  CurvedAnimation(
+    parent: _pathController,
+    curve: const Interval(0.25, 0.45, curve: Curves.elasticOut),
+  ),
+);
+```
+
+#### AnimatedAICircle (Seite 2)
+
+```dart
+// 5 AnimationControllers für verschiedene Effekte
+_pulse1Controller = AnimationController(duration: 2500ms)..repeat();
+_pulse2Controller = AnimationController(duration: 3000ms)..repeat();
+_pulse3Controller = AnimationController(duration: 3500ms)..repeat();
+_glowController = AnimationController(duration: 2000ms)..repeat(reverse: true);
+_iconController = AnimationController(duration: 1500ms)..repeat(reverse: true);
+```
+
+#### App-Flow
+
+```
+App Start → SplashScreen
+           ├── hasSeenOnboarding == false → /onboarding
+           │                                   ├── Seite 1-2: "Weiter"
+           │                                   ├── Seite 3: "Los geht's"
+           │                                   └── Header: "Überspringen"
+           │                                           ↓
+           │                               completeOnboarding()
+           │                                           ↓
+           └── hasSeenOnboarding == true ────────→ /login oder /
+```
+
+#### Geänderte Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `lib/features/onboarding/` | NEU - Komplettes Feature |
+| `lib/app.dart` | `/onboarding` Route + Import |
+| `lib/features/account/splash_screen.dart` | Onboarding-Check vor Auth |
+
+#### Test-Anleitung
+
+1. **Erstmaliger Start:** App-Daten löschen → Onboarding erscheint
+2. **Navigation:** Wischen/Buttons testen → Seiten wechseln
+3. **Abschluss:** "Los geht's" → Weiterleitung zu /login
+4. **Wiederholung:** App neu starten → Kein Onboarding mehr
+
+---
+
+## Neu in v1.2.7
+
+**Release-Datum:** 22. Januar 2026
+
+### ❤️ Haupt-Feature: Favoriten-System vollständig repariert
+
+Das gesamte Favoriten-System wurde repariert - **8 kritische Bugs behoben**.
+
+#### Bug Fixes
+
+| # | Problem | Lösung |
+|---|---------|--------|
+| 1 | POI-Favorit-Button war nur TODO | Toggle-Button mit dynamischem Icon implementiert |
+| 2 | Favorit-Icon immer leer | Icon reagiert auf `isPOIFavoriteProvider` |
+| 3 | LatLng nicht serialisierbar | Custom `JsonConverter` für Freezed |
+| 4 | Route-Speichern fehlte | Bookmark-Button im TripScreen AppBar |
+| 5 | Cloud-Sync nicht integriert | Automatischer Sync nach lokalem Speichern |
+| 6 | POI-Bilder in Liste fehlten | Pre-Enrichment für Top 20 POIs |
+| 7 | Image.network ohne Caching | CachedNetworkImage in Favoriten |
+| 8 | Enrichment blockierte UI | Non-blocking mit `unawaited()` |
+
+#### LatLng Serialisierung
+
+Das `latlong2` Package hat keine JSON-Serialisierung. Lösung: Custom JsonConverters.
+
+```dart
+// lib/data/models/route.dart
+class LatLngConverter implements JsonConverter<LatLng, Map<String, dynamic>> {
+  const LatLngConverter();
+
+  @override
+  LatLng fromJson(Map<String, dynamic> json) {
+    return LatLng(
+      (json['lat'] as num).toDouble(),
+      (json['lng'] as num).toDouble(),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson(LatLng latLng) {
+    return {'lat': latLng.latitude, 'lng': latLng.longitude};
+  }
+}
+
+// Anwendung in Freezed-Models:
+@freezed
+class AppRoute with _$AppRoute {
+  const factory AppRoute({
+    @LatLngConverter() required LatLng start,
+    @LatLngConverter() required LatLng end,
+    @LatLngListConverter() required List<LatLng> coordinates,
+    // ...
+  }) = _AppRoute;
+}
+```
+
+#### POI-Favorit-Button
+
+```dart
+// lib/features/poi/poi_detail_screen.dart
+final isFavorite = ref.watch(isPOIFavoriteProvider(poi.id));
+
+IconButton(
+  icon: Icon(
+    isFavorite ? Icons.favorite : Icons.favorite_border,
+    color: isFavorite ? Colors.red : colorScheme.onSurface,
+  ),
+  onPressed: () async {
+    await ref.read(favoritesNotifierProvider.notifier).togglePOI(poi);
+    // SnackBar mit Undo-Action
+  },
+)
+```
+
+#### Route-Speichern-Button
+
+```dart
+// lib/features/trip/trip_screen.dart
+AppBar(
+  actions: [
+    if (tripState.hasRoute)
+      IconButton(
+        icon: const Icon(Icons.bookmark_add),
+        tooltip: 'Route speichern',
+        onPressed: () => _saveRoute(context, ref, tripState),
+      ),
+  ],
+)
+
+Future<void> _saveRoute(...) async {
+  // Dialog für Route-Namen
+  final result = await showDialog<String>(...);
+
+  final trip = Trip(
+    id: const Uuid().v4(),
+    name: result,
+    type: TripType.daytrip,
+    route: route,
+    stops: tripState.stops.map((poi) => TripStop.fromPOI(poi)).toList(),
+    createdAt: DateTime.now(),
+  );
+
+  await ref.read(favoritesNotifierProvider.notifier).saveRoute(trip);
+}
+```
+
+#### Pre-Enrichment für POI-Bilder
+
+```dart
+// lib/features/poi/poi_list_screen.dart
+void _preEnrichVisiblePOIs() {
+  final poisToEnrich = poiState.filteredPOIs
+      .where((poi) => !poi.isEnriched && poi.imageUrl == null)
+      .take(20)
+      .toList();
+
+  for (final poi in poisToEnrich) {
+    unawaited(poiNotifier.enrichPOI(poi.id));  // Non-blocking!
+  }
+}
+```
+
+#### Cloud-Sync Integration
+
+```dart
+// lib/data/providers/favorites_provider.dart
+Future<void> addPOI(POI poi) async {
+  // 1. Lokal speichern
+  final updated = [poi, ...current.favoritePOIs];
+  await _favoritesBox.put('favorite_pois', updated.map((p) => p.toJson()).toList());
+
+  // 2. Cloud-Sync (wenn eingeloggt)
+  if (isAuthenticated) {
+    await ref.read(syncServiceProvider).saveFavoritePOI(poi);
+  }
+}
+```
+
+### Geänderte Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `lib/data/models/route.dart` | 3 Custom JsonConverters für LatLng |
+| `lib/features/poi/poi_detail_screen.dart` | Favorit-Button + Non-blocking Enrichment |
+| `lib/features/trip/trip_screen.dart` | Route-Speichern-Button + Dark Mode Fixes |
+| `lib/data/providers/favorites_provider.dart` | Cloud-Sync Integration |
+| `lib/features/poi/poi_list_screen.dart` | Pre-Enrichment für Bilder |
+| `lib/features/favorites/favorites_screen.dart` | CachedNetworkImage + Dark Mode |
+| `lib/data/services/sharing_service.dart` | Placeholder Route + createdAt Fix |
+
+### Test-Anleitung
+
+**Favoriten testen:**
+1. POI öffnen → Herz-Button klicken → Icon wird rot
+2. Erneut klicken → Icon wird grau
+3. Favoriten-Screen → POI erscheint/verschwindet
+4. App neu starten → Favoriten noch vorhanden
+
+**Route-Speichern testen:**
+1. Route planen (Start + Ziel)
+2. Trip-Screen → Bookmark-Button klicken
+3. Name eingeben → Speichern
+4. Favoriten-Screen → Route-Tab → Route erscheint
+
+---
+
+## Neu in v1.2.6
+
+**Release-Datum:** 22. Januar 2026
+
+### ☁️ Haupt-Feature: Supabase Cloud Integration
+
+- Backend-Proxy für AI-Features (OpenAI-Key nicht mehr im Client)
+- Auth-Screens: Login, Register, Passwort-Reset
+- Sync-Service für Trips und Favoriten
+- Row Level Security in Supabase
+
+Siehe `Dokumentation/CHANGELOG-v1.2.6.md` für Details.
+
+---
+
+## Neu in v1.2.5
+
+**Release-Datum:** 22. Januar 2026
+
+### 🖼️ Haupt-Feature: POI Enrichment System
+
+- Wikipedia/Wikimedia/Wikidata Integration
+- POI Highlights (UNESCO, Must-See, Geheimtipp)
+- Map-Marker mit Preview-Sheet
+- POI Caching (7-30 Tage)
+
+Siehe `Dokumentation/CHANGELOG-v1.2.5.md` für Details.
 
 ---
 
@@ -1201,30 +1545,38 @@ await accountNotifier.unlockAchievement('spontaneous');
 
 ## Favoriten-Management
 
-**Feature #15 - v1.2.0 (21. Januar 2026)**
+**Feature #15 - v1.2.0 | Vollständig repariert in v1.2.7 ⭐**
 
 Vollständiges Favoriten-System mit Kategorisierung für Routen und POIs.
 
-### Zugriff (v1.2.0)
+### Zugriff
 
-**MapScreen → AppBar → Favoriten-Icon (❤️)**
+**POI-Detail → Herz-Button** oder **TripScreen → Bookmark-Button** oder **MapScreen → AppBar → Favoriten-Icon (❤️)**
 
 ```dart
-// lib/features/map/map_screen.dart
+// POI favorisieren (poi_detail_screen.dart)
+final isFavorite = ref.watch(isPOIFavoriteProvider(poi.id));
 IconButton(
-  icon: const Icon(Icons.favorite_border),
-  onPressed: () => context.push('/favorites'),
-  tooltip: 'Favoriten',
+  icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+  onPressed: () => ref.read(favoritesNotifierProvider.notifier).togglePOI(poi),
+)
+
+// Route speichern (trip_screen.dart)
+IconButton(
+  icon: const Icon(Icons.bookmark_add),
+  onPressed: () => _saveRoute(context, ref, tripState),
 )
 ```
 
 ### Features
 
 - **Tab-View:** Routen | POIs
-- **Kategorien:** Eigene Listen erstellen
-- **Quick-Actions:** Favorit hinzufügen/entfernen
+- **POI-Favoriten:** Toggle-Button mit dynamischem Icon ⭐ v1.2.7
+- **Route-Speichern:** Bookmark-Button mit Benennungs-Dialog ⭐ v1.2.7
+- **Cloud-Sync:** Automatisch wenn eingeloggt ⭐ v1.2.7
 - **Batch-Delete:** Alle löschen Funktion
-- **Persistierung:** Hive-basiert
+- **CachedNetworkImage:** Effizientes Bild-Caching ⭐ v1.2.7
+- **Persistierung:** Hive-basiert (lokal) + Supabase (Cloud)
 
 ### Dateien
 
@@ -1232,47 +1584,96 @@ IconButton(
 lib/
 ├── data/
 │   ├── models/
-│   │   └── favorites.dart             # Freezed Favorites-Model
+│   │   ├── favorites.dart             # Freezed Favorites-Model
+│   │   └── route.dart                 # LatLng JsonConverters ⭐ v1.2.7
 │   └── providers/
-│       └── favorites_provider.dart    # Riverpod Favorites State
+│       └── favorites_provider.dart    # Riverpod Favorites State + Cloud-Sync
 └── features/
-    └── favorites/
-        └── favorites_screen.dart      # UI: Tab-View & Listen
+    ├── favorites/
+    │   └── favorites_screen.dart      # UI: Tab-View & Listen
+    ├── poi/
+    │   └── poi_detail_screen.dart     # Favorit-Toggle ⭐ v1.2.7
+    └── trip/
+        └── trip_screen.dart           # Route-Speichern ⭐ v1.2.7
 ```
 
-### Favorites Model
+### FavoritesState Model
 
 ```dart
-@freezed
-class Favorites with _$Favorites {
-  const factory Favorites({
-    @Default([]) List<Trip> savedRoutes,
-    @Default([]) List<POI> favoritePOIs,
-  }) = _Favorites;
+class FavoritesState {
+  final List<Trip> savedRoutes;
+  final List<POI> favoritePOIs;
+
+  int get routeCount => savedRoutes.length;
+  int get poiCount => favoritePOIs.length;
+  bool get hasFavorites => savedRoutes.isNotEmpty || favoritePOIs.isNotEmpty;
 }
 ```
 
-### FavoritesProvider
+### FavoritesProvider (v1.2.7)
 
 ```dart
 @riverpod
 class FavoritesNotifier extends _$FavoritesNotifier {
   @override
-  Future<Favorites> build() async {
-    // Lade aus Hive
-    return Favorites();
+  Future<FavoritesState> build() async {
+    _favoritesBox = await Hive.openBox('favorites');
+    return await _loadFavorites();
   }
 
   // Routen
-  Future<void> saveRoute(Trip trip) async { ... }
+  Future<void> saveRoute(Trip trip) async {
+    // 1. Lokal speichern
+    // 2. Cloud-Sync wenn authentifiziert
+    if (isAuthenticated) {
+      await ref.read(syncServiceProvider).saveTrip(...);
+    }
+  }
   Future<void> removeRoute(String tripId) async { ... }
+  bool isRouteSaved(String tripId) { ... }
 
   // POIs
-  Future<void> addPOI(POI poi) async { ... }
+  Future<void> addPOI(POI poi) async {
+    // 1. Lokal speichern
+    // 2. Cloud-Sync wenn authentifiziert
+    if (isAuthenticated) {
+      await ref.read(syncServiceProvider).saveFavoritePOI(poi);
+    }
+  }
   Future<void> removePOI(String poiId) async { ... }
+  Future<void> togglePOI(POI poi) async { ... }  // ⭐ NEU v1.2.7
+  bool isPOIFavorite(String poiId) { ... }
 
   // Bulk
   Future<void> clearAll() async { ... }
+}
+```
+
+### Helper Provider (v1.2.7) ⭐ NEU
+
+```dart
+// Prüft ob POI favorisiert ist (reaktiv)
+@riverpod
+bool isPOIFavorite(IsPOIFavoriteRef ref, String poiId) {
+  return ref.watch(favoritesNotifierProvider.notifier).isPOIFavorite(poiId);
+}
+
+// Prüft ob Route gespeichert ist (reaktiv)
+@riverpod
+bool isRouteSaved(IsRouteSavedRef ref, String tripId) {
+  return ref.watch(favoritesNotifierProvider.notifier).isRouteSaved(tripId);
+}
+
+// Gibt alle favorisierten POIs zurück
+@riverpod
+List<POI> favoritePOIs(FavoritePOIsRef ref) {
+  return ref.watch(favoritesNotifierProvider).value?.favoritePOIs ?? [];
+}
+
+// Gibt alle gespeicherten Routen zurück
+@riverpod
+List<Trip> savedRoutes(SavedRoutesRef ref) {
+  return ref.watch(favoritesNotifierProvider).value?.savedRoutes ?? [];
 }
 ```
 

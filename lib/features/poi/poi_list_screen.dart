@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -39,6 +40,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     // Wenn eine Route vorhanden ist, POIs für Route laden
     if (tripState.hasRoute) {
       await poiNotifier.loadPOIsForRoute(tripState.route!);
+      // Pre-Enrichment starten
+      _preEnrichVisiblePOIs();
       return;
     }
 
@@ -65,6 +68,33 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
         center: const LatLng(48.1351, 11.5820),
         radiusKm: 50,
       );
+    }
+
+    // Pre-Enrichment für Top-POIs starten
+    _preEnrichVisiblePOIs();
+  }
+
+  /// Pre-Enrichment für sichtbare POIs (Top 20 ohne Bilder)
+  void _preEnrichVisiblePOIs() {
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    final poiState = ref.read(pOIStateNotifierProvider);
+
+    // Top 20 POIs ohne Bilder auswählen
+    final poisToEnrich = poiState.filteredPOIs
+        .where((poi) => !poi.isEnriched && poi.imageUrl == null)
+        .take(20)
+        .toList();
+
+    if (poisToEnrich.isEmpty) {
+      debugPrint('[POIList] Alle sichtbaren POIs bereits enriched');
+      return;
+    }
+
+    debugPrint('[POIList] Pre-Enrichment für ${poisToEnrich.length} POIs starten');
+
+    // Im Hintergrund enrichen (nicht blockierend)
+    for (final poi in poisToEnrich) {
+      unawaited(poiNotifier.enrichPOI(poi.id));
     }
   }
 

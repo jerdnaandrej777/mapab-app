@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/constants/categories.dart';
+import '../models/route.dart';
 import '../models/trip.dart';
 
 part 'sharing_service.g.dart';
@@ -75,6 +78,21 @@ class SharingService {
         isOvernightStop: false,
       )).toList();
 
+      // Placeholder-Route erstellen (wird beim Öffnen neu berechnet)
+      final placeholderRoute = AppRoute(
+        start: stops.isNotEmpty
+            ? LatLng(stops.first.latitude, stops.first.longitude)
+            : const LatLng(48.1351, 11.5820), // München als Fallback
+        end: stops.isNotEmpty
+            ? LatLng(stops.last.latitude, stops.last.longitude)
+            : const LatLng(48.1351, 11.5820),
+        startAddress: data['startAddress'] ?? 'Start',
+        endAddress: data['endAddress'] ?? 'Ziel',
+        coordinates: [],
+        distanceKm: 0,
+        durationMinutes: 0,
+      );
+
       return Trip(
         id: data['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: data['name'] ?? 'Geteilter Trip',
@@ -82,7 +100,7 @@ class SharingService {
           (t) => t.name == data['type'],
           orElse: () => TripType.daytrip,
         ),
-        route: null, // Route wird beim Öffnen neu berechnet
+        route: placeholderRoute,
         stops: stops,
         days: data['days'] ?? 1,
         startDate: data['startDate'] != null
@@ -90,6 +108,7 @@ class SharingService {
             : null,
         notes: data['notes'],
         weatherCondition: null,
+        createdAt: DateTime.now(),
       );
     } catch (e) {
       print('[Sharing] Dekodierung fehlgeschlagen: $e');
