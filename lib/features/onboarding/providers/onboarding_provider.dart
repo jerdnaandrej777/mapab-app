@@ -13,16 +13,9 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   @override
   bool build() {
-    // Prüfe ob Onboarding bereits gesehen wurde
-    try {
-      final box = Hive.box(_boxName);
-      final hasSeenOnboarding = box.get(_key, defaultValue: false) as bool;
-      debugPrint('[Onboarding] hasSeenOnboarding: $hasSeenOnboarding');
-      return hasSeenOnboarding;
-    } catch (e) {
-      debugPrint('[Onboarding] Fehler beim Laden: $e');
-      return false;
-    }
+    // Onboarding bei JEDEM App-Start anzeigen
+    debugPrint('[Onboarding] Onboarding wird bei jedem Start angezeigt');
+    return false;
   }
 
   /// Markiert das Onboarding als abgeschlossen

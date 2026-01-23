@@ -49,6 +49,12 @@ app.*.map.json
 .env
 .env.*
 
+# Build scripts with credentials (niemals committen!)
+run_dev.bat
+build_release.bat
+run_dev.sh
+build_release.sh
+
 # API Keys (niemals committen!)
 **/secrets.dart
 **/api_keys.dart

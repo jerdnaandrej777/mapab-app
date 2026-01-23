@@ -9,7 +9,8 @@ part 'account_provider.g.dart';
 const _uuid = Uuid();
 
 /// Provider für User Account Management
-@riverpod
+/// keepAlive: true damit der Account-State nicht verloren geht bei Navigation
+@Riverpod(keepAlive: true)
 class AccountNotifier extends _$AccountNotifier {
   late Box _accountBox;
 

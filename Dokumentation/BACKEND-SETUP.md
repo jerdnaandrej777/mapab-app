@@ -94,34 +94,62 @@ Die Row Level Security ist bereits im Schema definiert. Prüfe unter Database �
 
 ## 3. Flutter Konfiguration
 
-### 3.1 Supabase Config eintragen
+### 3.1 Credentials-Handling (v1.3.1+)
 
-Bearbeite `lib/core/supabase/supabase_config.dart`:
+**Wichtig:** Credentials werden NICHT mehr im Code gespeichert, sondern via `--dart-define` übergeben!
+
+Die Config-Dateien verwenden `String.fromEnvironment()`:
 
 ```dart
+// lib/core/supabase/supabase_config.dart
 class SupabaseConfig {
-  // Bereits konfiguriert für MapAB:
-  static const String supabaseUrl = 'https://kcjgnctfjodggpvqwgil.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIs...'; // Vollständiger Key in Datei
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 }
-```
 
-### 3.2 Backend URL eintragen
-
-Bearbeite `lib/core/constants/api_config.dart`:
-
-```dart
+// lib/core/constants/api_config.dart
 class ApiConfig {
-  // Bereits konfiguriert:
-  static const String backendBaseUrl = 'https://backend-gules-gamma-30.vercel.app';
+  static const String backendBaseUrl = String.fromEnvironment('BACKEND_URL', defaultValue: '');
 }
 ```
+
+### 3.2 Build-Scripts verwenden
+
+**Für Entwicklung:** Erstelle `run_dev.bat` (nicht committen!):
+```batch
+@echo off
+flutter run ^
+  --dart-define=SUPABASE_URL=https://xxx.supabase.co ^
+  --dart-define=SUPABASE_ANON_KEY=eyJhbGci... ^
+  --dart-define=BACKEND_URL=https://backend.vercel.app
+pause
+```
+
+**Für Release:** Erstelle `build_release.bat` (nicht committen!):
+```batch
+@echo off
+flutter build apk --release ^
+  --dart-define=SUPABASE_URL=https://xxx.supabase.co ^
+  --dart-define=SUPABASE_ANON_KEY=eyJhbGci... ^
+  --dart-define=BACKEND_URL=https://backend.vercel.app
+pause
+```
+
+**Referenz:** Siehe `.env.local` für die benötigten Werte.
 
 ### 3.3 Dependencies installieren
 
 ```bash
 flutter pub get
 flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+### 3.4 App starten
+
+```bash
+# NICHT flutter run direkt ausführen!
+run_dev.bat    # Windows
+./run_dev.sh   # Linux/Mac
 ```
 
 ---
@@ -244,9 +272,138 @@ Optionen:
 
 ---
 
+## 11. Credentials-Sicherung (v1.3.1)
+
+### Wichtige Änderung
+
+Credentials werden jetzt via `--dart-define` zur Build-Zeit übergeben, **nicht** mehr hardcodiert im Code.
+
+### Alte Methode (UNSICHER)
+```dart
+// NICHT MEHR VERWENDEN!
+static const String supabaseUrl = 'https://xxx.supabase.co';
+```
+
+### Neue Methode (SICHER)
+```dart
+static const String supabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: '',
+);
+```
+
+### Build-Commands
+
+```bash
+# Development
+flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=BACKEND_URL=...
+
+# Release
+flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=BACKEND_URL=...
+```
+
+### Build-Scripts (empfohlen)
+
+Verwende die vorbereiteten Scripts (nicht im Git!):
+- `run_dev.bat` - Für Entwicklung
+- `build_release.bat` - Für Release-Build
+- `.env.local` - Referenz für die benötigten Werte
+
+Siehe CHANGELOG-v1.3.1.md für Details.
+
+---
+
+## 12. Geplante Migration zu Laravel
+
+### Hintergrund
+
+Die aktuelle Backend-Architektur (Vercel + Supabase) soll durch ein selbst-gehostetes Laravel-Backend ersetzt werden.
+
+### Gründe für die Migration
+
+| Aspekt | Aktuell | Mit Laravel |
+|--------|---------|-------------|
+| Kontrolle | Vendor-abhängig | Volle Kontrolle |
+| Kosten | Variabel | Fix (~10€/Monat) |
+| Skalierung | Vercel-Limits | VPS upgraden |
+| Debugging | Eingeschränkt | Volle Logs |
+
+### Geplante Architektur
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Flutter App                        │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│              Laravel Backend (VPS)                   │
+│  Laravel Sanctum │ OpenAI Proxy │ Rate Limiting     │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│                     MySQL                            │
+│  users │ trips │ favorites │ achievements           │
+└─────────────────────────────────────────────────────┘
+```
+
+### Migrations-Phasen
+
+| Phase | Beschreibung | Status |
+|-------|--------------|--------|
+| 1 | Laravel-Projekt Setup | Geplant |
+| 2 | Datenbank-Migrationen | Geplant |
+| 3 | API-Routes definieren | Geplant |
+| 4 | Controller implementieren | Geplant |
+| 5 | Rate-Limiting konfigurieren | Geplant |
+| 6 | Flutter-App anpassen | Geplant |
+| 7 | VPS-Deployment | Geplant |
+| 8 | Daten-Migration | Geplant |
+
+### Geplante API-Endpoints (Laravel)
+
+```
+# Public
+GET  /api/health
+
+# AI (Rate Limited)
+POST /api/ai/chat           # 100/Tag
+POST /api/ai/trip-plan      # 20/Tag
+
+# Auth
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/forgot-password
+
+# Protected (Sanctum)
+GET/PATCH  /api/users/me
+GET/POST   /api/trips
+GET/PATCH/DELETE /api/trips/:id
+POST       /api/trips/:id/complete
+GET/POST   /api/favorites/pois
+DELETE     /api/favorites/pois/:id
+```
+
+### Geschätzte Kosten (nach Migration)
+
+| Posten | Monatlich |
+|--------|-----------|
+| VPS (Hetzner CX21) | ~4€ |
+| Domain (.de) | ~1€ |
+| OpenAI API | ~5-20€ |
+| **Gesamt** | **~10-25€** |
+
+Siehe CLAUDE.md → "Geplante Laravel-Migration" für vollständige Details.
+
+---
+
 ## Änderungshistorie
 
 | Version | Datum | Änderungen |
 |---------|-------|------------|
 | 1.0.0 | 2026-01-21 | Initial Release |
 | 1.1.0 | 2026-01-22 | Supabase vollständig konfiguriert, Auth aktiviert |
+| 1.2.0 | 2026-01-23 | Credentials-Sicherung mit --dart-define dokumentiert |
+| 1.3.0 | 2026-01-23 | Laravel-Migration geplant, Dokumentation erweitert |

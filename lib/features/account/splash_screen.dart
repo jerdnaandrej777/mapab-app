@@ -16,89 +16,91 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _hasNavigated = false;
+  bool _initialDelayDone = false;
+
   @override
   void initState() {
     super.initState();
-    _checkAuthAndNavigate();
+    _startInitialDelay();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
-    // Warte kurz für Splash-Animation
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    // 0. Prüfe ob Onboarding bereits gesehen wurde
-    final hasSeenOnboarding = ref.read(onboardingNotifierProvider);
-
-    if (!hasSeenOnboarding) {
-      debugPrint('[Splash] Onboarding nicht gesehen → /onboarding');
-      if (mounted) {
-        context.go('/onboarding');
-      }
-      return;
+  Future<void> _startInitialDelay() async {
+    // Kurze Verzögerung für Splash-Animation
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) {
+      setState(() => _initialDelayDone = true);
     }
+  }
 
-    // 1. Prüfe Cloud-Auth (Supabase) - hat Priorität
-    final authState = ref.read(authNotifierProvider);
-
-    // Warte kurz falls Auth noch lädt
-    if (authState.status == AuthStatus.loading) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (!mounted) return;
-    }
-
-    // Erneut lesen nach potenziellem Laden
-    final currentAuthState = ref.read(authNotifierProvider);
-
-    // Cloud-User eingeloggt → direkt zur Hauptseite
-    if (currentAuthState.isAuthenticated) {
-      debugPrint('[Splash] Cloud-User eingeloggt: ${currentAuthState.userEmail}');
-      if (mounted) {
-        context.go('/');
-      }
-      return;
-    }
-
-    // 2. Prüfe lokalen Account (Gast-Modus)
-    final accountAsync = ref.read(accountNotifierProvider);
-
-    accountAsync.when(
-      data: (account) {
-        if (account != null) {
-          // Lokaler Account vorhanden → Main Screen
-          debugPrint('[Splash] Lokaler Account gefunden: ${account.displayName}');
-          if (mounted) {
-            context.go('/');
-          }
-        } else {
-          // Kein Account → Login Screen
-          debugPrint('[Splash] Kein Account gefunden → Login');
-          if (mounted) {
-            context.go('/login');
-          }
-        }
-      },
-      loading: () {
-        // Warten bis geladen
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            _checkAuthAndNavigate();
-          }
-        });
-      },
-      error: (_, __) {
-        // Bei Fehler zum Login
-        debugPrint('[Splash] Fehler beim Account-Laden → Login');
-        if (mounted) {
-          context.go('/login');
-        }
-      },
-    );
+  void _navigateTo(String route) {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+    debugPrint('[Splash] Navigiere zu: $route');
+    context.go(route);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Warte auf initiale Verzögerung
+    if (!_initialDelayDone) {
+      return _buildSplashUI();
+    }
+
+    // 0. Prüfe Onboarding
+    final hasSeenOnboarding = ref.watch(onboardingNotifierProvider);
+    if (!hasSeenOnboarding) {
+      // Post-Frame, um Navigation nach Build durchzuführen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigateTo('/onboarding');
+      });
+      return _buildSplashUI();
+    }
+
+    // 1. Prüfe Cloud-Auth (Supabase)
+    final authState = ref.watch(authNotifierProvider);
+
+    // Wenn Cloud-Auth noch lädt, warte
+    if (authState.status == AuthStatus.loading) {
+      return _buildSplashUI();
+    }
+
+    // Cloud-User eingeloggt → direkt zur Hauptseite
+    if (authState.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigateTo('/');
+      });
+      return _buildSplashUI();
+    }
+
+    // 2. Prüfe lokalen Account (Gast-Modus)
+    final accountAsync = ref.watch(accountNotifierProvider);
+
+    return accountAsync.when(
+      data: (account) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (account != null) {
+            debugPrint('[Splash] Lokaler Account: ${account.displayName}');
+            _navigateTo('/');
+          } else {
+            debugPrint('[Splash] Kein Account → Login');
+            _navigateTo('/login');
+          }
+        });
+        return _buildSplashUI();
+      },
+      loading: () => _buildSplashUI(),
+      error: (_, __) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          debugPrint('[Splash] Fehler → Login');
+          _navigateTo('/login');
+        });
+        return _buildSplashUI();
+      },
+    );
+  }
+
+  Widget _buildSplashUI() {
     return Scaffold(
       backgroundColor: AppTheme.primaryColor,
       body: Center(

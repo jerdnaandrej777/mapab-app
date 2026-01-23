@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../core/supabase/supabase_client.dart';
+import '../../core/supabase/supabase_client.dart' show isAuthenticated;
 import '../models/poi.dart';
 import '../models/trip.dart';
 import '../services/sync_service.dart';
@@ -9,7 +9,8 @@ import '../services/sync_service.dart';
 part 'favorites_provider.g.dart';
 
 /// Provider für Favoriten-Management (POIs und Routen)
-@riverpod
+/// keepAlive: true damit der State nicht verloren geht wenn keine Widgets watchen
+@Riverpod(keepAlive: true)
 class FavoritesNotifier extends _$FavoritesNotifier {
   late Box _favoritesBox;
 
@@ -46,10 +47,23 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     }
   }
 
+  /// Wartet bis der State geladen ist und gibt ihn zurück
+  Future<FavoritesState> _ensureLoaded() async {
+    // Wenn bereits geladen, direkt zurückgeben
+    if (state.hasValue && state.value != null) {
+      return state.value!;
+    }
+
+    // Warte auf das Laden
+    debugPrint('[Favorites] Warte auf State-Laden...');
+    final currentState = await future;
+    debugPrint('[Favorites] State geladen: ${currentState.routeCount} Routen, ${currentState.poiCount} POIs');
+    return currentState;
+  }
+
   /// Speichert Route zu Favoriten
   Future<void> saveRoute(Trip trip) async {
-    final current = state.value;
-    if (current == null) return;
+    final current = await _ensureLoaded();
 
     // Prüfe ob Route bereits existiert
     final exists = current.savedRoutes.any((r) => r.id == trip.id);
@@ -81,8 +95,7 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 
   /// Entfernt Route aus Favoriten
   Future<void> removeRoute(String tripId) async {
-    final current = state.value;
-    if (current == null) return;
+    final current = await _ensureLoaded();
 
     final updated = current.savedRoutes.where((r) => r.id != tripId).toList();
     await _favoritesBox.put(
@@ -103,8 +116,7 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 
   /// Speichert POI zu Favoriten
   Future<void> addPOI(POI poi) async {
-    final current = state.value;
-    if (current == null) return;
+    final current = await _ensureLoaded();
 
     // Prüfe ob POI bereits existiert
     final exists = current.favoritePOIs.any((p) => p.id == poi.id);
@@ -131,8 +143,7 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 
   /// Entfernt POI aus Favoriten
   Future<void> removePOI(String poiId) async {
-    final current = state.value;
-    if (current == null) return;
+    final current = await _ensureLoaded();
 
     final updated = current.favoritePOIs.where((p) => p.id != poiId).toList();
     await _favoritesBox.put(

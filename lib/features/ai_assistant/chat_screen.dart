@@ -519,8 +519,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   children: interests.map((interest) {
                     final isSelected = selectedInterests.contains(interest);
                     return FilterChip(
-                      label: Text(interest),
+                      label: Text(
+                        interest,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                      ),
                       selected: isSelected,
+                      selectedColor: Theme.of(context).colorScheme.primary,
+                      checkmarkColor: Colors.white,
                       onSelected: (selected) {
                         setDialogState(() {
                           if (selected) {

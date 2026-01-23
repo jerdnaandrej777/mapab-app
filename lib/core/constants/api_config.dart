@@ -1,11 +1,16 @@
 /// API-Konfiguration für Backend-Services
+/// WICHTIG: URLs werden via --dart-define beim Build übergeben!
 class ApiConfig {
   /// Backend-URL (Vercel)
-  /// WICHTIG: Nach Deployment anpassen!
   /// Lokal: http://localhost:3000
-  /// Produktion: https://mapab-backend.vercel.app
-  static const String backendBaseUrl =
-      String.fromEnvironment('BACKEND_URL', defaultValue: 'https://backend-gules-gamma-30.vercel.app');
+  /// Produktion: Aus --dart-define BACKEND_URL
+  static const String backendBaseUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: '',
+  );
+
+  /// Prüft ob Backend konfiguriert ist
+  static bool get isConfigured => backendBaseUrl.isNotEmpty;
 
   /// Timeout für API-Anfragen
   static const Duration connectTimeout = Duration(seconds: 30);

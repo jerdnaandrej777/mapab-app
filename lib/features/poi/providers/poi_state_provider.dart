@@ -49,11 +49,19 @@ class POIState with _$POIState {
 
     /// Filter: Suchtext
     @Default('') String searchQuery,
+
+    /// Nur POIs auf der Route anzeigen (mit routePosition)
+    @Default(false) bool routeOnlyMode,
   }) = _POIState;
 
   /// Gefilterte POIs basierend auf aktuellen Filtern
   List<POI> get filteredPOIs {
     var result = pois;
+
+    // Route-Only-Modus: Nur POIs mit routePosition (auf der Route)
+    if (routeOnlyMode) {
+      result = result.where((poi) => poi.routePosition != null).toList();
+    }
 
     // Kategorie-Filter
     if (selectedCategories.isNotEmpty) {
@@ -99,7 +107,8 @@ class POIState with _$POIState {
       selectedCategories.isNotEmpty ||
       mustSeeOnly ||
       maxDetourKm < 45 ||
-      searchQuery.isNotEmpty;
+      searchQuery.isNotEmpty ||
+      routeOnlyMode;
 }
 
 /// POI State Notifier mit keepAlive
@@ -251,7 +260,14 @@ class POIStateNotifier extends _$POIStateNotifier {
       mustSeeOnly: false,
       maxDetourKm: 45.0,
       searchQuery: '',
+      routeOnlyMode: false,
     );
+  }
+
+  /// Route-Only-Modus setzen (nur POIs auf der Route anzeigen)
+  void setRouteOnlyMode(bool enabled) {
+    state = state.copyWith(routeOnlyMode: enabled);
+    debugPrint('[POIState] Route-Only-Modus: $enabled');
   }
 
   /// Alle POIs löschen

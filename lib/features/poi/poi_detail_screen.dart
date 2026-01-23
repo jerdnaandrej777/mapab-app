@@ -21,6 +21,10 @@ class POIDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
+  /// Optimistisches UI-Update für Favoriten-Button
+  /// null = Provider-Wert nutzen, true/false = optimistischer Wert
+  bool? _optimisticFavorite;
+
   @override
   void initState() {
     super.initState();
@@ -132,8 +136,10 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
   }
 
   Widget _buildSliverAppBar(POI poi, ColorScheme colorScheme) {
-    // Favoriten-Status überwachen
-    final isFavorite = ref.watch(isPOIFavoriteProvider(poi.id));
+    // Favoriten-Status überwachen (Provider-Wert)
+    final providerFavorite = ref.watch(isPOIFavoriteProvider(poi.id));
+    // Effektiver Wert: Optimistischer Wert hat Priorität
+    final isFavorite = _optimisticFavorite ?? providerFavorite;
 
     return SliverAppBar(
       expandedHeight: 250,
@@ -163,25 +169,21 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
             ),
           ),
           onPressed: () async {
+            // Sofortiges optimistisches UI-Update
+            final newFavoriteState = !isFavorite;
+            setState(() {
+              _optimisticFavorite = newFavoriteState;
+            });
+
+            // Async Favoriten-Toggle
             final notifier = ref.read(favoritesNotifierProvider.notifier);
             await notifier.togglePOI(poi);
 
+            // Nach dem Toggle: Optimistischen Wert zurücksetzen (Provider übernimmt)
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isFavorite
-                        ? '${poi.name} aus Favoriten entfernt'
-                        : '${poi.name} zu Favoriten hinzugefügt',
-                  ),
-                  action: SnackBarAction(
-                    label: 'Rückgängig',
-                    onPressed: () async {
-                      await notifier.togglePOI(poi);
-                    },
-                  ),
-                ),
-              );
+              setState(() {
+                _optimisticFavorite = null;
+              });
             }
           },
         ),
