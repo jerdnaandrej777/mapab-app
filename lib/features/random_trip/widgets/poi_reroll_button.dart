@@ -1,7 +1,112 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
-/// Button zum Neu-Würfeln eines einzelnen POIs
+/// Kombiniertes Widget mit Delete und Reroll Buttons für einen POI
+class POIActionButtons extends StatelessWidget {
+  final String poiId;
+  final bool isLoading;
+  final bool canDelete;
+  final VoidCallback onReroll;
+  final VoidCallback onDelete;
+
+  const POIActionButtons({
+    super.key,
+    required this.poiId,
+    required this.isLoading,
+    required this.canDelete,
+    required this.onReroll,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Delete Button
+        if (canDelete)
+          _ActionButton(
+            icon: Icons.delete_outline,
+            color: colorScheme.error,
+            isLoading: false,
+            isDisabled: isLoading,
+            onTap: onDelete,
+            tooltip: 'Entfernen',
+          ),
+        if (canDelete) const SizedBox(width: 4),
+        // Reroll Button
+        _ActionButton(
+          icon: Icons.casino,
+          color: colorScheme.primary,
+          isLoading: isLoading,
+          isDisabled: isLoading,
+          onTap: onReroll,
+          tooltip: 'Neu würfeln',
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool isLoading;
+  final bool isDisabled;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.isLoading,
+    required this.isDisabled,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isDisabled ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDisabled
+                    ? color.withOpacity(0.2)
+                    : color.withOpacity(0.3),
+              ),
+            ),
+            child: isLoading
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  )
+                : Icon(
+                    icon,
+                    size: 16,
+                    color: isDisabled ? color.withOpacity(0.4) : color,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Button zum Neu-Würfeln eines einzelnen POIs (Legacy - für Abwärtskompatibilität)
 class POIRerollButton extends StatelessWidget {
   final String poiId;
   final bool isLoading;
@@ -16,6 +121,8 @@ class POIRerollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -26,22 +133,22 @@ class POIRerollButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: AppTheme.primaryColor.withOpacity(0.3),
+              color: colorScheme.primary.withOpacity(0.3),
             ),
           ),
           child: isLoading
-              ? const SizedBox(
+              ? SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(AppTheme.primaryColor),
+                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
                   ),
                 )
-              : const Icon(
+              : Icon(
                   Icons.casino,
                   size: 16,
-                  color: AppTheme.primaryColor,
+                  color: colorScheme.primary,
                 ),
         ),
       ),
@@ -62,30 +169,32 @@ class TripRerollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ElevatedButton.icon(
       onPressed: isLoading ? null : onReroll,
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-        foregroundColor: AppTheme.primaryColor,
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: colorScheme.primary.withOpacity(0.3),
           ),
         ),
       ),
       icon: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppTheme.primaryColor),
+                valueColor: AlwaysStoppedAnimation(colorScheme.primary),
               ),
             )
           : const Icon(Icons.refresh),
-      label: const Text('Neu wurfeln'),
+      label: const Text('Neu würfeln'),
     );
   }
 }

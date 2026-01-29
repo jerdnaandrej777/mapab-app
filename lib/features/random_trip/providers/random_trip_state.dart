@@ -52,8 +52,17 @@ class RandomTripState with _$RandomTripState {
     /// Lädt gerade
     @Default(false) bool isLoading,
 
+    /// POI-ID die gerade geladen wird (für individuelle Loading-Anzeigen)
+    String? loadingPOIId,
+
     /// Fehler-Nachricht
     String? error,
+
+    /// Aktuell ausgewählter Tag (1-basiert) für tagesweisen Export
+    @Default(1) int selectedDay,
+
+    /// Bereits exportierte/abgeschlossene Tage
+    @Default({}) Set<int> completedDays,
   }) = _RandomTripState;
 
   /// Hat gültigen Startpunkt
@@ -73,6 +82,34 @@ class RandomTripState with _$RandomTripState {
 
   /// Formatierter Radius
   String get formattedRadius => '${radiusKm.round()} km';
+
+  /// Kann POIs entfernen (mindestens 3 POIs vorhanden)
+  bool get canRemovePOI =>
+      generatedTrip != null && generatedTrip!.selectedPOIs.length > 2;
+
+  /// Prüft ob ein bestimmter POI gerade geladen wird
+  bool isPOILoading(String poiId) => loadingPOIId == poiId;
+
+  /// Anzahl der Tage im generierten Trip
+  int get tripDays => generatedTrip?.trip.actualDays ?? 1;
+
+  /// Prüft ob ein Tag abgeschlossen/exportiert wurde
+  bool isDayCompleted(int dayNumber) => completedDays.contains(dayNumber);
+
+  /// Stops für den ausgewählten Tag
+  List<TripStop> get stopsForSelectedDay =>
+      generatedTrip?.trip.getStopsForDay(selectedDay) ?? [];
+
+  /// Anzahl Stops für den ausgewählten Tag
+  int get stopsCountForSelectedDay => stopsForSelectedDay.length;
+
+  /// Prüft ob der ausgewählte Tag das Google Maps Limit überschreitet
+  bool get selectedDayOverLimit => stopsCountForSelectedDay > 9;
+
+  /// Berechnete Anzahl Tage basierend auf Radius (für Euro Trip)
+  int get calculatedDays => mode == RandomTripMode.eurotrip
+      ? (radiusKm / 600).ceil().clamp(1, 14)
+      : 1;
 
   /// Trip-Statistiken
   String? get tripStats {
@@ -104,11 +141,11 @@ enum RandomTripStep {
 
 /// Trip-Modus
 enum RandomTripMode {
-  /// Tagesausflug (1 Tag)
-  daytrip('Tagesausflug', '🚗'),
+  /// AI Tagesausflug (1 Tag)
+  daytrip('AI Tagesausflug', '🤖'),
 
-  /// Euro Trip (mehrere Tage)
-  eurotrip('Euro Trip', '✈️');
+  /// AI Euro Trip (mehrere Tage)
+  eurotrip('AI Euro Trip', '✈️');
 
   final String label;
   final String icon;

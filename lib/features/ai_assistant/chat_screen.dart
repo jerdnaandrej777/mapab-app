@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
 import '../../data/services/ai_service.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/geocoding_repo.dart';
 import '../../data/repositories/trip_generator_repo.dart';
+import '../../features/map/providers/route_session_provider.dart';
+import '../../features/poi/providers/poi_state_provider.dart';
 import '../../features/trip/providers/trip_state_provider.dart';
 import 'widgets/chat_message.dart';
 import 'widgets/suggestion_chips.dart';
@@ -25,8 +27,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _backendAvailable = true;
 
-  // Demo-Nachrichten
+  // Chat-Nachrichten mit History für Backend
   final List<Map<String, dynamic>> _messages = [
     {
       'content':
@@ -37,10 +40,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   final List<String> _suggestions = [
     '🤖 AI-Trip generieren',
-    'Welche Sehenswürdigkeiten sind auf meiner Route?',
-    'Zeige mir Naturhighlights',
-    'Was ist das beste Restaurant unterwegs?',
+    '🗺️ Sehenswürdigkeiten auf Route',
+    '🌲 Naturhighlights zeigen',
+    '🍽️ Restaurants empfehlen',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBackendHealth();
+  }
+
+  Future<void> _checkBackendHealth() async {
+    try {
+      final aiService = ref.read(aiServiceProvider);
+      final isHealthy = await aiService.checkHealth();
+      if (mounted) {
+        setState(() {
+          _backendAvailable = isHealthy;
+        });
+      }
+    } catch (e) {
+      debugPrint('[AI-Chat] Backend Health-Check fehlgeschlagen: $e');
+      if (mounted) {
+        setState(() {
+          _backendAvailable = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -51,6 +79,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Row(
@@ -70,13 +101,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          // AI-Status Banner
-          _buildStatusBanner(),
+          // Status Banner (nur wenn Backend nicht verfügbar)
+          _buildStatusBanner(colorScheme),
 
           // Chat-Nachrichten
           Expanded(
             child: _messages.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(colorScheme)
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -107,45 +138,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
 
           // Eingabefeld
-          _buildInputField(),
+          _buildInputField(colorScheme),
         ],
       ),
     );
   }
 
-  Widget _buildStatusBanner() {
-    // Prüfe echten API-Status
-    final aiService = ref.watch(aiServiceProvider);
-    final isConfigured = aiService.isConfigured;
+  Widget _buildStatusBanner(ColorScheme colorScheme) {
+    if (_backendAvailable) return const SizedBox.shrink();
 
-    if (isConfigured) return const SizedBox.shrink();
+    // Prüfe ob Backend überhaupt konfiguriert ist
+    final isConfigured = ApiConfig.isConfigured;
+    final message = isConfigured
+        ? 'Demo-Modus: Backend nicht erreichbar'
+        : 'Demo-Modus: Backend-URL nicht konfiguriert';
 
     return Container(
       padding: const EdgeInsets.all(12),
-      color: AppTheme.warningColor.withOpacity(0.1),
+      color: Colors.orange.withOpacity(0.15),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: AppTheme.warningColor, size: 20),
+          Icon(Icons.cloud_off, color: Colors.orange.shade700, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Demo-Modus: OpenAI API-Key nicht konfiguriert',
+              message,
               style: TextStyle(
-                color: AppTheme.warningColor,
+                color: Colors.orange.shade700,
                 fontSize: 13,
               ),
             ),
           ),
-          TextButton(
-            onPressed: _showApiKeyDialog,
-            child: const Text('Einrichten'),
-          ),
+          if (isConfigured)
+            TextButton(
+              onPressed: _checkBackendHealth,
+              child: const Text('Erneut prüfen'),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -153,28 +187,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: colorScheme.primaryContainer.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.smart_toy,
               size: 64,
-              color: AppTheme.primaryColor,
+              color: colorScheme.primary,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'AI-Reiseassistent',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Frag mich alles über deine Reise!',
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: colorScheme.onSurfaceVariant,
               fontSize: 16,
             ),
           ),
@@ -183,15 +218,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildInputField() {
+  Widget _buildInputField(ColorScheme colorScheme) {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: colorScheme.shadow.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -205,7 +240,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 decoration: InputDecoration(
                   hintText: 'Nachricht eingeben...',
                   filled: true,
-                  fillColor: AppTheme.backgroundColor,
+                  fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -222,11 +257,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
+                color: colorScheme.primary,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white),
+                icon: Icon(Icons.send, color: colorScheme.onPrimary),
                 onPressed: () => _sendMessage(_messageController.text),
               ),
             ),
@@ -239,9 +274,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    final userMessage = text.trim();
     setState(() {
       _messages.add({
-        'content': text.trim(),
+        'content': userMessage,
         'isUser': true,
       });
       _isLoading = true;
@@ -251,18 +287,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final aiService = ref.read(aiServiceProvider);
-
-      // Prüfe ob konfiguriert
-      if (!aiService.isConfigured) {
-        // Fallback auf Demo-Response wenn nicht konfiguriert
+      // Prüfe ob Backend verfügbar ist
+      if (!_backendAvailable) {
         await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
 
         setState(() {
           _isLoading = false;
           _messages.add({
-            'content': _generateDemoResponse(text),
+            'content': _generateSmartDemoResponse(userMessage),
             'isUser': false,
           });
         });
@@ -270,14 +303,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
 
-      // Echte API-Anfrage
-      print('[Chat] Sende Anfrage an OpenAI...');
+      // Echte API-Anfrage mit Chat-History
+      final aiService = ref.read(aiServiceProvider);
+      debugPrint('[AI-Chat] Sende Anfrage an Backend...');
+
+      // Chat-History für Kontext aufbereiten
+      final history = _messages
+          .where((m) => m['content'] != null)
+          .map((m) => ChatMessage(
+                content: m['content'] as String,
+                isUser: m['isUser'] as bool,
+              ))
+          .toList();
+
+      // Trip-Kontext abrufen
+      final tripState = ref.read(tripStateProvider);
+      final context = TripContext(
+        route: tripState.route,
+        stops: tripState.stops,
+      );
+
       final response = await aiService.chat(
-        message: text,
-        context: TripContext(
-          route: null,
-          stops: [],
-        ),
+        message: userMessage,
+        context: context,
+        history: history.take(10).toList(), // Letzte 10 Nachrichten
       );
 
       if (!mounted) return;
@@ -285,21 +334,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _isLoading = false;
         _messages.add({
-          'content': response,
+          'content': response.isNotEmpty
+              ? response
+              : 'Entschuldigung, ich konnte keine Antwort generieren.',
           'isUser': false,
         });
       });
       _scrollToBottom();
     } catch (e) {
-      print('[Chat] Fehler: $e');
+      debugPrint('[AI-Chat] Fehler: $e');
 
       if (!mounted) return;
 
+      // Bei Fehler auf Demo-Modus wechseln
       setState(() {
+        _backendAvailable = false;
         _isLoading = false;
         _messages.add({
-          'content':
-              'Entschuldigung, es gab einen Fehler bei der Anfrage. Bitte versuche es später erneut.\n\nFehler: $e',
+          'content': _generateSmartDemoResponse(userMessage),
           'isUser': false,
         });
       });
@@ -307,33 +359,136 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  String _generateDemoResponse(String query) {
-    // Demo-Antworten
-    if (query.toLowerCase().contains('prag')) {
-      return 'Für einen 3-Tage-Trip nach Prag empfehle ich:\n\n'
-          '**Tag 1:** Prager Burg, Karlsbrücke, Altstädter Ring\n\n'
-          '**Tag 2:** Vyšehrad, Nationalmuseum, Wenzelsplatz\n\n'
-          '**Tag 3:** Kutná Hora (Tagesausflug), Sedlec-Beinhaus\n\n'
-          'Soll ich diese Stops zu deiner Route hinzufügen?';
+  /// Intelligente Demo-Antworten basierend auf Schlüsselwörtern
+  String _generateSmartDemoResponse(String query) {
+    final lowerQuery = query.toLowerCase();
+
+    // Sehenswürdigkeiten
+    if (lowerQuery.contains('sehenswürd') ||
+        lowerQuery.contains('sightseeing') ||
+        lowerQuery.contains('besichtigen')) {
+      final tripState = ref.read(tripStateProvider);
+      if (tripState.hasRoute && tripState.stops.isNotEmpty) {
+        final stopList = tripState.stops
+            .take(5)
+            .map((s) => '• ${s.name} (${s.categoryLabel})')
+            .join('\n');
+        return '📍 **Sehenswürdigkeiten auf deiner Route:**\n\n'
+            '$stopList\n\n'
+            'Tippe auf einen Stop im Trip-Screen für Details!';
+      }
+      return '🗺️ **Top Sehenswürdigkeiten:**\n\n'
+          '• 🏰 Schloss Neuschwanstein - Bayerns Märchenschloss\n'
+          '• 🏔️ Zugspitze - Deutschlands höchster Gipfel\n'
+          '• 🌲 Partnachklamm - Beeindruckende Schlucht\n'
+          '• 🏛️ Marienplatz München - Historisches Zentrum\n\n'
+          'Erstelle eine Route, um personalisierte Empfehlungen zu erhalten!';
     }
 
-    if (query.toLowerCase().contains('sehenswürd')) {
-      return 'Auf deiner aktuellen Route findest du:\n\n'
-          '🏰 **Schloss Neuschwanstein** - Must-See, 12 km Umweg\n'
-          '🏔️ **Zugspitze** - Deutschlands höchster Berg\n'
-          '🌲 **Partnachklamm** - Beeindruckende Klamm\n\n'
-          'Möchtest du Details zu einem dieser Orte?';
+    // Natur
+    if (lowerQuery.contains('natur') ||
+        lowerQuery.contains('park') ||
+        lowerQuery.contains('wald') ||
+        lowerQuery.contains('see')) {
+      return '🌲 **Naturhighlights:**\n\n'
+          '• 🏞️ **Königssee** - Kristallklarer Bergsee\n'
+          '• 🌲 **Nationalpark Berchtesgaden** - Unberührte Natur\n'
+          '• 🏔️ **Partnachklamm** - Spektakuläre Schlucht\n'
+          '• 🌳 **Englischer Garten** - Münchens grüne Oase\n\n'
+          'Wähle "🤖 AI-Trip generieren" mit Interesse "Natur" für eine personalisierte Route!';
     }
 
-    if (query.toLowerCase().contains('restaurant')) {
-      return 'Hier sind meine Restaurant-Empfehlungen entlang deiner Route:\n\n'
-          '🍽️ **Gasthof Stern** in Garmisch - Bayerische Küche (4.5★)\n'
-          '🍽️ **Alpenhof** bei Füssen - Alpenküche (4.3★)\n\n'
-          'Ich kann auch nach vegetarischen oder veganen Optionen suchen.';
+    // Restaurants
+    if (lowerQuery.contains('restaurant') ||
+        lowerQuery.contains('essen') ||
+        lowerQuery.contains('imbiss') ||
+        lowerQuery.contains('küche')) {
+      return '🍽️ **Restaurant-Empfehlungen:**\n\n'
+          '• 🥨 **Hofbräuhaus München** - Bayerische Klassiker (4.5★)\n'
+          '• 🍖 **Augustiner Bräustuben** - Traditionell & gemütlich (4.4★)\n'
+          '• 🥗 **Prinz Myshkin** - Vegetarisch & modern (4.3★)\n\n'
+          'Tipp: Nutze die POI-Liste mit Filter "Restaurant" für mehr Optionen!';
     }
 
-    return 'Das ist eine interessante Frage! Im vollständigen Modus mit OpenAI-Integration könnte ich dir hier eine detaillierte Antwort geben.\n\n'
-        'Um die AI-Features zu aktivieren, richte bitte deinen OpenAI API-Key in den Einstellungen ein.';
+    // Hotels
+    if (lowerQuery.contains('hotel') ||
+        lowerQuery.contains('übernacht') ||
+        lowerQuery.contains('schlafen')) {
+      return '🏨 **Unterkunft-Tipps:**\n\n'
+          '• 🏨 Hotels findest du über die POI-Suche\n'
+          '• 💡 Filtere nach "Hotel" in der POI-Liste\n'
+          '• 📍 Auf der Karte siehst du Hotels in der Nähe\n\n'
+          'Erstelle erst deine Route, dann zeige ich dir Hotels entlang des Weges!';
+    }
+
+    // Wetter
+    if (lowerQuery.contains('wetter') ||
+        lowerQuery.contains('regen') ||
+        lowerQuery.contains('sonne')) {
+      return '☀️ **Wetter-Info:**\n\n'
+          'Aktuelle Wetterdaten siehst du:\n'
+          '• 🗺️ Auf dem Map-Screen oben\n'
+          '• 🎯 Bei POIs mit Outdoor-Aktivitäten\n\n'
+          'Tipp: Bei Regen empfehle ich Museen und Indoor-Attraktionen!';
+    }
+
+    // Route
+    if (lowerQuery.contains('route') ||
+        lowerQuery.contains('fahrt') ||
+        lowerQuery.contains('weg')) {
+      final tripState = ref.read(tripStateProvider);
+      if (tripState.hasRoute) {
+        return '🛣️ **Deine aktuelle Route:**\n\n'
+            '📍 Start: ${tripState.route!.startAddress}\n'
+            '🎯 Ziel: ${tripState.route!.endAddress}\n'
+            '📏 Distanz: ${tripState.route!.distanceKm.toStringAsFixed(0)} km\n'
+            '⏱️ Fahrzeit: ${(tripState.route!.durationMinutes / 60).toStringAsFixed(1)}h\n'
+            '🎯 Stops: ${tripState.stops.length}\n\n'
+            'Gehe zum Trip-Screen für Details!';
+      }
+      return '🗺️ **Route erstellen:**\n\n'
+          '1. Gehe zum 🗺️ Karten-Screen\n'
+          '2. Tippe auf Start- und Zielpunkt\n'
+          '3. Oder nutze "🤖 AI-Trip generieren"\n\n'
+          'Dann kann ich dir Empfehlungen entlang der Route geben!';
+    }
+
+    // Hilfe
+    if (lowerQuery.contains('hilfe') ||
+        lowerQuery.contains('help') ||
+        lowerQuery.contains('kannst du') ||
+        lowerQuery.contains('was kann')) {
+      return '🤖 **Was ich kann:**\n\n'
+          '• 🗺️ Routen-Infos geben\n'
+          '• 📍 Sehenswürdigkeiten empfehlen\n'
+          '• 🌲 Naturhighlights zeigen\n'
+          '• 🍽️ Restaurants vorschlagen\n'
+          '• 🤖 AI-Trips generieren\n\n'
+          'Frag mich einfach oder wähle einen Vorschlag unten!';
+    }
+
+    // Städte-spezifisch
+    final cities = ['münchen', 'berlin', 'hamburg', 'köln', 'prag', 'wien', 'salzburg'];
+    for (final city in cities) {
+      if (lowerQuery.contains(city)) {
+        return '🏙️ **$city erkunden:**\n\n'
+            'Nutze "🤖 AI-Trip generieren" und gib "$city" als Ziel ein!\n\n'
+            'Dort kannst du:\n'
+            '• 📅 Anzahl der Tage wählen\n'
+            '• ❤️ Interessen angeben (Kultur, Natur, Essen...)\n'
+            '• 🚗 Eine optimierte Route erhalten\n\n'
+            'Oder gehe zur POI-Liste und suche nach "$city"!';
+      }
+    }
+
+    // Default-Antwort
+    return '🤔 **Interessante Frage!**\n\n'
+        'Im vollständigen Modus mit Backend-Verbindung kann ich dir hier eine detaillierte Antwort geben.\n\n'
+        '**Probiere diese Funktionen:**\n'
+        '• 🤖 AI-Trip generieren (Button unten)\n'
+        '• 🗺️ Route auf der Karte erstellen\n'
+        '• 📍 POI-Liste durchsuchen\n\n'
+        '_Tipp: Frage nach Sehenswürdigkeiten, Restaurants oder Natur!_';
   }
 
   void _scrollToBottom() {
@@ -349,6 +504,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _clearChat() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -378,53 +535,129 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  void _showApiKeyDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('OpenAI API-Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Für die vollständige AI-Integration benötigst du einen OpenAI API-Key.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'API-Key',
-                hintText: 'sk-...',
-              ),
-              obscureText: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: API-Key speichern
-            },
-            child: const Text('Speichern'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleSuggestionTap(String suggestion) {
-    if (suggestion == '🤖 AI-Trip generieren') {
-      _showTripGeneratorDialog();
-    } else {
-      _sendMessage(suggestion);
+    switch (suggestion) {
+      case '🤖 AI-Trip generieren':
+        _showTripGeneratorDialog();
+        break;
+      case '🗺️ Sehenswürdigkeiten auf Route':
+        _handleSehenswuerdigkeitenRequest();
+        break;
+      case '🌲 Naturhighlights zeigen':
+        _handleNaturhighlightsRequest();
+        break;
+      case '🍽️ Restaurants empfehlen':
+        _handleRestaurantRequest();
+        break;
+      default:
+        _sendMessage(suggestion);
     }
   }
 
+  void _handleSehenswuerdigkeitenRequest() {
+    final tripState = ref.read(tripStateProvider);
+
+    if (tripState.hasRoute && tripState.stops.isNotEmpty) {
+      // Zeige aktuelle Stops
+      final stopList = tripState.stops
+          .map((s) => '• **${s.name}** (${s.categoryLabel})')
+          .join('\n');
+
+      setState(() {
+        _messages.add({
+          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'isUser': true,
+        });
+        _messages.add({
+          'content': '📍 **Sehenswürdigkeiten auf deiner Route:**\n\n'
+              '$stopList\n\n'
+              '💡 Gehe zum Trip-Screen für Details oder tippe auf einen POI!',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    } else if (tripState.hasRoute) {
+      // Route vorhanden, aber keine Stops
+      setState(() {
+        _messages.add({
+          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'isUser': true,
+        });
+        _messages.add({
+          'content': '📍 **Noch keine Stops auf deiner Route!**\n\n'
+              'Deine Route:\n'
+              '• Start: ${tripState.route!.startAddress}\n'
+              '• Ziel: ${tripState.route!.endAddress}\n\n'
+              '💡 Gehe zur POI-Liste und füge Sehenswürdigkeiten hinzu!',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    } else {
+      // Keine Route
+      setState(() {
+        _messages.add({
+          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'isUser': true,
+        });
+        _messages.add({
+          'content': '🗺️ **Erstelle zuerst eine Route!**\n\n'
+              '1. Gehe zum Karten-Screen 🗺️\n'
+              '2. Wähle Start- und Zielpunkt\n'
+              '3. Oder nutze "🤖 AI-Trip generieren"\n\n'
+              'Dann zeige ich dir alle Sehenswürdigkeiten entlang deiner Route!',
+          'isUser': false,
+        });
+      });
+      _scrollToBottom();
+    }
+  }
+
+  void _handleNaturhighlightsRequest() {
+    setState(() {
+      _messages.add({
+        'content': '🌲 Zeige mir Naturhighlights',
+        'isUser': true,
+      });
+      _messages.add({
+        'content': '🌲 **Naturhighlights entdecken:**\n\n'
+            '**Top Empfehlungen:**\n'
+            '• 🏞️ Königssee - Kristallklarer Bergsee\n'
+            '• 🏔️ Partnachklamm - Spektakuläre Schlucht\n'
+            '• 🌳 Nationalpark Berchtesgaden\n'
+            '• 🏔️ Zugspitze - Deutschlands höchster Gipfel\n\n'
+            '💡 **Tipp:** Gehe zur POI-Liste und filtere nach "Natur" 🌲\n\n'
+            'Oder generiere einen AI-Trip mit Interesse "Natur"!',
+        'isUser': false,
+      });
+    });
+    _scrollToBottom();
+  }
+
+  void _handleRestaurantRequest() {
+    setState(() {
+      _messages.add({
+        'content': '🍽️ Empfehle mir Restaurants',
+        'isUser': true,
+      });
+      _messages.add({
+        'content': '🍽️ **Restaurant-Empfehlungen:**\n\n'
+            '**Bayerische Klassiker:**\n'
+            '• 🥨 Hofbräuhaus München (4.5★)\n'
+            '• 🍖 Augustiner Bräustuben (4.4★)\n\n'
+            '**Modern & International:**\n'
+            '• 🥗 Prinz Myshkin - Vegetarisch (4.3★)\n'
+            '• 🍝 Brenner - Italienisch (4.2★)\n\n'
+            '💡 **Tipp:** Nutze die POI-Liste mit Filter "Restaurant" für Lokale auf deiner Route!\n\n'
+            'Oder frag mich nach einem bestimmten Küchenstil!',
+        'isUser': false,
+      });
+    });
+    _scrollToBottom();
+  }
+
   void _showTripGeneratorDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
     final destinationController = TextEditingController();
     final startController = TextEditingController();
     double days = 3;
@@ -473,21 +706,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(height: 16),
 
                 // Tage
-                const Text(
+                Text(
                   'Anzahl Tage',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${days.round()} ${days.round() == 1 ? "Tag" : "Tage"}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 Slider(
@@ -505,29 +738,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(height: 16),
 
                 // Interessen
-                const Text(
+                Text(
                   'Interessen:',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 4,
                   children: interests.map((interest) {
                     final isSelected = selectedInterests.contains(interest);
                     return FilterChip(
-                      label: Text(
-                        interest,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                        ),
-                      ),
+                      label: Text(interest),
                       selected: isSelected,
-                      selectedColor: Theme.of(context).colorScheme.primary,
-                      checkmarkColor: Colors.white,
                       onSelected: (selected) {
                         setDialogState(() {
                           if (selected) {
@@ -548,7 +775,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Abbrechen'),
             ),
-            ElevatedButton(
+            FilledButton(
               onPressed: () async {
                 final destination = destinationController.text.trim();
                 final startText = startController.text.trim();
@@ -626,9 +853,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final aiService = ref.read(aiServiceProvider);
-
-      if (!aiService.isConfigured) {
+      if (!_backendAvailable) {
         // Demo-Response
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
@@ -636,13 +861,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         setState(() {
           _isLoading = false;
           _messages.add({
-            'content': _generateDemoTripPlan(destination, days),
+            'content': _generateDemoTripPlan(destination, days, interests),
             'isUser': false,
           });
         });
         _scrollToBottom();
         return;
       }
+
+      final aiService = ref.read(aiServiceProvider);
 
       // Echte AI-Anfrage
       final plan = await aiService.generateTripPlan(
@@ -657,7 +884,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // Formatiere den Plan
       final planText = StringBuffer();
       planText.writeln('🗺️ ${plan.title}\n');
-      if (plan.description != null) {
+      if (plan.description != null && plan.description!.isNotEmpty) {
         planText.writeln('${plan.description}\n');
       }
 
@@ -685,15 +912,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
-      print('[Trip Generator] Fehler: $e');
+      debugPrint('[Trip Generator] Fehler: $e');
 
       if (!mounted) return;
 
+      // Bei Fehler Demo-Modus aktivieren
       setState(() {
+        _backendAvailable = false;
         _isLoading = false;
         _messages.add({
-          'content':
-              'Entschuldigung, es gab einen Fehler beim Generieren des Trips.\n\nFehler: $e',
+          'content': _generateDemoTripPlan(destination, days, interests),
           'isUser': false,
         });
       });
@@ -718,7 +946,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
         }
       } catch (e) {
-        print('[AI-Trip] Geocoding Fehler: $e');
+        debugPrint('[AI-Trip] Geocoding Fehler: $e');
       }
       return null;
     }
@@ -778,12 +1006,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           address = result.shortName ?? result.displayName ?? address;
         }
       } catch (e) {
-        print('[AI-Trip] Reverse Geocoding Fehler: $e');
+        debugPrint('[AI-Trip] Reverse Geocoding Fehler: $e');
       }
 
       return (lat: position.latitude, lng: position.longitude, address: address);
     } catch (e) {
-      print('[AI-Trip] GPS Fehler: $e');
+      debugPrint('[AI-Trip] GPS Fehler: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('GPS-Fehler: $e')),
@@ -877,6 +1105,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
       _scrollToBottom();
 
+      // Alte Route-Session stoppen und POIs löschen
+      ref.read(routeSessionProvider.notifier).stopRoute();
+      ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
+      debugPrint('[AI-Chat] Alte Route-Session und POIs gelöscht');
+
       // Route an TripStateProvider übergeben
       final tripState = ref.read(tripStateProvider.notifier);
       tripState.setRoute(result.trip.route);
@@ -888,7 +1121,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         context.go('/trip');
       }
     } catch (e) {
-      print('[AI-Trip] Random Trip Fehler: $e');
+      debugPrint('[AI-Trip] Random Trip Fehler: $e');
 
       if (!mounted) return;
 
@@ -905,9 +1138,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  String _generateDemoTripPlan(String destination, int days) {
-    return '🗺️ $days Tage in $destination\n\n'
-        '**Tag 1: Ankunft & Stadterkund**ung\n'
+  String _generateDemoTripPlan(String destination, int days, List<String> interests) {
+    final interestsText = interests.isNotEmpty
+        ? 'Basierend auf deinen Interessen (${interests.join(', ')}):\n\n'
+        : '';
+
+    return '🗺️ **$days Tage in $destination**\n\n'
+        '$interestsText'
+        '**Tag 1: Ankunft & Stadterkundung**\n'
         '• Hauptbahnhof (1h) - Ankunft und Check-in\n'
         '• Altstadt (2h) - Historisches Zentrum erkunden\n'
         '• Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
@@ -916,6 +1154,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         '• Kunstgalerie (1.5h) - Lokale Kunstszene\n'
         '• Lokales Restaurant (1h) - Traditionelle Küche\n\n'
         '${days > 2 ? "**Tag 3: Natur & Entspannung**\n• Park/Garten (2h) - Grüne Oase\n• Aussichtspunkt (1h) - Panoramablick\n• Café (1h) - Kaffee und Kuchen\n\n" : ""}'
-        '💡 Dies ist ein Demo-Plan. Mit OpenAI-Integration erhältst du personalisierte Empfehlungen!';
+        '💡 _Dies ist ein Demo-Plan. Mit Backend-Verbindung erhältst du personalisierte Empfehlungen!_\n\n'
+        '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel für eine echte Route mit POIs!';
   }
 }

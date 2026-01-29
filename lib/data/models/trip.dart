@@ -1,6 +1,8 @@
+import 'dart:math';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/categories.dart';
+import '../../core/constants/trip_constants.dart';
 import 'poi.dart';
 import 'route.dart';
 
@@ -97,6 +99,48 @@ class Trip with _$Trip {
   /// Alle Koordinaten für optimierte Route
   List<LatLng> get allWaypoints {
     return sortedStops
+        .map((stop) => LatLng(stop.latitude, stop.longitude))
+        .toList();
+  }
+
+  /// Gibt alle Stops für einen bestimmten Tag zurück (1-basiert)
+  List<TripStop> getStopsForDay(int dayNumber) {
+    return sortedStops.where((s) => s.day == dayNumber).toList();
+  }
+
+  /// Berechnet die Distanz für einen bestimmten Tag (approximiert)
+  double getDistanceForDay(int dayNumber) {
+    final dayStops = getStopsForDay(dayNumber);
+    if (dayStops.isEmpty) return 0;
+
+    // Approximation: Gesamtdistanz / Anzahl Tage
+    // (Exakte Berechnung würde separate Routen pro Tag erfordern)
+    return route.distanceKm / actualDays;
+  }
+
+  /// Anzahl der tatsächlichen Tage (basierend auf Stop-Verteilung)
+  int get actualDays {
+    if (stops.isEmpty) return 1;
+    return stops.map((s) => s.day).reduce(max);
+  }
+
+  /// Prüft ob ein Tag das POI-Limit überschreitet
+  bool isDayOverLimit(int dayNumber) {
+    return getStopsForDay(dayNumber).length > TripConstants.maxPoisPerDay;
+  }
+
+  /// Gibt die Anzahl der Stops pro Tag als Map zurück
+  Map<int, int> get stopsPerDay {
+    final result = <int, int>{};
+    for (final stop in stops) {
+      result[stop.day] = (result[stop.day] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  /// Waypoints für einen bestimmten Tag
+  List<LatLng> getWaypointsForDay(int dayNumber) {
+    return getStopsForDay(dayNumber)
         .map((stop) => LatLng(stop.latitude, stop.longitude))
         .toList();
   }

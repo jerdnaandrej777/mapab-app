@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/services/hotel_service.dart';
 import 'hotel_detail_sheet.dart';
 
@@ -22,6 +21,8 @@ class HotelSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (suggestions.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -36,7 +37,7 @@ class HotelSuggestionCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Keine Hotels fur Tag $dayNumber gefunden',
+                'Keine Hotels für Tag $dayNumber gefunden',
                 style: const TextStyle(color: Colors.orange),
               ),
             ),
@@ -53,7 +54,7 @@ class HotelSuggestionCard extends StatelessWidget {
             const Text('🏨', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 8),
             Text(
-              'Ubernachtung Tag $dayNumber',
+              'Übernachtung Tag $dayNumber',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
@@ -95,12 +96,14 @@ class _HotelItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: isSelected
-            ? AppTheme.primaryColor.withOpacity(0.1)
-            : Colors.grey.withOpacity(0.05),
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -111,8 +114,8 @@ class _HotelItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected
-                    ? AppTheme.primaryColor
-                    : Colors.grey.withOpacity(0.2),
+                    ? colorScheme.primary
+                    : colorScheme.outline.withOpacity(0.3),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -126,8 +129,8 @@ class _HotelItem extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isSelected
-                          ? AppTheme.primaryColor
-                          : Colors.grey.withOpacity(0.5),
+                          ? colorScheme.primary
+                          : colorScheme.outline.withOpacity(0.5),
                       width: 2,
                     ),
                   ),
@@ -136,9 +139,9 @@ class _HotelItem extends StatelessWidget {
                           child: Container(
                             width: 12,
                             height: 12,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppTheme.primaryColor,
+                              color: colorScheme.primary,
                             ),
                           ),
                         )
@@ -178,7 +181,7 @@ class _HotelItem extends StatelessWidget {
                             hotel.typeDisplay,
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -186,7 +189,7 @@ class _HotelItem extends StatelessWidget {
                             hotel.formattedDistance,
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -197,7 +200,7 @@ class _HotelItem extends StatelessWidget {
                           hotel.address!,
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppTheme.textSecondary,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -214,7 +217,7 @@ class _HotelItem extends StatelessWidget {
                   tooltip: 'Details anzeigen',
                   padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
-                  color: AppTheme.primaryColor,
+                  color: colorScheme.primary,
                 ),
               ],
             ),
@@ -240,11 +243,13 @@ class HotelSuggestionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Hotel-Vorschlage',
+          'Hotel-Vorschläge',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -254,7 +259,7 @@ class HotelSuggestionsSection extends StatelessWidget {
           'Basierend auf OpenStreetMap-Daten',
           style: TextStyle(
             fontSize: 12,
-            color: AppTheme.textSecondary,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 16),

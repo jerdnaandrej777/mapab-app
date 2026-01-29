@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/providers/auth_provider.dart';
 import '../../data/providers/account_provider.dart';
+import '../../data/providers/settings_provider.dart';
 import '../../core/supabase/supabase_config.dart';
 
 /// Login Screen mit Email/Passwort und Gast-Modus
@@ -19,6 +20,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLocalLoading = false;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Gespeicherte Credentials laden (nach Build-Phase)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedCredentials();
+    });
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    // Kurz warten bis Settings vollständig initialisiert sind
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (!mounted) return;
+
+    final settings = ref.read(settingsNotifierProvider);
+    if (settings.hasStoredCredentials) {
+      setState(() {
+        _emailController.text = settings.savedEmail ?? '';
+        _passwordController.text = settings.savedPassword ?? '';
+        _rememberMe = true;
+      });
+      debugPrint('[Login] Gespeicherte Anmeldedaten geladen');
+    } else {
+      debugPrint('[Login] Keine gespeicherten Anmeldedaten gefunden');
+    }
+  }
 
   @override
   void dispose() {
@@ -30,13 +60,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Prüfe ob Supabase konfiguriert ist
+    if (!SupabaseConfig.isConfigured) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cloud-Login nicht verfügbar - App ohne Supabase-Credentials gebaut'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
     final success = await ref.read(authNotifierProvider.notifier).signIn(
-          _emailController.text.trim(),
-          _passwordController.text,
+          email,
+          password,
         );
 
     if (success && mounted) {
-      context.go('/');
+      // Credentials speichern oder löschen basierend auf Remember-Me
+      try {
+        final settingsNotifier = ref.read(settingsNotifierProvider.notifier);
+        if (_rememberMe) {
+          await settingsNotifier.saveCredentials(email, password);
+          debugPrint('[Login] Anmeldedaten gespeichert');
+        } else {
+          await settingsNotifier.clearCredentials();
+          debugPrint('[Login] Anmeldedaten gelöscht');
+        }
+      } catch (e) {
+        debugPrint('[Login] Credentials-Speicherung fehlgeschlagen: $e');
+        // Fehler nicht blockierend - Navigation trotzdem durchführen
+      }
+
+      if (mounted) {
+        context.go('/');
+      }
     }
   }
 
@@ -69,6 +132,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isCloudAvailable = SupabaseConfig.isConfigured;
     final isLoading = authState.isLoading || _isLocalLoading;
 
+    // Debug-Output für Supabase-Konfiguration
+    debugPrint('[Login] isCloudAvailable: $isCloudAvailable');
+    debugPrint('[Login] SUPABASE_URL: ${SupabaseConfig.supabaseUrl.isEmpty ? "(leer)" : SupabaseConfig.supabaseUrl.substring(0, 20)}...');
+    debugPrint('[Login] SUPABASE_ANON_KEY: ${SupabaseConfig.supabaseAnonKey.isEmpty ? "(leer)" : "${SupabaseConfig.supabaseAnonKey.substring(0, 20)}..."}');
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -100,13 +168,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 40),
 
-                // Cloud-Login (wenn verfügbar)
-                if (isCloudAvailable) ...[
-                  _buildCloudLoginForm(theme, colorScheme, authState, isLoading),
-                  const SizedBox(height: 24),
-                  _buildDivider(theme),
-                  const SizedBox(height: 24),
-                ],
+                // Cloud-Login Formular (immer anzeigen)
+                _buildCloudLoginForm(theme, colorScheme, authState, isLoading, isCloudAvailable),
+                const SizedBox(height: 24),
+                _buildDivider(theme),
+                const SizedBox(height: 24),
 
                 // Gast-Modus
                 _buildGuestSection(theme, colorScheme, isLoading, isCloudAvailable),
@@ -144,12 +210,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ColorScheme colorScheme,
     AppAuthState authState,
     bool isLoading,
+    bool isCloudAvailable,
   ) {
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Warnung wenn Supabase nicht konfiguriert
+          if (!isCloudAvailable) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: colorScheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Cloud nicht verfügbar - App ohne Supabase-Credentials gebaut',
+                      style: TextStyle(
+                        color: colorScheme.onErrorContainer,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // Email Field
           TextFormField(
             controller: _emailController,
@@ -205,13 +299,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           const SizedBox(height: 8),
 
-          // Forgot Password
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: isLoading ? null : () => context.push('/forgot-password'),
-              child: const Text('Passwort vergessen?'),
-            ),
+          // Remember Me + Forgot Password Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Remember Me Checkbox
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: _rememberMe,
+                      onChanged: isLoading
+                          ? null
+                          : (value) {
+                              setState(() => _rememberMe = value ?? false);
+                            },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: isLoading
+                        ? null
+                        : () {
+                            setState(() => _rememberMe = !_rememberMe);
+                          },
+                    child: Text(
+                      'Anmeldedaten merken',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Forgot Password
+              TextButton(
+                onPressed: isLoading ? null : () => context.push('/forgot-password'),
+                child: const Text('Passwort vergessen?'),
+              ),
+            ],
           ),
 
           const SizedBox(height: 16),

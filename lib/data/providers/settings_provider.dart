@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -26,6 +27,10 @@ class AppSettings {
   final String language;
   final bool hapticFeedback;
   final bool soundEffects;
+  // Remember Me Feature
+  final bool rememberMe;
+  final String? savedEmail;
+  final String? savedPasswordEncoded; // Base64-encoded für einfache Obfuskation
 
   const AppSettings({
     this.themeMode = AppThemeMode.system,
@@ -35,6 +40,9 @@ class AppSettings {
     this.language = 'de',
     this.hapticFeedback = true,
     this.soundEffects = true,
+    this.rememberMe = false,
+    this.savedEmail,
+    this.savedPasswordEncoded,
   });
 
   AppSettings copyWith({
@@ -45,6 +53,10 @@ class AppSettings {
     String? language,
     bool? hapticFeedback,
     bool? soundEffects,
+    bool? rememberMe,
+    String? savedEmail,
+    String? savedPasswordEncoded,
+    bool clearCredentials = false,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -54,8 +66,25 @@ class AppSettings {
       language: language ?? this.language,
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
       soundEffects: soundEffects ?? this.soundEffects,
+      rememberMe: rememberMe ?? this.rememberMe,
+      savedEmail: clearCredentials ? null : (savedEmail ?? this.savedEmail),
+      savedPasswordEncoded: clearCredentials ? null : (savedPasswordEncoded ?? this.savedPasswordEncoded),
     );
   }
+
+  /// Dekodiert das gespeicherte Passwort
+  String? get savedPassword {
+    if (savedPasswordEncoded == null) return null;
+    try {
+      return utf8.decode(base64Decode(savedPasswordEncoded!));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Prüft ob gespeicherte Credentials vorhanden sind
+  bool get hasStoredCredentials =>
+      rememberMe && savedEmail != null && savedPasswordEncoded != null;
 
   /// Konvertiert den aktuellen ThemeMode zu Flutter's ThemeMode
   ThemeMode get flutterThemeMode {
@@ -82,6 +111,9 @@ class AppSettings {
     'language': language,
     'hapticFeedback': hapticFeedback,
     'soundEffects': soundEffects,
+    'rememberMe': rememberMe,
+    'savedEmail': savedEmail,
+    'savedPasswordEncoded': savedPasswordEncoded,
   };
 
   /// Deserialisiert von Map
@@ -94,6 +126,9 @@ class AppSettings {
       language: json['language'] as String? ?? 'de',
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       soundEffects: json['soundEffects'] as bool? ?? true,
+      rememberMe: json['rememberMe'] as bool? ?? false,
+      savedEmail: json['savedEmail'] as String?,
+      savedPasswordEncoded: json['savedPasswordEncoded'] as String?,
     );
   }
 }
@@ -155,6 +190,36 @@ class SettingsNotifier extends _$SettingsNotifier {
   Future<void> setSoundEffects(bool enabled) async {
     state = state.copyWith(soundEffects: enabled);
     await _saveSettings();
+  }
+
+  /// Aktiviert/Deaktiviert "Anmeldedaten merken"
+  Future<void> setRememberMe(bool enabled) async {
+    if (!enabled) {
+      // Wenn deaktiviert, lösche gespeicherte Credentials
+      state = state.copyWith(rememberMe: false, clearCredentials: true);
+    } else {
+      state = state.copyWith(rememberMe: true);
+    }
+    await _saveSettings();
+  }
+
+  /// Speichert Login-Credentials (verschlüsselt)
+  Future<void> saveCredentials(String email, String password) async {
+    final encodedPassword = base64Encode(utf8.encode(password));
+    state = state.copyWith(
+      rememberMe: true,
+      savedEmail: email,
+      savedPasswordEncoded: encodedPassword,
+    );
+    await _saveSettings();
+    debugPrint('[Settings] Anmeldedaten gespeichert für: $email');
+  }
+
+  /// Löscht gespeicherte Credentials
+  Future<void> clearCredentials() async {
+    state = state.copyWith(rememberMe: false, clearCredentials: true);
+    await _saveSettings();
+    debugPrint('[Settings] Gespeicherte Anmeldedaten gelöscht');
   }
 
   /// Prüft ob Dark Mode basierend auf Sonnenuntergang aktiv sein sollte

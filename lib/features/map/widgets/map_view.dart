@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import '../providers/map_controller_provider.dart';
 import '../providers/route_planner_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
+import '../../random_trip/providers/random_trip_provider.dart';
+import '../../random_trip/providers/random_trip_state.dart';
 import '../../../data/models/poi.dart';
 
 /// Karten-Widget mit MapLibre/flutter_map
@@ -52,6 +55,12 @@ class _MapViewState extends ConsumerState<MapView> {
     final tripState = ref.watch(tripStateProvider);
     final routePlanner = ref.watch(routePlannerProvider);
     final poiState = ref.watch(pOIStateNotifierProvider);
+    final randomTripState = ref.watch(randomTripNotifierProvider);
+
+    // AI Trip Preview Route und POIs
+    final aiTripRoute = randomTripState.generatedTrip?.trip.route;
+    final aiTripPOIs = randomTripState.generatedTrip?.selectedPOIs ?? [];
+    final isAITripPreview = randomTripState.step == RandomTripStep.preview;
 
     return FlutterMap(
       mapController: _mapController,
@@ -74,14 +83,18 @@ class _MapViewState extends ConsumerState<MapView> {
           maxZoom: 19,
         ),
 
-        // Route-Polyline (wenn Route vorhanden)
-        if (tripState.hasRoute || routePlanner.route != null)
+        // Route-Polyline (wenn Route vorhanden - inkl. AI Trip Preview)
+        // WICHTIG: AI Trip Preview hat Priorität über andere Routen
+        if (tripState.hasRoute || routePlanner.route != null || (isAITripPreview && aiTripRoute != null))
           PolylineLayer(
             polylines: [
               Polyline(
-                points: tripState.route?.coordinates ??
-                    routePlanner.route?.coordinates ??
-                    [],
+                // AI Trip Preview hat Priorität, dann TripState, dann RoutePlanner
+                points: (isAITripPreview && aiTripRoute != null)
+                    ? aiTripRoute.coordinates
+                    : (tripState.route?.coordinates ??
+                        routePlanner.route?.coordinates ??
+                        []),
                 color: Theme.of(context).colorScheme.primary,
                 strokeWidth: 5,
                 borderColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
@@ -90,8 +103,8 @@ class _MapViewState extends ConsumerState<MapView> {
             ],
           ),
 
-        // POI-Marker Layer
-        if (poiState.filteredPOIs.isNotEmpty)
+        // POI-Marker Layer (normale POIs, nicht während AI Trip Preview)
+        if (poiState.filteredPOIs.isNotEmpty && !isAITripPreview)
           MarkerLayer(
             markers: poiState.filteredPOIs.map((poi) {
               return Marker(
@@ -108,12 +121,34 @@ class _MapViewState extends ConsumerState<MapView> {
             }).toList(),
           ),
 
-        // Start-Marker
-        if (routePlanner.startLocation != null)
+        // AI Trip Preview POIs als nummerierte Marker
+        if (isAITripPreview && aiTripPOIs.isNotEmpty)
+          MarkerLayer(
+            markers: aiTripPOIs.asMap().entries.map((entry) {
+              final index = entry.key;
+              final poi = entry.value;
+              return Marker(
+                point: poi.location,
+                width: 36,
+                height: 36,
+                child: _AITripStopMarker(
+                  number: index + 1,
+                  icon: poi.categoryIcon,
+                  onTap: () => _onPOITap(poi),
+                ),
+              );
+            }).toList(),
+          ),
+
+        // Start-Marker (für normale Route oder AI Trip)
+        // WICHTIG: AI Trip Preview hat Priorität
+        if (routePlanner.startLocation != null || (isAITripPreview && randomTripState.startLocation != null))
           MarkerLayer(
             markers: [
               Marker(
-                point: routePlanner.startLocation!,
+                point: (isAITripPreview && randomTripState.startLocation != null)
+                    ? randomTripState.startLocation!
+                    : routePlanner.startLocation!,
                 width: 24,
                 height: 24,
                 child: const StartMarker(),
@@ -121,8 +156,8 @@ class _MapViewState extends ConsumerState<MapView> {
             ],
           ),
 
-        // Ziel-Marker
-        if (routePlanner.endLocation != null)
+        // Ziel-Marker (nur für normale Route, nicht AI Trip)
+        if (routePlanner.endLocation != null && !isAITripPreview)
           MarkerLayer(
             markers: [
               Marker(
@@ -134,8 +169,8 @@ class _MapViewState extends ConsumerState<MapView> {
             ],
           ),
 
-        // Trip-Stops Marker
-        if (tripState.hasStops)
+        // Trip-Stops Marker (für bestätigte Trips)
+        if (tripState.hasStops && !isAITripPreview)
           MarkerLayer(
             markers: tripState.stops.asMap().entries.map((entry) {
               final index = entry.key;
@@ -173,8 +208,9 @@ class _MapViewState extends ConsumerState<MapView> {
       _selectedPOIId = poi.id;
     });
 
-    // POI-Preview Sheet anzeigen
-    _showPOIPreview(poi);
+    // Direkt zur POI-Detail-Seite navigieren
+    ref.read(pOIStateNotifierProvider.notifier).selectPOI(poi);
+    context.push('/poi/${poi.id}');
   }
 
   void _showPOIPreview(POI poi) {
@@ -557,6 +593,79 @@ class StopMarker extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// AI Trip Stop-Marker Widget mit Nummer und Icon
+class _AITripStopMarker extends StatelessWidget {
+  final int number;
+  final String icon;
+  final VoidCallback? onTap;
+
+  const _AITripStopMarker({
+    required this.number,
+    required this.icon,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          // Haupt-Marker
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colorScheme.primary,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                icon,
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ),
+          // Nummer-Badge
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Center(
+                child: Text(
+                  '$number',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

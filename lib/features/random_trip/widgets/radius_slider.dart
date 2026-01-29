@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/trip_constants.dart';
 import '../providers/random_trip_provider.dart';
 import '../providers/random_trip_state.dart';
 
@@ -12,11 +12,13 @@ class RadiusSlider extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     // Min/Max basierend auf Modus
     final (minRadius, maxRadius) = state.mode == RandomTripMode.daytrip
-        ? (30.0, 200.0)
-        : (100.0, 800.0);
+        ? (30.0, 300.0)
+        : (100.0, 5000.0);
 
     // Radius anpassen falls ausserhalb der Grenzen
     final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
@@ -29,21 +31,21 @@ class RadiusSlider extends ConsumerWidget {
           children: [
             Text(
               'Radius',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '${currentRadius.round()} km',
-                style: const TextStyle(
+                _formatRadiusDisplay(currentRadius, state.mode),
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
+                  color: colorScheme.onPrimaryContainer,
                 ),
               ),
             ),
@@ -54,16 +56,16 @@ class RadiusSlider extends ConsumerWidget {
           _getRadiusDescription(currentRadius, state.mode),
           style: TextStyle(
             fontSize: 12,
-            color: AppTheme.textSecondary,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppTheme.primaryColor,
-            inactiveTrackColor: AppTheme.primaryColor.withOpacity(0.2),
-            thumbColor: AppTheme.primaryColor,
-            overlayColor: AppTheme.primaryColor.withOpacity(0.1),
+            activeTrackColor: colorScheme.primary,
+            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            thumbColor: colorScheme.primary,
+            overlayColor: colorScheme.primary.withOpacity(0.1),
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(
               enabledThumbRadius: 10,
@@ -73,7 +75,9 @@ class RadiusSlider extends ConsumerWidget {
             value: currentRadius,
             min: minRadius,
             max: maxRadius,
-            divisions: ((maxRadius - minRadius) / 10).round(),
+            divisions: state.mode == RandomTripMode.daytrip
+                ? ((maxRadius - minRadius) / 10).round()
+                : ((maxRadius - minRadius) / 100).round(),
             onChanged: (value) => notifier.setRadius(value),
           ),
         ),
@@ -81,10 +85,11 @@ class RadiusSlider extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: _getQuickSelectValues(state.mode).map((value) {
-            final isSelected = (currentRadius - value).abs() < 10;
+            final isSelected = (currentRadius - value).abs() < 50;
             return _QuickSelectButton(
               value: value,
               isSelected: isSelected,
+              isEuroTrip: state.mode == RandomTripMode.eurotrip,
               onTap: () => notifier.setRadius(value),
             );
           }).toList(),
@@ -95,42 +100,66 @@ class RadiusSlider extends ConsumerWidget {
 
   String _getRadiusDescription(double radius, RandomTripMode mode) {
     if (mode == RandomTripMode.daytrip) {
-      if (radius <= 50) return 'Kurzer Ausflug in der Nahe';
+      if (radius <= 50) return 'Kurzer Ausflug in der Nähe';
       if (radius <= 100) return 'Idealer Tagesausflug';
       if (radius <= 150) return 'Ausgedehnter Tagesausflug';
-      return 'Langer Tagesausflug mit viel Fahrzeit';
+      if (radius <= 200) return 'Langer Tagesausflug mit viel Fahrzeit';
+      return 'Sehr weiter Tagesausflug';
     } else {
-      if (radius <= 200) return 'Regionale Erkundung';
-      if (radius <= 400) return 'Mehrere Bundeslander/Kantone';
-      if (radius <= 600) return 'Lander-ubergreifend';
-      return 'Grosser Euro Trip';
+      if (radius <= 300) return 'Regionale Erkundung';
+      if (radius <= 600) return 'Mehrere Bundesländer/Kantone';
+      if (radius <= 1000) return 'Länder-übergreifend';
+      if (radius <= 2000) return 'Großer Euro Trip';
+      if (radius <= 3500) return 'Kontinentale Reise';
+      return 'Epischer Europa-Trip';
     }
   }
 
   List<double> _getQuickSelectValues(RandomTripMode mode) {
     if (mode == RandomTripMode.daytrip) {
-      return [50, 100, 150, 200];
+      return TripConstants.dayTripQuickSelectRadii;
     }
-    return [200, 400, 600, 800];
+    return TripConstants.euroTripQuickSelectRadii;
+  }
+
+  String _formatRadiusDisplay(double radius, RandomTripMode mode) {
+    if (mode == RandomTripMode.eurotrip) {
+      final days = TripConstants.calculateDaysFromDistance(radius);
+      return '$days ${days == 1 ? 'Tag' : 'Tage'} (${radius.round()} km)';
+    }
+    return '${radius.round()} km';
   }
 }
 
 class _QuickSelectButton extends StatelessWidget {
   final double value;
   final bool isSelected;
+  final bool isEuroTrip;
   final VoidCallback onTap;
 
   const _QuickSelectButton({
     required this.value,
     required this.isSelected,
     required this.onTap,
+    this.isEuroTrip = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Label erstellen: Bei Euro Trip Tage anzeigen
+    String label;
+    if (isEuroTrip) {
+      final days = TripConstants.calculateDaysFromDistance(value);
+      label = '$days ${days == 1 ? 'Tag' : 'Tage'}';
+    } else {
+      label = '${value.round()} km';
+    }
+
     return Material(
       color: isSelected
-          ? AppTheme.primaryColor.withOpacity(0.15)
+          ? colorScheme.primaryContainer
           : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
@@ -142,16 +171,16 @@ class _QuickSelectButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSelected
-                  ? AppTheme.primaryColor
-                  : Colors.grey.withOpacity(0.3),
+                  ? colorScheme.primary
+                  : colorScheme.outline.withOpacity(0.3),
             ),
           ),
           child: Text(
-            '${value.round()} km',
+            label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
             ),
           ),
         ),

@@ -13,10 +13,12 @@
 ### Schritt 1: Code-Generierung ausführen
 
 ```bash
-cd "C:\Users\Gejer\Desktop\Apps\Mapab APP"
+cd <PROJECT_ROOT>
 flutter pub get
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
+
+> **Hinweis:** Ersetze `<PROJECT_ROOT>` mit deinem lokalen Projektpfad (z.B. `C:\Users\DeinName\Projects\MapAB`).
 
 **Wichtig:** Dieser Schritt generiert die fehlenden Freezed-Dateien für das Account-System.
 
@@ -37,7 +39,7 @@ flutter build apk --release --split-per-abi
 
 **APK-Speicherort:**
 ```
-C:\Users\Gejer\Desktop\Apps\Mapab APP\build\app\outputs\flutter-apk\
+<PROJECT_ROOT>/build/app/outputs/flutter-apk/
 ```
 
 ### Schritt 3: APK online hosten
@@ -103,7 +105,7 @@ firebase appdistribution:distribute "build/app/outputs/flutter-apk/app-arm64-v8a
 npm install -g netlify-cli
 
 # In PWA-Ordner wechseln
-cd "C:\Users\Gejer\Desktop\Apps\Mapab\Mobi"
+cd <PROJECT_ROOT>/web
 
 # Deployen
 netlify deploy --dir=. --prod

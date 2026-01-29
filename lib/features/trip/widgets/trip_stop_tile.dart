@@ -11,6 +11,7 @@ class TripStopTile extends StatelessWidget {
   final int index;
   final VoidCallback onRemove;
   final VoidCallback onEdit;
+  final VoidCallback? onTap;
 
   const TripStopTile({
     super.key,
@@ -21,6 +22,7 @@ class TripStopTile extends StatelessWidget {
     required this.index,
     required this.onRemove,
     required this.onEdit,
+    this.onTap,
   });
 
   @override
@@ -29,20 +31,22 @@ class TripStopTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
         children: [
           // Drag Handle
           Container(
@@ -156,6 +160,7 @@ class TripStopTile extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

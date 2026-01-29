@@ -101,7 +101,8 @@ class POICacheService {
     final jsonList = cached.map((c) => c.toJson()).toList();
     await _box!.put(regionKey, jsonEncode(jsonList));
 
-    debugPrint('[POICache] ${pois.length} POIs für Region "$regionKey" gecached');
+    debugPrint(
+        '[POICache] ${pois.length} POIs für Region "$regionKey" gecached');
   }
 
   /// Lädt gecachte POIs für eine Region
@@ -126,7 +127,8 @@ class POICacheService {
       }
 
       final pois = cachedList.map((c) => c.poi).toList();
-      debugPrint('[POICache] ${pois.length} POIs aus Cache geladen: $regionKey');
+      debugPrint(
+          '[POICache] ${pois.length} POIs aus Cache geladen: $regionKey');
       return pois;
     } catch (e) {
       debugPrint('[POICache] Fehler beim Laden der Region: $e');
@@ -205,6 +207,43 @@ class POICacheService {
     }
 
     debugPrint('[POICache] $deletedCount abgelaufene Einträge gelöscht');
+  }
+
+  /// Löscht gecachte POIs ohne Bilder (Migration von vor v1.5.3)
+  /// Sollte einmalig bei App-Start ausgeführt werden
+  Future<int> clearCachedPOIsWithoutImages() async {
+    await init();
+    if (_enrichedBox == null) return 0;
+
+    int deletedCount = 0;
+    final keysToDelete = <String>[];
+
+    for (final key in _enrichedBox!.keys) {
+      final jsonStr = _enrichedBox!.get(key);
+      if (jsonStr != null) {
+        try {
+          final cached = CachedPOI.fromJson(jsonDecode(jsonStr));
+          // POI ohne Bild löschen
+          if (cached.poi.imageUrl == null) {
+            keysToDelete.add(key);
+          }
+        } catch (_) {
+          keysToDelete.add(key);
+        }
+      }
+    }
+
+    for (final key in keysToDelete) {
+      await _enrichedBox!.delete(key);
+      deletedCount++;
+    }
+
+    if (deletedCount > 0) {
+      debugPrint(
+          '[POICache] $deletedCount POIs ohne Bilder aus Cache entfernt');
+    }
+
+    return deletedCount;
   }
 
   /// Löscht den gesamten Cache

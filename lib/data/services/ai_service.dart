@@ -219,6 +219,12 @@ Antworte als JSON-Array: [{"name": "POI-Name", "reason": "Begründung"}]
 
   /// Health-Check für Backend
   Future<bool> checkHealth() async {
+    // Zuerst prüfen ob Backend-URL konfiguriert ist
+    if (!ApiConfig.isConfigured) {
+      debugPrint('[AI] Backend nicht konfiguriert (BACKEND_URL fehlt in --dart-define)');
+      return false;
+    }
+
     try {
       final response = await _dio.get(ApiConfig.healthEndpoint);
       return response.statusCode == 200 && response.data['status'] == 'ok';
@@ -292,7 +298,7 @@ class UserPreferences {
 /// Trip-Kontext für Chatbot
 class TripContext {
   final AppRoute? route;
-  final List<TripStop> stops;
+  final List<POI> stops;
 
   TripContext({this.route, this.stops = const []});
 }

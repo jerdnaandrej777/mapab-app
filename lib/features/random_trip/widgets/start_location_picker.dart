@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/route.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../providers/random_trip_provider.dart';
@@ -61,6 +60,8 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
   Widget build(BuildContext context) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     // Controller mit aktuellem Wert synchronisieren
     if (state.startAddress != null && _controller.text.isEmpty) {
@@ -72,7 +73,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
       children: [
         Text(
           'Startpunkt',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
         ),
@@ -81,12 +82,12 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
         // Adress-Eingabefeld (Standard)
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.05),
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: state.hasValidStart && !state.useGPS
-                  ? AppTheme.primaryColor
-                  : Colors.grey.withOpacity(0.2),
+                  ? colorScheme.primary
+                  : colorScheme.outline.withOpacity(0.3),
               width: state.hasValidStart && !state.useGPS ? 2 : 1,
             ),
           ),
@@ -127,7 +128,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                 Container(
                   decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      top: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
                     ),
                   ),
                   child: Column(
@@ -137,7 +138,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.location_on, size: 20, color: AppTheme.primaryColor),
+                            Icon(Icons.location_on, size: 20, color: colorScheme.primary),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -154,7 +155,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                                       result.displayName,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: AppTheme.textSecondary,
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -188,18 +189,18 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: colorScheme.errorContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(color: colorScheme.error.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                Icon(Icons.error_outline, color: colorScheme.error, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     state.error!,
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                    style: TextStyle(color: colorScheme.onErrorContainer, fontSize: 13),
                   ),
                 ),
                 IconButton(
@@ -232,6 +233,8 @@ class _GpsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(8),
@@ -239,36 +242,39 @@ class _GpsButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.primaryColor.withOpacity(0.1)
+              ? colorScheme.primaryContainer
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
-                ? AppTheme.primaryColor
-                : Colors.grey.withOpacity(0.3),
+                ? colorScheme.primary
+                : colorScheme.outline.withOpacity(0.3),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isLoading)
-              const SizedBox(
+              SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colorScheme.primary,
+                ),
               )
             else
               Icon(
                 Icons.my_location,
                 size: 18,
-                color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
               ),
             const SizedBox(width: 8),
             Text(
               address ?? 'GPS-Standort verwenden',
               style: TextStyle(
                 fontSize: 13,
-                color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
@@ -277,112 +283,10 @@ class _GpsButton extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 size: 16,
-                color: AppTheme.primaryColor,
+                color: colorScheme.primary,
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LocationButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final bool isSelected;
-  final bool isLoading;
-  final VoidCallback onTap;
-
-  const _LocationButton({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.isSelected,
-    this.isLoading = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isSelected
-          ? AppTheme.primaryColor.withOpacity(0.1)
-          : Colors.grey.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: isLoading ? null : onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected
-                  ? AppTheme.primaryColor
-                  : Colors.grey.withOpacity(0.2),
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.primaryColor.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        icon,
-                        color: isSelected ? AppTheme.primaryColor : Colors.grey,
-                        size: 24,
-                      ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected
-                            ? AppTheme.primaryColor
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      sublabel,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                const Icon(
-                  Icons.check_circle,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-            ],
-          ),
         ),
       ),
     );

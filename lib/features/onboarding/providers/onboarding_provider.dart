@@ -13,7 +13,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   @override
   bool build() {
-    // Onboarding bei JEDEM App-Start anzeigen
+    // Onboarding bei JEDEM App-Start anzeigen (gewünschtes Verhalten)
     debugPrint('[Onboarding] Onboarding wird bei jedem Start angezeigt');
     return false;
   }

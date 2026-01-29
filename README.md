@@ -102,7 +102,7 @@ lib/
 
 ## Dokumentation
 
-📖 **[Komplette Feature-Dokumentation](../Mobi/Dokumentation/FLUTTER-APP-DOKUMENTATION.md)**
+📖 **[Komplette Feature-Dokumentation](docs/FLUTTER-APP-DOKUMENTATION.md)**
 
 Die vollständige Dokumentation enthält:
 - Detaillierte Feature-Beschreibungen
@@ -148,35 +148,35 @@ flutter test
 
 ## Recent Updates (Januar 2026)
 
-### ✅ Kritische Fixes implementiert
+### v1.5.7 - Mehrtägige Euro Trips mit tagesweisem Google Maps Export
+- **Automatische Tagesberechnung** - 600km = 1 Tag (max 14 Tage)
+- **Max 9 POIs pro Tag** - Google Maps Waypoint-Limit automatisch beachtet
+- **Tagesweiser Export** - Exportiere jeden Tag einzeln nach Google Maps
+- **DayTabSelector** - Neue horizontale Tab-Leiste zur Tagesauswahl
+- **Persistenz vorbereitet** - ActiveTripService für Trip-Fortsetzung
 
-1. **GPS-Fix in Random Trip**
-   - Location Services Check hinzugefügt
-   - München-Fallback (48.1351, 11.5820) für Emulator
-   - Strukturiertes Logging für Debugging
-   - Datei: `lib/features/random_trip/providers/random_trip_provider.dart`
+### v1.5.6 - Floating Buttons bei AI Trip ausblenden
+- **Aufgeräumtere UI** - Einstellungen- und GPS-Button werden bei AI Trip ausgeblendet
+- GPS-Standort kann direkt im AI Trip Panel gesetzt werden
 
-2. **AI Chat aktiviert**
-   - Hart-codierter Demo-Modus entfernt
-   - Integration mit echtem OpenAI API-Key
-   - Fallback zu Demo wenn Key fehlt
-   - Datei: `lib/features/ai_assistant/chat_screen.dart`
+### v1.5.5 - POI-Card Layout-Fix
+- **Alle POIs sichtbar** - IntrinsicHeight Problem behoben
+- Feste Card-Höhe (96px) für stabiles Layout
 
-3. **Account-System hinzugefügt**
-   - Local-First mit Hive-Persistierung
-   - Multi-Profile Support (Gast + Lokale Accounts)
-   - Gamification: XP, Level (1-100), 21 Achievements
-   - Statistiken: Trips, POIs besucht, Km gefahren
-   - Dateien:
-     - `lib/data/models/user_account.dart`
-     - `lib/data/providers/account_provider.dart`
-     - `lib/features/account/login_screen.dart`
-     - `lib/features/account/profile_screen.dart`
+### v1.5.4 - GPS-Dialog
+- **GPS-Dialog** - Fragt ob GPS-Einstellungen geöffnet werden sollen (statt München-Fallback)
 
-4. **PWA POI-Loading repariert**
-   - `lon` → `lng` Standardisierung in curated-pois.js
-   - Fallback-Logik bereinigt in poi-loader.js
-   - Legacy POIs in pois.js markiert
+### v1.5.0-v1.5.3 - AI Trip auf MapScreen
+- **AI Trip direkt auf MapScreen** - Karte bleibt immer sichtbar
+- **POI-Marker** - Nummerierte Icons mit Kategorie-Symbol
+- **Auto-Zoom** - Route wird automatisch angezeigt
+- **POI-Liste Bugfixes** - Race Condition und Filter-Probleme behoben
+
+### v1.4.x - AI Trip Verbesserungen
+- **Erweiterter Radius** - Tagesausflug bis 300 km, Euro Trip bis 5000 km
+- **POI-Card Redesign** - Kompaktes horizontales Layout
+- **POI-Bearbeitung** - Einzelne POIs löschen oder neu würfeln
+- **Integrierter Trip-Planer** - AI Trip direkt im Trip-Screen
 
 ### Wichtig nach Code-Updates
 
@@ -275,7 +275,7 @@ Dies generiert die notwendigen Freezed-Dateien für das Account-System.
 ## Projektstruktur
 
 ```
-C:\Users\Gejer\Desktop\Apps\Mapab APP\
+mapab-app/
 ├── android/                    # Android-spezifische Configs
 ├── ios/                        # iOS-spezifische Configs
 ├── lib/
@@ -361,10 +361,10 @@ Copyright (c) 2026 MapAB Team
 
 ## Inspiration
 
-Basiert auf den Konzepten von [MapAB PWA](../Mobi/), einer JavaScript-basierten Progressive Web App für Reiseplanung.
+Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Reiseplanung.
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.5.7
 **Release:** Januar 2026
 **Erstellt mit:** Flutter 💙

@@ -23,8 +23,8 @@ class RandomTripScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           state.mode == RandomTripMode.daytrip
-              ? 'Zufalls-Tagesausflug'
-              : 'Euro Trip',
+              ? 'AI Tagesausflug'
+              : 'AI Euro Trip',
         ),
         leading: IconButton(
           icon: const Icon(Icons.close),

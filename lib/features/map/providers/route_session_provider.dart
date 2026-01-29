@@ -115,6 +115,10 @@ class RouteSession extends _$RouteSession {
     try {
       final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
 
+      // Alte POIs löschen bevor neue geladen werden
+      poiNotifier.clearPOIs();
+      debugPrint('[RouteSession] Alte POIs gelöscht');
+
       // POIs für Route laden
       await poiNotifier.loadPOIsForRoute(route);
 

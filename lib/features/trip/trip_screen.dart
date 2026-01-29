@@ -1,29 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/categories.dart';
+import '../../core/constants/trip_constants.dart';
 import '../../data/models/trip.dart';
 import '../../data/providers/favorites_provider.dart';
+import '../map/providers/route_planner_provider.dart';
+import '../random_trip/providers/random_trip_provider.dart';
+import '../random_trip/providers/random_trip_state.dart';
+import '../random_trip/widgets/trip_preview_card.dart';
+import '../random_trip/widgets/hotel_suggestion_card.dart';
 import 'providers/trip_state_provider.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
 
-/// Trip-Planungs-Screen
-class TripScreen extends ConsumerWidget {
+/// Trip-Planungs-Screen - zeigt nur berechnete Routen an
+class TripScreen extends ConsumerStatefulWidget {
   const TripScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TripScreen> createState() => _TripScreenState();
+}
+
+class _TripScreenState extends ConsumerState<TripScreen> {
+
+  @override
+  Widget build(BuildContext context) {
     final tripState = ref.watch(tripStateProvider);
+    final randomTripState = ref.watch(randomTripNotifierProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Prüfen ob Route vorhanden (von normaler Planung oder AI Trip)
+    final hasRoute = tripState.hasRoute || randomTripState.step == RandomTripStep.preview;
+    final isGenerating = randomTripState.step == RandomTripStep.generating;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deine Route'),
+        title: Text(_getTitle(tripState, randomTripState)),
         actions: [
           // Speichern-Button (nur wenn Route vorhanden)
           if (tripState.hasRoute)
@@ -32,15 +50,116 @@ class TripScreen extends ConsumerWidget {
               tooltip: 'Route speichern',
               onPressed: () => _saveRoute(context, ref, tripState),
             ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => _showMoreOptions(context, ref),
+          if (hasRoute || tripState.hasStops)
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: () => _showMoreOptions(context, ref),
+            ),
+        ],
+      ),
+      body: isGenerating
+          ? _buildGeneratingView(context, colorScheme)
+          : hasRoute || tripState.hasStops
+              ? _buildTripContent(context, ref, tripState, randomTripState, theme, colorScheme)
+              : _buildConfigView(context, ref, theme, colorScheme),
+    );
+  }
+
+  String _getTitle(TripStateData tripState, RandomTripState randomTripState) {
+    if (randomTripState.step == RandomTripStep.generating) {
+      return 'Trip wird generiert...';
+    }
+    if (randomTripState.step == RandomTripStep.preview) {
+      return randomTripState.mode == RandomTripMode.daytrip
+          ? 'AI Tagesausflug'
+          : 'AI Euro Trip';
+    }
+    if (tripState.hasRoute || tripState.hasStops) {
+      return 'Deine Route';
+    }
+    return 'Route planen';
+  }
+
+  /// Ansicht wenn keine Route vorhanden
+  Widget _buildConfigView(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.route,
+              size: 80,
+              color: colorScheme.onSurface.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Keine Route vorhanden',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tippe auf die Karte, um Start und Ziel festzulegen',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.go('/'),
+              icon: const Icon(Icons.map),
+              label: const Text('Zur Karte'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Generierungs-Ansicht (Loading)
+  Widget _buildGeneratingView(BuildContext context, ColorScheme colorScheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              strokeWidth: 4,
+              valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            '🎲',
+            style: TextStyle(fontSize: 48),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Trip wird generiert...',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'POIs laden, Route optimieren, Hotels suchen',
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
-      body: !tripState.hasRoute && !tripState.hasStops
-          ? _buildEmptyState(context, theme, colorScheme)
-          : _buildTripContent(context, ref, tripState, theme, colorScheme),
     );
   }
 
@@ -112,28 +231,135 @@ class TripScreen extends ConsumerWidget {
     if (route == null) return;
 
     // Google Maps URL mit Waypoints
-    // Format: https://www.google.com/maps/dir/?api=1&origin=LAT,LNG&destination=LAT,LNG&waypoints=LAT,LNG|LAT,LNG
-    final origin = '${route.start.latitude},${route.start.longitude}';
-    final destination = '${route.end.latitude},${route.end.longitude}';
+    final origin = '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
+    final destination = '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
 
     var url = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$origin'
         '&destination=$destination'
         '&travelmode=driving';
 
-    // Waypoints hinzufügen (max 10 für Google Maps)
+    // Waypoints hinzufügen (max 9 für Google Maps)
     if (tripState.stops.isNotEmpty) {
       final waypoints = tripState.stops
-          .take(10)
-          .map((poi) => '${poi.latitude},${poi.longitude}')
+          .take(TripConstants.maxPoisPerDay)
+          .map((poi) => '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
           .join('|');
       url += '&waypoints=$waypoints';
     }
 
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    debugPrint('[GoogleMaps] Opening URL: $url');
+
+    try {
+      await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      debugPrint('[GoogleMaps] Error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Maps konnte nicht geöffnet werden'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Öffnet einen bestimmten Tag in Google Maps (für Mehrtages-Trips)
+  Future<void> _openDayInGoogleMaps(
+    BuildContext context,
+    Trip trip,
+    int dayNumber,
+    LatLng tripStartLocation,
+    String startAddress,
+  ) async {
+    final stopsForDay = trip.getStopsForDay(dayNumber);
+    if (stopsForDay.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Keine Stops für Tag $dayNumber')),
+      );
+      return;
+    }
+
+    // Start bestimmen: Tag 1 = Trip-Start, sonst letzter Stop vom Vortag
+    LatLng origin;
+    String originName;
+    if (dayNumber == 1) {
+      origin = tripStartLocation;
+      originName = startAddress;
     } else {
+      final prevDayStops = trip.getStopsForDay(dayNumber - 1);
+      if (prevDayStops.isNotEmpty) {
+        origin = prevDayStops.last.location;
+        originName = prevDayStops.last.name;
+      } else {
+        origin = tripStartLocation;
+        originName = startAddress;
+      }
+    }
+
+    // Ziel bestimmen: letzter Tag = Trip-Start, sonst erster Stop vom Folgetag
+    LatLng destination;
+    String destinationName;
+    if (dayNumber == trip.actualDays) {
+      destination = tripStartLocation;
+      destinationName = startAddress;
+    } else {
+      final nextDayStops = trip.getStopsForDay(dayNumber + 1);
+      if (nextDayStops.isNotEmpty) {
+        destination = nextDayStops.first.location;
+        destinationName = nextDayStops.first.name;
+      } else {
+        destination = tripStartLocation;
+        destinationName = startAddress;
+      }
+    }
+
+    // Waypoints: Alle Stops des Tages (max 9)
+    final waypoints = stopsForDay
+        .take(TripConstants.maxPoisPerDay)
+        .map((s) => '${s.location.latitude.toStringAsFixed(6)},${s.location.longitude.toStringAsFixed(6)}')
+        .join('|');
+
+    final originStr = '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
+    final destinationStr = '${destination.latitude.toStringAsFixed(6)},${destination.longitude.toStringAsFixed(6)}';
+
+    final url = 'https://www.google.com/maps/dir/?api=1'
+        '&origin=$originStr'
+        '&destination=$destinationStr'
+        '&waypoints=$waypoints'
+        '&travelmode=driving';
+
+    debugPrint('[GoogleMaps] Tag $dayNumber: $originName -> $destinationName');
+    debugPrint('[GoogleMaps] Opening URL: $url');
+
+    try {
+      await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+
+      // Tag als abgeschlossen markieren
+      ref.read(randomTripNotifierProvider.notifier).completeDay(dayNumber);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tag $dayNumber exportiert'),
+            action: SnackBarAction(
+              label: 'Rückgängig',
+              onPressed: () {
+                ref.read(randomTripNotifierProvider.notifier).uncompleteDay(dayNumber);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[GoogleMaps] Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -151,8 +377,8 @@ class TripScreen extends ConsumerWidget {
     if (route == null) return;
 
     // Google Maps Link generieren
-    final origin = '${route.start.latitude},${route.start.longitude}';
-    final destination = '${route.end.latitude},${route.end.longitude}';
+    final origin = '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
+    final destination = '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
     var mapsUrl = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$origin'
         '&destination=$destination'
@@ -161,10 +387,12 @@ class TripScreen extends ConsumerWidget {
     if (tripState.stops.isNotEmpty) {
       final waypoints = tripState.stops
           .take(10)
-          .map((poi) => '${poi.latitude},${poi.longitude}')
+          .map((poi) => '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
           .join('|');
       mapsUrl += '&waypoints=$waypoints';
     }
+
+    debugPrint('[GoogleMaps] Share URL: $mapsUrl');
 
     // Share-Text erstellen
     final stopNames = tripState.stops.map((s) => '• ${s.name}').join('\n');
@@ -181,61 +409,34 @@ ${tripState.stops.isNotEmpty ? '📌 Stops:\n$stopNames\n' : ''}
 $mapsUrl
 ''';
 
-    await Share.share(shareText, subject: 'Meine Route');
-  }
-
-  Widget _buildEmptyState(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.route,
-            size: 80,
-            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+    try {
+      await Share.share(shareText, subject: 'Meine Route');
+    } catch (e) {
+      debugPrint('[Share] Error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Route konnte nicht geteilt werden'),
+            duration: Duration(seconds: 2),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Noch keine Route geplant',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Berechne eine Route auf der Karte oder nutze den AI-Trip-Generator',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => context.go('/'),
-            icon: const Icon(Icons.map),
-            label: const Text('Zur Karte'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push('/assistant'),
-            icon: const Text('🤖', style: TextStyle(fontSize: 18)),
-            label: const Text('AI-Trip generieren'),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   Widget _buildTripContent(
     BuildContext context,
     WidgetRef ref,
     TripStateData tripState,
+    RandomTripState randomTripState,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
+    // Wenn AI Trip im Preview-Modus
+    if (randomTripState.step == RandomTripStep.preview) {
+      return _buildAITripPreview(context, ref, randomTripState, colorScheme);
+    }
+
     final route = tripState.route;
     final stops = tripState.stops;
 
@@ -302,6 +503,10 @@ $mapsUrl
                 detourKm: (stop.detourKm ?? 0).toInt(),
                 durationMinutes: (stop.detourMinutes ?? 0).toInt(),
                 index: index,
+                onTap: () {
+                  // POI-Details öffnen
+                  context.push('/poi/${stop.id}');
+                },
                 onRemove: () {
                   ref.read(tripStateProvider.notifier).removeStop(stop.id);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -309,7 +514,8 @@ $mapsUrl
                   );
                 },
                 onEdit: () {
-                  // TODO: Stop bearbeiten
+                  // POI-Details öffnen zum Bearbeiten
+                  context.push('/poi/${stop.id}');
                 },
               );
             },
@@ -340,6 +546,150 @@ $mapsUrl
                     icon: const Icon(Icons.share),
                     label: const Text('Route Teilen'),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// AI Trip Preview-Ansicht
+  Widget _buildAITripPreview(
+    BuildContext context,
+    WidgetRef ref,
+    RandomTripState state,
+    ColorScheme colorScheme,
+  ) {
+    final notifier = ref.read(randomTripNotifierProvider.notifier);
+    final trip = state.generatedTrip?.trip;
+    final isMultiDay = trip != null && trip.actualDays > 1;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const TripPreviewCard(),
+                const SizedBox(height: 24),
+
+                // Hotel-Vorschläge (für Mehrtages-Trips)
+                if (state.isMultiDay && state.hotelSuggestions.isNotEmpty) ...[
+                  HotelSuggestionsSection(
+                    suggestionsByDay: state.hotelSuggestions,
+                    selectedHotels: state.selectedHotels,
+                    onSelect: notifier.selectHotel,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // Action Buttons
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tagesweiser Export (nur bei Mehrtages-Trips)
+                if (isMultiDay) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: state.startLocation != null
+                          ? () => _openDayInGoogleMaps(
+                                context,
+                                trip,
+                                state.selectedDay,
+                                state.startLocation!,
+                                state.startAddress!,
+                              )
+                          : null,
+                      icon: const Icon(Icons.map),
+                      label: Text(
+                        state.isDayCompleted(state.selectedDay)
+                            ? 'Tag ${state.selectedDay} erneut exportieren'
+                            : 'Tag ${state.selectedDay} in Google Maps',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: state.isDayCompleted(state.selectedDay)
+                            ? colorScheme.surfaceContainerHighest
+                            : colorScheme.primary,
+                        foregroundColor: state.isDayCompleted(state.selectedDay)
+                            ? colorScheme.onSurface
+                            : colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Standard-Buttons
+                Row(
+                  children: [
+                    // Bearbeiten Button
+                    OutlinedButton.icon(
+                      onPressed: () => notifier.backToConfig(),
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Bearbeiten'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Neu generieren Button
+                    OutlinedButton.icon(
+                      onPressed: () => notifier.regenerateTrip(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Neu'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Trip speichern Button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => notifier.confirmTrip(),
+                        icon: const Icon(Icons.check),
+                        label: const Text('Speichern'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -419,6 +769,8 @@ $mapsUrl
   }
 
   void _showMoreOptions(BuildContext context, WidgetRef ref) {
+    final randomTripState = ref.read(randomTripNotifierProvider);
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -459,6 +811,26 @@ $mapsUrl
                 _clearAllStops(context, ref);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              title: const Text('Gesamte Route löschen',
+                  style: TextStyle(color: Colors.red)),
+              subtitle: const Text('Route und alle Stops löschen'),
+              onTap: () {
+                Navigator.pop(context);
+                _clearEntireRoute(context, ref);
+              },
+            ),
+            // Wenn AI Trip aktiv: Zurück zu Konfiguration
+            if (randomTripState.step == RandomTripStep.preview)
+              ListTile(
+                leading: const Icon(Icons.arrow_back),
+                title: const Text('Zurück zur Konfiguration'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(randomTripNotifierProvider.notifier).backToConfig();
+                },
+              ),
           ],
         ),
       ),
@@ -480,6 +852,37 @@ $mapsUrl
             onPressed: () {
               Navigator.pop(context);
               ref.read(tripStateProvider.notifier).clearStops();
+            },
+            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _clearEntireRoute(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Gesamte Route löschen?'),
+        content: const Text(
+          'Die Route und alle Stops werden gelöscht. '
+          'Diese Aktion kann nicht rückgängig gemacht werden.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Route im Route-Planner löschen (löscht auch Trip-State)
+              ref.read(routePlannerProvider.notifier).clearRoute();
+              // AI Trip State zurücksetzen
+              ref.read(randomTripNotifierProvider.notifier).reset();
+              // Zur Karte navigieren
+              context.go('/');
             },
             child: const Text('Löschen', style: TextStyle(color: Colors.red)),
           ),

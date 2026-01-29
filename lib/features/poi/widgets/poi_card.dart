@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/utils/format_utils.dart';
 
-/// POI-Karte für Liste
+/// POI-Karte für Liste - Kompaktes horizontales Layout
 class POICard extends StatelessWidget {
   final String name;
   final POICategory category;
@@ -33,6 +32,11 @@ class POICard extends StatelessWidget {
     this.highlights = const [],
   });
 
+  // Bildgröße: 88x88 für kompaktes, ausgewogenes Layout
+  static const double _imageSize = 88.0;
+  // Minimale Höhe der Card für konsistentes Layout
+  static const double _minCardHeight = 96.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -47,293 +51,306 @@ class POICard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Bild-Header
-            Stack(
-              children: [
-                // Bild oder Placeholder
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: imageUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl!,
-                          height: 140,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => _buildImagePlaceholder(),
-                          errorWidget: (context, url, error) =>
-                              _buildImagePlaceholder(),
-                        )
-                      : _buildImagePlaceholder(),
-                ),
+        // FIX v1.5.5: Feste Höhe statt IntrinsicHeight für stabiles Layout
+        // IntrinsicHeight + height: double.infinity verursachte Layout-Probleme
+        child: SizedBox(
+          height: _minCardHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Linke Seite: Quadratisches Bild
+              _buildImage(colorScheme),
 
-                // Highlight Badges (UNESCO, Must-See, Historic, Secret)
-                if (highlights.isNotEmpty || isMustSee)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Row(
-                      children: [
-                        // UNESCO Badge
-                        if (highlights.any((h) => h == POIHighlight.unesco))
-                          _buildHighlightBadge(
-                            POIHighlight.unesco.icon,
-                            'UNESCO',
-                            const Color(0xFF00CED1),
-                          ),
-                        // Must-See Badge
-                        if (isMustSee || highlights.any((h) => h == POIHighlight.mustSee))
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: highlights.any((h) => h == POIHighlight.unesco) ? 4 : 0,
-                            ),
-                            child: _buildHighlightBadge(
-                              '⭐',
-                              'Must-See',
-                              Colors.orange,
-                            ),
-                          ),
-                        // Secret/Geheimtipp Badge
-                        if (highlights.any((h) => h == POIHighlight.secret))
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: _buildHighlightBadge(
-                              '💎',
-                              'Geheimtipp',
-                              Colors.purple,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                // Kategorie Badge
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      category.icon,
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-
-                // Wetter-Warnung
-                if (showWeatherWarning)
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+              // Rechte Seite: Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Oberer Bereich: Name & Kategorie
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.wb_cloudy,
-                            color: Colors.orange.shade700,
-                            size: 14,
+                          // Name mit Kategorie-Icon
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                category.icon,
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Outdoor',
-                            style: TextStyle(
-                              color: Colors.orange.shade700,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
+
+                          const SizedBox(height: 4),
+
+                          // Kategorie-Label & Distanz
+                          Row(
+                            children: [
+                              Text(
+                                category.label,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (distance != null) ...[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Container(
+                                    width: 3,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.onSurfaceVariant,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.route_rounded,
+                                  size: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  distance!,
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
-                    ),
-                  ),
-              ],
-            ),
 
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                      const SizedBox(height: 6),
 
-                  const SizedBox(height: 4),
+                      // Unterer Bereich: Rating & Badges
+                      Row(
+                        children: [
+                          // Kompakte Sterne-Anzeige
+                          _buildCompactRating(rating, isDark),
 
-                  // Kategorie & Distanz
-                  Row(
-                    children: [
-                      Text(
-                        category.label,
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (distance != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: theme.hintColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.route,
-                          size: 14,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          distance!,
-                          style: TextStyle(
-                            color: theme.textTheme.bodySmall?.color,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                      // Historic Badge inline
-                      if (highlights.any((h) => h == POIHighlight.historic)) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.brown.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '🏛️ Historisch',
+                          const SizedBox(width: 6),
+
+                          Text(
+                            '${FormatUtils.formatRating(rating)}',
                             style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.brown.shade700,
+                              color: colorScheme.onSurface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
 
-                  const SizedBox(height: 8),
+                          Text(
+                            ' (${FormatUtils.formatNumber(reviewCount)})',
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
 
-                  // Bewertung & Add-Button
-                  Row(
-                    children: [
-                      // Sterne
-                      ...List.generate(5, (index) {
-                        if (index < rating.floor()) {
-                          return const Icon(Icons.star,
-                              size: 16, color: Colors.amber);
-                        } else if (index < rating) {
-                          return const Icon(Icons.star_half,
-                              size: 16, color: Colors.amber);
-                        }
-                        return Icon(Icons.star_border,
-                            size: 16, color: isDark ? Colors.grey.shade600 : Colors.grey.shade300);
-                      }),
+                          const Spacer(),
 
-                      const SizedBox(width: 6),
-
-                      // Rating & Reviews
-                      Text(
-                        '${FormatUtils.formatRating(rating)} (${FormatUtils.formatNumber(reviewCount)})',
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color,
-                          fontSize: 12,
-                        ),
+                          // Add-Button
+                          if (onAddToTrip != null)
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onAddToTrip,
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(
+                                    Icons.add_rounded,
+                                    color: colorScheme.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-
-                      const Spacer(),
-
-                      // Add-Button
-                      if (onAddToTrip != null)
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          color: colorScheme.primary,
-                          iconSize: 28,
-                          onPressed: onAddToTrip,
-                          tooltip: 'Zur Route hinzufügen',
-                        ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  /// Quadratisches Bild mit Badges
+  Widget _buildImage(ColorScheme colorScheme) {
+    return SizedBox(
+      width: _imageSize,
+      child: Stack(
+        children: [
+          // Bild
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(16),
+            ),
+            child: imageUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    width: _imageSize,
+                    height: _minCardHeight,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 176, // 2x für Retina
+                    memCacheHeight: 176,
+                    fadeInDuration: const Duration(milliseconds: 150),
+                    fadeOutDuration: const Duration(milliseconds: 100),
+                    placeholder: (context, url) => _buildImagePlaceholder(),
+                    errorWidget: (context, url, error) => _buildImagePlaceholder(),
+                  )
+                : _buildImagePlaceholder(),
+          ),
+
+          // Highlight Badges (kompakt, nur Icons)
+          if (_hasHighlights)
+            Positioned(
+              top: 6,
+              left: 6,
+              child: _buildCompactBadges(),
+            ),
+
+          // Wetter-Warnung
+          if (showWeatherWarning)
+            Positioned(
+              bottom: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.wb_cloudy_rounded,
+                  color: Colors.orange.shade700,
+                  size: 14,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool get _hasHighlights =>
+      isMustSee ||
+      highlights.any((h) =>
+          h == POIHighlight.unesco ||
+          h == POIHighlight.mustSee ||
+          h == POIHighlight.secret);
+
+  /// Kompakte Badges (nur Icons, übereinander)
+  Widget _buildCompactBadges() {
+    final badges = <Widget>[];
+
+    // UNESCO
+    if (highlights.any((h) => h == POIHighlight.unesco)) {
+      badges.add(_buildIconBadge('🏛️', const Color(0xFF00CED1)));
+    }
+
+    // Must-See
+    if (isMustSee || highlights.any((h) => h == POIHighlight.mustSee)) {
+      badges.add(_buildIconBadge('⭐', Colors.orange));
+    }
+
+    // Geheimtipp
+    if (highlights.any((h) => h == POIHighlight.secret)) {
+      badges.add(_buildIconBadge('💎', Colors.purple));
+    }
+
+    if (badges.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: badges
+          .map((badge) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: badge,
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildIconBadge(String icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        icon,
+        style: const TextStyle(fontSize: 12),
+      ),
+    );
+  }
+
+  /// Kompakte Rating-Anzeige mit gefülltem/leerem Stern
+  Widget _buildCompactRating(double rating, bool isDark) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.star_rounded,
+          size: 16,
+          color: Colors.amber.shade600,
+        ),
+      ],
     );
   }
 
   Widget _buildImagePlaceholder() {
     return Container(
-      height: 140,
-      width: double.infinity,
-      color: Color(category.colorValue).withOpacity(0.2),
+      width: _imageSize,
+      height: _minCardHeight,
+      color: Color(category.colorValue).withOpacity(0.15),
       child: Center(
         child: Text(
           category.icon,
-          style: const TextStyle(fontSize: 48),
+          style: const TextStyle(fontSize: 32),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHighlightBadge(String icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }

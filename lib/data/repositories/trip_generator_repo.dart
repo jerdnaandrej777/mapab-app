@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -5,13 +7,12 @@ import '../../core/algorithms/day_planner.dart';
 import '../../core/algorithms/random_poi_selector.dart';
 import '../../core/algorithms/route_optimizer.dart';
 import '../../core/constants/categories.dart';
+import '../../core/constants/trip_constants.dart';
 import '../models/poi.dart';
-import '../models/route.dart';
 import '../models/trip.dart';
 import '../services/hotel_service.dart';
 import 'poi_repo.dart';
 import 'routing_repo.dart';
-import 'geocoding_repo.dart';
 
 part 'trip_generator_repo.g.dart';
 
@@ -20,7 +21,6 @@ part 'trip_generator_repo.g.dart';
 class TripGeneratorRepository {
   final POIRepository _poiRepo;
   final RoutingRepository _routingRepo;
-  final GeocodingRepository _geocodingRepo;
   final HotelService _hotelService;
   final RandomPOISelector _poiSelector;
   final RouteOptimizer _routeOptimizer;
@@ -30,14 +30,12 @@ class TripGeneratorRepository {
   TripGeneratorRepository({
     POIRepository? poiRepo,
     RoutingRepository? routingRepo,
-    GeocodingRepository? geocodingRepo,
     HotelService? hotelService,
     RandomPOISelector? poiSelector,
     RouteOptimizer? routeOptimizer,
     DayPlanner? dayPlanner,
   })  : _poiRepo = poiRepo ?? POIRepository(),
         _routingRepo = routingRepo ?? RoutingRepository(),
-        _geocodingRepo = geocodingRepo ?? GeocodingRepository(),
         _hotelService = hotelService ?? HotelService(),
         _poiSelector = poiSelector ?? RandomPOISelector(),
         _routeOptimizer = routeOptimizer ?? RouteOptimizer(),
@@ -129,24 +127,29 @@ class TripGeneratorRepository {
   ///
   /// [startLocation] - Startpunkt
   /// [startAddress] - Adresse des Startpunkts
-  /// [days] - Anzahl der Reisetage
+  /// [radiusKm] - Such-Radius in km (Tage werden automatisch berechnet)
   /// [categories] - Bevorzugte Kategorien
   /// [includeHotels] - Hotels vorschlagen
   Future<GeneratedTrip> generateEuroTrip({
     required LatLng startLocation,
     required String startAddress,
-    required int days,
+    double radiusKm = 1000,
     List<POICategory> categories = const [],
     bool includeHotels = true,
   }) async {
-    // Radius basierend auf Tagen berechnen
-    final radiusKm = DayPlanner.calculateRecommendedRadius(days);
+    // Tage basierend auf Radius berechnen (600km = 1 Tag)
+    final days = TripConstants.calculateDaysFromDistance(radiusKm);
+    debugPrint('[TripGenerator] Euro Trip: ${radiusKm}km -> $days Tage');
 
-    // POIs pro Tag schätzen
-    final poisPerDay = DayPlanner.estimatePoisPerDay();
+    // POIs pro Tag (max 9 wegen Google Maps Limit)
+    final poisPerDay = min(
+      DayPlanner.estimatePoisPerDay(),
+      TripConstants.maxPoisPerDay,
+    );
     final totalPOIs = days * poisPerDay;
+    debugPrint('[TripGenerator] POIs: $poisPerDay pro Tag, $totalPOIs gesamt');
 
-    // 1. POIs im Radius laden
+    // 1. POIs im Radius laden (mit Timeout für große Radien)
     final categoryIds = categories.isNotEmpty
         ? categories.map((c) => c.id).toList()
         : null;
@@ -155,11 +158,20 @@ class TripGeneratorRepository {
       center: startLocation,
       radiusKm: radiusKm,
       categoryFilter: categoryIds,
+    ).timeout(
+      const Duration(seconds: 45),
+      onTimeout: () {
+        debugPrint('[TripGenerator] ⚠️ POI-Laden Timeout nach 45s');
+        return <POI>[];
+      },
     );
+
+    debugPrint('[TripGenerator] ${availablePOIs.length} POIs gefunden');
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
-        'Keine POIs im Umkreis von ${radiusKm}km gefunden',
+        'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
+        'Versuche einen anderen Startpunkt oder kleineren Radius.',
       );
     }
 
@@ -184,12 +196,14 @@ class TripGeneratorRepository {
     );
 
     // 4. Auf Tage aufteilen
+    debugPrint('[TripGenerator] Plane $days Tage mit ${optimizedPOIs.length} POIs...');
     var tripDays = _dayPlanner.planDays(
       pois: optimizedPOIs,
       startLocation: startLocation,
       days: days,
       returnToStart: true,
     );
+    debugPrint('[TripGenerator] TripDays: ${tripDays.length}, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
     // 5. Hotels hinzufügen (optional)
     List<List<HotelSuggestion>> hotelSuggestions = [];
@@ -225,6 +239,8 @@ class TripGeneratorRepository {
       }
     }
 
+    debugPrint('[TripGenerator] Route berechnen mit ${allWaypoints.length} Waypoints...');
+
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
       end: startLocation,
@@ -232,6 +248,8 @@ class TripGeneratorRepository {
       startAddress: startAddress,
       endAddress: startAddress,
     );
+
+    debugPrint('[TripGenerator] ✓ Route berechnet: ${route.distanceKm.toStringAsFixed(0)}km');
 
     // 7. Trip erstellen
     final allStops = tripDays.expand((day) => day.stops).toList();
@@ -253,6 +271,59 @@ class TripGeneratorRepository {
       selectedPOIs: optimizedPOIs,
       tripDays: tripDays,
       hotelSuggestions: hotelSuggestions,
+    );
+  }
+
+  /// Entfernt einen einzelnen POI aus dem Trip
+  Future<GeneratedTrip> removePOI({
+    required GeneratedTrip currentTrip,
+    required String poiIdToRemove,
+    required LatLng startLocation,
+    required String startAddress,
+  }) async {
+    // Prüfen ob genug POIs übrig bleiben (min 2)
+    if (currentTrip.selectedPOIs.length <= 2) {
+      throw TripGenerationException(
+        'Mindestens 2 Stops müssen im Trip bleiben',
+      );
+    }
+
+    // POI aus der Liste entfernen
+    final newSelectedPOIs = currentTrip.selectedPOIs
+        .where((p) => p.id != poiIdToRemove)
+        .toList();
+
+    // Route neu optimieren
+    final optimizedPOIs = _routeOptimizer.optimizeRoute(
+      pois: newSelectedPOIs,
+      startLocation: startLocation,
+      returnToStart: true,
+    );
+
+    // Neue Route berechnen
+    final waypoints = optimizedPOIs.map((p) => p.location).toList();
+    final route = await _routingRepo.calculateFastRoute(
+      start: startLocation,
+      end: startLocation,
+      waypoints: waypoints,
+      startAddress: startAddress,
+      endAddress: startAddress,
+    );
+
+    // Trip aktualisieren
+    final updatedTrip = currentTrip.trip.copyWith(
+      name: _generateTripName(optimizedPOIs),
+      route: route,
+      stops: optimizedPOIs.asMap().entries.map((entry) {
+        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+      }).toList(),
+      updatedAt: DateTime.now(),
+    );
+
+    return GeneratedTrip(
+      trip: updatedTrip,
+      availablePOIs: currentTrip.availablePOIs,
+      selectedPOIs: optimizedPOIs,
     );
   }
 

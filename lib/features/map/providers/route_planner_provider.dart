@@ -2,7 +2,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../data/models/route.dart';
 import '../../../data/repositories/routing_repo.dart';
+import '../../poi/providers/poi_state_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
+import 'route_session_provider.dart';
 
 part 'route_planner_provider.g.dart';
 
@@ -50,6 +52,17 @@ class RoutePlanner extends _$RoutePlanner {
     );
   }
 
+  /// Löscht die gesamte Route (Start, Ziel, berechnete Route)
+  void clearRoute() {
+    state = const RoutePlannerData();
+    // Auch im Trip-State löschen
+    ref.read(tripStateProvider.notifier).clearAll();
+    // Route-Session stoppen und POIs löschen
+    ref.read(routeSessionProvider.notifier).stopRoute();
+    ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
+    print('[RoutePlanner] Route, Session und POIs gelöscht');
+  }
+
   /// Berechnet Route wenn Start UND Ziel gesetzt
   Future<void> _tryCalculateRoute() async {
     if (state.startLocation == null || state.endLocation == null) {
@@ -57,6 +70,12 @@ class RoutePlanner extends _$RoutePlanner {
     }
 
     state = state.copyWith(isCalculating: true);
+
+    // Alte Route-Session stoppen, POIs und Trip-Stops löschen
+    ref.read(routeSessionProvider.notifier).stopRoute();
+    ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
+    ref.read(tripStateProvider.notifier).clearStops();
+    print('[RoutePlanner] Alte Route-Session, POIs und Trip-Stops gelöscht');
 
     try {
       final routingRepo = ref.read(routingRepositoryProvider);

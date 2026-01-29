@@ -21,13 +21,66 @@ class POIListScreen extends ConsumerStatefulWidget {
 
 class _POIListScreenState extends ConsumerState<POIListScreen> {
   bool _isInitialized = false;
+  late ScrollController _scrollController;
+  Timer? _scrollDebounceTimer;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPOIs();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollDebounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Debounced Scroll-Handler für Lazy-Loading von POI-Bildern
+  void _onScroll() {
+    _scrollDebounceTimer?.cancel();
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 150), () {
+      _enrichVisiblePOIs();
+    });
+  }
+
+  /// Enriched POIs im sichtbaren Bereich + Puffer
+  void _enrichVisiblePOIs() {
+    if (!_scrollController.hasClients) return;
+
+    final poiState = ref.read(pOIStateNotifierProvider);
+    final pois = poiState.filteredPOIs;
+    if (pois.isEmpty) return;
+
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+
+    // Berechne sichtbaren Bereich (Card-Höhe ~108px inkl. Padding)
+    const itemHeight = 108.0;
+    final scrollPosition = _scrollController.position.pixels;
+    final viewportHeight = _scrollController.position.viewportDimension;
+
+    final firstVisible = (scrollPosition / itemHeight).floor();
+    final lastVisible = ((scrollPosition + viewportHeight) / itemHeight).ceil();
+
+    // Puffer: 5 Items vor und nach sichtbarem Bereich
+    final startIndex = (firstVisible - 5).clamp(0, pois.length - 1);
+    final endIndex = (lastVisible + 5).clamp(0, pois.length - 1);
+
+    // Enrichment für alle POIs im Bereich
+    for (int i = startIndex; i <= endIndex; i++) {
+      final poi = pois[i];
+      if (!poi.isEnriched &&
+          poi.imageUrl == null &&
+          !poiState.enrichingPOIIds.contains(poi.id)) {
+        poiNotifier.enrichPOI(poi.id);
+      }
+    }
   }
 
   Future<void> _loadPOIs() async {
@@ -37,19 +90,59 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
     final tripState = ref.read(tripStateProvider);
 
+    debugPrint(
+        '[POIList] _loadPOIs gestartet - hasRoute: ${tripState.hasRoute}');
+
     // Wenn eine Route vorhanden ist, POIs für Route laden
     if (tripState.hasRoute) {
+      // FIX v1.5.2: RouteOnlyMode setzen für Route-POIs
+      poiNotifier.setRouteOnlyMode(true);
       await poiNotifier.loadPOIsForRoute(tripState.route!);
+      final state = ref.read(pOIStateNotifierProvider);
+      debugPrint(
+          '[POIList] Nach loadPOIsForRoute: ${state.pois.length} POIs geladen, ${state.filteredPOIs.length} nach Filter');
       // Pre-Enrichment starten
       _preEnrichVisiblePOIs();
       return;
     }
 
+    // WICHTIG: Wenn keine Route vorhanden ist, routeOnlyMode deaktivieren
+    // Sonst werden alle POIs herausgefiltert (da sie keine routePosition haben)
+    // FIX v1.5.2: Auch alle anderen Filter zurücksetzen
+    poiNotifier.resetFilters();
+    debugPrint('[POIList] Keine Route vorhanden - alle Filter zurückgesetzt');
+
     // Sonst: GPS-Position verwenden
     try {
+      // Prüfen ob Location Services aktiviert sind
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[POIList] GPS deaktiviert - zeige Dialog');
+        if (!mounted) return;
+        final openSettings = await _showGpsDialog();
+        if (openSettings) {
+          await Geolocator.openLocationSettings();
+        }
+        return; // Kein Fallback mehr - Benutzer muss GPS aktivieren
+      }
+
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        final newPermission = await Geolocator.requestPermission();
+        if (newPermission == LocationPermission.denied ||
+            newPermission == LocationPermission.deniedForever) {
+          debugPrint('[POIList] GPS-Berechtigung verweigert');
+          if (!mounted) return;
+          _showPermissionDeniedSnackBar();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[POIList] GPS-Berechtigung dauerhaft verweigert');
+        if (!mounted) return;
+        _showPermissionDeniedSnackBar();
+        return;
       }
 
       final position = await Geolocator.getCurrentPosition(
@@ -62,11 +155,13 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
         radiusKm: 50,
       );
     } catch (e) {
-      // Fallback: München als Zentrum
-      debugPrint('[POIList] GPS nicht verfügbar, nutze München als Fallback');
-      await poiNotifier.loadPOIsInRadius(
-        center: const LatLng(48.1351, 11.5820),
-        radiusKm: 50,
+      debugPrint('[POIList] GPS-Fehler: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('GPS-Position konnte nicht ermittelt werden'),
+          duration: Duration(seconds: 3),
+        ),
       );
     }
 
@@ -74,28 +169,71 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     _preEnrichVisiblePOIs();
   }
 
-  /// Pre-Enrichment für sichtbare POIs (Top 20 ohne Bilder)
+  /// Pre-Enrichment für sichtbare POIs (Top 8 ohne Bilder)
+  /// OPTIMIERT v1.3.7: Nutzt Concurrency-Limits im Service, kein Doppel-Enrichment
   void _preEnrichVisiblePOIs() {
     final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
     final poiState = ref.read(pOIStateNotifierProvider);
 
-    // Top 20 POIs ohne Bilder auswählen
+    // Nur Top 8 POIs ohne Bilder und nicht bereits in Enrichment
     final poisToEnrich = poiState.filteredPOIs
-        .where((poi) => !poi.isEnriched && poi.imageUrl == null)
-        .take(20)
+        .where((poi) =>
+            !poi.isEnriched &&
+            poi.imageUrl == null &&
+            !poiState.enrichingPOIIds.contains(poi.id))
+        .take(
+            15) // Erhöht auf 15 für bessere initiale Abdeckung (ca. 1.5 Bildschirme)
         .toList();
 
     if (poisToEnrich.isEmpty) {
-      debugPrint('[POIList] Alle sichtbaren POIs bereits enriched');
+      debugPrint(
+          '[POIList] Alle sichtbaren POIs bereits enriched oder in Arbeit');
       return;
     }
 
-    debugPrint('[POIList] Pre-Enrichment für ${poisToEnrich.length} POIs starten');
+    debugPrint(
+        '[POIList] Pre-Enrichment für ${poisToEnrich.length} POIs starten');
 
-    // Im Hintergrund enrichen (nicht blockierend)
+    // Enrichment starten - Concurrency wird im Service kontrolliert
     for (final poi in poisToEnrich) {
-      unawaited(poiNotifier.enrichPOI(poi.id));
+      // Fire-and-forget, aber ohne unawaited da Service Concurrency handhabt
+      poiNotifier.enrichPOI(poi.id);
     }
+  }
+
+  /// Dialog anzeigen wenn GPS deaktiviert ist (v1.5.9)
+  Future<bool> _showGpsDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('GPS deaktiviert'),
+            content: const Text(
+              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Nein'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Einstellungen öffnen'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  /// SnackBar anzeigen wenn GPS-Berechtigung verweigert wurde
+  void _showPermissionDeniedSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+            'GPS-Berechtigung wird benötigt um POIs in der Nähe zu finden'),
+        duration: Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -132,7 +270,9 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               onChanged: (value) {
-                ref.read(pOIStateNotifierProvider.notifier).setSearchQuery(value);
+                ref
+                    .read(pOIStateNotifierProvider.notifier)
+                    .setSearchQuery(value);
               },
               decoration: InputDecoration(
                 hintText: 'POIs durchsuchen...',
@@ -141,7 +281,9 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
-                          ref.read(pOIStateNotifierProvider.notifier).setSearchQuery('');
+                          ref
+                              .read(pOIStateNotifierProvider.notifier)
+                              .setSearchQuery('');
                         },
                       )
                     : null,
@@ -167,7 +309,9 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                   icon: '⭐',
                   isSelected: poiState.mustSeeOnly,
                   onTap: () {
-                    ref.read(pOIStateNotifierProvider.notifier).toggleMustSeeOnly();
+                    ref
+                        .read(pOIStateNotifierProvider.notifier)
+                        .toggleMustSeeOnly();
                   },
                 ),
                 const SizedBox(width: 8),
@@ -178,8 +322,10 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                         icon: cat.icon,
                         isSelected: poiState.selectedCategories.contains(cat),
                         onTap: () {
-                          final notifier = ref.read(pOIStateNotifierProvider.notifier);
-                          final categories = Set<POICategory>.from(poiState.selectedCategories);
+                          final notifier =
+                              ref.read(pOIStateNotifierProvider.notifier);
+                          final categories = Set<POICategory>.from(
+                              poiState.selectedCategories);
                           if (categories.contains(cat)) {
                             categories.remove(cat);
                           } else {
@@ -211,7 +357,9 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                   if (poiState.hasActiveFilters)
                     TextButton.icon(
                       onPressed: () {
-                        ref.read(pOIStateNotifierProvider.notifier).resetFilters();
+                        ref
+                            .read(pOIStateNotifierProvider.notifier)
+                            .resetFilters();
                       },
                       icon: const Icon(Icons.clear, size: 16),
                       label: const Text('Filter löschen'),
@@ -307,17 +455,38 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
       );
     }
 
-    // POI-Liste
+    // POI-Liste OPTIMIERT: Mit cacheExtent und addAutomaticKeepAlives
     return RefreshIndicator(
       onRefresh: () async {
         _isInitialized = false;
         await _loadPOIs();
       },
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         itemCount: pois.length,
+        // OPTIMIERUNG: Mehr Items im Speicher halten für flüssiges Scrollen
+        cacheExtent: 500,
+        // OPTIMIERUNG: Automatisches KeepAlive für sichtbare Items
+        addAutomaticKeepAlives: true,
+        // OPTIMIERUNG: Semantics deaktivieren für bessere Performance
+        addSemanticIndexes: false,
         itemBuilder: (context, index) {
           final poi = pois[index];
+
+          // v1.6.0: On-Demand Enrichment ohne Index-Limit
+          // Scroll-Listener (_enrichVisiblePOIs) übernimmt das Lazy-Loading
+          // Dieser Fallback fängt Edge-Cases ab (z.B. wenn User direkt zu einem POI springt)
+          if (!poi.isEnriched &&
+              poi.imageUrl == null &&
+              !poiState.enrichingPOIIds.contains(poi.id)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poi.id);
+              }
+            });
+          }
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: POICard(
@@ -332,7 +501,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               imageUrl: poi.imageUrl,
               highlights: poi.highlights,
               onTap: () {
-                ref.read(pOIStateNotifierProvider.notifier).selectPOI(poi);
+                // FIX v1.6.7: selectPOI hier entfernt - wird in POIDetailScreen via selectPOIById aufgerufen
+                // Vorher: Doppel-Select mit veraltetem POI führte zu fehlenden Fotos/Highlights
                 context.push('/poi/${poi.id}');
               },
               onAddToTrip: () {
@@ -348,18 +518,6 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
   void _addPOIToTrip(POI poi) {
     final tripNotifier = ref.read(tripStateProvider.notifier);
     tripNotifier.addStop(poi);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${poi.name} zur Route hinzugefügt'),
-        action: SnackBarAction(
-          label: 'Rückgängig',
-          onPressed: () {
-            tripNotifier.removeStop(poi.id);
-          },
-        ),
-      ),
-    );
   }
 
   void _showFilterSheet() {
@@ -415,7 +573,9 @@ class _FilterChip extends StatelessWidget {
               : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.3),
+            color: isSelected
+                ? colorScheme.primary
+                : colorScheme.outline.withOpacity(0.3),
           ),
         ),
         child: Row(
@@ -426,7 +586,9 @@ class _FilterChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                color: isSelected
+                    ? colorScheme.onPrimaryContainer
+                    : colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),

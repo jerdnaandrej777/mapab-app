@@ -1,32 +1,45 @@
 import 'dart:convert';
-import 'dart:math' show cos;
+import 'dart:math' show cos, sqrt, min, max, pi;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/geo_utils.dart';
 import '../models/poi.dart';
 import '../models/route.dart';
+import '../services/poi_cache_service.dart';
 
 part 'poi_repo.g.dart';
 
+/// Mindest-Score für POIs (35 = ca. 1.75 Sterne)
+/// POIs unter diesem Score werden herausgefiltert
+/// HINWEIS: Wert gesenkt von 70 auf 35, um mehr POIs anzuzeigen
+/// - Overpass/OSM POIs haben Score 40-60
+/// - Wikipedia POIs haben Score 55-75
+const int minimumPOIScore = 35;
+
 /// Repository für POI-Laden mit 3-Schichten-System
 /// Übernommen von MapAB js/services/poi-loader.js
+/// OPTIMIERT: Mit Region-Cache für schnelleres Laden
 class POIRepository {
   final Dio _dio;
+  final POICacheService? _cacheService;
 
-  POIRepository({Dio? dio})
+  POIRepository({Dio? dio, POICacheService? cacheService})
       : _dio = dio ??
             Dio(BaseOptions(
               headers: {'User-Agent': ApiConfig.userAgent},
               connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
               receiveTimeout: const Duration(milliseconds: ApiConfig.overpassTimeout),
-            ));
+            )),
+        _cacheService = cacheService;
 
   /// Lädt POIs in einem Radius um einen Punkt (für Zufalls-Trips)
   /// Verwendet das 3-Schichten-System ohne Routen-Berechnungen
+  /// OPTIMIERT: Paralleles Laden aller 3 Schichten + Region-Cache
   Future<List<POI>> loadPOIsInRadius({
     required LatLng center,
     required double radiusKm,
@@ -34,45 +47,76 @@ class POIRepository {
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
+    bool useCache = true,
   }) async {
+    // OPTIMIERUNG: Zuerst im Cache schauen
+    if (useCache && _cacheService != null) {
+      final regionKey = _cacheService!.createRegionKey(
+        center.latitude,
+        center.longitude,
+        radiusKm,
+      );
+      final cachedPOIs = await _cacheService!.getCachedPOIs(regionKey);
+      if (cachedPOIs != null && cachedPOIs.isNotEmpty) {
+        debugPrint('[POI] Cache-Treffer: ${cachedPOIs.length} POIs für Region $regionKey');
+        // Nach Kategorien filtern (falls angegeben)
+        if (categoryFilter != null && categoryFilter.isNotEmpty) {
+          return cachedPOIs
+              .where((poi) => categoryFilter.contains(poi.categoryId))
+              .toList();
+        }
+        return cachedPOIs;
+      }
+    }
+
     final allPOIs = <POI>[];
     final seenIds = <String>{};
 
     // Bounding Box aus Zentrum + Radius erstellen
     final bounds = _createBoundsFromRadius(center, radiusKm);
 
-    // 1. Kuratierte POIs laden
+    debugPrint('[POI] Starte paralleles Laden für Radius ${radiusKm}km...');
+    final stopwatch = Stopwatch()..start();
+
+    // OPTIMIERUNG: Alle 3 Schichten parallel laden
+    // FIX v1.3.8: Besseres Error Tracking
+    final futures = <Future<List<POI>>>[];
+    final sourceErrors = <String>[];
+    int sourceCount = 0;
+
     if (includeCurated) {
-      debugPrint('[POI] Lade kuratierte POIs...');
-      final curated = await loadCuratedPOIs(bounds);
-      debugPrint('[POI] Kuratierte POIs: ${curated.length}');
-      for (final poi in curated) {
-        if (!seenIds.contains(poi.id)) {
-          seenIds.add(poi.id);
-          allPOIs.add(poi);
-        }
-      }
+      sourceCount++;
+      futures.add(loadCuratedPOIs(bounds).catchError((e) {
+        sourceErrors.add('Kuratiert: $e');
+        debugPrint('[POI] Curated-Fehler: $e');
+        return <POI>[];
+      }));
     }
 
-    // 2. Wikipedia POIs laden (für größere Radien mehrere Anfragen)
     if (includeWikipedia) {
-      debugPrint('[POI] Lade Wikipedia POIs für Radius ${radiusKm}km...');
-      final wikipedia = await _loadWikipediaPOIsInRadius(center, radiusKm);
-      debugPrint('[POI] Wikipedia POIs: ${wikipedia.length}');
-      for (final poi in wikipedia) {
-        if (!seenIds.contains(poi.id)) {
-          seenIds.add(poi.id);
-          allPOIs.add(poi);
-        }
-      }
+      sourceCount++;
+      futures.add(_loadWikipediaPOIsInRadius(center, radiusKm).catchError((e) {
+        sourceErrors.add('Wikipedia: $e');
+        debugPrint('[POI] Wikipedia-Fehler: $e');
+        return <POI>[];
+      }));
     }
 
-    // 3. Overpass POIs laden
     if (includeOverpass) {
-      debugPrint('[POI] Lade Overpass POIs...');
-      final overpass = await loadOverpassPOIs(bounds);
-      debugPrint('[POI] Overpass POIs: ${overpass.length}');
-      for (final poi in overpass) {
+      sourceCount++;
+      futures.add(loadOverpassPOIs(bounds).catchError((e) {
+        sourceErrors.add('Overpass: $e');
+        debugPrint('[POI] Overpass-Fehler: $e');
+        return <POI>[];
+      }));
+    }
+
+    // Parallel warten
+    final results = await Future.wait(futures);
+
+    // Ergebnisse zusammenführen (Duplikate vermeiden)
+    for (final poiList in results) {
+      for (final poi in poiList) {
         if (!seenIds.contains(poi.id)) {
           seenIds.add(poi.id);
           allPOIs.add(poi);
@@ -80,19 +124,47 @@ class POIRepository {
       }
     }
 
-    // Nach Kategorien filtern (falls angegeben)
-    var filteredPOIs = allPOIs;
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      filteredPOIs = allPOIs
-          .where((poi) => categoryFilter.contains(poi.categoryId))
-          .toList();
+    stopwatch.stop();
+
+    // FIX v1.3.8: Warnung bei teilweisen/vollständigen Fehlern
+    if (sourceErrors.isNotEmpty) {
+      if (sourceErrors.length == sourceCount) {
+        debugPrint('[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
+      } else {
+        debugPrint('[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
+      }
     }
+
+    debugPrint('[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
 
     // Nach Distanz filtern (exakt im Radius)
-    final result = filteredPOIs.where((poi) {
+    final distanceFiltered = allPOIs.where((poi) {
       final distance = GeoUtils.haversineDistance(center, poi.location);
       return distance <= radiusKm;
     }).toList();
+
+    // v1.3.9: Qualitätsfilter - nur POIs mit >= 3.5 Sternen (Score >= 70)
+    final qualityFiltered = distanceFiltered.where((poi) => poi.score >= minimumPOIScore).toList();
+    debugPrint('[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
+
+    // OPTIMIERUNG: Im Cache speichern (vor Kategorie-Filter)
+    if (useCache && _cacheService != null && qualityFiltered.isNotEmpty) {
+      final regionKey = _cacheService!.createRegionKey(
+        center.latitude,
+        center.longitude,
+        radiusKm,
+      );
+      // Asynchron cachen ohne zu warten
+      _cacheService!.cachePOIs(qualityFiltered, regionKey);
+    }
+
+    // Nach Kategorien filtern (falls angegeben)
+    var result = qualityFiltered;
+    if (categoryFilter != null && categoryFilter.isNotEmpty) {
+      result = qualityFiltered
+          .where((poi) => categoryFilter.contains(poi.categoryId))
+          .toList();
+    }
 
     debugPrint('[POI] Gesamt nach Filter: ${result.length}');
     return result;
@@ -132,8 +204,14 @@ class POIRepository {
     }
 
     // Grid-basierte Abfrage für größere Radien
-    final gridSize = 15.0; // km pro Grid-Zelle
-    final cellsPerSide = (radiusKm * 2 / gridSize).ceil();
+    // OPTIMIERUNG v1.6.2: Dynamische Grid-Size für große Radien
+    // Maximal 36 Zellen (6x6) um Performance zu gewährleisten
+    // Bei 600km war es vorher 80x80 = 6400 Zellen (10+ Minuten!)
+    const maxCellsPerSide = 6;
+    final gridSize = max((radiusKm * 2 / maxCellsPerSide), 15.0);
+    final cellsPerSide = min((radiusKm * 2 / gridSize).ceil(), maxCellsPerSide);
+
+    debugPrint('[POI] Wikipedia Grid: ${cellsPerSide}x$cellsPerSide Zellen, ${gridSize.toStringAsFixed(0)}km pro Zelle');
 
     for (int i = 0; i < cellsPerSide && allPOIs.length < 200; i++) {
       for (int j = 0; j < cellsPerSide && allPOIs.length < 200; j++) {
@@ -203,6 +281,7 @@ class POIRepository {
   /// 1. Kuratierte POIs (schnell, qualitativ)
   /// 2. Wikipedia-Artikel (mittel, informativ)
   /// 3. Overpass/OSM (langsam, vollständig)
+  /// OPTIMIERT: Paralleles Laden aller 3 Schichten
   Future<List<POI>> loadAllPOIs(
     AppRoute route, {
     double bufferKm = 50,
@@ -217,21 +296,48 @@ class POIRepository {
     final bounds = GeoUtils.calculateBounds(route.coordinates);
     final expandedBounds = GeoUtils.expandBounds(bounds, 0.2);
 
-    // 1. Kuratierte POIs laden
+    debugPrint('[POI] Starte paralleles Laden für Route...');
+    final stopwatch = Stopwatch()..start();
+
+    // OPTIMIERUNG: Alle 3 Schichten parallel laden
+    // FIX v1.3.8: Besseres Error Tracking
+    final futures = <Future<List<POI>>>[];
+    final sourceErrors = <String>[];
+    int sourceCount = 0;
+
     if (includeCurated) {
-      final curated = await loadCuratedPOIs(expandedBounds);
-      for (final poi in curated) {
-        if (!seenIds.contains(poi.id)) {
-          seenIds.add(poi.id);
-          allPOIs.add(poi);
-        }
-      }
+      sourceCount++;
+      futures.add(loadCuratedPOIs(expandedBounds).catchError((e) {
+        sourceErrors.add('Kuratiert: $e');
+        debugPrint('[POI] Curated-Fehler: $e');
+        return <POI>[];
+      }));
     }
 
-    // 2. Wikipedia POIs laden
     if (includeWikipedia) {
-      final wikipedia = await loadWikipediaPOIs(expandedBounds);
-      for (final poi in wikipedia) {
+      sourceCount++;
+      futures.add(loadWikipediaPOIs(expandedBounds).catchError((e) {
+        sourceErrors.add('Wikipedia: $e');
+        debugPrint('[POI] Wikipedia-Fehler: $e');
+        return <POI>[];
+      }));
+    }
+
+    if (includeOverpass) {
+      sourceCount++;
+      futures.add(loadOverpassPOIs(expandedBounds).catchError((e) {
+        sourceErrors.add('Overpass: $e');
+        debugPrint('[POI] Overpass-Fehler: $e');
+        return <POI>[];
+      }));
+    }
+
+    // Parallel warten
+    final results = await Future.wait(futures);
+
+    // Ergebnisse zusammenführen (Duplikate vermeiden)
+    for (final poiList in results) {
+      for (final poi in poiList) {
         if (!seenIds.contains(poi.id)) {
           seenIds.add(poi.id);
           allPOIs.add(poi);
@@ -239,19 +345,25 @@ class POIRepository {
       }
     }
 
-    // 3. Overpass POIs laden
-    if (includeOverpass) {
-      final overpass = await loadOverpassPOIs(expandedBounds);
-      for (final poi in overpass) {
-        if (!seenIds.contains(poi.id)) {
-          seenIds.add(poi.id);
-          allPOIs.add(poi);
-        }
+    stopwatch.stop();
+
+    // FIX v1.3.8: Warnung bei teilweisen/vollständigen Fehlern
+    if (sourceErrors.isNotEmpty) {
+      if (sourceErrors.length == sourceCount) {
+        debugPrint('[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
+      } else {
+        debugPrint('[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
       }
     }
+
+    debugPrint('[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
+
+    // v1.3.9: Qualitätsfilter - nur POIs mit >= 3.5 Sternen (Score >= 70)
+    final qualityFiltered = allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
+    debugPrint('[POI] Qualitätsfilter: ${allPOIs.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
 
     // Routen-bezogene Daten berechnen
-    return _calculateRouteData(allPOIs, route);
+    return _calculateRouteData(qualityFiltered, route);
   }
 
   /// Lädt kuratierte POIs aus lokaler JSON-Datei
@@ -439,32 +551,49 @@ out center;
   }
 
   /// Ermittelt Kategorie basierend auf Keywords im Titel
+  /// Verwendet Score-basiertes Matching mit Prioritäten (spezifischere Kategorien höher)
   String _inferCategoryFromTitle(String title) {
     final lowerTitle = title.toLowerCase();
 
-    // Kategorie-Patterns (Reihenfolge ist wichtig - spezifischere zuerst)
-    const patterns = <String, List<String>>{
-      'castle': ['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'],
-      'church': ['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'],
-      'museum': ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'],
-      'nature': ['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve'],
-      'lake': ['see', 'lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre'],
-      'viewpoint': ['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'turm', 'tower', 'gipfel', 'peak', 'berg'],
-      'park': ['park', 'garten', 'garden', 'botanical'],
-      'monument': ['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue'],
-      'city': ['altstadt', 'old town', 'stadt', 'city', 'marktplatz', 'market square', 'rathaus', 'town hall'],
-      'coast': ['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port'],
+    // Kategorie-Patterns mit Priorität (Tuple: keywords, priority)
+    // Höhere Priorität = spezifischere Kategorie
+    const patterns = <String, (List<String>, int)>{
+      'museum': (['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'], 100),
+      'castle': (['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'], 90),
+      'church': (['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'], 85),
+      'nature': (['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve'], 80),
+      'lake': (['see', 'lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre'], 75),
+      'viewpoint': (['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'gipfel', 'peak'], 70),
+      'park': (['park', 'garten', 'garden', 'botanical'], 65),
+      'monument': (['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue'], 60),
+      'city': (['altstadt', 'old town', 'marktplatz', 'market square', 'rathaus', 'town hall'], 55),
+      'coast': (['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port'], 50),
     };
 
+    String? bestCategory;
+    int bestScore = 0;
+    int bestPosition = title.length;
+
     for (final entry in patterns.entries) {
-      for (final keyword in entry.value) {
-        if (lowerTitle.contains(keyword)) {
-          return entry.key;
+      final (keywords, priority) = entry.value;
+      for (final keyword in keywords) {
+        final position = lowerTitle.indexOf(keyword);
+        if (position != -1) {
+          // Score = Priorität + Bonus für frühere Position im Titel
+          final positionBonus = ((title.length - position) / title.length * 20).round();
+          final score = priority + positionBonus;
+
+          // Beste Kategorie auswählen (höchster Score, bei Gleichstand frühere Position)
+          if (score > bestScore || (score == bestScore && position < bestPosition)) {
+            bestScore = score;
+            bestCategory = entry.key;
+            bestPosition = position;
+          }
         }
       }
     }
 
-    return 'attraction'; // Fallback
+    return bestCategory ?? 'attraction'; // Fallback
   }
 
   /// Ermittelt Score basierend auf Keywords (bekannte Sehenswürdigkeiten höher)
@@ -541,7 +670,9 @@ out center;
 }
 
 /// Riverpod Provider für POIRepository
+/// OPTIMIERT: Mit Cache-Service für Region-Caching
 @riverpod
 POIRepository poiRepository(PoiRepositoryRef ref) {
-  return POIRepository();
+  final cacheService = ref.watch(poiCacheServiceProvider);
+  return POIRepository(cacheService: cacheService);
 }

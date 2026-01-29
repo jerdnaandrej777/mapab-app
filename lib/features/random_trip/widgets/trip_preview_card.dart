@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/trip_constants.dart';
 import '../../../data/models/trip.dart';
 import '../providers/random_trip_provider.dart';
+import 'day_tab_selector.dart';
 import 'poi_reroll_button.dart';
 
 /// Widget zur Vorschau des generierten Trips mit Karte
@@ -16,6 +17,7 @@ class TripPreviewCard extends ConsumerWidget {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
     final trip = state.generatedTrip?.trip;
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (trip == null) {
       return const Center(child: Text('Kein Trip generiert'));
@@ -42,20 +44,23 @@ class TripPreviewCard extends ConsumerWidget {
                       ? null
                       : () => notifier.regenerateTrip(),
                   icon: state.isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary,
+                          ),
                         )
                       : const Icon(Icons.refresh),
                   tooltip: 'Neu generieren',
                 ),
-                // Bestatigen
+                // Bestätigen
                 IconButton(
                   onPressed: () => notifier.confirmTrip(),
                   icon: const Icon(Icons.check_circle_outline),
-                  color: AppTheme.primaryColor,
-                  tooltip: 'Trip bestatigen',
+                  color: colorScheme.primary,
+                  tooltip: 'Trip bestätigen',
                 ),
               ],
             ),
@@ -63,33 +68,17 @@ class TripPreviewCard extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
 
-        // Statistiken
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatItem(
-                icon: Icons.place,
-                value: '${trip.stopCount}',
-                label: 'Stops',
-              ),
-              _StatItem(
-                icon: Icons.straighten,
-                value: trip.route.formattedDistance,
-                label: 'Distanz',
-              ),
-              _StatItem(
-                icon: Icons.schedule,
-                value: trip.formattedTotalDuration,
-                label: 'Dauer',
-              ),
-            ],
-          ),
+        // Tages-Auswahl (nur bei Mehrtages-Trips)
+        if (trip.actualDays > 1) ...[
+          const DayTabSelector(),
+          const SizedBox(height: 16),
+        ],
+
+        // Statistiken (bei Mehrtages-Trip: für ausgewählten Tag)
+        _TripStatistics(
+          trip: trip,
+          selectedDay: state.selectedDay,
+          isMultiDay: trip.actualDays > 1,
         ),
         const SizedBox(height: 16),
 
@@ -103,14 +92,100 @@ class TripPreviewCard extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
-        // Stop-Liste
+        // Stop-Liste (bei Mehrtages-Trip: nur ausgewählter Tag)
         _StopList(
           trip: trip,
           startAddress: state.startAddress!,
-          isLoading: state.isLoading,
+          loadingPOIId: state.loadingPOIId,
+          canRemovePOI: state.canRemovePOI,
           onReroll: (poiId) => notifier.rerollPOI(poiId),
+          onRemove: (poiId) => notifier.removePOI(poiId),
+          selectedDay: trip.actualDays > 1 ? state.selectedDay : null,
         ),
       ],
+    );
+  }
+}
+
+class _TripStatistics extends StatelessWidget {
+  final Trip trip;
+  final int selectedDay;
+  final bool isMultiDay;
+
+  const _TripStatistics({
+    required this.trip,
+    required this.selectedDay,
+    required this.isMultiDay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Bei Mehrtages-Trip: Statistiken für ausgewählten Tag
+    final stopsForDay = isMultiDay ? trip.getStopsForDay(selectedDay) : trip.stops;
+    final stopCount = stopsForDay.length;
+
+    // Warnung wenn Tag das Limit überschreitet
+    final isOverLimit = stopCount > TripConstants.maxPoisPerDay;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isOverLimit
+            ? Colors.orange.withOpacity(0.15)
+            : colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: isOverLimit
+            ? Border.all(color: Colors.orange, width: 1)
+            : null,
+      ),
+      child: Column(
+        children: [
+          if (isOverLimit)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Max ${TripConstants.maxPoisPerDay} Stops pro Tag (Google Maps Limit)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatItem(
+                icon: Icons.place,
+                value: '$stopCount',
+                label: isMultiDay ? 'Stops (Tag $selectedDay)' : 'Stops',
+                isWarning: isOverLimit,
+              ),
+              _StatItem(
+                icon: Icons.straighten,
+                value: isMultiDay
+                    ? '~${trip.getDistanceForDay(selectedDay).toStringAsFixed(0)} km'
+                    : trip.route.formattedDistance,
+                label: 'Distanz',
+              ),
+              _StatItem(
+                icon: Icons.calendar_today,
+                value: '${trip.actualDays}',
+                label: trip.actualDays == 1 ? 'Tag' : 'Tage',
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -119,31 +194,37 @@ class _StatItem extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
+  final bool isWarning;
 
   const _StatItem({
     required this.icon,
     required this.value,
     required this.label,
+    this.isWarning = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = isWarning ? Colors.orange.shade800 : colorScheme.onPrimaryContainer;
+
     return Column(
       children: [
-        Icon(icon, color: AppTheme.primaryColor, size: 20),
+        Icon(icon, color: textColor, size: 20),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
+            color: textColor,
           ),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: AppTheme.textSecondary,
+            color: textColor.withOpacity(0.7),
           ),
         ),
       ],
@@ -159,7 +240,9 @@ class _TripMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Alle Punkte fur Bounds
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Alle Punkte für Bounds
     final allPoints = [
       startLocation,
       ...trip.stops.map((s) => s.location),
@@ -189,7 +272,7 @@ class _TripMap extends StatelessWidget {
             Polyline(
               points: trip.route.coordinates,
               strokeWidth: 4,
-              color: AppTheme.primaryColor,
+              color: colorScheme.primary,
             ),
           ],
         ),
@@ -223,7 +306,7 @@ class _TripMap extends StatelessWidget {
                 height: 36,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
+                    color: colorScheme.primary,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -246,19 +329,58 @@ class _TripMap extends StatelessWidget {
 class _StopList extends StatelessWidget {
   final Trip trip;
   final String startAddress;
-  final bool isLoading;
+  final String? loadingPOIId;
+  final bool canRemovePOI;
   final Function(String) onReroll;
+  final Function(String) onRemove;
+  final int? selectedDay; // Null = alle Tage anzeigen
 
   const _StopList({
     required this.trip,
     required this.startAddress,
-    required this.isLoading,
+    required this.loadingPOIId,
+    required this.canRemovePOI,
     required this.onReroll,
+    required this.onRemove,
+    this.selectedDay,
   });
 
   @override
   Widget build(BuildContext context) {
-    final stops = trip.sortedStops;
+    // Stops basierend auf ausgewähltem Tag filtern
+    final stops = selectedDay != null
+        ? trip.getStopsForDay(selectedDay!)
+        : trip.sortedStops;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isMultiDay = trip.actualDays > 1;
+
+    // Start-Label basierend auf Tag
+    String startLabel;
+    String endLabel;
+    if (isMultiDay && selectedDay != null) {
+      if (selectedDay == 1) {
+        startLabel = 'Start (Tag 1)';
+      } else {
+        // Vorheriger Tag: letzter Stop
+        final prevDayStops = trip.getStopsForDay(selectedDay! - 1);
+        startLabel = prevDayStops.isNotEmpty
+            ? 'Von: ${prevDayStops.last.name}'
+            : 'Tag $selectedDay Start';
+      }
+
+      if (selectedDay == trip.actualDays) {
+        endLabel = 'Zurück zum Start';
+      } else {
+        // Nächster Tag: erster Stop als Ziel
+        final nextDayStops = trip.getStopsForDay(selectedDay! + 1);
+        endLabel = nextDayStops.isNotEmpty
+            ? 'Weiter nach: ${nextDayStops.first.name}'
+            : 'Ende Tag $selectedDay';
+      }
+    } else {
+      startLabel = 'Start';
+      endLabel = 'Zurück zum Start';
+    }
 
     return Column(
       children: [
@@ -266,38 +388,48 @@ class _StopList extends StatelessWidget {
         _StopItem(
           icon: Icons.home,
           iconColor: Colors.green,
-          title: 'Start',
-          subtitle: startAddress,
+          title: startLabel,
+          subtitle: isMultiDay && selectedDay != null && selectedDay != 1
+              ? null
+              : startAddress,
           isFirst: true,
         ),
 
         // Stops
         ...stops.asMap().entries.map((entry) {
-          final index = entry.key;
           final stop = entry.value;
+          final isThisPOILoading = loadingPOIId == stop.poiId;
           return _StopItem(
             icon: null,
             emoji: stop.categoryIcon,
-            iconColor: AppTheme.primaryColor,
+            iconColor: colorScheme.primary,
             title: stop.name,
             subtitle: stop.detourKm != null
                 ? '+${stop.detourKm!.toStringAsFixed(1)} km Umweg'
                 : null,
             isOvernightStop: stop.isOvernightStop,
-            trailing: POIRerollButton(
+            trailing: POIActionButtons(
               poiId: stop.poiId,
-              isLoading: isLoading,
+              isLoading: isThisPOILoading,
+              canDelete: canRemovePOI,
               onReroll: () => onReroll(stop.poiId),
+              onDelete: () => onRemove(stop.poiId),
             ),
           );
         }),
 
-        // Zurück zum Start
+        // Ende
         _StopItem(
-          icon: Icons.flag,
-          iconColor: Colors.red,
-          title: 'Zuruck zum Start',
-          subtitle: startAddress,
+          icon: selectedDay == trip.actualDays || !isMultiDay
+              ? Icons.flag
+              : Icons.arrow_forward,
+          iconColor: selectedDay == trip.actualDays || !isMultiDay
+              ? Colors.red
+              : Colors.blue,
+          title: endLabel,
+          subtitle: selectedDay == trip.actualDays || !isMultiDay
+              ? startAddress
+              : null,
           isLast: true,
         ),
       ],
@@ -330,6 +462,8 @@ class _StopItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -342,7 +476,7 @@ class _StopItem extends StatelessWidget {
                 Container(
                   width: 2,
                   height: 16,
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: colorScheme.primary.withOpacity(0.3),
                 ),
               Container(
                 width: 32,
@@ -362,7 +496,7 @@ class _StopItem extends StatelessWidget {
                 Container(
                   width: 2,
                   height: 16,
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: colorScheme.primary.withOpacity(0.3),
                 ),
             ],
           ),
@@ -392,11 +526,11 @@ class _StopItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.1),
+                          color: Colors.purple.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
-                          '🏨 Ubernachtung',
+                          '🏨 Übernachtung',
                           style: TextStyle(fontSize: 10),
                         ),
                       ),
@@ -408,7 +542,7 @@ class _StopItem extends StatelessWidget {
                     subtitle!,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
               ],

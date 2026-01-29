@@ -1,7 +1,7 @@
 import 'package:latlong2/latlong.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
-import '../utils/geo_utils.dart';
+import '../constants/trip_constants.dart';
 import 'route_optimizer.dart';
 
 /// Algorithmus zur Tagesaufteilung für Mehrtages-Trips
@@ -109,24 +109,50 @@ class DayPlanner {
   }
 
   /// Clustert POIs geografisch in [days] Gruppen
+  /// Beachtet das Google Maps Limit von max 9 POIs pro Tag
   List<List<POI>> _clusterPOIsByGeography(List<POI> pois, int days) {
     if (pois.length <= days) {
       // Weniger POIs als Tage: jeder POI ein Tag
       return pois.map((p) => [p]).toList();
     }
 
-    // Einfaches geografisches Clustering basierend auf Position in der Liste
-    // Die Liste ist bereits durch RouteOptimizer sortiert
-    final poisPerDay = (pois.length / days).ceil();
+    // Berechne POIs pro Tag, aber max 9 (Google Maps Limit)
+    var poisPerDay = (pois.length / days).ceil();
+    poisPerDay = poisPerDay.clamp(
+      TripConstants.minPoisPerDay,
+      TripConstants.maxPoisPerDay,
+    );
+
     final clusters = <List<POI>>[];
+    var currentIndex = 0;
 
-    for (int i = 0; i < days; i++) {
-      final startIdx = i * poisPerDay;
-      final endIdx = (startIdx + poisPerDay).clamp(0, pois.length);
+    // Verteile POIs auf Tage
+    for (int i = 0; i < days && currentIndex < pois.length; i++) {
+      final remaining = pois.length - currentIndex;
+      final remainingDays = days - i;
 
-      if (startIdx < pois.length) {
-        clusters.add(pois.sublist(startIdx, endIdx));
+      // Berechne, wie viele POIs für diesen Tag
+      var countForThisDay = (remaining / remainingDays).ceil();
+      countForThisDay = countForThisDay.clamp(
+        TripConstants.minPoisPerDay,
+        TripConstants.maxPoisPerDay,
+      );
+
+      // Stelle sicher, dass wir nicht über das Ende hinausgehen
+      final endIdx = (currentIndex + countForThisDay).clamp(0, pois.length);
+
+      if (currentIndex < pois.length) {
+        clusters.add(pois.sublist(currentIndex, endIdx));
+        currentIndex = endIdx;
       }
+    }
+
+    // Falls POIs übrig sind (wegen 9er-Limit), verteile sie auf zusätzliche Tage
+    while (currentIndex < pois.length) {
+      final endIdx = (currentIndex + TripConstants.maxPoisPerDay)
+          .clamp(0, pois.length);
+      clusters.add(pois.sublist(currentIndex, endIdx));
+      currentIndex = endIdx;
     }
 
     return clusters;
@@ -207,6 +233,7 @@ class DayPlanner {
   }
 
   /// Schätzt die optimale Anzahl von POIs pro Tag
+  /// Berücksichtigt Google Maps Limit von 9 Waypoints
   static int estimatePoisPerDay({
     int hoursPerDay = 6,
     int avgVisitDurationMinutes = 45,
@@ -214,29 +241,20 @@ class DayPlanner {
   }) {
     final totalMinutes = hoursPerDay * 60;
     final minutesPerStop = avgVisitDurationMinutes + avgDrivingMinutesBetweenStops;
-    return (totalMinutes / minutesPerStop).floor().clamp(2, 8);
+    return (totalMinutes / minutesPerStop)
+        .floor()
+        .clamp(TripConstants.minPoisPerDay, TripConstants.maxPoisPerDay);
   }
 
   /// Berechnet empfohlene Radius basierend auf Tagen
+  /// Verwendet 600km pro Tag als Basis
   static double calculateRecommendedRadius(int days) {
-    // Mehr Tage = größerer Radius
-    switch (days) {
-      case 1:
-        return 100; // Tagesausflug
-      case 2:
-        return 200;
-      case 3:
-        return 300;
-      case 4:
-        return 400;
-      case 5:
-        return 500;
-      case 6:
-        return 600;
-      case 7:
-      default:
-        return 700;
-    }
+    return TripConstants.calculateRadiusFromDays(days);
+  }
+
+  /// Berechnet die Anzahl der Tage basierend auf dem Radius
+  static int calculateDaysFromRadius(double radiusKm) {
+    return TripConstants.calculateDaysFromDistance(radiusKm);
   }
 }
 

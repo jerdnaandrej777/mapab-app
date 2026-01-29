@@ -6,13 +6,17 @@ import '../../../core/constants/categories.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
 import '../../../data/services/hotel_service.dart';
+import '../../map/providers/route_planner_provider.dart';
+import '../../map/providers/route_session_provider.dart';
+import '../../poi/providers/poi_state_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
 import 'random_trip_state.dart';
 
 part 'random_trip_provider.g.dart';
 
 /// Notifier für Random Trip State Management
-@riverpod
+/// keepAlive: true damit der State beim Wechsel zwischen Modi erhalten bleibt
+@Riverpod(keepAlive: true)
 class RandomTripNotifier extends _$RandomTripNotifier {
   late TripGeneratorRepository _tripGenerator;
   late GeocodingRepository _geocodingRepo;
@@ -29,7 +33,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     state = state.copyWith(
       mode: mode,
       days: mode == RandomTripMode.daytrip ? 1 : 3,
-      radiusKm: mode == RandomTripMode.daytrip ? 100 : 300,
+      radiusKm: mode == RandomTripMode.daytrip ? 100 : 1000,
     );
   }
 
@@ -170,21 +174,26 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           poiCount: (state.radiusKm / 20).clamp(3, 8).round(),
         );
       } else {
+        // Euro Trip: Radius übergeben, Tage werden automatisch berechnet
+        print('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}');
         result = await _tripGenerator.generateEuroTrip(
           startLocation: state.startLocation!,
           startAddress: state.startAddress!,
-          days: state.days,
+          radiusKm: state.radiusKm,
           categories: state.selectedCategories,
           includeHotels: state.includeHotels,
         );
+        print('[RandomTrip] Euro Trip generiert! POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }
 
+      print('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
       state = state.copyWith(
         generatedTrip: result,
         hotelSuggestions: result.hotelSuggestions ?? [],
         step: RandomTripStep.preview,
         isLoading: false,
       );
+      print('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
     } on TripGenerationException catch (e) {
       state = state.copyWith(
         step: RandomTripStep.config,
@@ -209,7 +218,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   Future<void> rerollPOI(String poiId) async {
     if (state.generatedTrip == null) return;
 
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(
+      isLoading: true,
+      loadingPOIId: poiId,
+    );
 
     try {
       final result = await _tripGenerator.rerollPOI(
@@ -223,11 +235,52 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       state = state.copyWith(
         generatedTrip: result,
         isLoading: false,
+        loadingPOIId: null,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        loadingPOIId: null,
         error: 'POI konnte nicht neu gewürfelt werden',
+      );
+    }
+  }
+
+  /// Entfernt einen einzelnen POI aus dem Trip
+  Future<void> removePOI(String poiId) async {
+    if (state.generatedTrip == null) return;
+
+    // Prüfen ob genug POIs übrig bleiben
+    if (state.generatedTrip!.selectedPOIs.length <= 2) {
+      state = state.copyWith(
+        error: 'Mindestens 2 Stops müssen im Trip bleiben',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      loadingPOIId: poiId,
+    );
+
+    try {
+      final result = await _tripGenerator.removePOI(
+        currentTrip: state.generatedTrip!,
+        poiIdToRemove: poiId,
+        startLocation: state.startLocation!,
+        startAddress: state.startAddress!,
+      );
+
+      state = state.copyWith(
+        generatedTrip: result,
+        isLoading: false,
+        loadingPOIId: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        loadingPOIId: null,
+        error: 'POI konnte nicht entfernt werden: $e',
       );
     }
   }
@@ -243,6 +296,19 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   void confirmTrip() {
     final generatedTrip = state.generatedTrip;
     if (generatedTrip == null) return;
+
+    // Bestehende Route im Route-Planner löschen (überschreibt alte Route)
+    final routePlannerNotifier = ref.read(routePlannerProvider.notifier);
+    routePlannerNotifier.clearStart();
+    routePlannerNotifier.clearEnd();
+
+    // Alte Route-Session stoppen (löscht auch POIs)
+    ref.read(routeSessionProvider.notifier).stopRoute();
+
+    // Alte POIs löschen
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    poiNotifier.clearPOIs();
+    print('[RandomTrip] Alte POIs gelöscht');
 
     // Route und Stops an TripStateProvider übergeben
     final tripStateNotifier = ref.read(tripStateProvider.notifier);
@@ -274,5 +340,36 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Löscht Fehler
   void clearError() {
     state = state.copyWith(error: null);
+  }
+
+  /// Wählt einen Tag aus (für tagesweisen Export)
+  void selectDay(int dayNumber) {
+    final maxDay = state.generatedTrip?.trip.actualDays ?? 1;
+    final clampedDay = dayNumber.clamp(1, maxDay);
+    state = state.copyWith(selectedDay: clampedDay);
+  }
+
+  /// Markiert einen Tag als abgeschlossen/exportiert
+  void completeDay(int dayNumber) {
+    final updatedDays = Set<int>.from(state.completedDays)..add(dayNumber);
+    state = state.copyWith(completedDays: updatedDays);
+
+    // Automatisch zum nächsten Tag wechseln, falls vorhanden
+    final maxDay = state.generatedTrip?.trip.actualDays ?? 1;
+    if (dayNumber < maxDay) {
+      state = state.copyWith(selectedDay: dayNumber + 1);
+    }
+  }
+
+  /// Setzt den Abschluss-Status eines Tages zurück
+  void uncompleteDay(int dayNumber) {
+    final updatedDays = Set<int>.from(state.completedDays)..remove(dayNumber);
+    state = state.copyWith(completedDays: updatedDays);
+  }
+
+  /// Prüft ob alle Tage abgeschlossen sind
+  bool get allDaysCompleted {
+    final totalDays = state.generatedTrip?.trip.actualDays ?? 1;
+    return state.completedDays.length >= totalDays;
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
-/// Vorschlag-Chips für schnelle Eingaben
+/// Vorschlag-Chips für schnelle Eingaben - Dark-Mode kompatibel
 class SuggestionChips extends StatelessWidget {
   final List<String> suggestions;
   final ValueChanged<String> onSelected;
@@ -14,6 +13,8 @@ class SuggestionChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -24,7 +25,7 @@ class SuggestionChips extends StatelessWidget {
             child: Text(
               'Vorschläge',
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -32,7 +33,7 @@ class SuggestionChips extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: 36,
+            height: 40,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -63,23 +64,29 @@ class _SuggestionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorScheme.primary.withOpacity(0.3),
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: AppTheme.primaryColor,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+          child: Text(
+            text,
+            style: TextStyle(
+              color: colorScheme.primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),

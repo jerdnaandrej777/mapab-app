@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,11 +39,12 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     try {
       notifier.selectPOIById(widget.poiId);
 
-      // Enrichment triggern wenn noch nicht angereichert (NICHT-BLOCKIEREND)
+      // FIX v1.6.7: Enrichment BLOCKIEREND warten
+      // Vorher: unawaited → UI zeigte ungereichterten POI (ohne Foto/Highlights)
+      // Nachher: await → UI zeigt Loading, dann vollständige Daten
       final state = ref.read(pOIStateNotifierProvider);
       if (state.selectedPOI != null && !state.selectedPOI!.isEnriched) {
-        // unawaited: Enrichment läuft im Hintergrund, UI wird über State-Änderungen aktualisiert
-        unawaited(notifier.enrichPOI(widget.poiId));
+        await notifier.enrichPOI(widget.poiId);
       }
     } catch (e) {
       debugPrint('[POIDetail] POI nicht gefunden: ${widget.poiId}');

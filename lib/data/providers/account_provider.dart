@@ -16,8 +16,8 @@ class AccountNotifier extends _$AccountNotifier {
 
   @override
   Future<UserAccount?> build() async {
-    // Hive Box öffnen
-    _accountBox = await Hive.openBox('user_accounts');
+    // Box ist bereits in main.dart geöffnet - nur Referenz holen
+    _accountBox = Hive.box('user_accounts');
 
     // Lade aktiven Account
     return await _loadActiveAccount();
