@@ -1,8 +1,16 @@
 # Laravel Backend Migration
 
-Diese Dokumentation beschreibt den geplanten Umstieg von Vercel + Supabase auf ein eigenes Laravel-Backend.
+> **STATUS: GEPLANT - NICHT IMPLEMENTIERT**
+>
+> Dieses Dokument beschreibt eine **geplante** Migration, die noch **nicht umgesetzt** wurde.
+>
+> **Aktueller Backend-Stack:** Node.js/TypeScript auf Vercel + Supabase
+>
+> Diese Migration ist für die Zukunft geplant, hat aber keinen festen Zeitplan.
 
-**Status:** In Planung
+---
+
+Diese Dokumentation beschreibt den geplanten Umstieg von Vercel + Supabase auf ein eigenes Laravel-Backend.
 
 ---
 

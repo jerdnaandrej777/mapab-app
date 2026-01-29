@@ -8,6 +8,7 @@ import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
 import '../../data/models/poi.dart';
 import '../../data/services/ai_service.dart';
+import '../../data/services/poi_enrichment_service.dart';
 import '../../data/repositories/geocoding_repo.dart';
 import '../../data/repositories/poi_repo.dart';
 import '../../data/repositories/trip_generator_repo.dart';
@@ -1003,6 +1004,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             '📍 **${sortedPOIs.length} POIs** im Umkreis von ${_searchRadius.toInt()} km:';
       }
 
+      // POIs sofort anzeigen (mit Kategorie-Icons als Placeholder)
       setState(() {
         _isLoading = false;
         _messages.add({
@@ -1013,6 +1015,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         });
       });
       _scrollToBottom();
+
+      // OPTIMIERT v1.7.6: Hintergrund-Enrichment für Bilder im Chat
+      // POIs werden sofort angezeigt, Bilder laden asynchron nach
+      final messageIndex = _messages.length - 1;
+      final poisToEnrich = sortedPOIs
+          .where((p) => p.imageUrl == null && !p.isEnriched)
+          .take(10)
+          .toList();
+
+      if (poisToEnrich.isNotEmpty) {
+        debugPrint('[AI-Chat] Starte Hintergrund-Enrichment für ${poisToEnrich.length} POIs');
+        final enrichmentService = ref.read(poiEnrichmentServiceProvider);
+        final enrichedMap = await enrichmentService.enrichPOIsBatch(poisToEnrich);
+
+        if (mounted && messageIndex < _messages.length) {
+          // Bestehende Nachricht mit angereicherten POIs aktualisieren
+          final updatedPOIs = sortedPOIs.map((poi) {
+            return enrichedMap[poi.id] ?? poi;
+          }).toList();
+
+          setState(() {
+            _messages[messageIndex] = {
+              ..._messages[messageIndex],
+              'pois': updatedPOIs,
+            };
+          });
+          debugPrint('[AI-Chat] Hintergrund-Enrichment abgeschlossen - Bilder aktualisiert');
+        }
+      }
     } catch (e) {
       debugPrint('[AI-Chat] POI-Suche Fehler: $e');
 

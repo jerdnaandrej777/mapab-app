@@ -18,7 +18,24 @@
       "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" emulators)",
       "Bash(cmd.exe /c \"cd /d C:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP && flutter run\")",
       "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" emulators --launch Pixel_6)",
-      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" run)"
+      "Bash(\"C:\\\\Users\\\\Gejer\\\\flutter\\\\bin\\\\flutter.bat\" run)",
+      "Bash(flutter analyze:*)",
+      "Bash(npm install:*)",
+      "Bash(flutter build:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: MapAB v1.3.0 - Google Maps Export & Route Teilen\n\n- Google Maps Export: Route mit Start, Ziel und Waypoints in Maps öffnen\n- Route Teilen: Share-Funktion für WhatsApp, Email, SMS etc.\n- SnackBar Fix: POI hinzufügen Bestätigung verschwindet nach 2s automatisch\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(gh:*)",
+      "Bash(node generate-icons.js:*)",
+      "Bash(grep:*)",
+      "Bash(cmd /c copy:*)",
+      "Bash(copy:*)",
+      "Bash(.build_release.bat)",
+      "Bash(cmd /c \"build_release.bat\")",
+      "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP && build_release.bat\")",
+      "Bash(cmd /c build_release.bat)",
+      "Bash(npx qrcode:*)"
     ]
   }
 }

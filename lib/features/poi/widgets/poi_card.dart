@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../map/widgets/weather_bar.dart';
 
 /// POI-Karte für Liste - Kompaktes horizontales Layout
 class POICard extends StatelessWidget {
@@ -16,6 +17,7 @@ class POICard extends StatelessWidget {
   final VoidCallback? onAddToTrip;
   final bool showWeatherWarning;
   final List<POIHighlight> highlights;
+  final WeatherCondition? weatherCondition;
 
   const POICard({
     super.key,
@@ -30,6 +32,7 @@ class POICard extends StatelessWidget {
     this.onAddToTrip,
     this.showWeatherWarning = false,
     this.highlights = const [],
+    this.weatherCondition,
   });
 
   // Bildgröße: 88x88 für kompaktes, ausgewogenes Layout
@@ -105,7 +108,7 @@ class POICard extends StatelessWidget {
 
                           const SizedBox(height: 4),
 
-                          // Kategorie-Label & Distanz
+                          // Kategorie-Label & Distanz & Wetter-Badge
                           Row(
                             children: [
                               Text(
@@ -115,6 +118,14 @@ class POICard extends StatelessWidget {
                                   fontSize: 12,
                                 ),
                               ),
+                              // Wetter-Badge anzeigen (v1.7.6)
+                              if (weatherCondition != null) ...[
+                                const SizedBox(width: 6),
+                                WeatherBadge(
+                                  overallCondition: weatherCondition!,
+                                  isIndoorPOI: category.isIndoor,
+                                ),
+                              ],
                               if (distance != null) ...[
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 6),

@@ -627,6 +627,7 @@ out center;
   }
 
   /// Parst Overpass POI
+  /// OPTIMIERT v1.7.6: Extrahiert OSM image/wikimedia_commons/wikidata/wikipedia Tags
   POI _parseOverpassPOI(Map<String, dynamic> data) {
     final tags = data['tags'] as Map<String, dynamic>? ?? {};
 
@@ -654,6 +655,34 @@ out center;
       category = 'church';
     }
 
+    // OSM Bild-Tags extrahieren
+    final osmImageTag = tags['image'] as String?;
+    final wikimediaCommonsTag = tags['wikimedia_commons'] as String?;
+    final wikidataTag = tags['wikidata'] as String?;
+    final wikipediaTag = tags['wikipedia'] as String?;
+
+    // Bild-URL aus OSM-Tags ableiten
+    String? imageUrl = osmImageTag;
+    if (imageUrl == null && wikimediaCommonsTag != null) {
+      // wikimedia_commons Tag: "File:Name.jpg" → URL
+      if (wikimediaCommonsTag.startsWith('File:')) {
+        final filename = Uri.encodeComponent(
+          wikimediaCommonsTag.replaceFirst('File:', ''),
+        );
+        imageUrl =
+            'https://commons.wikimedia.org/wiki/Special:FilePath/$filename?width=800';
+      }
+    }
+
+    // Wikipedia-Titel aus Tag parsen (Format: "de:Artikelname")
+    String? wpTitle;
+    if (wikipediaTag != null) {
+      final parts = wikipediaTag.split(':');
+      if (parts.length >= 2 && parts[0] == 'de') {
+        wpTitle = parts.sublist(1).join(':');
+      }
+    }
+
     return POI(
       id: 'osm-${data['type']}-${data['id']}',
       name: tags['name'] ?? 'Unbekannt',
@@ -664,7 +693,11 @@ out center;
       website: tags['website'],
       phone: tags['phone'],
       openingHours: tags['opening_hours'],
-      hasWikidataData: tags['website'] != null || tags['phone'] != null,
+      imageUrl: imageUrl,
+      wikidataId: wikidataTag,
+      wikipediaTitle: wpTitle,
+      hasWikipedia: wpTitle != null,
+      hasWikidataData: tags['website'] != null || tags['phone'] != null || wikidataTag != null,
     );
   }
 }

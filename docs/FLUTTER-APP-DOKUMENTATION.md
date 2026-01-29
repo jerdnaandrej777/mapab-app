@@ -1,11 +1,14 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.3.0 (22. Januar 2026)
+Version: 1.7.6 (29. Januar 2026)
 
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Neu in v1.3.0](#neu-in-v130) ⭐ AKTUELL
+2. [Neu in v1.3.6](#neu-in-v136) ⭐ AKTUELL
+3. [Neu in v1.3.5](#neu-in-v135)
+4. [Neu in v1.3.4](#neu-in-v134)
+4. [Neu in v1.3.0](#neu-in-v130)
 3. [Neu in v1.2.9](#neu-in-v129)
 4. [Neu in v1.2.8](#neu-in-v128)
 5. [Neu in v1.2.7](#neu-in-v127)
@@ -42,18 +45,213 @@ Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Androi
 
 ### Download & Installation
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.3.0
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.6
 
 **Direkter APK-Download:**
 ```
-https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.3.0/MapAB-v1.3.0.apk
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.6/MapAB-v1.7.6.apk
 ```
 
 **Installationsschritte:**
-1. APK herunterladen (56.5 MB)
+1. APK herunterladen (57 MB)
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
+
+---
+
+## Neu in v1.3.6
+
+**Release-Datum:** 23. Januar 2026
+
+### ⚡ Haupt-Feature: Performance-Optimierungen
+
+Version 1.3.6 bringt signifikante Performance-Verbesserungen für das Laden der POI-Liste und Bilder.
+
+#### Paralleles POI-Laden
+
+Die drei POI-Datenquellen werden jetzt **gleichzeitig** statt nacheinander geladen:
+
+| Metrik | v1.3.5 | v1.3.6 | Verbesserung |
+|--------|--------|--------|--------------|
+| POI-Laden (kalt) | ~5.5s | ~3.0s | **45% schneller** |
+| POI-Laden (Cache) | ~5.5s | ~0.1s | **98% schneller** |
+
+#### 💾 Region-Cache
+
+POIs werden nach Region gecached:
+- **Cache-Dauer:** 7 Tage
+- **Ergebnis:** Sofortiges Laden bei erneutem Besuch derselben Region
+
+#### 🖼️ Optimiertes Bild-Laden
+
+- **Batch-Enrichment:** Max 3 POIs gleichzeitig, 500ms Pause zwischen Batches
+- **Speichereffizient:** Bilder werden auf Zielgröße (400x140px) skaliert
+- **On-Demand Loading:** Bilder werden erst bei Sichtbarkeit geladen
+
+#### 📜 ListView Performance
+
+- `cacheExtent: 500` - Mehr Items werden vorgerendert
+- `addAutomaticKeepAlives: true` - Sichtbare Items bleiben im Speicher
+- Flüssigeres Scrollen durch weniger Rebuilds
+
+#### Geänderte Dateien
+
+```
+lib/data/repositories/poi_repo.dart         # Paralleles Laden + Region-Cache
+lib/features/poi/poi_list_screen.dart       # Batch-Enrichment + ListView Optimierungen
+lib/features/poi/widgets/poi_card.dart      # memCacheWidth/Height + Fade-Optimierungen
+```
+
+#### Technische Details
+
+Siehe: [CHANGELOG-v1.3.6.md](CHANGELOG-v1.3.6.md) für vollständige technische Dokumentation.
+
+---
+
+## Neu in v1.3.5
+
+**Release-Datum:** 23. Januar 2026
+
+### 🤖 Haupt-Feature: AI Trip Button
+
+Der neue "AI Trip" Button auf der Hauptkarte bietet direkten Zugang zum AI-gestützten Trip Generator.
+
+#### Features
+
+- **Neuer Button auf der Karte** - Ersetzt den "Landschaft"-Button
+- **Ein-Klick AI Trip** - Direkter Start der AI-Routenplanung
+- **Umbenennung** - "Zufalls-Trip" → "AI Trip" für bessere Klarheit
+
+#### UI-Design
+
+```
+┌────────────────────────────────┐
+│ 🟢 München                [X]  │
+│─────────────────────────────────│
+│ 📍 Berlin                 [X]  │
+└────────────────────────────────┘
+
+    [Schnell]  [AI Trip]           ← NEU
+
+    [🗑️ Route löschen]
+
+    [▶️ Route starten - 584 km]
+```
+
+#### Geänderte Dateien
+
+```
+lib/features/map/map_screen.dart                              # AI Trip Button
+lib/features/random_trip/random_trip_screen.dart              # Titel: AI Tagesausflug/AI Euro Trip
+lib/features/random_trip/providers/random_trip_state.dart     # Mode Labels umbenannt
+```
+
+### 🔐 Haupt-Feature: Anmeldedaten merken (Remember Me)
+
+Login-Credentials können jetzt sicher lokal gespeichert werden.
+
+#### Features
+
+- **Checkbox "Anmeldedaten merken"** - Im Login-Screen
+- **Automatisches Ausfüllen** - Beim nächsten App-Start
+- **Sichere Speicherung** - Base64-Encoding in Hive
+- **Manuelle Löschung** - Durch Deaktivieren der Checkbox
+
+#### UI-Design
+
+```
+┌────────────────────────────────────────┐
+│  E-Mail                                │
+│  ┌──────────────────────────────────┐  │
+│  │ user@example.com                 │  │
+│  └──────────────────────────────────┘  │
+│                                        │
+│  Passwort                              │
+│  ┌──────────────────────────────────┐  │
+│  │ ••••••••••                    👁  │  │
+│  └──────────────────────────────────┘  │
+│                                        │
+│  [✓] Anmeldedaten merken   Passwort vergessen?  │  ← NEU
+│                                        │
+│  [        Anmelden        ]            │
+└────────────────────────────────────────┘
+```
+
+#### Geänderte Dateien
+
+```
+lib/data/providers/settings_provider.dart   # Remember Me State + Methoden
+lib/features/auth/login_screen.dart         # Checkbox + Auto-Fill
+```
+
+#### Technische Details
+
+- **Speicherort:** Hive Box "settings"
+- **Encoding:** Base64 für Passwort-Obfuskation
+- **Getter:** `settings.savedPassword` dekodiert automatisch
+- **Check:** `settings.hasStoredCredentials` prüft ob vollständig
+
+---
+
+## Neu in v1.3.4
+
+**Release-Datum:** 23. Januar 2026
+
+### 🗑️ Haupt-Feature: Route Löschen Funktionalität
+
+Die App bietet jetzt umfassende Möglichkeiten zum Löschen von Routen.
+
+#### Features
+
+- **X-Buttons in Suchleiste** - Start oder Ziel einzeln löschen
+- **"Route löschen" Button** - Komplette Route mit einem Klick zurücksetzen
+- **TripScreen Menü** - "Gesamte Route löschen" Option mit Bestätigungsdialog
+- **Zufalls-Trip überschreibt Route** - Bestehende Route wird automatisch ersetzt
+
+#### UI-Design
+
+```
+┌────────────────────────────────┐
+│ 🟢 München                [X]  │  ← X-Button
+│─────────────────────────────────│
+│ 📍 Berlin                 [X]  │  ← X-Button
+└────────────────────────────────┘
+
+    [Schnell]  [AI Trip]
+
+    [🗑️ Route löschen]           ← NEU v1.3.4
+
+    [▶️ Route starten - 584 km]
+```
+
+#### Geänderte Dateien
+
+```
+lib/features/map/providers/route_planner_provider.dart  # clearRoute() Methode
+lib/features/map/map_screen.dart                        # X-Buttons + Route löschen Button
+lib/features/trip/trip_screen.dart                      # Gesamte Route löschen Menüpunkt
+lib/features/random_trip/providers/random_trip_provider.dart  # Route-Reset
+```
+
+#### Code-Beispiel
+
+```dart
+// Route komplett löschen (Start + Ziel + Route + Trip-State)
+ref.read(routePlannerProvider.notifier).clearRoute();
+
+// Einzeln löschen
+ref.read(routePlannerProvider.notifier).clearStart();
+ref.read(routePlannerProvider.notifier).clearEnd();
+```
+
+### 🔧 Build-System Updates
+
+| Komponente | Vorher | Nachher |
+|------------|--------|---------|
+| Android Gradle Plugin | 8.5.0 | 8.9.1 |
+| Gradle | 8.7 | 8.11.1 |
+| NDK | 26.1 | 28.2 |
 
 ---
 

@@ -208,3 +208,113 @@ class IndoorOnlyFilter extends _$IndoorOnlyFilter {
     state = enabled;
   }
 }
+
+/// State für Standort-Wetter (v1.7.6)
+class LocationWeatherState {
+  final Weather? weather;
+  final String? locationName;
+  final bool isLoading;
+  final String? error;
+  final DateTime? lastUpdated;
+
+  const LocationWeatherState({
+    this.weather,
+    this.locationName,
+    this.isLoading = false,
+    this.error,
+    this.lastUpdated,
+  });
+
+  LocationWeatherState copyWith({
+    Weather? weather,
+    String? locationName,
+    bool? isLoading,
+    String? error,
+    DateTime? lastUpdated,
+  }) {
+    return LocationWeatherState(
+      weather: weather ?? this.weather,
+      locationName: locationName ?? this.locationName,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  /// Hat gueltige Wetterdaten
+  bool get hasWeather => weather != null;
+
+  /// Wetter-Zustand
+  WeatherCondition get condition => weather?.condition ?? WeatherCondition.unknown;
+
+  /// Ist das Wetter schlecht?
+  bool get isBadWeather =>
+      condition == WeatherCondition.bad || condition == WeatherCondition.danger;
+
+  /// Soll eine Warnung angezeigt werden?
+  bool get showWarning => weather?.showWarning ?? false;
+
+  /// Cache noch gueltig (15 Minuten)
+  bool get isCacheValid {
+    if (lastUpdated == null) return false;
+    return DateTime.now().difference(lastUpdated!).inMinutes < 15;
+  }
+}
+
+/// Provider für Standort-Wetter (v1.7.6)
+/// Zeigt Wetter am aktuellen GPS-Standort, auch ohne Route
+@riverpod
+class LocationWeatherNotifier extends _$LocationWeatherNotifier {
+  @override
+  LocationWeatherState build() {
+    return const LocationWeatherState();
+  }
+
+  /// Lädt Wetter für den aktuellen Standort
+  Future<void> loadWeatherForLocation(LatLng position, {String? locationName}) async {
+    // Cache pruefen
+    if (state.isCacheValid && state.hasWeather) {
+      debugPrint('[LocationWeather] Cache gueltig, ueberspringe');
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final weatherRepo = ref.read(weatherRepositoryProvider);
+
+      // Wetter mit 7-Tage-Vorhersage laden
+      final weather = await weatherRepo.getWeatherWithForecast(position);
+
+      state = LocationWeatherState(
+        weather: weather,
+        locationName: locationName,
+        isLoading: false,
+        lastUpdated: DateTime.now(),
+      );
+
+      debugPrint('[LocationWeather] Wetter geladen: ${weather.description}, ${weather.formattedTemperature}');
+
+      if (weather.showWarning) {
+        debugPrint('[LocationWeather] WARNUNG: ${weather.condition.label}');
+      }
+    } catch (e) {
+      debugPrint('[LocationWeather] Fehler: $e');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Wetter konnte nicht geladen werden',
+      );
+    }
+  }
+
+  /// Aktualisiert das Wetter (erzwingt Neuladen)
+  Future<void> refresh(LatLng position, {String? locationName}) async {
+    state = state.copyWith(lastUpdated: null); // Cache invalidieren
+    await loadWeatherForLocation(position, locationName: locationName);
+  }
+
+  /// Löscht die Wetter-Daten
+  void clear() {
+    state = const LocationWeatherState();
+  }
+}

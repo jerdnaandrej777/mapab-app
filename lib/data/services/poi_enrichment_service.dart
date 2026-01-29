@@ -254,7 +254,18 @@ class POIEnrichmentService {
 
       debugPrint('[Enrichment] Parallel-Laden abgeschlossen: ${enrichment.hasImage ? "Bild ✓" : "kein Bild"}, ${enrichment.hasDescription ? "Beschreibung ✓" : "keine Beschreibung"}');
 
-      // 3. Wikidata für strukturierte Daten und Fallback-Bild
+      // 3. EN-Wikipedia Fallback wenn kein Bild aus DE-Quellen
+      // OPTIMIERT v1.7.6: Englische Wikipedia hat oft Bilder die in DE fehlen
+      if (!enrichment.hasImage) {
+        debugPrint('[Enrichment] Kein Bild aus DE-Quellen - versuche EN Wikipedia für: ${poi.name}');
+        final enResult = await _fetchEnglishWikipediaImage(poi.name);
+        if (enResult != null) {
+          enrichment = enrichment.merge(enResult);
+          debugPrint('[Enrichment] EN Wikipedia Bild gefunden: ${enResult.imageUrl}');
+        }
+      }
+
+      // 4. Wikidata für strukturierte Daten und Fallback-Bild
       // OPTIMIERT v1.3.7: Wikidata auch ohne vorherige wikidataId versuchen (über POI-Name)
       String? wikidataIdToUse = enrichment.wikidataId;
 
@@ -390,7 +401,7 @@ class POIEnrichmentService {
         'action': 'query',
         'generator': 'geosearch',
         'ggscoord': '$lat|$lng',
-        'ggsradius': '5000', // OPTIMIERT: 5km Radius für mehr Treffer
+        'ggsradius': '10000', // OPTIMIERT: 10km Radius für mehr Treffer in ländlichen Gebieten
         'ggslimit': '15', // OPTIMIERT: Mehr Ergebnisse
         'prop': 'imageinfo',
         'iiprop': 'url|extmetadata',
@@ -430,37 +441,45 @@ class POIEnrichmentService {
     // Rate-Limit-Schutz: Kurze Pause zwischen API-Calls
     await Future.delayed(_apiCallDelay);
 
-    // Methode 2: Titel-basierte Suche mit bereinigtem Namen
-    final cleanedName = _cleanSearchName(name);
-    final searchResponse = await _requestWithRetry(
-      ApiEndpoints.wikimediaCommons,
-      {
-        'action': 'query',
-        'generator': 'search',
-        'gsrsearch': 'File:$cleanedName',
-        'gsrnamespace': '6', // File namespace
-        'gsrlimit': '10', // OPTIMIERT: Mehr Ergebnisse
-        'prop': 'imageinfo',
-        'iiprop': 'url',
-        'iiurlwidth': '800',
-        'format': 'json',
-        'origin': '*',
-      },
-    );
+    // Methode 2: Titel-basierte Suche mit Suchvarianten
+    // OPTIMIERT v1.7.6: Mehrere Varianten probieren (Umlaute, Präfix-Wörter)
+    final searchVariants = _getSearchVariants(name);
+    for (final variant in searchVariants) {
+      final searchResponse = await _requestWithRetry(
+        ApiEndpoints.wikimediaCommons,
+        {
+          'action': 'query',
+          'generator': 'search',
+          'gsrsearch': 'File:$variant',
+          'gsrnamespace': '6', // File namespace
+          'gsrlimit': '10',
+          'prop': 'imageinfo',
+          'iiprop': 'url',
+          'iiurlwidth': '800',
+          'format': 'json',
+          'origin': '*',
+        },
+      );
 
-    if (searchResponse != null) {
-      final searchPages = searchResponse.data['query']?['pages'] as Map<String, dynamic>?;
-      if (searchPages != null && searchPages.isNotEmpty) {
-        for (final page in searchPages.values) {
-          final imageInfo = (page['imageinfo'] as List?)?.firstOrNull;
-          if (imageInfo != null) {
-            final url = imageInfo['thumburl'] ?? imageInfo['url'];
-            if (url != null && _isValidImageUrl(url)) {
-              debugPrint('[Enrichment] Wikimedia Titel-Bild gefunden: ${page['title']}');
-              return url;
+      if (searchResponse != null) {
+        final searchPages = searchResponse.data['query']?['pages'] as Map<String, dynamic>?;
+        if (searchPages != null && searchPages.isNotEmpty) {
+          for (final page in searchPages.values) {
+            final imageInfo = (page['imageinfo'] as List?)?.firstOrNull;
+            if (imageInfo != null) {
+              final url = imageInfo['thumburl'] ?? imageInfo['url'];
+              if (url != null && _isValidImageUrl(url)) {
+                debugPrint('[Enrichment] Wikimedia Titel-Bild gefunden (Variante "$variant"): ${page['title']}');
+                return url;
+              }
             }
           }
         }
+      }
+
+      // Rate-Limit-Schutz zwischen Varianten
+      if (variant != searchVariants.last) {
+        await Future.delayed(_apiCallDelay);
       }
     }
 
@@ -468,6 +487,7 @@ class POIEnrichmentService {
     await Future.delayed(_apiCallDelay);
 
     // Methode 3: Kategorie-basierte Suche (z.B. "Category:Schloss Neuschwanstein")
+    final cleanedName = _cleanSearchName(name);
     final categoryResponse = await _requestWithRetry(
       ApiEndpoints.wikimediaCommons,
       {
@@ -502,16 +522,88 @@ class POIEnrichmentService {
 
     // FIX v1.5.3: Failure-Log wenn kein Bild gefunden wurde
     debugPrint('[Enrichment] ⚠️ Kein Wikimedia-Bild gefunden für: $name (lat=$lat, lng=$lng)');
-    debugPrint('[Enrichment] Versuchte Methoden: Geo-Suche (5km), Titel-Suche, Kategorie-Suche');
+    debugPrint('[Enrichment] Versuchte Methoden: Geo-Suche (10km), Titel-Suche (${_getSearchVariants(name).length} Varianten), Kategorie-Suche');
     return null;
   }
 
   /// Bereinigt POI-Name für bessere Suchergebnisse
+  /// OPTIMIERT v1.7.6: Auch nach Komma/Semikolon abschneiden
   String _cleanSearchName(String name) {
     return name
         .replaceAll(RegExp(r'\s*\(.*?\)\s*'), '') // Klammern entfernen
         .replaceAll(RegExp(r'\s*-\s*.*$'), '') // Alles nach Bindestrich entfernen
+        .replaceAll(RegExp(r'[,;].*$'), '') // Alles nach Komma/Semikolon entfernen
         .trim();
+  }
+
+  /// Erzeugt alternative Suchvarianten für Wikimedia Commons Titel-Suche
+  /// OPTIMIERT v1.7.6: Umlaute normalisieren, Präfix-Wörter entfernen
+  List<String> _getSearchVariants(String name) {
+    final primary = _cleanSearchName(name);
+    final variants = <String>{primary};
+
+    // Variante ohne Umlaute (Wikimedia hat oft englische Dateinamen)
+    final noUmlauts = primary
+        .replaceAll('ä', 'ae')
+        .replaceAll('ö', 'oe')
+        .replaceAll('ü', 'ue')
+        .replaceAll('Ä', 'Ae')
+        .replaceAll('Ö', 'Oe')
+        .replaceAll('Ü', 'Ue')
+        .replaceAll('ß', 'ss');
+    if (noUmlauts != primary) variants.add(noUmlauts);
+
+    // Variante ohne Präfix-Wörter (z.B. "Schloss Neuschwanstein" → "Neuschwanstein")
+    final parts = primary.split(' ');
+    if (parts.length > 1) {
+      const prefixWords = [
+        'schloss', 'burg', 'kloster', 'dom', 'kirche', 'stift',
+        'rathaus', 'basilika', 'kapelle', 'abtei', 'palais',
+      ];
+      if (prefixWords.contains(parts.first.toLowerCase())) {
+        variants.add(parts.sublist(1).join(' '));
+      }
+    }
+
+    return variants.toList();
+  }
+
+  /// Fallback: Sucht Bild in englischer Wikipedia
+  /// OPTIMIERT v1.7.6: Viele europäische POIs haben Bilder in EN Wikipedia aber nicht in DE
+  Future<POIEnrichmentData?> _fetchEnglishWikipediaImage(String name) async {
+    final cleanName = _cleanSearchName(name);
+    final response = await _requestWithRetry(
+      ApiEndpoints.wikipediaEnSearch,
+      {
+        'action': 'query',
+        'titles': cleanName,
+        'prop': 'pageimages|pageprops',
+        'piprop': 'original|thumbnail',
+        'pithumbsize': 400,
+        'ppprop': 'wikibase_item',
+        'format': 'json',
+        'origin': '*',
+      },
+    );
+
+    if (response == null) return null;
+
+    final pages =
+        response.data['query']?['pages'] as Map<String, dynamic>?;
+    if (pages == null || pages.isEmpty) return null;
+
+    final page = pages.values.first as Map<String, dynamic>;
+    if (page['pageid'] == null) return null;
+
+    final imageUrl = page['original']?['source'] as String?;
+    if (imageUrl == null) return null; // Nur nützlich wenn Bild vorhanden
+
+    debugPrint('[Enrichment] EN Wikipedia Treffer: $cleanName → Bild vorhanden');
+    return POIEnrichmentData(
+      imageUrl: imageUrl,
+      thumbnailUrl: page['thumbnail']?['source'] as String?,
+      wikidataId: page['pageprops']?['wikibase_item'] as String?,
+    );
   }
 
   /// Lädt strukturierte Daten von Wikidata
@@ -770,6 +862,39 @@ LIMIT 1
       }
 
       debugPrint('[Enrichment] Wikipedia-Batch: ${wikiResults.length} Ergebnisse');
+
+      // 3b. Wikipedia-POIs MIT Beschreibung OHNE Bild: Wikimedia Fallback
+      // OPTIMIERT v1.7.6: Viele Wikipedia-Artikel haben keine pageimage
+      final poisWithWikiButNoImage = poisWithWiki
+          .where((poi) {
+            final result = results[poi.id];
+            return result != null && result.imageUrl == null;
+          })
+          .take(5)
+          .toList();
+
+      if (poisWithWikiButNoImage.isNotEmpty) {
+        debugPrint('[Enrichment] Wikimedia Fallback für ${poisWithWikiButNoImage.length} Wikipedia-POIs ohne Bild');
+
+        final fallbackFutures = poisWithWikiButNoImage.map((poi) async {
+          final imageUrl = await _fetchWikimediaCommonsImage(
+            poi.latitude,
+            poi.longitude,
+            poi.name,
+          );
+          if (imageUrl != null) {
+            final existingPOI = results[poi.id]!;
+            results[poi.id] = existingPOI.copyWith(imageUrl: imageUrl);
+
+            // Im Cache speichern
+            if (cacheService != null) {
+              await cacheService.cacheEnrichedPOI(results[poi.id]!);
+            }
+          }
+        });
+
+        await Future.wait(fallbackFutures);
+      }
     }
 
     // 4. POIs ohne Wikipedia-Titel: Wikimedia Geo-Suche (parallel, max 5)

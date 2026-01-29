@@ -27,6 +27,10 @@ class ApiEndpoints {
   static const String wikipediaGeoSearch =
       'https://de.wikipedia.org/w/api.php';
 
+  // Wikipedia EN - Fallback für Bilder wenn DE kein Ergebnis liefert
+  static const String wikipediaEnSearch =
+      'https://en.wikipedia.org/w/api.php';
+
   // Wikidata - Echte POI-Daten (Telefon, Website, etc.)
   static const String wikidataSparql =
       'https://query.wikidata.org/sparql';

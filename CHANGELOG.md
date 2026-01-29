@@ -7,6 +7,210 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.7.7] - 2026-01-29
+
+### POI-Bildquellen optimiert & Chat-Bilder
+
+#### Verbessert
+- **OSM-Tags aus Overpass** - `image`, `wikimedia_commons`, `wikidata`, `wikipedia` Tags werden jetzt extrahiert und als Bildquelle genutzt (0 zusätzliche API-Calls)
+- **Wikimedia Geo-Suche** - Radius von 5km auf 10km erhöht (mehr Treffer in ländlichen Gebieten)
+- **Titel-Suche mit Suchvarianten** - Umlaute normalisieren (ä→ae), Präfix-Wörter entfernen (Schloss, Burg, Kloster etc.)
+- **EN-Wikipedia Fallback** - Englische Wikipedia als Fallback wenn deutsche kein Bild liefert
+- **Batch-Enrichment Fix** - Wikipedia-POIs mit Beschreibung aber ohne Bild bekommen jetzt Wikimedia Geo-Suche als Fallback
+
+#### Hinzugefügt
+- **Chat-Bilder** - POI-Karten im AI-Chat zeigen jetzt Bilder an
+  - POIs erscheinen sofort mit Kategorie-Icons
+  - Bilder laden im Hintergrund nach (1-3 Sekunden)
+  - In-Place-Update der Chat-Nachricht mit angereicherten POIs
+  - `mounted`-Check und Index-Bounds-Check für Sicherheit
+
+#### Technisch
+- `_parseOverpassPOI()` erweitert: extrahiert OSM Bild-Tags
+- `_getSearchVariants()` Methode: erzeugt Suchvarianten ohne Umlaute/Präfixe
+- `_fetchEnglishWikipediaImage()` Methode: EN-Wikipedia Fallback
+- `ApiEndpoints.wikipediaEnSearch`: Neuer Endpoint für EN-Wikipedia
+- `enrichPOIsBatch()`: Wikimedia Fallback für Wikipedia-POIs ohne Bild
+- `_handleLocationBasedQuery()`: Hintergrund-Enrichment mit In-Place-Update
+
+#### Bild-Trefferquote
+| Version | Trefferquote |
+|---------|-------------|
+| v1.3.6 | ~60% |
+| v1.3.7 | ~85% |
+| v1.7.7 | ~95% |
+
+---
+
+## [1.7.6] - 2026-01-29
+
+### Erweiterte Wetter-Funktionen
+
+#### Hinzugefügt
+- **Weather-Chip** - Kompakter Wetter-Anzeiger oben rechts auf der Karte
+  - Zeigt aktuelle Temperatur und Wetter-Icon
+  - Farbcodiert nach Wetter-Zustand (grün/gelb/orange/rot)
+  - Bei Tap: Öffnet Wetter-Details-Sheet
+- **Wetter-Alert-Banner** - Proaktive Warnungen bei schlechtem Wetter
+  - Erscheint automatisch bei Unwetter/schlechtem Wetter am Standort
+  - Spezifische Nachrichten für Gewitter, Schnee, Regen, Sturm
+  - Dismiss-Button (einmal pro Session)
+- **Wetter-Details-Sheet** - Vollständiges Wetter-Dashboard
+  - 7-Tage-Vorhersage horizontal scrollbar
+  - UV-Index mit Empfehlung (Niedrig/Mittel/Hoch/Sehr hoch/Extrem)
+  - Sonnenauf- und Sonnenuntergang
+  - POI-Empfehlungen basierend auf Wetter
+- **WeatherBadge in POI-Karten** - Wetter-Empfehlungen auf POI-Cards
+  - "Empfohlen" Badge für Indoor-POIs bei schlechtem Wetter
+  - "Ideal" Badge für Outdoor-POIs bei gutem Wetter
+  - "Regen" / "Unwetter" Warnung für Outdoor-POIs
+- **AI Trip Wetter-Integration** - Wetter-basierte Kategorieauswahl
+  - Wetter-Empfehlungs-Banner im AI Trip Panel
+  - "Anwenden" Button für automatische Kategorie-Vorauswahl
+  - Indoor-Kategorien bei schlechtem Wetter, Outdoor bei gutem
+
+#### Neu
+- `LocationWeatherNotifier` - Standort-Wetter ohne aktive Route
+  - 15-Minuten-Cache für API-Effizienz
+  - Automatisches Laden bei GPS-Position
+- `WeatherChip` Widget - Kompakte Wetter-Anzeige
+- `WeatherAlertBanner` Widget - Proaktive Warnungen
+- `WeatherDetailsSheet` - Vollständiges Wetter-Dashboard
+- `applyWeatherBasedCategories()` - Automatische Kategorieauswahl
+
+#### Technisch
+- Open-Meteo API für kostenlose Wetterdaten (kein API-Key nötig)
+- WMO Weather Codes für Wetterklassifizierung
+- 15-Minuten-Cache reduziert API-Aufrufe
+- Session-basierter Dismiss-State für Alert-Banner
+
+---
+
+## [1.7.5] - 2026-01-29
+
+### Route Löschen Button für AI-Chat Routen
+
+#### Hinzugefügt
+- **Route löschen Button** erscheint jetzt auch nach AI-Chat Routengenerierung
+- Konsistentes Verhalten zwischen Schnell-Modus und AI-Chat
+
+---
+
+## [1.7.4] - 2026-01-29
+
+### Auto-Route von GPS-Standort zu POI
+
+#### Hinzugefügt
+- **Auto-Route-Erstellung** - Beim Hinzufügen eines POIs ohne aktive Route
+  - GPS-Position wird als Startpunkt verwendet
+  - Route wird automatisch berechnet
+  - Navigation zum Trip-Tab
+
+---
+
+## [1.7.3] - 2026-01-28
+
+### POI-Foto Batch-Enrichment
+
+#### Verbessert
+- **7x schneller** - Batch-API für Wikipedia Multi-Title-Query
+- Bis zu 50 POIs in einer Anfrage statt einzeln
+- Reduzierte API-Calls von ~160 auf ~4 für 20 POIs
+
+---
+
+## [1.7.2] - 2026-01-28
+
+### AI-Chat mit standortbasierten POI-Vorschlägen
+
+#### Hinzugefügt
+- **GPS-basierte POI-Suche** im AI-Chat
+- Radius-Einstellung (10-100km)
+- Anklickbare POI-Karten mit Bildern
+- TripContext mit Standort-Informationen
+
+---
+
+## [1.7.1] - 2026-01-28
+
+### Auto-Zoom Verbesserung
+
+#### Behoben
+- MapController-Timing-Fix für zuverlässiges Auto-Zoom
+
+---
+
+## [1.7.0] - 2026-01-28
+
+### Auto-Navigation & Zoom
+
+#### Hinzugefügt
+- **Auto-Navigation** zum Trip-Tab nach Route-Berechnung
+- **Auto-Zoom** auf Route beim Tab-Wechsel
+- **"Auf Karte anzeigen" Button** im TripScreen
+
+---
+
+## [1.6.9] - 2026-01-28
+
+### POI-Fotos überall
+
+#### Hinzugefügt
+- POI-Fotos in Favoriten, Trip-Stops, AI Trip Preview
+- Auto-Enrichment beim Laden
+
+---
+
+## [1.6.8] - 2026-01-28
+
+### GPS-Dialog & Löschbutton & POI-Details Fix
+
+#### Behoben
+- GPS-Dialog bei "Überrasch mich!" wenn GPS deaktiviert
+- Löschbutton erscheint nach AI Trip Generierung
+- POI-Details unter "Deine Route" funktionieren
+
+---
+
+## [1.6.7] - 2026-01-28
+
+### POI-Detail Fotos & Highlights Fix
+
+#### Behoben
+- Fotos und Highlights werden nach Routenberechnung korrekt angezeigt
+- Await statt unawaited für Enrichment
+
+---
+
+## [1.6.6] - 2026-01-28
+
+### POI-Foto CORS & Rate-Limit Fix
+
+#### Behoben
+- Wikidata SPARQL CORS-Header
+- Rate-Limit-Handling (HTTP 429)
+- Concurrency von 5 auf 3 reduziert
+
+---
+
+## [1.6.5] - 2026-01-28
+
+### TripScreen vereinfacht
+
+#### Geändert
+- Nur noch berechnete Routen angezeigt
+
+---
+
+## [1.6.4] - 2026-01-28
+
+### POI Hinzufügen ohne Snackbar
+
+#### Geändert
+- Kein Snackbar mehr beim POI-Hinzufügen (weniger störend)
+
+---
+
 ## [1.6.3] - 2026-01-28
 
 ### Euro Trip Route-Anzeige Fix

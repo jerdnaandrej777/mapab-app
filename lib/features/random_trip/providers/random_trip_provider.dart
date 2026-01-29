@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../core/constants/categories.dart';
+import '../../../core/constants/categories.dart'; // Enthält WeatherCondition
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
 import '../../../data/services/hotel_service.dart';
@@ -66,6 +66,60 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Setzt alle Kategorien
   void setCategories(List<POICategory> categories) {
     state = state.copyWith(selectedCategories: categories);
+  }
+
+  /// Setzt Kategorien basierend auf Wetter-Bedingung (v1.7.6)
+  /// Bei schlechtem Wetter: Indoor-Kategorien empfohlen
+  /// Bei gutem Wetter: Outdoor-Kategorien empfohlen
+  void applyWeatherBasedCategories(WeatherCondition condition) {
+    List<POICategory> recommended;
+
+    switch (condition) {
+      case WeatherCondition.danger:
+        // Nur Indoor-Kategorien bei Unwetter
+        recommended = [
+          POICategory.museum,
+          POICategory.church,
+        ];
+        print('[RandomTrip] Unwetter erkannt - nur Indoor-Kategorien');
+        break;
+
+      case WeatherCondition.bad:
+        // Indoor bevorzugt, aber auch wetterfeste Outdoor-POIs
+        recommended = [
+          POICategory.museum,
+          POICategory.church,
+          POICategory.castle, // Hat oft Indoor-Bereiche
+          POICategory.city, // Städte haben Überdachungen
+        ];
+        print('[RandomTrip] Schlechtes Wetter - Indoor bevorzugt');
+        break;
+
+      case WeatherCondition.mixed:
+        // Flexibel - alle Kategorien erlaubt
+        recommended = [];
+        print('[RandomTrip] Wechselhaftes Wetter - alle Kategorien');
+        break;
+
+      case WeatherCondition.good:
+      case WeatherCondition.unknown:
+      default:
+        // Outdoor bevorzugt bei gutem Wetter
+        recommended = [
+          POICategory.nature,
+          POICategory.viewpoint,
+          POICategory.lake,
+          POICategory.coast,
+          POICategory.park,
+          POICategory.activity,
+          POICategory.castle,
+          POICategory.monument,
+        ];
+        print('[RandomTrip] Gutes Wetter - Outdoor empfohlen');
+        break;
+    }
+
+    state = state.copyWith(selectedCategories: recommended);
   }
 
   /// Setzt Startpunkt manuell

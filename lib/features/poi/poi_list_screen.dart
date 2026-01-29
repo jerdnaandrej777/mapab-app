@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/categories.dart';
 import '../../data/models/poi.dart';
+import '../map/providers/weather_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'providers/poi_state_provider.dart';
 import 'widgets/poi_card.dart';
@@ -387,6 +388,9 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
   Widget _buildPOIList(POIState poiState) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    // Wetter-State für Badges (v1.7.6)
+    final weatherState = ref.watch(routeWeatherNotifierProvider);
+    final hasWeatherData = weatherState.weatherPoints.isNotEmpty;
 
     // Loading
     if (poiState.isLoading) {
@@ -503,6 +507,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               isMustSee: poi.isMustSee,
               imageUrl: poi.imageUrl,
               highlights: poi.highlights,
+              // Wetter-Badge anzeigen wenn Wetterdaten vorhanden (v1.7.6)
+              weatherCondition: hasWeatherData ? weatherState.overallCondition : null,
               onTap: () {
                 // FIX v1.6.7: selectPOI hier entfernt - wird in POIDetailScreen via selectPOIById aufgerufen
                 // Vorher: Doppel-Select mit veraltetem POI führte zu fehlenden Fotos/Highlights

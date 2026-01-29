@@ -13,9 +13,13 @@ import '../random_trip/providers/random_trip_state.dart';
 import 'providers/map_controller_provider.dart';
 import 'providers/route_planner_provider.dart';
 import 'providers/route_session_provider.dart';
+import 'providers/weather_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/map_view.dart';
 import 'widgets/weather_bar.dart';
+import 'widgets/weather_chip.dart';
+import 'widgets/weather_alert_banner.dart';
+import 'widgets/weather_details_sheet.dart';
 
 /// Planungs-Modus (Schnell oder AI Trip)
 enum MapPlanMode { schnell, aiTrip }
@@ -363,6 +367,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               bottom: 100,
               child: Column(
                 children: [
+                  // Weather-Chip (v1.7.6) - zeigt aktuelles Wetter am Standort
+                  WeatherChip(
+                    onTap: () {
+                      final weatherState = ref.read(locationWeatherNotifierProvider);
+                      if (weatherState.hasWeather) {
+                        showWeatherDetailsSheet(
+                          context,
+                          weather: weatherState.weather!,
+                          locationName: weatherState.locationName ?? 'Mein Standort',
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   // Settings-Button
                   FloatingActionButton.small(
                     heroTag: 'settings',
@@ -389,6 +407,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ],
               ),
             ),
+
+          // Wetter-Alert-Banner (v1.7.6) - zeigt proaktive Warnungen
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 16,
+            child: WeatherAlertBanner(),
+          ),
 
         ],
       ),
@@ -440,6 +466,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final location = LatLng(position.latitude, position.longitude);
         mapController.move(location, 14.0);
         _showSnackBar('Position gefunden!');
+
+        // Standort-Wetter laden (v1.7.6)
+        ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(
+          location,
+          locationName: 'Mein Standort',
+        );
       }
     } catch (e) {
       debugPrint('[GPS] Fehler: $e');
@@ -486,11 +518,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Karte zur Position bewegen
       final mapController = ref.read(mapControllerProvider);
+      final location = LatLng(position.latitude, position.longitude);
       if (mapController != null) {
-        final location = LatLng(position.latitude, position.longitude);
         mapController.move(location, 12.0);
         debugPrint('[GPS] Karte auf Standort zentriert: ${position.latitude}, ${position.longitude}');
       }
+
+      // Standort-Wetter laden (v1.7.6)
+      ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(
+        location,
+        locationName: 'Mein Standort',
+      );
     } catch (e) {
       debugPrint('[GPS] Position nicht verfügbar: $e - zeige Europa-Zentrum');
       _showDefaultMapCenter();
@@ -1274,6 +1312,7 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
   Widget build(BuildContext context) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
+    final weatherState = ref.watch(locationWeatherNotifierProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -1298,6 +1337,13 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Wetter-Empfehlung (v1.7.6)
+          if (weatherState.hasWeather)
+            _WeatherRecommendationBanner(
+              condition: weatherState.condition,
+              onApply: () => notifier.applyWeatherBasedCategories(weatherState.condition),
+            ),
+
           // AI Trip Type Selector (Tagesausflug / Euro Trip)
           Padding(
             padding: const EdgeInsets.all(12),
@@ -1882,5 +1928,94 @@ class _GeneratingIndicator extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Wetter-Empfehlungs-Banner für AI Trip Panel (v1.7.6)
+class _WeatherRecommendationBanner extends StatelessWidget {
+  final WeatherCondition condition;
+  final VoidCallback onApply;
+
+  const _WeatherRecommendationBanner({
+    required this.condition,
+    required this.onApply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (icon, text, color) = _getRecommendation();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Wetter-Empfehlung',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Anwenden-Button
+          GestureDetector(
+            onTap: onApply,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Anwenden',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (String, String, Color) _getRecommendation() {
+    switch (condition) {
+      case WeatherCondition.good:
+        return ('☀️', 'Heute ideal für Outdoor-POIs', Colors.green);
+      case WeatherCondition.mixed:
+        return ('⛅', 'Wechselhaft - flexibel planen', Colors.amber);
+      case WeatherCondition.bad:
+        return ('🌧️', 'Regen - Indoor-POIs empfohlen', Colors.orange);
+      case WeatherCondition.danger:
+        return ('⚠️', 'Unwetter - nur Indoor-POIs!', Colors.red);
+      case WeatherCondition.unknown:
+        return ('❓', 'Wetter unbekannt', Colors.grey);
+    }
   }
 }

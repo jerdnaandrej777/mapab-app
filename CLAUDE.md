@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.5 | Plattformen: Android, iOS, Desktop
+Version: 1.7.7 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,12 +85,12 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Auto-Navigation & Zoom + Route Löschen für AI-Chat (v1.7.5) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner (v1.7.6) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview (v1.5.0) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment (v1.7.3) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button (v1.7.0) |
-| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen (v1.7.2) |
+| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
 | `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment (v1.6.9) |
 | `lib/features/auth/login_screen.dart` | Cloud-Login mit Remember Me |
@@ -98,6 +98,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/random_trip/random_trip_screen.dart` | AI Trip Generator (Legacy) |
 | `lib/features/random_trip/widgets/day_tab_selector.dart` | Tag-Auswahl für mehrtägige Trips (v1.5.7) |
 | `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
+| `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
+| `lib/features/map/widgets/weather_alert_banner.dart` | Proaktives Wetter-Warnbanner (v1.7.6) |
+| `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6) |
+| `lib/features/map/widgets/weather_bar.dart` | Routen-Wetter + WeatherBadge für POIs |
 
 ### Provider
 
@@ -111,7 +115,8 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Navigation (v1.7.0) |
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
-| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl (v1.5.7) |
+| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien (v1.7.6) |
+| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
@@ -146,6 +151,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | OpenRouteService | Scenic Routing | API-Key |
 | Overpass | POIs & Hotels | - |
 | Wikipedia DE | Geosearch + Extracts | - |
+| Wikipedia EN | Fallback-Bilder (v1.7.7) | - |
 | Wikimedia Commons | POI-Bilder | - |
 | Wikidata SPARQL | Strukturierte POI-Daten | - |
 | Open-Meteo | Wetter | - |
@@ -218,7 +224,8 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 | `[POIState]` | POI State Änderungen |
 | `[Favorites]` | Favoriten-Operationen |
 | `[Sync]` | Cloud-Sync |
-| `[Weather]` | Wetter-Laden |
+| `[Weather]` | Routen-Wetter-Laden |
+| `[LocationWeather]` | Standort-Wetter (v1.7.6) |
 | `[AI]` | AI-Anfragen |
 | `[GPS]` | GPS-Funktionen |
 | `[Auth]` | Auth-Operationen |
@@ -327,6 +334,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.3.md` (POI-Foto Batch-Enrichment - 7x schneller)
 - `Dokumentation/CHANGELOG-v1.7.5.md` (Route Löschen Button für AI-Chat Routen)
 - `Dokumentation/CHANGELOG-v1.7.4.md` (Auto-Route von GPS-Standort zu POI)
+- `Dokumentation/CHANGELOG-v1.7.7.md` (POI-Bildquellen optimiert & Chat-Bilder)
 
 ---
 
@@ -349,6 +357,67 @@ final days = TripConstants.calculateDaysFromDistance(1800);  // 3
 // Radius aus Tagen berechnen
 final radius = TripConstants.calculateRadiusFromDays(3);  // 1800.0
 ```
+
+### Wetter-Integration (v1.7.6+)
+
+```dart
+import '../providers/weather_provider.dart';
+
+// Standort-Wetter laden (auch ohne Route)
+ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(
+  latLng,
+  locationName: 'Mein Standort',
+);
+
+// Wetter-State abfragen
+final weatherState = ref.watch(locationWeatherNotifierProvider);
+if (weatherState.hasWeather) {
+  final weather = weatherState.weather!;
+  print('${weather.formattedTemperature} - ${weather.description}');
+}
+
+// Prüfen ob Warnung angezeigt werden soll
+if (weatherState.showWarning) {
+  // danger oder bad mit hoher Niederschlagswahrscheinlichkeit
+}
+
+// Wetter-Details-Sheet öffnen
+showWeatherDetailsSheet(
+  context,
+  weather: weatherState.weather!,
+  locationName: 'Mein Standort',
+);
+
+// AI Trip: Wetter-basierte Kategorien anwenden
+ref.read(randomTripNotifierProvider.notifier)
+    .applyWeatherBasedCategories(weatherState.condition);
+
+// POI-Karten mit Wetter-Badge (POICard Parameter)
+POICard(
+  weatherCondition: weatherState.condition,  // Optional
+  // ...
+);
+```
+
+**Wetter-Zustände:**
+
+| WeatherCondition | Beschreibung | Empfehlung |
+|------------------|--------------|------------|
+| `good` | Sonnig, klar | Outdoor-POIs (grün) |
+| `mixed` | Wechselhaft, bewölkt | Flexibel planen (gelb) |
+| `bad` | Regen, Nebel | Indoor-POIs empfohlen (orange) |
+| `danger` | Gewitter, Sturm, Schnee | Nur Indoor! (rot) |
+| `unknown` | Keine Daten | - |
+
+**Wetter-Widgets:**
+
+| Widget | Verwendung |
+|--------|------------|
+| `WeatherChip` | Kompakter Anzeiger auf MapScreen |
+| `WeatherAlertBanner` | Proaktive Warnung bei schlechtem Wetter |
+| `WeatherDetailsSheet` | 7-Tage-Vorhersage Bottom Sheet |
+| `WeatherBadge` | Empfehlungs-Badge auf POI-Karten |
+| `WeatherBar` | Routen-Wetter mit 5 Punkten |
 
 ### Neuen Provider erstellen
 
@@ -643,7 +712,7 @@ debugPrint('Regions: ${stats['regions']}, Enriched: ${stats['enrichedPOIs']}');
 - **Batch-Enrichment**: Wikipedia Multi-Title-Query für bis zu 50 POIs (v1.7.3)
 - **ListView**: `cacheExtent: 500` für flüssigeres Scrollen
 
-### POI-Foto-Optimierungen (v1.3.7+, v1.6.6, v1.7.3)
+### POI-Foto-Optimierungen (v1.3.7+, v1.6.6, v1.7.3, v1.7.7)
 
 ```dart
 // Prüfen ob POI gerade enriched wird (Per-POI Loading State)
@@ -664,20 +733,26 @@ POIEnrichmentService._apiCallDelay = 200;            // 200ms zwischen API-Calls
 - **Doppel-Enrichment-Schutz**: Prüfung vor jedem Enrichment-Start
 - **Rate-Limit-Handling**: HTTP 429 wird erkannt und 5 Sekunden gewartet (v1.6.6)
 - **API-Call-Delays**: 200ms Pause zwischen Wikimedia-Calls (v1.6.6)
+- **OSM-Tags**: Overpass `image`, `wikimedia_commons`, `wikidata`, `wikipedia` Tags werden extrahiert (v1.7.7)
+- **EN-Wikipedia Fallback**: Englische Wikipedia als Fallback wenn DE kein Bild liefert (v1.7.7)
+- **Suchvarianten**: Umlaute normalisieren + Präfix-Wörter entfernen für bessere Wikimedia-Treffer (v1.7.7)
+- **Batch-Fix**: Wikipedia-POIs ohne Bild bekommen Wikimedia Geo-Suche Fallback (v1.7.7)
 
 **Bildquellen (in Prioritäts-Reihenfolge):**
-1. Wikipedia API (pageimages) - Hauptbild + Thumbnail
-2. Wikimedia Commons Geo-Suche (5km Radius, 15 Ergebnisse)
-3. Wikimedia Commons Titel-Suche (bereinigter Name)
-4. Wikimedia Commons Kategorie-Suche
-5. Wikidata SPARQL (P18 Bild, P154 Logo, P94 Wappen)
+1. OSM-Tags aus Overpass: `image`, `wikimedia_commons` Tags (v1.7.7)
+2. Wikipedia DE API (pageimages) - Hauptbild + Thumbnail
+3. Wikimedia Commons Geo-Suche (10km Radius, 15 Ergebnisse) (v1.7.7: 10km statt 5km)
+4. Wikimedia Commons Titel-Suche (mit Suchvarianten: Umlaute, Präfixe) (v1.7.7)
+5. Wikimedia Commons Kategorie-Suche
+6. Wikipedia EN API (Fallback nur für Bild) (v1.7.7)
+7. Wikidata SPARQL (P18 Bild, P154 Logo, P94 Wappen)
 
 **Performance-Vergleich:**
-| Metrik | v1.3.6 | v1.3.7 | v1.7.3 |
-|--------|--------|--------|--------|
-| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek |
-| API-Calls für 20 POIs | ~160 | ~80 | ~4 |
-| Bild-Trefferquote | ~60% | ~85% | ~85% |
+| Metrik | v1.3.6 | v1.3.7 | v1.7.3 | v1.7.7 |
+|--------|--------|--------|--------|--------|
+| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek | ~3 Sek |
+| API-Calls für 20 POIs | ~160 | ~80 | ~4 | ~4-8 |
+| Bild-Trefferquote | ~60% | ~85% | ~85% | ~95% |
 
 ### POI Enrichment Race Condition Fix (v1.5.1)
 
@@ -1279,4 +1354,38 @@ if (context.hasUserLocation) {
 | "Hotels" | `hotel` |
 | Unspezifisch | alle Kategorien |
 
-**Ergebnis:** Der AI-Chat schlägt POIs basierend auf dem aktuellen Standort vor. Benutzer können den Such-Radius anpassen und direkt zu POI-Details navigieren.
+**Feature 6: Hintergrund-Enrichment für POI-Bilder im Chat (v1.7.7)**
+
+```dart
+// chat_screen.dart - _handleLocationBasedQuery()
+// POIs werden sofort mit Kategorie-Icons angezeigt
+setState(() {
+  _messages.add({
+    'content': headerText,
+    'isUser': false,
+    'type': ChatMessageType.poiList,
+    'pois': sortedPOIs,
+  });
+});
+
+// Hintergrund-Enrichment: Bilder laden asynchron nach
+final messageIndex = _messages.length - 1;
+final poisToEnrich = sortedPOIs
+    .where((p) => p.imageUrl == null && !p.isEnriched)
+    .take(10)
+    .toList();
+
+if (poisToEnrich.isNotEmpty) {
+  final enrichmentService = ref.read(poiEnrichmentServiceProvider);
+  final enrichedMap = await enrichmentService.enrichPOIsBatch(poisToEnrich);
+
+  if (mounted && messageIndex < _messages.length) {
+    final updatedPOIs = sortedPOIs.map((p) => enrichedMap[p.id] ?? p).toList();
+    setState(() {
+      _messages[messageIndex] = {..._messages[messageIndex], 'pois': updatedPOIs};
+    });
+  }
+}
+```
+
+**Ergebnis:** Der AI-Chat schlägt POIs basierend auf dem aktuellen Standort vor. Benutzer können den Such-Radius anpassen und direkt zu POI-Details navigieren. POI-Bilder werden im Hintergrund geladen und erscheinen nach 1-3 Sekunden (v1.7.7).
