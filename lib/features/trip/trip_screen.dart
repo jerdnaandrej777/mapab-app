@@ -9,7 +9,9 @@ import '../../core/constants/categories.dart';
 import '../../core/constants/trip_constants.dart';
 import '../../data/models/trip.dart';
 import '../../data/providers/favorites_provider.dart';
+import '../map/providers/map_controller_provider.dart';
 import '../map/providers/route_planner_provider.dart';
+import '../poi/providers/poi_state_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
 import '../random_trip/widgets/trip_preview_card.dart';
@@ -447,6 +449,7 @@ $mapsUrl
           totalDistance: tripState.totalDistance,
           totalDuration: tripState.totalDuration,
           stopCount: stops.length,
+          isRecalculating: tripState.isRecalculating,
         ),
 
         const SizedBox(height: 8),
@@ -504,7 +507,14 @@ $mapsUrl
                 durationMinutes: (stop.detourMinutes ?? 0).toInt(),
                 index: index,
                 onTap: () {
-                  // POI-Details öffnen
+                  // v1.6.8: POI zum State hinzufügen bevor Navigation
+                  // Ermöglicht POI-Details mit Foto für Trip-Stops
+                  final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+                  poiNotifier.addPOI(stop);
+                  // Enrichment triggern für Foto-Laden
+                  if (stop.imageUrl == null) {
+                    poiNotifier.enrichPOI(stop.id);
+                  }
                   context.push('/poi/${stop.id}');
                 },
                 onRemove: () {
@@ -514,7 +524,8 @@ $mapsUrl
                   );
                 },
                 onEdit: () {
-                  // POI-Details öffnen zum Bearbeiten
+                  // v1.6.8: POI zum State hinzufügen bevor Navigation
+                  ref.read(pOIStateNotifierProvider.notifier).addPOI(stop);
                   context.push('/poi/${stop.id}');
                 },
               );
@@ -526,26 +537,47 @@ $mapsUrl
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
+                // Auf Karte anzeigen Button (v1.7.0)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
                     onPressed: route != null
-                        ? () => _openInGoogleMaps(context, tripState)
+                        ? () {
+                            // Flag setzen für Auto-Zoom beim Tab-Wechsel
+                            ref.read(shouldFitToRouteProvider.notifier).state = true;
+                            context.go('/');
+                          }
                         : null,
-                    icon: const Icon(Icons.map),
-                    label: const Text('Google Maps'),
+                    icon: const Icon(Icons.map_outlined),
+                    label: const Text('Auf Karte anzeigen'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: route != null
-                        ? () => _shareRoute(context, tripState)
-                        : null,
-                    icon: const Icon(Icons.share),
-                    label: const Text('Route Teilen'),
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: route != null
+                            ? () => _openInGoogleMaps(context, tripState)
+                            : null,
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Google Maps'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: route != null
+                            ? () => _shareRoute(context, tripState)
+                            : null,
+                        icon: const Icon(Icons.share),
+                        label: const Text('Route Teilen'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -607,6 +639,26 @@ $mapsUrl
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Auf Karte anzeigen Button (v1.7.0)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      // Flag setzen für Auto-Zoom beim Tab-Wechsel
+                      ref.read(shouldFitToRouteProvider.notifier).state = true;
+                      context.go('/');
+                    },
+                    icon: const Icon(Icons.map_outlined),
+                    label: const Text('Auf Karte anzeigen'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Tagesweiser Export (nur bei Mehrtages-Trips)
                 if (isMultiDay) ...[
                   SizedBox(

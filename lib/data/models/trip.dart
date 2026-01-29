@@ -217,6 +217,24 @@ class TripStop with _$TripStop {
 
   /// Kategorie-Icon
   String get categoryIcon => category?.icon ?? '📍';
+
+  /// Bild-URL (falls vorhanden - wird über POI-State gepflegt)
+  String? get imageUrl => null;
+
+  /// v1.6.9: Konvertiert TripStop zurück zu POI
+  /// Nützlich für Navigation zu POI-Details
+  POI toPOI() {
+    return POI(
+      id: poiId,
+      name: name,
+      latitude: latitude,
+      longitude: longitude,
+      categoryId: categoryId,
+      routePosition: routePosition,
+      detourKm: detourKm,
+      detourMinutes: detourMinutes,
+    );
+  }
 }
 
 /// Tages-Aufteilung für Mehrtages-Trips

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../data/models/trip.dart';
+import '../../poi/providers/poi_state_provider.dart';
 import '../providers/random_trip_provider.dart';
 import 'day_tab_selector.dart';
 import 'poi_reroll_button.dart';
@@ -326,7 +330,7 @@ class _TripMap extends StatelessWidget {
   }
 }
 
-class _StopList extends StatelessWidget {
+class _StopList extends ConsumerWidget {
   final Trip trip;
   final String startAddress;
   final String? loadingPOIId;
@@ -346,7 +350,10 @@ class _StopList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // POI State für aktuelle Bilder abonnieren
+    final poiState = ref.watch(pOIStateNotifierProvider);
+
     // Stops basierend auf ausgewähltem Tag filtern
     final stops = selectedDay != null
         ? trip.getStopsForDay(selectedDay!)
@@ -399,6 +406,12 @@ class _StopList extends StatelessWidget {
         ...stops.asMap().entries.map((entry) {
           final stop = entry.value;
           final isThisPOILoading = loadingPOIId == stop.poiId;
+
+          // v1.6.9: POI aus State holen für aktuelle Bilddaten
+          final poiFromState = poiState.pois.where((p) => p.id == stop.poiId).firstOrNull;
+          final imageUrl = poiFromState?.imageUrl ?? stop.imageUrl;
+          final category = poiFromState?.category ?? stop.category;
+
           return _StopItem(
             icon: null,
             emoji: stop.categoryIcon,
@@ -408,6 +421,9 @@ class _StopList extends StatelessWidget {
                 ? '+${stop.detourKm!.toStringAsFixed(1)} km Umweg'
                 : null,
             isOvernightStop: stop.isOvernightStop,
+            imageUrl: imageUrl,
+            category: category,
+            poiId: stop.poiId,
             trailing: POIActionButtons(
               poiId: stop.poiId,
               isLoading: isThisPOILoading,
@@ -415,6 +431,17 @@ class _StopList extends StatelessWidget {
               onReroll: () => onReroll(stop.poiId),
               onDelete: () => onRemove(stop.poiId),
             ),
+            onTap: () {
+              // v1.6.9: Navigation zu POI-Details
+              // POI zum State hinzufügen falls nicht vorhanden
+              final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+              if (poiFromState == null) {
+                // Konvertiere TripStop zu POI und füge hinzu
+                final poi = stop.toPOI();
+                poiNotifier.addPOI(poi);
+              }
+              context.push('/poi/${stop.poiId}');
+            },
           );
         }),
 
@@ -447,6 +474,10 @@ class _StopItem extends StatelessWidget {
   final bool isLast;
   final bool isOvernightStop;
   final Widget? trailing;
+  final String? imageUrl;
+  final POICategory? category;
+  final String? poiId;
+  final VoidCallback? onTap;
 
   const _StopItem({
     this.icon,
@@ -458,98 +489,153 @@ class _StopItem extends StatelessWidget {
     this.isLast = false,
     this.isOvernightStop = false,
     this.trailing,
+    this.imageUrl,
+    this.category,
+    this.poiId,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final hasPOIImage = imageUrl != null || poiId != null;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Timeline
-        SizedBox(
-          width: 40,
-          child: Column(
-            children: [
-              if (!isFirst)
-                Container(
-                  width: 2,
-                  height: 16,
-                  color: colorScheme.primary.withOpacity(0.3),
-                ),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: iconColor, width: 2),
-                ),
-                child: Center(
-                  child: emoji != null
-                      ? Text(emoji!, style: const TextStyle(fontSize: 14))
-                      : Icon(icon, color: iconColor, size: 16),
-                ),
-              ),
-              if (!isLast)
-                Container(
-                  width: 2,
-                  height: 16,
-                  color: colorScheme.primary.withOpacity(0.3),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Content
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                        ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timeline mit optionalem Bild
+            SizedBox(
+              width: hasPOIImage ? 56 : 40,
+              child: Column(
+                children: [
+                  if (!isFirst)
+                    Container(
+                      width: 2,
+                      height: hasPOIImage ? 8 : 16,
+                      color: colorScheme.primary.withOpacity(0.3),
+                    ),
+                  // v1.6.9: POI-Bild statt nur Icon
+                  if (hasPOIImage && poiId != null)
+                    _buildPOIImage(colorScheme)
+                  else
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: iconColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: iconColor, width: 2),
+                      ),
+                      child: Center(
+                        child: emoji != null
+                            ? Text(emoji!, style: const TextStyle(fontSize: 14))
+                            : Icon(icon, color: iconColor, size: 16),
                       ),
                     ),
-                    if (isOvernightStop)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                  if (!isLast)
+                    Container(
+                      width: 2,
+                      height: hasPOIImage ? 8 : 16,
+                      color: colorScheme.primary.withOpacity(0.3),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          '🏨 Übernachtung',
-                          style: TextStyle(fontSize: 10),
+                        if (isOvernightStop)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              '🏨 Übernachtung',
+                              style: TextStyle(fontSize: 10),
+                            ),
+                          ),
+                        if (trailing != null) trailing!,
+                      ],
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    if (trailing != null) trailing!,
                   ],
                 ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
+            // v1.6.9: Pfeil für Navigation
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right,
+                color: colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  /// v1.6.9: POI-Bild mit Fallback auf Kategorie-Icon
+  Widget _buildPOIImage(ColorScheme colorScheme) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: imageUrl != null
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _buildImagePlaceholder(colorScheme),
+                errorWidget: (context, url, error) => _buildImagePlaceholder(colorScheme),
+              )
+            : _buildImagePlaceholder(colorScheme),
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder(ColorScheme colorScheme) {
+    final cat = category ?? POICategory.attraction;
+    return Container(
+      color: Color(cat.colorValue).withOpacity(0.2),
+      child: Center(
+        child: Text(
+          emoji ?? cat.icon,
+          style: const TextStyle(fontSize: 20),
+        ),
+      ),
     );
   }
 }

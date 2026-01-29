@@ -713,6 +713,158 @@ LIMIT 1
 
     return false;
   }
+
+  /// Enriched mehrere POIs in einem Batch-Request (OPTIMIERT v1.7.3)
+  /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 Titel pro Request
+  Future<Map<String, POI>> enrichPOIsBatch(List<POI> pois) async {
+    if (pois.isEmpty) return {};
+
+    debugPrint('[Enrichment] Batch-Request für ${pois.length} POIs');
+
+    final results = <String, POI>{};
+    final cacheService = _cacheService;
+
+    // 1. Cache-Treffer zuerst prüfen
+    final uncachedPOIs = <POI>[];
+    for (final poi in pois) {
+      if (cacheService != null) {
+        final cached = await cacheService.getCachedEnrichedPOI(poi.id);
+        if (cached != null) {
+          results[poi.id] = cached;
+          continue;
+        }
+      }
+      uncachedPOIs.add(poi);
+    }
+
+    debugPrint('[Enrichment] ${results.length} Cache-Treffer, ${uncachedPOIs.length} zu laden');
+
+    if (uncachedPOIs.isEmpty) return results;
+
+    // 2. POIs mit Wikipedia-Titel sammeln (max 50)
+    final poisWithWiki = uncachedPOIs
+        .where((p) => p.wikipediaTitle != null && p.wikipediaTitle!.isNotEmpty)
+        .take(50)
+        .toList();
+
+    // 3. Wikipedia Batch-Abfrage
+    if (poisWithWiki.isNotEmpty) {
+      final titles = poisWithWiki.map((p) => p.wikipediaTitle!).toList();
+      final wikiResults = await _fetchWikipediaBatch(titles);
+
+      // Ergebnisse zuordnen
+      for (final poi in poisWithWiki) {
+        final enrichment = wikiResults[poi.wikipediaTitle];
+        if (enrichment != null) {
+          final enrichedPOI = _applyEnrichment(poi, enrichment);
+          results[poi.id] = enrichedPOI;
+
+          // Im Cache speichern wenn Bild vorhanden
+          if (cacheService != null && enrichment.hasImage) {
+            await cacheService.cacheEnrichedPOI(enrichedPOI);
+          }
+        } else {
+          // Kein Wikipedia-Ergebnis → einzelnes Enrichment versuchen
+          results[poi.id] = poi;
+        }
+      }
+
+      debugPrint('[Enrichment] Wikipedia-Batch: ${wikiResults.length} Ergebnisse');
+    }
+
+    // 4. POIs ohne Wikipedia-Titel: Wikimedia Geo-Suche (parallel, max 5)
+    final poisWithoutWiki = uncachedPOIs
+        .where((p) => p.wikipediaTitle == null || p.wikipediaTitle!.isEmpty)
+        .where((p) => !results.containsKey(p.id))
+        .take(5)
+        .toList();
+
+    if (poisWithoutWiki.isNotEmpty) {
+      debugPrint('[Enrichment] Wikimedia Geo-Suche für ${poisWithoutWiki.length} POIs ohne Wikipedia');
+
+      final futures = poisWithoutWiki.map((poi) async {
+        final imageUrl = await _fetchWikimediaCommonsImage(
+          poi.latitude,
+          poi.longitude,
+          poi.name,
+        );
+        return MapEntry(poi.id, imageUrl != null
+            ? _applyEnrichment(poi, POIEnrichmentData(imageUrl: imageUrl))
+            : poi.copyWith(isEnriched: true));
+      });
+
+      final geoResults = await Future.wait(futures);
+      for (final entry in geoResults) {
+        results[entry.key] = entry.value;
+      }
+    }
+
+    // 5. Restliche POIs als "enriched" markieren (ohne Bild)
+    for (final poi in uncachedPOIs) {
+      if (!results.containsKey(poi.id)) {
+        results[poi.id] = poi.copyWith(isEnriched: true);
+      }
+    }
+
+    debugPrint('[Enrichment] Batch abgeschlossen: ${results.length} POIs verarbeitet');
+    return results;
+  }
+
+  /// Wikipedia Batch-Abfrage (bis zu 50 Titel pro Request)
+  Future<Map<String, POIEnrichmentData>> _fetchWikipediaBatch(List<String> titles) async {
+    if (titles.isEmpty) return {};
+
+    final response = await _requestWithRetry(
+      ApiEndpoints.wikipediaGeoSearch,
+      {
+        'action': 'query',
+        'titles': titles.join('|'), // Pipe-separierte Titel
+        'prop': 'extracts|pageimages|pageprops',
+        'exintro': 'true',
+        'explaintext': 'true',
+        'piprop': 'original|thumbnail',
+        'pithumbsize': 400,
+        'ppprop': 'wikibase_item',
+        'format': 'json',
+        'origin': '*',
+      },
+    );
+
+    if (response == null) return {};
+
+    final pages = response.data['query']?['pages'] as Map<String, dynamic>?;
+    if (pages == null || pages.isEmpty) return {};
+
+    final results = <String, POIEnrichmentData>{};
+
+    // Normalisierte Titel-Mapping aufbauen (Wikipedia kann Titel normalisieren)
+    final normalized = response.data['query']?['normalized'] as List?;
+    final titleMap = <String, String>{};
+    if (normalized != null) {
+      for (final n in normalized) {
+        titleMap[n['to'] as String] = n['from'] as String;
+      }
+    }
+
+    for (final page in pages.values) {
+      if (page['pageid'] == null) continue;
+
+      final title = page['title'] as String?;
+      if (title == null) continue;
+
+      // Original-Titel finden (falls normalisiert)
+      final originalTitle = titleMap[title] ?? title;
+
+      results[originalTitle] = POIEnrichmentData(
+        imageUrl: page['original']?['source'],
+        thumbnailUrl: page['thumbnail']?['source'],
+        description: page['extract'],
+        wikidataId: page['pageprops']?['wikibase_item'],
+      );
+    }
+
+    return results;
+  }
 }
 
 /// Riverpod Provider für POIEnrichmentService

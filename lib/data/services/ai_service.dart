@@ -39,6 +39,16 @@ class AIService {
     try {
       // Kontext für Backend aufbereiten
       final contextData = <String, dynamic>{};
+
+      // Standort-Informationen hinzufügen (NEU)
+      if (context.hasUserLocation) {
+        contextData['userLocation'] = {
+          'lat': context.userLatitude,
+          'lng': context.userLongitude,
+          'name': context.userLocationName,
+        };
+      }
+
       if (context.route != null) {
         contextData['routeStart'] = context.route!.startAddress;
         contextData['routeEnd'] = context.route!.endAddress;
@@ -300,7 +310,21 @@ class TripContext {
   final AppRoute? route;
   final List<POI> stops;
 
-  TripContext({this.route, this.stops = const []});
+  // Standort-Informationen (NEU für standortbasierte Empfehlungen)
+  final double? userLatitude;
+  final double? userLongitude;
+  final String? userLocationName;
+
+  TripContext({
+    this.route,
+    this.stops = const [],
+    this.userLatitude,
+    this.userLongitude,
+    this.userLocationName,
+  });
+
+  /// Hat der Kontext Standort-Informationen?
+  bool get hasUserLocation => userLatitude != null && userLongitude != null;
 }
 
 /// Chat-Nachricht

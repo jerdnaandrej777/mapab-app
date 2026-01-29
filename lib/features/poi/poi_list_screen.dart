@@ -50,7 +50,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     });
   }
 
-  /// Enriched POIs im sichtbaren Bereich + Puffer
+  /// Enriched POIs im sichtbaren Bereich + Puffer (OPTIMIERT v1.7.3: Batch-Request)
   void _enrichVisiblePOIs() {
     if (!_scrollController.hasClients) return;
 
@@ -68,18 +68,25 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     final firstVisible = (scrollPosition / itemHeight).floor();
     final lastVisible = ((scrollPosition + viewportHeight) / itemHeight).ceil();
 
-    // Puffer: 5 Items vor und nach sichtbarem Bereich
-    final startIndex = (firstVisible - 5).clamp(0, pois.length - 1);
-    final endIndex = (lastVisible + 5).clamp(0, pois.length - 1);
+    // Puffer: 10 Items vor und nach sichtbarem Bereich (erhöht für Batch)
+    final startIndex = (firstVisible - 10).clamp(0, pois.length - 1);
+    final endIndex = (lastVisible + 10).clamp(0, pois.length);
 
-    // Enrichment für alle POIs im Bereich
-    for (int i = startIndex; i <= endIndex; i++) {
+    // Sammle alle POIs im Bereich die Enrichment brauchen
+    final poisToEnrich = <POI>[];
+    for (int i = startIndex; i < endIndex && i < pois.length; i++) {
       final poi = pois[i];
       if (!poi.isEnriched &&
           poi.imageUrl == null &&
           !poiState.enrichingPOIIds.contains(poi.id)) {
-        poiNotifier.enrichPOI(poi.id);
+        poisToEnrich.add(poi);
       }
+    }
+
+    // OPTIMIERT v1.7.3: Batch-Enrichment für alle POIs im Bereich
+    if (poisToEnrich.isNotEmpty) {
+      debugPrint('[POIList] Scroll-Batch für ${poisToEnrich.length} POIs');
+      poiNotifier.enrichPOIsBatch(poisToEnrich);
     }
   }
 
@@ -169,20 +176,19 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     _preEnrichVisiblePOIs();
   }
 
-  /// Pre-Enrichment für sichtbare POIs (Top 8 ohne Bilder)
-  /// OPTIMIERT v1.3.7: Nutzt Concurrency-Limits im Service, kein Doppel-Enrichment
+  /// Pre-Enrichment für sichtbare POIs (OPTIMIERT v1.7.3: Batch-Request)
+  /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 POIs gleichzeitig
   void _preEnrichVisiblePOIs() {
     final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
     final poiState = ref.read(pOIStateNotifierProvider);
 
-    // Nur Top 8 POIs ohne Bilder und nicht bereits in Enrichment
+    // Nur POIs ohne Bilder und nicht bereits in Enrichment (bis zu 30)
     final poisToEnrich = poiState.filteredPOIs
         .where((poi) =>
             !poi.isEnriched &&
             poi.imageUrl == null &&
             !poiState.enrichingPOIIds.contains(poi.id))
-        .take(
-            15) // Erhöht auf 15 für bessere initiale Abdeckung (ca. 1.5 Bildschirme)
+        .take(30) // OPTIMIERT: Mehr POIs im Batch (schneller durch Multi-Title-Query)
         .toList();
 
     if (poisToEnrich.isEmpty) {
@@ -192,13 +198,10 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     }
 
     debugPrint(
-        '[POIList] Pre-Enrichment für ${poisToEnrich.length} POIs starten');
+        '[POIList] Batch-Enrichment für ${poisToEnrich.length} POIs starten');
 
-    // Enrichment starten - Concurrency wird im Service kontrolliert
-    for (final poi in poisToEnrich) {
-      // Fire-and-forget, aber ohne unawaited da Service Concurrency handhabt
-      poiNotifier.enrichPOI(poi.id);
-    }
+    // OPTIMIERT v1.7.3: Batch-Enrichment nutzen statt einzelner Requests
+    poiNotifier.enrichPOIsBatch(poisToEnrich);
   }
 
   /// Dialog anzeigen wenn GPS deaktiviert ist (v1.5.9)
@@ -515,9 +518,40 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     );
   }
 
-  void _addPOIToTrip(POI poi) {
+  Future<void> _addPOIToTrip(POI poi) async {
     final tripNotifier = ref.read(tripStateProvider.notifier);
-    tripNotifier.addStop(poi);
+    final result = await tripNotifier.addStopWithAutoRoute(poi);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      if (result.routeCreated) {
+        // Route wurde erstellt - zum Trip-Tab navigieren
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Route zu "${poi.name}" erstellt'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.go('/trip');
+      }
+    } else if (result.isGpsDisabled) {
+      // GPS deaktiviert - Dialog anzeigen
+      final shouldOpen = await _showGpsDialog();
+      if (shouldOpen) {
+        await Geolocator.openLocationSettings();
+      }
+    } else {
+      // Anderer Fehler
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _showFilterSheet() {

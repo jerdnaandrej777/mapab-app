@@ -12,6 +12,10 @@ final currentMapPositionProvider = StateProvider<LatLng?>((ref) => null);
 /// Provider für die aktuelle Zoom-Stufe
 final currentMapZoomProvider = StateProvider<double>((ref) => 6.0);
 
+/// Provider der angibt, ob beim nächsten MapScreen-Anzeige auf die Route gezoomt werden soll
+/// Wird auf true gesetzt nach Route-Berechnung und bei Tab-Wechsel zum Trip-Screen
+final shouldFitToRouteProvider = StateProvider<bool>((ref) => false);
+
 /// Extension für einfache Karten-Operationen
 extension MapControllerExtension on MapController {
   /// Bewegt die Karte zu einer Position mit Animation

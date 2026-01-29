@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
+import '../poi/providers/poi_state_provider.dart';
 
 /// Favoriten-Screen für gespeicherte Routen und POIs
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -17,11 +18,34 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Set<String> _enrichedPOIIds = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Enrichment für Favoriten-POIs nach erstem Frame starten
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _enrichFavoritePOIs();
+    });
+  }
+
+  /// Enriched alle Favoriten-POIs die noch kein Bild haben
+  Future<void> _enrichFavoritePOIs() async {
+    final favoritesAsync = ref.read(favoritesNotifierProvider);
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+
+    favoritesAsync.whenData((favorites) {
+      for (final poi in favorites.favoritePOIs) {
+        // Nur enrichen wenn noch kein Bild und nicht bereits enriched
+        if (poi.imageUrl == null && !_enrichedPOIIds.contains(poi.id)) {
+          _enrichedPOIIds.add(poi.id);
+          debugPrint('[Favorites] Enriching POI: ${poi.name}');
+          poiNotifier.enrichPOI(poi.id);
+        }
+      }
+    });
   }
 
   @override
@@ -283,10 +307,20 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    // Enrichment triggern wenn kein Bild vorhanden
+    if (poi.imageUrl == null && !_enrichedPOIIds.contains(poi.id)) {
+      _enrichedPOIIds.add(poi.id);
+      ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poi.id);
+    }
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('/poi/${poi.id}'),
+        onTap: () {
+          // POI zum State hinzufügen für POI-Detail-Screen
+          ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+          context.push('/poi/${poi.id}');
+        },
         child: Stack(
           children: [
             Column(

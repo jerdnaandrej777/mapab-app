@@ -7,12 +7,14 @@ class TripSummary extends StatelessWidget {
   final double totalDistance;
   final int totalDuration;
   final int stopCount;
+  final bool isRecalculating;
 
   const TripSummary({
     super.key,
     required this.totalDistance,
     required this.totalDuration,
     required this.stopCount,
+    this.isRecalculating = false,
   });
 
   @override
@@ -47,6 +49,7 @@ class TripSummary extends StatelessWidget {
                 icon: Icons.straighten,
                 value: FormatUtils.formatDistance(totalDistance),
                 label: 'Gesamt',
+                isLoading: isRecalculating,
               ),
               Container(
                 width: 1,
@@ -57,6 +60,7 @@ class TripSummary extends StatelessWidget {
                 icon: Icons.timer,
                 value: FormatUtils.formatDuration(totalDuration),
                 label: 'Fahrzeit',
+                isLoading: isRecalculating,
               ),
               Container(
                 width: 1,
@@ -67,6 +71,7 @@ class TripSummary extends StatelessWidget {
                 icon: Icons.place,
                 value: '$stopCount',
                 label: 'Stops',
+                isLoading: false,
               ),
             ],
           ),
@@ -79,17 +84,31 @@ class TripSummary extends StatelessWidget {
     required IconData icon,
     required String value,
     required String label,
+    bool isLoading = false,
   }) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 20),
+        isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(icon, color: Colors.white, size: 20),
         const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        AnimatedOpacity(
+          opacity: isLoading ? 0.5 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Text(

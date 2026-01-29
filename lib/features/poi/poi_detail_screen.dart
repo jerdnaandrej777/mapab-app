@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -663,17 +664,72 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     launchUrl(Uri.parse(url));
   }
 
-  void _addToTrip(POI poi) {
+  Future<void> _addToTrip(POI poi) async {
     final tripNotifier = ref.read(tripStateProvider.notifier);
-    tripNotifier.addStop(poi);
+    final result = await tripNotifier.addStopWithAutoRoute(poi);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${poi.name} zur Route hinzugefügt'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    context.pop();
+    if (!mounted) return;
+
+    if (result.success) {
+      if (result.routeCreated) {
+        // Route wurde erstellt - zum Trip-Tab navigieren
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Route zu "${poi.name}" erstellt'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.go('/trip');
+      } else {
+        // Stop zur bestehenden Route hinzugefügt
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${poi.name} zur Route hinzugefügt'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.pop();
+      }
+    } else if (result.isGpsDisabled) {
+      // GPS deaktiviert - Dialog anzeigen
+      final shouldOpen = await _showGpsDialog();
+      if (shouldOpen) {
+        await Geolocator.openLocationSettings();
+      }
+    } else {
+      // Anderer Fehler
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<bool> _showGpsDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('GPS deaktiviert'),
+            content: const Text(
+              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Nein'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Einstellungen öffnen'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }

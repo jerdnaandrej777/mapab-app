@@ -194,6 +194,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
       );
       print('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
+
+      // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
+      _enrichGeneratedPOIs(result);
     } on TripGenerationException catch (e) {
       state = state.copyWith(
         step: RandomTripStep.config,
@@ -371,5 +374,23 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   bool get allDaysCompleted {
     final totalDays = state.generatedTrip?.trip.actualDays ?? 1;
     return state.completedDays.length >= totalDays;
+  }
+
+  /// v1.6.9: Enriched die generierten POIs für Foto-Anzeige
+  /// Wird nach Trip-Generierung aufgerufen
+  void _enrichGeneratedPOIs(GeneratedTrip result) {
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+
+    // POIs zum State hinzufügen und enrichen
+    for (final poi in result.selectedPOIs) {
+      // POI zum State hinzufügen (für POI-Detail-Navigation)
+      poiNotifier.addPOI(poi);
+
+      // Enrichment triggern wenn noch kein Bild vorhanden
+      if (poi.imageUrl == null) {
+        print('[RandomTrip] Enriching POI: ${poi.name}');
+        poiNotifier.enrichPOI(poi.id);
+      }
+    }
   }
 }

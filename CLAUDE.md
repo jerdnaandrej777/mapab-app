@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.6.7 | Plattformen: Android, iOS, Desktop
+Version: 1.7.5 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,18 +85,19 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + GPS-Dialog + Floating Buttons ausblenden (v1.5.6) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Auto-Navigation & Zoom + Route Löschen für AI-Chat (v1.7.5) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview (v1.5.0) |
-| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter |
+| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment (v1.7.3) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Tagesweiser Export - nur berechnete Routen (v1.6.5) |
-| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button (v1.7.0) |
+| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen (v1.7.2) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
-| `lib/features/favorites/favorites_screen.dart` | Favoriten |
+| `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment (v1.6.9) |
 | `lib/features/auth/login_screen.dart` | Cloud-Login mit Remember Me |
 | `lib/features/onboarding/onboarding_screen.dart` | Animiertes Onboarding |
 | `lib/features/random_trip/random_trip_screen.dart` | AI Trip Generator (Legacy) |
 | `lib/features/random_trip/widgets/day_tab_selector.dart` | Tag-Auswahl für mehrtägige Trips (v1.5.7) |
+| `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
 
 ### Provider
 
@@ -105,9 +106,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/providers/account_provider.dart` | Account State (keepAlive) |
 | `lib/data/providers/favorites_provider.dart` | Favoriten State (keepAlive) |
 | `lib/data/providers/auth_provider.dart` | Auth State (keepAlive) |
-| `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) |
+| `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) + Auto-Routenberechnung (v1.7.2) |
 | `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix) |
-| `lib/features/map/providers/route_planner_provider.dart` | Route-Planner |
+| `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Navigation (v1.7.0) |
+| `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
 | `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl (v1.5.7) |
 
@@ -117,8 +119,8 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/data/services/ai_service.dart` | AI via Backend-Proxy |
-| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment (v1.6.6 CORS & Rate-Limit Fix) |
+| `lib/data/services/ai_service.dart` | AI via Backend-Proxy + TripContext mit Standort (v1.7.2) |
+| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API (v1.7.3) |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
 | `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7) |
@@ -317,6 +319,14 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.6.5.md` (TripScreen vereinfacht - nur berechnete Routen)
 - `Dokumentation/CHANGELOG-v1.6.6.md` (POI-Foto CORS & Rate-Limit Fix)
 - `Dokumentation/CHANGELOG-v1.6.7.md` (POI-Detail Fotos & Highlights Fix)
+- `Dokumentation/CHANGELOG-v1.6.8.md` (GPS-Dialog & Löschbutton & POI-Details Fix)
+- `Dokumentation/CHANGELOG-v1.6.9.md` (POI-Fotos überall - Favoriten, Trip-Stops, AI Trip Preview)
+- `Dokumentation/CHANGELOG-v1.7.0.md` (Auto-Navigation zum Trip-Tab & Auto-Zoom auf Route)
+- `Dokumentation/CHANGELOG-v1.7.1.md` (Auto-Zoom Verbesserung - MapController-Timing-Fix)
+- `Dokumentation/CHANGELOG-v1.7.2.md` (AI-Chat mit standortbasierten POI-Vorschlägen)
+- `Dokumentation/CHANGELOG-v1.7.3.md` (POI-Foto Batch-Enrichment - 7x schneller)
+- `Dokumentation/CHANGELOG-v1.7.5.md` (Route Löschen Button für AI-Chat Routen)
+- `Dokumentation/CHANGELOG-v1.7.4.md` (Auto-Route von GPS-Standort zu POI)
 
 ---
 
@@ -372,6 +382,39 @@ routePlanner.setEnd(latLng, 'Adresse');
 // Route wird automatisch berechnet wenn beide gesetzt
 ```
 
+### Stops hinzufügen/entfernen mit Auto-Neuberechnung (v1.7.4+)
+
+```dart
+// Stop hinzufügen MIT Auto-Route (v1.7.4)
+// Wenn keine Route existiert: GPS → POI Route wird automatisch erstellt
+final result = await ref.read(tripStateProvider.notifier).addStopWithAutoRoute(poi);
+
+if (result.success) {
+  if (result.routeCreated) {
+    // Neue Route wurde erstellt (GPS → POI)
+    context.go('/trip');
+  }
+  // Sonst: Stop wurde zu bestehender Route hinzugefügt
+} else if (result.isGpsDisabled) {
+  // GPS-Dialog anzeigen
+}
+
+// Stop hinzufügen OHNE Auto-Route (klassisch)
+ref.read(tripStateProvider.notifier).addStop(poi);
+
+// Stop entfernen - Route wird automatisch neu berechnet
+ref.read(tripStateProvider.notifier).removeStop(poiId);
+
+// Stops neu ordnen - Route wird automatisch neu berechnet
+ref.read(tripStateProvider.notifier).reorderStops(oldIndex, newIndex);
+
+// Prüfen ob Route gerade neu berechnet wird
+final isRecalculating = ref.watch(tripStateProvider).isRecalculating;
+
+// WICHTIG: Bei Stop-Änderungen wird OSRM mit Waypoints aufgerufen
+// → Echte Distanz (km) und Fahrzeit werden aktualisiert
+```
+
 ### Route löschen (v1.3.4+)
 
 ```dart
@@ -402,7 +445,31 @@ ref.read(routeSessionProvider.notifier).stopRoute();
 ### POI enrichen
 
 ```dart
+// Einzelner POI
 ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poiId);
+
+// Batch-Enrichment für mehrere POIs (v1.7.3 - 7x schneller)
+ref.read(pOIStateNotifierProvider.notifier).enrichPOIsBatch(poisList);
+```
+
+### POI zum State hinzufügen (v1.6.9+)
+
+```dart
+// POI manuell zum State hinzufügen (für POI-Details-Navigation)
+ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+
+// Typischer Anwendungsfall: Vor Navigation zu POI-Details
+ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+if (poi.imageUrl == null) {
+  ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poi.id);
+}
+context.push('/poi/${poi.id}');
+
+// HINWEIS: addPOI() wird automatisch aufgerufen bei:
+// - Favoriten-Screen: POI-Card Klick
+// - TripScreen: Stop-Tile Klick
+// - TripPreviewCard: Stop-Item Klick
+// - RandomTripProvider: Nach Trip-Generierung (_enrichGeneratedPOIs)
 ```
 
 ### RouteOnlyMode (v1.4.6+)
@@ -573,10 +640,10 @@ debugPrint('Regions: ${stats['regions']}, Enriched: ${stats['enrichedPOIs']}');
 - **POI-Laden**: 3 Quellen werden parallel geladen (50-70% schneller)
 - **Region-Cache**: 7 Tage gültig, sofortiges Laden bei erneutem Besuch
 - **Enrichment-Cache**: 30 Tage gültig für Bilder/Beschreibungen
-- **Batch-Enrichment**: Max 3 POIs gleichzeitig, 500ms Pause zwischen Batches
+- **Batch-Enrichment**: Wikipedia Multi-Title-Query für bis zu 50 POIs (v1.7.3)
 - **ListView**: `cacheExtent: 500` für flüssigeres Scrollen
 
-### POI-Foto-Optimierungen (v1.3.7+, v1.6.6)
+### POI-Foto-Optimierungen (v1.3.7+, v1.6.6, v1.7.3)
 
 ```dart
 // Prüfen ob POI gerade enriched wird (Per-POI Loading State)
@@ -606,11 +673,11 @@ POIEnrichmentService._apiCallDelay = 200;            // 200ms zwischen API-Calls
 5. Wikidata SPARQL (P18 Bild, P154 Logo, P94 Wappen)
 
 **Performance-Vergleich:**
-| Metrik | v1.3.6 | v1.3.7 |
-|--------|--------|--------|
-| Zeit pro POI | 3-9 Sek | 1-3 Sek |
-| Bild-Trefferquote | ~60% | ~85% |
-| Wikimedia Radius | 500m | 5km |
+| Metrik | v1.3.6 | v1.3.7 | v1.7.3 |
+|--------|--------|--------|--------|
+| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek |
+| API-Calls für 20 POIs | ~160 | ~80 | ~4 |
+| Bild-Trefferquote | ~60% | ~85% | ~85% |
 
 ### POI Enrichment Race Condition Fix (v1.5.1)
 
@@ -745,6 +812,68 @@ Future<bool> _showGpsDialog() async {
 
 **Konsistenz:** Das Verhalten ist jetzt konsistent mit `RandomTripProvider`, der bereits Fehlermeldungen statt Fallback-Standorte verwendet.
 
+### GPS-Dialog bei AI Trip (v1.6.8)
+
+**Problem:** Bei "Überrasch mich!" ohne GPS wurde nur eine Fehlermeldung angezeigt, kein Dialog.
+
+**Lösung:** Neue Helper-Methoden in `_AITripPanelState`:
+
+```dart
+// GPS-Button und "Überrasch mich!" Button nutzen jetzt:
+Future<bool> _checkGPSAndShowDialog() async {
+  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    // Dialog anzeigen mit Option "Einstellungen öffnen"
+    return false;
+  }
+  return true;
+}
+
+Future<void> _handleGenerateTrip() async {
+  // Wenn kein Startpunkt gesetzt, GPS-Dialog anzeigen
+  if (!state.hasValidStart) {
+    final gpsAvailable = await _checkGPSAndShowDialog();
+    if (!gpsAvailable) return;
+    await notifier.useCurrentLocation();
+  }
+  notifier.generateTrip();
+}
+```
+
+**Ergebnis:** Bei deaktiviertem GPS erscheint jetzt auch bei "Überrasch mich!" ein Dialog.
+
+### GPS-Button im Schnell-Modus (v1.6.8)
+
+**Problem:** Im Schnell-Modus gab es keinen GPS-Button zum Setzen des aktuellen Standorts als Startpunkt.
+
+**Lösung:** GPS-Button zur `_SearchBar` hinzugefügt:
+
+```dart
+// _SearchBar erweitert mit GPS-Button Parameter:
+_SearchBar(
+  startAddress: routePlanner.startAddress,
+  // ... andere Parameter
+  onGpsTap: _handleSchnellModeGPS,
+  isLoadingGps: _isLoadingSchnellGps,
+),
+
+// Handler-Methode:
+Future<void> _handleSchnellModeGPS() async {
+  // GPS-Status prüfen, Dialog wenn deaktiviert
+  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    final shouldOpen = await _showGpsDialog();
+    if (shouldOpen) await Geolocator.openLocationSettings();
+    return;
+  }
+  // Position abrufen und als Startpunkt setzen
+  final position = await Geolocator.getCurrentPosition(...);
+  ref.read(routePlannerProvider.notifier).setStart(latLng, 'Mein Standort');
+}
+```
+
+**Ergebnis:** GPS-Button erscheint neben dem Startpunkt-Feld im Schnell-Modus. Bei Klick wird der aktuelle Standort als Startpunkt gesetzt (mit GPS-Dialog wenn deaktiviert).
+
 ### POI-Card Layout-Fix (v1.5.5)
 
 **Problem:** POI-Liste zeigte "15 von 22 POIs" an, aber nur 1 POI war sichtbar.
@@ -871,3 +1000,283 @@ onTap: () {
 - Loading-Indikator "Lade Details..." wird korrekt angezeigt
 - Nach dem Laden sind Foto und Highlights sofort sichtbar
 - Keine Race Conditions mehr
+
+### POI-Details unter "Deine Route" (v1.6.8)
+
+**Problem:** Beim Klick auf einen Stop unter "Deine Route" wurden keine POI-Details angezeigt.
+
+**Ursache:** Der POI aus dem TripState war nicht im POIState vorhanden, daher konnte der POIDetailScreen ihn nicht finden.
+
+**Lösung:** Neue `addPOI()` Methode im POIStateProvider:
+
+```dart
+// poi_state_provider.dart
+void addPOI(POI poi) {
+  final existingIndex = state.pois.indexWhere((p) => p.id == poi.id);
+  if (existingIndex != -1) {
+    // POI bereits vorhanden - aktualisieren
+    final updatedPOIs = List<POI>.from(state.pois);
+    updatedPOIs[existingIndex] = poi;
+    state = state.copyWith(pois: updatedPOIs);
+  } else {
+    // POI hinzufügen
+    state = state.copyWith(pois: [...state.pois, poi]);
+  }
+}
+
+// trip_screen.dart - Navigation angepasst:
+onTap: () {
+  ref.read(pOIStateNotifierProvider.notifier).addPOI(stop);
+  context.push('/poi/${stop.id}');
+},
+```
+
+**Ergebnis:** POI-Details mit Foto werden jetzt korrekt angezeigt.
+
+### Löschbutton für AI Trip (v1.6.8)
+
+**Problem:** Nach AI Trip Generierung erschien kein Löschbutton auf der Karte.
+
+**Ursache:** Der `_RouteClearButton` wurde nur für `routePlanner.hasStart || hasEnd` angezeigt, nicht für AI Trips.
+
+**Lösung:** Zwei Anpassungen in `map_screen.dart`:
+
+```dart
+// 1. Schnell-Modus: Erweiterte Bedingung
+if (routePlanner.hasStart || routePlanner.hasEnd ||
+    randomTripState.step == RandomTripStep.preview ||
+    randomTripState.step == RandomTripStep.confirmed)
+  _RouteClearButton(
+    onClear: () {
+      ref.read(routePlannerProvider.notifier).clearRoute();
+      ref.read(randomTripNotifierProvider.notifier).reset();
+    },
+  ),
+
+// 2. AI Trip Modus: Separater Button
+if (_planMode == MapPlanMode.aiTrip &&
+    !isGenerating &&
+    (randomTripState.step == RandomTripStep.preview ||
+     randomTripState.step == RandomTripStep.confirmed))
+  _RouteClearButton(...)
+```
+
+**Ergebnis:** Der "Route löschen" Button erscheint jetzt auch nach AI Trip Generierung.
+
+### Auto-Navigation & Zoom (v1.7.0)
+
+**Feature 1: Auto-Navigation zum Trip-Tab nach Route-Berechnung**
+
+Nach Berechnung einer Route wird automatisch zum Trip-Tab navigiert.
+
+```dart
+// map_screen.dart - Listener im initState
+ref.listenManual(routePlannerProvider, (previous, next) {
+  if (next.hasRoute && (previous?.route != next.route)) {
+    _fitMapToRoute(next.route!);
+    // Nach Route-Berechnung automatisch zum Trip-Tab navigieren
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.go('/trip');
+      }
+    });
+  }
+});
+```
+
+**Feature 2: Auto-Zoom auf Route beim Tab-Wechsel**
+
+Beim Wechsel vom Trip-Tab zur Karte wird automatisch auf die Route gezoomt.
+
+```dart
+// map_controller_provider.dart - Neuer Provider
+final shouldFitToRouteProvider = StateProvider<bool>((ref) => false);
+
+// route_planner_provider.dart - Nach Route-Berechnung
+ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+// map_screen.dart - Im build()
+final shouldFitToRoute = ref.watch(shouldFitToRouteProvider);
+if (shouldFitToRoute) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (routeToFit != null) _fitMapToRoute(routeToFit);
+    ref.read(shouldFitToRouteProvider.notifier).state = false;
+  });
+}
+```
+
+**Feature 3: "Auf Karte anzeigen" Button im TripScreen**
+
+```dart
+// trip_screen.dart
+FilledButton.icon(
+  onPressed: () {
+    ref.read(shouldFitToRouteProvider.notifier).state = true;
+    context.go('/');
+  },
+  icon: const Icon(Icons.map_outlined),
+  label: const Text('Auf Karte anzeigen'),
+),
+```
+
+**Feature 4: GPS-Fallback für Kartenausschnitt (v1.7.2)**
+
+Ohne Route wird der GPS-Standort als Kartenzentrum verwendet.
+
+```dart
+// map_screen.dart - initState und build()
+// Prüfe ob irgendeine Route vorhanden ist
+final hasAnyRoute = routePlanner.hasRoute ||
+    tripState.hasRoute ||
+    randomTripState.step == RandomTripStep.preview ||
+    randomTripState.step == RandomTripStep.confirmed;
+
+if (hasAnyRoute) {
+  // Auf Route zoomen (Priorität: AI Trip > Trip > RoutePlanner)
+  _fitMapToRoute(routeToFit);
+} else {
+  // Keine Route → GPS-Standort zentrieren
+  _centerOnCurrentLocationSilent();
+}
+
+// Fallback bei GPS-Fehler: Europa-Zentrum
+void _showDefaultMapCenter() {
+  mapController?.move(const LatLng(50.0, 10.0), 6.0);
+}
+```
+
+**Ergebnis:** Bessere Benutzerführung zwischen Karte und Trip-Tab. Karte zeigt immer relevanten Ausschnitt.
+
+### AI-Chat mit standortbasierten POI-Vorschlägen (v1.7.2)
+
+**Feature 1: Automatisches GPS-Laden beim Chat-Start**
+
+```dart
+// chat_screen.dart - initState
+@override
+void initState() {
+  super.initState();
+  _checkBackendHealth();
+  _initializeLocation(); // GPS automatisch beim Start laden
+}
+
+// State-Variablen
+LatLng? _currentLocation;
+String? _currentLocationName;
+bool _isLoadingLocation = false;
+double _searchRadius = 30.0; // 10-100km einstellbar
+```
+
+**Feature 2: Location-Header mit Radius-Einstellung**
+
+```dart
+// Zeigt aktuellen Standort und Radius
+// 📍 München          [30 km] [⚙️]
+Widget _buildLocationHeader(ColorScheme colorScheme) {
+  // Standort-Info oder "Standort aktivieren" Button
+  // Radius-Anzeige mit Settings-Button
+}
+
+// Radius-Slider Dialog (10-100km)
+void _showRadiusSliderDialog() {
+  // Quick-Select: 15, 30, 50, 100 km
+}
+```
+
+**Feature 3: Standortbasierte POI-Suche**
+
+```dart
+// Neue Suggestion Chips
+final _suggestions = [
+  '📍 POIs in meiner Nähe',
+  '🏰 Sehenswürdigkeiten',
+  '🌲 Natur & Parks',
+  '🍽️ Restaurants',
+];
+
+// Keyword-Erkennung für standortbasierte Anfragen
+bool _isLocationBasedQuery(String query) {
+  final keywords = ['in meiner nähe', 'um mich', 'hier', 'zeig mir', ...];
+  return keywords.any((k) => query.toLowerCase().contains(k));
+}
+
+// POI-Suche mit Kategorien-Filter
+Future<void> _handleLocationBasedQuery(String query) async {
+  final categories = _getCategoriesFromQuery(query);
+  final pois = await poiRepo.loadPOIsInRadius(
+    center: _currentLocation!,
+    radiusKm: _searchRadius,
+    categoryFilter: categories,
+  );
+  // POIs nach Distanz sortieren und als Karten anzeigen
+}
+```
+
+**Feature 4: Anklickbare POI-Karten im Chat**
+
+```dart
+// POI-Karten mit Bild, Name, Beschreibung, Distanz
+Widget _buildPOICard(POI poi, ColorScheme colorScheme) {
+  return Card(
+    child: InkWell(
+      onTap: () => _navigateToPOI(poi),
+      child: Row(
+        children: [
+          // Bild (CachedNetworkImage)
+          // Name + Beschreibung
+          // Distanz Badge
+          // Pfeil-Icon
+        ],
+      ),
+    ),
+  );
+}
+
+// Navigation zu POI-Details
+void _navigateToPOI(POI poi) {
+  ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+  if (poi.imageUrl == null) {
+    ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poi.id);
+  }
+  context.push('/poi/${poi.id}');
+}
+```
+
+**Feature 5: TripContext mit Standort-Informationen**
+
+```dart
+// ai_service.dart - TripContext erweitert
+class TripContext {
+  final AppRoute? route;
+  final List<POI> stops;
+
+  // NEU: Standort-Informationen
+  final double? userLatitude;
+  final double? userLongitude;
+  final String? userLocationName;
+
+  bool get hasUserLocation => userLatitude != null && userLongitude != null;
+}
+
+// Backend erhält Standort im Kontext
+final contextData = <String, dynamic>{};
+if (context.hasUserLocation) {
+  contextData['userLocation'] = {
+    'lat': context.userLatitude,
+    'lng': context.userLongitude,
+    'name': context.userLocationName,
+  };
+}
+```
+
+**Kategorien-Zuordnung:**
+
+| Anfrage | Kategorien |
+|---------|------------|
+| "Sehenswürdigkeiten" | `museum`, `monument`, `castle`, `viewpoint` |
+| "Natur", "Parks" | `nature`, `park`, `lake`, `waterfall` |
+| "Restaurants", "Essen" | `restaurant`, `cafe` |
+| "Hotels" | `hotel` |
+| Unspezifisch | alle Kategorien |
+
+**Ergebnis:** Der AI-Chat schlägt POIs basierend auf dem aktuellen Standort vor. Benutzer können den Such-Radius anpassen und direkt zu POI-Details navigieren.

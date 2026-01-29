@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -5,9 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
+import '../../data/models/poi.dart';
 import '../../data/services/ai_service.dart';
-import '../../data/models/trip.dart';
 import '../../data/repositories/geocoding_repo.dart';
+import '../../data/repositories/poi_repo.dart';
 import '../../data/repositories/trip_generator_repo.dart';
 import '../../features/map/providers/route_session_provider.dart';
 import '../../features/poi/providers/poi_state_provider.dart';
@@ -23,32 +25,155 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
+/// Message-Typ für unterschiedliche Chat-Inhalte
+enum ChatMessageType { text, poiList }
+
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isLoading = false;
   bool _backendAvailable = true;
 
+  // GPS-Standort State
+  LatLng? _currentLocation;
+  String? _currentLocationName;
+  bool _isLoadingLocation = false;
+
+  // Such-Radius (10-100km)
+  double _searchRadius = 30.0;
+
   // Chat-Nachrichten mit History für Backend
+  // Erweitert um POI-Liste Support
   final List<Map<String, dynamic>> _messages = [
     {
       'content':
           'Hallo! Ich bin dein AI-Reiseassistent. Wie kann ich dir bei der Planung helfen?',
       'isUser': false,
+      'type': ChatMessageType.text,
     },
   ];
 
   final List<String> _suggestions = [
-    '🤖 AI-Trip generieren',
-    '🗺️ Sehenswürdigkeiten auf Route',
-    '🌲 Naturhighlights zeigen',
-    '🍽️ Restaurants empfehlen',
+    '📍 POIs in meiner Nähe',
+    '🏰 Sehenswürdigkeiten',
+    '🌲 Natur & Parks',
+    '🍽️ Restaurants',
   ];
 
   @override
   void initState() {
     super.initState();
     _checkBackendHealth();
+    _initializeLocation(); // GPS automatisch beim Start laden
+  }
+
+  /// GPS-Standort automatisch beim Chat-Start laden
+  Future<void> _initializeLocation() async {
+    if (_isLoadingLocation) return;
+
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      // GPS-Status prüfen
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[AI-Chat] GPS deaktiviert');
+        if (mounted) {
+          setState(() {
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      // Berechtigung prüfen
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('[AI-Chat] GPS-Berechtigung verweigert');
+          if (mounted) {
+            setState(() {
+              _isLoadingLocation = false;
+            });
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[AI-Chat] GPS-Berechtigung dauerhaft verweigert');
+        if (mounted) {
+          setState(() {
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      // Position abrufen
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      final location = LatLng(position.latitude, position.longitude);
+
+      // Reverse Geocoding für Ortsname
+      String? locationName;
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final result = await geocodingRepo.reverseGeocode(location);
+        if (result != null) {
+          locationName = result.shortName ?? result.displayName;
+        }
+      } catch (e) {
+        debugPrint('[AI-Chat] Reverse Geocoding Fehler: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _currentLocation = location;
+          _currentLocationName = locationName ?? 'Mein Standort';
+          _isLoadingLocation = false;
+        });
+        debugPrint(
+            '[AI-Chat] Standort geladen: $_currentLocationName (${location.latitude}, ${location.longitude})');
+      }
+    } catch (e) {
+      debugPrint('[AI-Chat] GPS Fehler: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  /// GPS-Dialog anzeigen wenn deaktiviert
+  Future<bool> _showGpsDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('GPS deaktiviert'),
+            content: const Text(
+              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Nein'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Einstellungen öffnen'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   Future<void> _checkBackendHealth() async {
@@ -104,6 +229,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Status Banner (nur wenn Backend nicht verfügbar)
           _buildStatusBanner(colorScheme),
 
+          // Location Header mit Standort und Radius
+          _buildLocationHeader(colorScheme),
+
           // Chat-Nachrichten
           Expanded(
             child: _messages.isEmpty
@@ -122,6 +250,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       }
 
                       final message = _messages[index];
+                      final messageType = message['type'] as ChatMessageType? ??
+                          ChatMessageType.text;
+
+                      // POI-Liste anzeigen
+                      if (messageType == ChatMessageType.poiList) {
+                        final pois = message['pois'] as List<POI>?;
+                        final headerText = message['content'] as String?;
+                        return _buildPOIListMessage(
+                          pois: pois ?? [],
+                          headerText: headerText,
+                          colorScheme: colorScheme,
+                        );
+                      }
+
+                      // Standard Text-Nachricht
                       return ChatMessageBubble(
                         content: message['content'],
                         isUser: message['isUser'],
@@ -175,6 +318,213 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: const Text('Erneut prüfen'),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Location Header mit Standort und Radius-Slider
+  Widget _buildLocationHeader(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withOpacity(0.3),
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Standort-Zeile
+          Row(
+            children: [
+              // Standort-Info oder Loading
+              if (_isLoadingLocation)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Standort wird geladen...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                )
+              else if (_currentLocation != null)
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: Colors.green.shade600,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _currentLocationName ?? 'Standort aktiv',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                TextButton.icon(
+                  onPressed: () async {
+                    final serviceEnabled =
+                        await Geolocator.isLocationServiceEnabled();
+                    if (!serviceEnabled) {
+                      final shouldOpen = await _showGpsDialog();
+                      if (shouldOpen) {
+                        await Geolocator.openLocationSettings();
+                      }
+                      return;
+                    }
+                    _initializeLocation();
+                  },
+                  icon: Icon(
+                    Icons.location_off,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  label: Text(
+                    'Standort aktivieren',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+
+              // Radius-Anzeige
+              if (_currentLocation != null) ...[
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_searchRadius.toInt()} km',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(
+                    Icons.tune,
+                    size: 20,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: _showRadiusSliderDialog,
+                  tooltip: 'Such-Radius anpassen',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Dialog zum Anpassen des Such-Radius
+  void _showRadiusSliderDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
+    double tempRadius = _searchRadius;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Such-Radius'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${tempRadius.toInt()} km',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Slider(
+                value: tempRadius,
+                min: 10,
+                max: 100,
+                divisions: 9,
+                label: '${tempRadius.toInt()} km',
+                onChanged: (value) {
+                  setDialogState(() {
+                    tempRadius = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              // Quick-Select Buttons
+              Wrap(
+                spacing: 8,
+                children: [15, 30, 50, 100].map((radius) {
+                  final isSelected = tempRadius == radius.toDouble();
+                  return ChoiceChip(
+                    label: Text('$radius km'),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setDialogState(() {
+                        tempRadius = radius.toDouble();
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  _searchRadius = tempRadius;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('Übernehmen'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -271,14 +621,434 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  /// POI-Liste als Chat-Nachricht anzeigen
+  Widget _buildPOIListMessage({
+    required List<POI> pois,
+    String? headerText,
+    required ColorScheme colorScheme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header-Text (z.B. "📍 POIs in deiner Nähe:")
+        if (headerText != null && headerText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 4),
+            child: Text(
+              headerText,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+
+        // POI-Karten
+        if (pois.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_off,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Keine POIs in diesem Bereich gefunden.',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...pois.take(5).map((poi) => _buildPOICard(poi, colorScheme)),
+
+        // "Mehr anzeigen" Button wenn > 5 POIs
+        if (pois.length > 5)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: TextButton.icon(
+              onPressed: () {
+                // Zur POI-Liste navigieren
+                context.push('/pois');
+              },
+              icon: const Icon(Icons.list, size: 18),
+              label: Text('Alle ${pois.length} POIs anzeigen'),
+            ),
+          ),
+
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  /// Einzelne POI-Karte (anklickbar)
+  Widget _buildPOICard(POI poi, ColorScheme colorScheme) {
+    // Distanz zum aktuellen Standort berechnen
+    double? distanceKm;
+    if (_currentLocation != null) {
+      final Distance distance = const Distance();
+      distanceKm = distance.as(
+            LengthUnit.Kilometer,
+            _currentLocation!,
+            poi.location,
+          ) /
+          1000;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _navigateToPOI(poi),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // POI-Bild oder Placeholder
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: poi.imageUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: poi.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              _getCategoryIcon(poi.categoryId),
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              _getCategoryIcon(poi.categoryId),
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: colorScheme.surfaceContainerHighest,
+                          child: Icon(
+                            _getCategoryIcon(poi.categoryId),
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // POI-Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      poi.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      poi.shortDescription ?? poi.categoryLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Distanz
+              if (distanceKm != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${distanceKm.toStringAsFixed(1)} km',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+
+              const SizedBox(width: 4),
+
+              // Pfeil-Icon
+              Icon(
+                Icons.chevron_right,
+                color: colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Icon für POI-Kategorie
+  IconData _getCategoryIcon(String categoryId) {
+    switch (categoryId) {
+      case 'museum':
+        return Icons.museum;
+      case 'castle':
+        return Icons.castle;
+      case 'church':
+        return Icons.church;
+      case 'monument':
+        return Icons.account_balance;
+      case 'nature':
+        return Icons.park;
+      case 'park':
+        return Icons.nature_people;
+      case 'lake':
+        return Icons.water;
+      case 'viewpoint':
+        return Icons.landscape;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'hotel':
+        return Icons.hotel;
+      case 'city':
+        return Icons.location_city;
+      default:
+        return Icons.place;
+    }
+  }
+
+  /// Navigation zu POI-Details
+  void _navigateToPOI(POI poi) {
+    // POI zum State hinzufügen (damit POI-Detail-Screen ihn findet)
+    ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+
+    // Enrichment starten falls kein Bild
+    if (poi.imageUrl == null) {
+      ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poi.id);
+    }
+
+    // Navigieren
+    context.push('/poi/${poi.id}');
+  }
+
+  /// Prüft ob die Anfrage standortbasiert ist
+  bool _isLocationBasedQuery(String query) {
+    final lowerQuery = query.toLowerCase();
+    final locationKeywords = [
+      'in meiner nähe',
+      'um mich',
+      'hier',
+      'in der nähe',
+      'nearby',
+      'nahegelegene',
+      'pois in',
+      'was gibt es',
+      'was kann ich',
+      'zeig mir',
+      'empfehle',
+    ];
+
+    return locationKeywords.any((k) => lowerQuery.contains(k));
+  }
+
+  /// Kategorien aus Anfrage-Text extrahieren
+  List<String>? _getCategoriesFromQuery(String query) {
+    final lowerQuery = query.toLowerCase();
+
+    // Kategorie-Mapping
+    final categoryMapping = <String, List<String>>{
+      'sehenswürd': ['museum', 'monument', 'castle', 'viewpoint', 'unesco'],
+      'museum': ['museum'],
+      'schloss': ['castle'],
+      'schlösser': ['castle'],
+      'burg': ['castle'],
+      'kirche': ['church'],
+      'natur': ['nature', 'park', 'lake', 'waterfall'],
+      'park': ['park', 'nature'],
+      'see': ['lake'],
+      'restaurant': ['restaurant'],
+      'essen': ['restaurant', 'cafe'],
+      'hotel': ['hotel'],
+      'übernacht': ['hotel'],
+      'aussicht': ['viewpoint'],
+    };
+
+    for (final entry in categoryMapping.entries) {
+      if (lowerQuery.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+
+    // Standard: alle Kategorien
+    return null;
+  }
+
+  /// Standortbasierte POI-Anfrage verarbeiten
+  Future<void> _handleLocationBasedQuery(String query) async {
+    // User-Nachricht hinzufügen
+    setState(() {
+      _messages.add({
+        'content': query,
+        'isUser': true,
+        'type': ChatMessageType.text,
+      });
+      _isLoading = true;
+    });
+    _messageController.clear();
+    _scrollToBottom();
+
+    // Standort prüfen
+    if (_currentLocation == null) {
+      // Versuche Standort zu laden
+      await _initializeLocation();
+
+      if (_currentLocation == null) {
+        // Kein Standort verfügbar
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          final shouldOpen = await _showGpsDialog();
+          if (shouldOpen) {
+            await Geolocator.openLocationSettings();
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _messages.add({
+              'content':
+                  '📍 **Standort nicht verfügbar**\n\n'
+                  'Um POIs in deiner Nähe zu finden, benötige ich Zugriff auf deinen Standort.\n\n'
+                  'Bitte aktiviere die Ortungsdienste und versuche es erneut.',
+              'isUser': false,
+              'type': ChatMessageType.text,
+            });
+          });
+          _scrollToBottom();
+        }
+        return;
+      }
+    }
+
+    try {
+      debugPrint(
+          '[AI-Chat] Suche POIs um ${_currentLocation!.latitude}, ${_currentLocation!.longitude} mit Radius ${_searchRadius}km');
+
+      // Kategorien aus Anfrage extrahieren
+      final categories = _getCategoriesFromQuery(query);
+
+      // POIs laden
+      final poiRepo = ref.read(poiRepositoryProvider);
+      final pois = await poiRepo.loadPOIsInRadius(
+        center: _currentLocation!,
+        radiusKm: _searchRadius,
+        categoryFilter: categories,
+      );
+
+      debugPrint('[AI-Chat] ${pois.length} POIs gefunden');
+
+      if (!mounted) return;
+
+      // POIs nach Distanz sortieren
+      final Distance distanceCalculator = const Distance();
+      final sortedPOIs = List<POI>.from(pois);
+      sortedPOIs.sort((a, b) {
+        final distA = distanceCalculator.as(
+          LengthUnit.Kilometer,
+          _currentLocation!,
+          a.location,
+        );
+        final distB = distanceCalculator.as(
+          LengthUnit.Kilometer,
+          _currentLocation!,
+          b.location,
+        );
+        return distA.compareTo(distB);
+      });
+
+      // Header-Text basierend auf Kategorien
+      String headerText;
+      if (categories != null && categories.isNotEmpty) {
+        headerText =
+            '📍 **${sortedPOIs.length} POIs** (${categories.join(", ")}) im Umkreis von ${_searchRadius.toInt()} km:';
+      } else {
+        headerText =
+            '📍 **${sortedPOIs.length} POIs** im Umkreis von ${_searchRadius.toInt()} km:';
+      }
+
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'content': headerText,
+          'isUser': false,
+          'type': ChatMessageType.poiList,
+          'pois': sortedPOIs,
+        });
+      });
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('[AI-Chat] POI-Suche Fehler: $e');
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _messages.add({
+            'content':
+                '❌ **Fehler bei der POI-Suche**\n\n'
+                'Entschuldigung, es gab ein Problem beim Laden der POIs.\n\n'
+                'Bitte versuche es erneut.',
+            'isUser': false,
+            'type': ChatMessageType.text,
+          });
+        });
+        _scrollToBottom();
+      }
+    }
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
     final userMessage = text.trim();
+
+    // Prüfe ob standortbasierte Anfrage
+    if (_isLocationBasedQuery(userMessage)) {
+      await _handleLocationBasedQuery(userMessage);
+      return;
+    }
+
     setState(() {
       _messages.add({
         'content': userMessage,
         'isUser': true,
+        'type': ChatMessageType.text,
       });
       _isLoading = true;
     });
@@ -297,6 +1067,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _messages.add({
             'content': _generateSmartDemoResponse(userMessage),
             'isUser': false,
+            'type': ChatMessageType.text,
           });
         });
         _scrollToBottom();
@@ -316,11 +1087,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ))
           .toList();
 
-      // Trip-Kontext abrufen
+      // Trip-Kontext abrufen (mit Standort für standortbasierte Empfehlungen)
       final tripState = ref.read(tripStateProvider);
       final context = TripContext(
         route: tripState.route,
         stops: tripState.stops,
+        userLatitude: _currentLocation?.latitude,
+        userLongitude: _currentLocation?.longitude,
+        userLocationName: _currentLocationName,
       );
 
       final response = await aiService.chat(
@@ -537,17 +1311,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _handleSuggestionTap(String suggestion) {
     switch (suggestion) {
-      case '🤖 AI-Trip generieren':
-        _showTripGeneratorDialog();
+      case '📍 POIs in meiner Nähe':
+        _handleLocationBasedQuery('Zeig mir POIs in meiner Nähe');
         break;
-      case '🗺️ Sehenswürdigkeiten auf Route':
-        _handleSehenswuerdigkeitenRequest();
+      case '🏰 Sehenswürdigkeiten':
+        _handleLocationBasedQuery('Zeig mir Sehenswürdigkeiten in meiner Nähe');
         break;
-      case '🌲 Naturhighlights zeigen':
-        _handleNaturhighlightsRequest();
+      case '🌲 Natur & Parks':
+        _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner Nähe');
         break;
-      case '🍽️ Restaurants empfehlen':
-        _handleRestaurantRequest();
+      case '🍽️ Restaurants':
+        _handleLocationBasedQuery('Zeig mir Restaurants in meiner Nähe');
         break;
       default:
         _sendMessage(suggestion);

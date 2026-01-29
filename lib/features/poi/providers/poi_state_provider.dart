@@ -215,6 +215,63 @@ class POIStateNotifier extends _$POIStateNotifier {
     }
   }
 
+  /// Reichert mehrere POIs in einem Batch an (OPTIMIERT v1.7.3)
+  /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 POIs gleichzeitig
+  Future<void> enrichPOIsBatch(List<POI> pois) async {
+    if (pois.isEmpty) return;
+
+    // Nur nicht-enriched POIs filtern
+    final unenrichedPOIs = pois.where((p) => !p.isEnriched).toList();
+    if (unenrichedPOIs.isEmpty) {
+      debugPrint('[POIState] Alle POIs bereits enriched');
+      return;
+    }
+
+    debugPrint('[POIState] Batch-Enrichment für ${unenrichedPOIs.length} POIs');
+
+    // Markiere alle als "in Arbeit"
+    final newEnrichingIds = {...state.enrichingPOIIds, ...unenrichedPOIs.map((p) => p.id)};
+    state = state.copyWith(
+      isEnriching: true,
+      enrichingPOIIds: newEnrichingIds,
+    );
+
+    try {
+      final enrichmentService = ref.read(poiEnrichmentServiceProvider);
+      final enrichedPOIs = await enrichmentService.enrichPOIsBatch(unenrichedPOIs);
+
+      // State atomar aktualisieren
+      final currentPOIs = List<POI>.from(state.pois);
+      for (final entry in enrichedPOIs.entries) {
+        final index = currentPOIs.indexWhere((p) => p.id == entry.key);
+        if (index != -1) {
+          currentPOIs[index] = entry.value;
+        }
+      }
+
+      // Loading State entfernen
+      final remainingEnrichingIds = Set<String>.from(state.enrichingPOIIds)
+        ..removeAll(enrichedPOIs.keys);
+
+      state = state.copyWith(
+        pois: currentPOIs,
+        isEnriching: remainingEnrichingIds.isNotEmpty,
+        enrichingPOIIds: remainingEnrichingIds,
+      );
+
+      debugPrint('[POIState] Batch-Enrichment abgeschlossen: ${enrichedPOIs.length} POIs aktualisiert');
+    } catch (e) {
+      // Loading State entfernen bei Fehler
+      final remainingEnrichingIds = Set<String>.from(state.enrichingPOIIds)
+        ..removeAll(unenrichedPOIs.map((p) => p.id));
+      state = state.copyWith(
+        isEnriching: remainingEnrichingIds.isNotEmpty,
+        enrichingPOIIds: remainingEnrichingIds,
+      );
+      debugPrint('[POIState] Batch-Enrichment Fehler: $e');
+    }
+  }
+
   /// Reichert einen einzelnen POI an (on-demand)
   /// OPTIMIERT v1.3.7: Per-POI Loading State, Doppel-Enrichment-Schutz
   /// FIX v1.5.1: Race Condition behoben - State wird atomar aktualisiert
@@ -358,6 +415,23 @@ class POIStateNotifier extends _$POIStateNotifier {
   void clearPOIs() {
     state = const POIState();
     debugPrint('[POIState] Alle POIs gelöscht');
+  }
+
+  /// Fügt einen einzelnen POI zum State hinzu (für Navigation von TripScreen)
+  /// v1.6.8: Ermöglicht POI-Details-Anzeige für Trip-Stops
+  void addPOI(POI poi) {
+    final existingIndex = state.pois.indexWhere((p) => p.id == poi.id);
+    if (existingIndex != -1) {
+      // POI bereits vorhanden - aktualisieren
+      final updatedPOIs = List<POI>.from(state.pois);
+      updatedPOIs[existingIndex] = poi;
+      state = state.copyWith(pois: updatedPOIs);
+      debugPrint('[POIState] POI aktualisiert: ${poi.name}');
+    } else {
+      // POI hinzufügen
+      state = state.copyWith(pois: [...state.pois, poi]);
+      debugPrint('[POIState] POI hinzugefügt: ${poi.name}');
+    }
   }
 
   /// Prüft ob ein POI gerade enriched wird (für UI)

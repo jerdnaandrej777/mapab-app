@@ -4,6 +4,7 @@ import '../../../data/models/route.dart';
 import '../../../data/repositories/routing_repo.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
+import 'map_controller_provider.dart';
 import 'route_session_provider.dart';
 
 part 'route_planner_provider.g.dart';
@@ -94,6 +95,11 @@ class RoutePlanner extends _$RoutePlanner {
 
       // Route in Trip-State schreiben
       ref.read(tripStateProvider.notifier).setRoute(route);
+
+      // Flag setzen, dass beim nächsten MapScreen-Anzeigen auf Route gezoomt werden soll
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+      print('[RoutePlanner] Route berechnet: ${route.distanceKm.toStringAsFixed(0)} km');
     } catch (e) {
       print('[RoutePlanner] Fehler bei Routenberechnung: $e');
       state = state.copyWith(

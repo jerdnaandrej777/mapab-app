@@ -30,6 +30,7 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   bool _isLoadingLocation = false;
+  bool _isLoadingSchnellGps = false;
   MapPlanMode _planMode = MapPlanMode.schnell;
   bool _categoriesExpanded = false;
 
@@ -39,12 +40,41 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // Listener für Route-Änderungen (Auto-Zoom)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Wenn bereits eine Route existiert (z.B. von Trip-Screen kommend), zoome darauf
+      // Sonst zentriere auf GPS-Standort
       final routePlanner = ref.read(routePlannerProvider);
-      if (routePlanner.hasRoute) {
+      final tripState = ref.read(tripStateProvider);
+      final randomTripState = ref.read(randomTripNotifierProvider);
+
+      // Prüfe ob irgendeine Route vorhanden ist
+      final hasAnyRoute = routePlanner.hasRoute ||
+          tripState.hasRoute ||
+          randomTripState.step == RandomTripStep.preview ||
+          randomTripState.step == RandomTripStep.confirmed;
+
+      if (hasAnyRoute) {
         // Kurze Verzögerung damit MapController bereit ist
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) {
-            _fitMapToRoute(routePlanner.route!);
+            // Bestimme welche Route (Priorität: AI Trip > Trip > RoutePlanner)
+            AppRoute? routeToFit;
+            if (randomTripState.step == RandomTripStep.preview ||
+                randomTripState.step == RandomTripStep.confirmed) {
+              routeToFit = randomTripState.generatedTrip?.trip.route;
+            } else if (tripState.hasRoute) {
+              routeToFit = tripState.route;
+            } else if (routePlanner.hasRoute) {
+              routeToFit = routePlanner.route;
+            }
+            if (routeToFit != null) {
+              _fitMapToRoute(routeToFit);
+            }
+          }
+        });
+      } else {
+        // Keine Route → zentriere auf GPS-Standort
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            _centerOnCurrentLocationSilent();
           }
         });
       }
@@ -54,6 +84,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         // Wenn eine neue Route berechnet wurde, zoome die Karte darauf
         if (next.hasRoute && (previous?.route != next.route)) {
           _fitMapToRoute(next.route!);
+          // Nach Route-Berechnung automatisch zum Trip-Tab navigieren
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              debugPrint('[MapScreen] Route berechnet - navigiere zu Trip-Tab');
+              context.go('/trip');
+            }
+          });
         }
       });
 
@@ -122,6 +159,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final routePlanner = ref.watch(routePlannerProvider);
     final routeSession = ref.watch(routeSessionProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
+    final tripState = ref.watch(tripStateProvider);
+
+    // Auto-Zoom auf Route bei Tab-Wechsel (v1.7.0)
+    final shouldFitToRoute = ref.watch(shouldFitToRouteProvider);
+    if (shouldFitToRoute) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        // Prüfe ob MapController bereit ist
+        final mapController = ref.read(mapControllerProvider);
+        if (mapController == null) {
+          debugPrint('[MapScreen] MapController noch nicht bereit, warte...');
+          // Retry nach kurzer Verzögerung
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              // Triggere erneuten Build durch State-Änderung
+              setState(() {});
+            }
+          });
+          return;
+        }
+
+        // Bestimme welche Route angezeigt werden soll (Priorität: AI Trip > Trip > RoutePlanner)
+        AppRoute? routeToFit;
+        if (randomTripState.step == RandomTripStep.preview ||
+            randomTripState.step == RandomTripStep.confirmed) {
+          routeToFit = randomTripState.generatedTrip?.trip.route;
+        } else if (tripState.hasRoute) {
+          routeToFit = tripState.route;
+        } else if (routePlanner.hasRoute) {
+          routeToFit = routePlanner.route;
+        }
+
+        if (routeToFit != null) {
+          debugPrint('[MapScreen] Auto-Zoom auf Route bei Tab-Wechsel');
+          _fitMapToRoute(routeToFit);
+        } else {
+          // Keine Route vorhanden → auf GPS-Standort zentrieren
+          debugPrint('[MapScreen] Keine Route - zentriere auf GPS-Standort');
+          _centerOnCurrentLocationSilent();
+        }
+        // Flag zurücksetzen (nur wenn MapController bereit war)
+        ref.read(shouldFitToRouteProvider.notifier).state = false;
+      });
+    }
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -190,15 +272,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       onEndClear: routePlanner.hasEnd
                           ? () => ref.read(routePlannerProvider.notifier).clearEnd()
                           : null,
+                      onGpsTap: _handleSchnellModeGPS,
+                      isLoadingGps: _isLoadingSchnellGps,
                     ),
 
-                    // Route löschen Button (wenn Route oder Start/Ziel vorhanden)
-                    if (routePlanner.hasStart || routePlanner.hasEnd)
+                    // Route löschen Button (wenn Route, Start/Ziel ODER AI Trip ODER Trip-Route vorhanden)
+                    // v1.6.8: Auch bei AI Trip Preview/Confirmed anzeigen
+                    // v1.7.5: Auch bei AI-Chat Route (tripState) anzeigen
+                    if (routePlanner.hasStart || routePlanner.hasEnd ||
+                        randomTripState.step == RandomTripStep.preview ||
+                        randomTripState.step == RandomTripStep.confirmed ||
+                        tripState.hasRoute)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: _RouteClearButton(
                           onClear: () {
+                            // Alle Route-States zurücksetzen
                             ref.read(routePlannerProvider.notifier).clearRoute();
+                            ref.read(randomTripNotifierProvider.notifier).reset();
+                            // Trip-State auch löschen (für AI-Chat Routen)
+                            ref.read(tripStateProvider.notifier).clearAll();
                           },
                         ),
                       ),
@@ -238,6 +331,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   // === LOADING (Trip wird generiert) ===
                   if (isGenerating)
                     _GeneratingIndicator(),
+
+                  // === ROUTE LÖSCHEN BUTTON FÜR AI TRIP ===
+                  // v1.6.8: Zeige Löschbutton wenn AI Trip generiert wurde
+                  // v1.7.5: Auch bei AI-Chat Route (tripState) anzeigen
+                  if (_planMode == MapPlanMode.aiTrip &&
+                      !isGenerating &&
+                      (randomTripState.step == RandomTripStep.preview ||
+                       randomTripState.step == RandomTripStep.confirmed ||
+                       tripState.hasRoute))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _RouteClearButton(
+                        onClear: () {
+                          // Alle Route-States zurücksetzen
+                          ref.read(randomTripNotifierProvider.notifier).reset();
+                          ref.read(routePlannerProvider.notifier).clearRoute();
+                          ref.read(tripStateProvider.notifier).clearAll();
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -336,6 +449,63 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  /// Zentriert die Karte still auf aktuelle GPS-Position (ohne UI-Feedback)
+  /// Verwendet bei Tab-Wechsel wenn keine Route vorhanden
+  Future<void> _centerOnCurrentLocationSilent() async {
+    try {
+      // Prüfe ob Location Services aktiviert sind
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[GPS] Location Services deaktiviert - zeige Europa-Zentrum');
+        _showDefaultMapCenter();
+        return;
+      }
+
+      // Prüfe Berechtigungen
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('[GPS] Berechtigung verweigert - zeige Europa-Zentrum');
+          _showDefaultMapCenter();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[GPS] Berechtigung dauerhaft verweigert - zeige Europa-Zentrum');
+        _showDefaultMapCenter();
+        return;
+      }
+
+      // Position abrufen (mit kürzerem Timeout)
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      // Karte zur Position bewegen
+      final mapController = ref.read(mapControllerProvider);
+      if (mapController != null) {
+        final location = LatLng(position.latitude, position.longitude);
+        mapController.move(location, 12.0);
+        debugPrint('[GPS] Karte auf Standort zentriert: ${position.latitude}, ${position.longitude}');
+      }
+    } catch (e) {
+      debugPrint('[GPS] Position nicht verfügbar: $e - zeige Europa-Zentrum');
+      _showDefaultMapCenter();
+    }
+  }
+
+  /// Zeigt Europa-Zentrum als Fallback
+  void _showDefaultMapCenter() {
+    final mapController = ref.read(mapControllerProvider);
+    if (mapController != null) {
+      mapController.move(const LatLng(50.0, 10.0), 6.0);
+      debugPrint('[Map] Fallback: Europa-Zentrum angezeigt');
+    }
+  }
+
   void _showSnackBar(String message, {int duration = 2}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -368,6 +538,77 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ],
       ),
     ) ?? false;
+  }
+
+  /// GPS-Button im Schnell-Modus: Setzt aktuellen Standort als Startpunkt
+  Future<void> _handleSchnellModeGPS() async {
+    if (_isLoadingSchnellGps) return;
+
+    setState(() => _isLoadingSchnellGps = true);
+
+    try {
+      // Prüfe ob Location Services aktiviert sind
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[GPS] Location Services deaktiviert');
+        final shouldOpenSettings = await _showGpsDialog();
+        if (shouldOpenSettings) {
+          await Geolocator.openLocationSettings();
+        }
+        return;
+      }
+
+      // Prüfe Berechtigungen
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('[GPS] Berechtigung verweigert');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[GPS] Berechtigung dauerhaft verweigert');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('GPS-Berechtigung wurde dauerhaft verweigert. Bitte in den Einstellungen aktivieren.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Position abrufen
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      debugPrint('[GPS] Position: ${position.latitude}, ${position.longitude}');
+
+      // Startpunkt setzen
+      final latLng = LatLng(position.latitude, position.longitude);
+      ref.read(routePlannerProvider.notifier).setStart(latLng, 'Mein Standort');
+
+      // Karte zentrieren
+      final mapController = ref.read(mapControllerProvider);
+      if (mapController != null) {
+        mapController.move(latLng, 15);
+      }
+    } catch (e) {
+      debugPrint('[GPS] Fehler: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('GPS-Fehler: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingSchnellGps = false);
+      }
+    }
   }
 
   /// Startet die Route-Session
@@ -551,6 +792,8 @@ class _SearchBar extends StatelessWidget {
   final VoidCallback onEndTap;
   final VoidCallback? onStartClear;
   final VoidCallback? onEndClear;
+  final VoidCallback? onGpsTap;
+  final bool isLoadingGps;
 
   const _SearchBar({
     this.startAddress,
@@ -560,6 +803,8 @@ class _SearchBar extends StatelessWidget {
     required this.onEndTap,
     this.onStartClear,
     this.onEndClear,
+    this.onGpsTap,
+    this.isLoadingGps = false,
   });
 
   @override
@@ -582,14 +827,52 @@ class _SearchBar extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Start-Eingabe
-          _SearchField(
-            icon: Icons.trip_origin,
-            iconColor: AppTheme.successColor,
-            hint: 'Startpunkt eingeben',
-            value: startAddress,
-            onTap: onStartTap,
-            onClear: onStartClear,
+          // Start-Eingabe mit GPS-Button
+          Row(
+            children: [
+              Expanded(
+                child: _SearchField(
+                  icon: Icons.trip_origin,
+                  iconColor: AppTheme.successColor,
+                  hint: 'Startpunkt eingeben',
+                  value: startAddress,
+                  onTap: onStartTap,
+                  onClear: onStartClear,
+                ),
+              ),
+              // GPS-Button
+              if (onGpsTap != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: isLoadingGps ? null : onGpsTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: startAddress != null && startAddress!.contains('Standort')
+                            ? colorScheme.primaryContainer
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: isLoadingGps
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colorScheme.primary,
+                              ),
+                            )
+                          : Icon(
+                              Icons.my_location,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           Divider(height: 1, indent: 48, color: theme.dividerColor),
@@ -920,6 +1203,73 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
     _focusNode.unfocus();
   }
 
+  /// Prüft GPS-Status und zeigt Dialog wenn deaktiviert
+  Future<bool> _checkGPSAndShowDialog() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (!mounted) return false;
+      final shouldOpen = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('GPS deaktiviert'),
+          content: const Text(
+            'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Nein'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Einstellungen öffnen'),
+            ),
+          ],
+        ),
+      ) ?? false;
+      if (shouldOpen) {
+        await Geolocator.openLocationSettings();
+      }
+      return false;
+    }
+    return true;
+  }
+
+  /// Handelt GPS-Button-Klick mit Dialog
+  Future<void> _handleGPSButtonTap() async {
+    final gpsAvailable = await _checkGPSAndShowDialog();
+    if (!gpsAvailable) return;
+
+    // GPS verfügbar - Standort ermitteln
+    final notifier = ref.read(randomTripNotifierProvider.notifier);
+    await notifier.useCurrentLocation();
+  }
+
+  /// Handelt "Überrasch mich!" Klick - prüft GPS wenn kein Startpunkt
+  Future<void> _handleGenerateTrip() async {
+    final state = ref.read(randomTripNotifierProvider);
+    final notifier = ref.read(randomTripNotifierProvider.notifier);
+
+    // Wenn kein Startpunkt gesetzt, GPS-Dialog anzeigen
+    if (!state.hasValidStart) {
+      final gpsAvailable = await _checkGPSAndShowDialog();
+      if (!gpsAvailable) return;
+
+      // GPS-Standort ermitteln
+      await notifier.useCurrentLocation();
+
+      // Prüfen ob Standort jetzt gesetzt ist
+      final newState = ref.read(randomTripNotifierProvider);
+      if (!newState.hasValidStart) {
+        // Standort konnte nicht ermittelt werden
+        return;
+      }
+    }
+
+    // Trip generieren
+    notifier.generateTrip();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(randomTripNotifierProvider);
@@ -1112,9 +1462,9 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // GPS Button
+                // GPS Button mit Dialog wenn GPS deaktiviert
                 InkWell(
-                  onTap: state.isLoading ? null : () => notifier.useCurrentLocation(),
+                  onTap: state.isLoading ? null : _handleGPSButtonTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1187,13 +1537,13 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
             onToggle: widget.onCategoriesToggle,
           ),
 
-          // Generate Button
+          // Generate Button - prüft GPS wenn kein Startpunkt gesetzt
           Padding(
             padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: state.canGenerate ? () => notifier.generateTrip() : null,
+                onPressed: state.isLoading ? null : _handleGenerateTrip,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,

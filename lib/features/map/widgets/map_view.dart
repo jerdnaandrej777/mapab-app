@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../providers/map_controller_provider.dart';
@@ -392,12 +393,7 @@ class _MapViewState extends ConsumerState<MapView> {
                   child: FilledButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      ref.read(tripStateProvider.notifier).addStop(poi);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${poi.name} zur Route hinzugefügt'),
-                        ),
-                      );
+                      _addPOIToTripFromMap(poi);
                     },
                     icon: const Icon(Icons.add),
                     label: const Text('Zur Route'),
@@ -451,6 +447,73 @@ class _MapViewState extends ConsumerState<MapView> {
         ),
       ),
     );
+  }
+
+  /// POI zur Route hinzufügen mit Auto-Route von GPS-Standort
+  Future<void> _addPOIToTripFromMap(POI poi) async {
+    final tripNotifier = ref.read(tripStateProvider.notifier);
+    final result = await tripNotifier.addStopWithAutoRoute(poi);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      if (result.routeCreated) {
+        // Route wurde erstellt - zum Trip-Tab navigieren
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Route zu "${poi.name}" erstellt'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.go('/trip');
+      } else {
+        // Stop zur bestehenden Route hinzugefügt
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${poi.name} zur Route hinzugefügt'),
+          ),
+        );
+      }
+    } else if (result.isGpsDisabled) {
+      // GPS deaktiviert - Dialog anzeigen
+      final shouldOpen = await _showGpsDialog();
+      if (shouldOpen) {
+        await Geolocator.openLocationSettings();
+      }
+    } else {
+      // Anderer Fehler
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<bool> _showGpsDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('GPS deaktiviert'),
+            content: const Text(
+              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Nein'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Einstellungen öffnen'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 

@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/poi.dart';
+import '../../../data/repositories/routing_repo.dart';
+import '../../map/providers/map_controller_provider.dart';
 
 part 'trip_state_provider.g.dart';
 
@@ -22,22 +27,118 @@ class TripState extends _$TripState {
   void addStop(POI poi) {
     final newStops = [...state.stops, poi];
     state = state.copyWith(stops: newStops);
+    _recalculateRoute();
+  }
+
+  /// Fügt einen Stop hinzu und erstellt automatisch eine Route wenn keine vorhanden
+  /// GPS-Standort wird als Startpunkt verwendet, der POI als Ziel
+  /// Gibt ein Result-Objekt zurück mit Status und optionaler Fehlermeldung
+  Future<AddStopResult> addStopWithAutoRoute(POI poi) async {
+    // Wenn bereits eine Route existiert, einfach den Stop hinzufügen
+    if (state.route != null) {
+      addStop(poi);
+      return const AddStopResult(success: true);
+    }
+
+    // Keine Route vorhanden - GPS-Standort als Start verwenden
+    debugPrint('[TripState] Keine Route vorhanden - erstelle Route von GPS zu POI');
+
+    try {
+      // GPS-Status prüfen
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[TripState] GPS deaktiviert');
+        return const AddStopResult(
+          success: false,
+          error: 'gps_disabled',
+          message: 'GPS ist deaktiviert. Bitte aktiviere die Ortungsdienste.',
+        );
+      }
+
+      // Berechtigung prüfen
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('[TripState] GPS-Berechtigung verweigert');
+          return const AddStopResult(
+            success: false,
+            error: 'permission_denied',
+            message: 'GPS-Berechtigung wurde verweigert.',
+          );
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('[TripState] GPS-Berechtigung dauerhaft verweigert');
+        return const AddStopResult(
+          success: false,
+          error: 'permission_denied_forever',
+          message: 'GPS-Berechtigung wurde dauerhaft verweigert. Bitte in den Einstellungen aktivieren.',
+        );
+      }
+
+      // GPS-Position abrufen
+      state = state.copyWith(isRecalculating: true);
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      final startLocation = LatLng(position.latitude, position.longitude);
+      debugPrint('[TripState] GPS-Position: ${position.latitude}, ${position.longitude}');
+
+      // Route berechnen von GPS-Standort zum POI
+      final routingRepo = ref.read(routingRepositoryProvider);
+      final route = await routingRepo.calculateFastRoute(
+        start: startLocation,
+        end: poi.location,
+        startAddress: 'Mein Standort',
+        endAddress: poi.name,
+      );
+
+      // Route setzen
+      state = state.copyWith(
+        route: route,
+        stops: [],
+        isRecalculating: false,
+      );
+
+      // Flag setzen, dass auf Route gezoomt werden soll
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+      debugPrint('[TripState] Route erstellt: ${route.distanceKm.toStringAsFixed(1)} km zum POI "${poi.name}"');
+
+      return const AddStopResult(success: true, routeCreated: true);
+    } catch (e) {
+      debugPrint('[TripState] Fehler beim Erstellen der Route: $e');
+      state = state.copyWith(isRecalculating: false);
+      return AddStopResult(
+        success: false,
+        error: 'route_error',
+        message: 'Fehler beim Erstellen der Route: $e',
+      );
+    }
   }
 
   /// Entfernt einen Stop
   void removeStop(String poiId) {
     final newStops = state.stops.where((p) => p.id != poiId).toList();
     state = state.copyWith(stops: newStops);
+    _recalculateRoute();
   }
 
   /// Setzt alle Stops neu (z.B. nach Optimierung)
   void setStops(List<POI> stops) {
     state = state.copyWith(stops: stops);
+    _recalculateRoute();
   }
 
   /// Leert alle Stops
   void clearStops() {
     state = state.copyWith(stops: []);
+    _recalculateRoute();
   }
 
   /// Leert Route und Stops
@@ -51,6 +152,42 @@ class TripState extends _$TripState {
     final stop = newStops.removeAt(oldIndex);
     newStops.insert(newIndex, stop);
     state = state.copyWith(stops: newStops);
+    _recalculateRoute();
+  }
+
+  /// Berechnet die Route mit aktuellen Waypoints (Stops) neu
+  Future<void> _recalculateRoute() async {
+    // Nur neu berechnen wenn Route vorhanden
+    if (state.route == null) return;
+
+    state = state.copyWith(isRecalculating: true);
+
+    try {
+      final routingRepo = ref.read(routingRepositoryProvider);
+
+      // Stops als Waypoints extrahieren
+      final waypoints = state.stops.map((poi) => poi.location).toList();
+
+      debugPrint('[TripState] Route neu berechnen mit ${waypoints.length} Waypoints');
+
+      final newRoute = await routingRepo.calculateFastRoute(
+        start: state.route!.start,
+        end: state.route!.end,
+        waypoints: waypoints,
+        startAddress: state.route!.startAddress,
+        endAddress: state.route!.endAddress,
+      );
+
+      state = state.copyWith(
+        route: newRoute,
+        isRecalculating: false,
+      );
+
+      debugPrint('[TripState] Route aktualisiert: ${newRoute.distanceKm.toStringAsFixed(1)} km, ${newRoute.durationMinutes} Min');
+    } catch (e) {
+      debugPrint('[TripState] Route-Neuberechnung fehlgeschlagen: $e');
+      state = state.copyWith(isRecalculating: false);
+    }
   }
 }
 
@@ -58,19 +195,23 @@ class TripState extends _$TripState {
 class TripStateData {
   final AppRoute? route;
   final List<POI> stops;
+  final bool isRecalculating;
 
   const TripStateData({
     this.route,
     this.stops = const [],
+    this.isRecalculating = false,
   });
 
   TripStateData copyWith({
     AppRoute? route,
     List<POI>? stops,
+    bool? isRecalculating,
   }) {
     return TripStateData(
       route: route ?? this.route,
       stops: stops ?? this.stops,
+      isRecalculating: isRecalculating ?? this.isRecalculating,
     );
   }
 
@@ -89,4 +230,23 @@ class TripStateData {
     final stopsDuration = stops.length * 45; // 45 Min pro Stop
     return baseDuration + stopsDuration;
   }
+}
+
+/// Ergebnis von addStopWithAutoRoute
+class AddStopResult {
+  final bool success;
+  final bool routeCreated;
+  final String? error;
+  final String? message;
+
+  const AddStopResult({
+    required this.success,
+    this.routeCreated = false,
+    this.error,
+    this.message,
+  });
+
+  bool get isGpsDisabled => error == 'gps_disabled';
+  bool get isPermissionDenied =>
+      error == 'permission_denied' || error == 'permission_denied_forever';
 }
