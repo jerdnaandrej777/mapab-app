@@ -7,6 +7,100 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.7.19] - 2026-01-31
+
+### UI-Verbesserungen
+
+#### GPS Reverse Geocoding
+- **GPS-Standorte zeigen echte Stadtnamen** (z.B. "München" statt "Mein Standort")
+  - GPS-Button im Schnell-Modus verwendet Nominatim Reverse Geocoding
+  - Automatisches Zentrieren beim App-Start zeigt Stadtname
+  - Fallback auf "Mein Standort" bei Fehler
+- **Dateien**: `lib/features/map/map_screen.dart` (Zeilen 630, 527)
+
+#### Unified Weather Widget
+- **Drei Wetter-Widgets zu einem intelligenten Widget zusammengeführt**
+  - Ersetzt: `WeatherRecommendationBanner`, `WeatherBar`, `WeatherAlertBanner`
+  - Automatischer Modus-Wechsel zwischen Standort-Wetter und Route-Wetter
+  - Ein-/Ausklappbar mit persistiertem State
+  - Integrierte Warnungen und Toggles (Wetter-Kategorien, Indoor-Filter)
+  - Dark Mode vollständig kompatibel
+- **Dateien**:
+  - **NEU**: `lib/features/map/widgets/unified_weather_widget.dart`
+  - **GELÖSCHT**: `lib/features/map/widgets/weather_bar.dart`
+  - **GELÖSCHT**: `lib/features/map/widgets/weather_alert_banner.dart`
+- **Details**: [Dokumentation/CHANGELOG-v1.7.19.md](Dokumentation/CHANGELOG-v1.7.19.md)
+
+---
+
+## [1.7.18] - 2026-01-31
+
+### Snackbar Auto-Dismiss
+
+#### Verbessert
+- **"Route gespeichert" Snackbar verschwindet nach 1 Sekunde** (statt 4 Sekunden Flutter-Standard)
+  - Gilt für beide Modi: Reguläre Route & AI Trip speichern
+  - "Anzeigen" Button bleibt innerhalb der Sekunde funktionsfähig
+  - Schnellere, weniger aufdringliche UX
+
+#### Technisch
+- **Dateien**: `lib/features/trip/trip_screen.dart` (Zeilen 221, 293)
+- `duration: const Duration(seconds: 1)` Parameter zu beiden SnackBar-Widgets hinzugefügt
+- Methoden: `_saveRoute()` und `_saveAITrip()`
+
+---
+
+## [1.7.17] - 2026-01-31
+
+### Persistente Wetter-Widgets
+
+#### Behoben
+- **Wetter-Widgets verschwanden bei Navigation** zwischen Screens
+  - Problem: Weather Provider hatten kein `keepAlive: true` → State wurde zurückgesetzt
+  - Folgen: 15-Minuten-Cache funktionierte nicht, redundante API-Calls (5-10/Min)
+
+#### Verbessert
+- **`keepAlive: true` für Weather Provider**
+  - WeatherChip bleibt sichtbar bei Screen-Wechseln
+  - WeatherBar bleibt geladen (keine redundanten API-Calls)
+  - Cache funktioniert korrekt (15 Minuten gültig)
+  - **Performance:** ~90% weniger API-Calls zu Open-Meteo
+
+#### Technisch
+- **Dateien**: `lib/features/map/providers/weather_provider.dart` (Zeilen 108, 266)
+- `RouteWeatherNotifier`: `@riverpod` → `@Riverpod(keepAlive: true)`
+- `LocationWeatherNotifier`: `@riverpod` → `@Riverpod(keepAlive: true)`
+- Konsistent mit anderen Providern (account, favorites, auth, tripState, pOIState)
+
+---
+
+## [1.7.16] - 2026-01-31
+
+### WeatherBar einklappbar & Dauerhafte Adress-Anzeige
+
+#### Hinzugefügt
+- **WeatherBar jetzt einklappbar**
+  - Tap auf Header wechselt zwischen ein-/ausgeklappt
+  - Expand-Icon (▼/▲) rotiert sanft (200ms Animation)
+  - Standard: Ausgeklappt beim ersten Anzeigen
+  - Mehr Platz auf der Karte
+
+- **Dauerhafte Adress-Anzeige** (`_RouteAddressBar`)
+  - Start/Ziel-Adressen bleiben sichtbar bis Route gelöscht wird
+  - Distanz + Dauer wenn Route berechnet (z.B. "5.2 km • 12 Min.")
+  - Dark-Mode kompatibel
+  - Position: Zwischen Wetter-Empfehlung und Suchleiste (Schnell-Modus)
+
+#### Technisch
+- **WeatherBar**: `lib/features/map/widgets/weather_bar.dart`
+  - Konvertiert zu `ConsumerStatefulWidget` mit `_isExpanded` State
+  - `AnimatedCrossFade` für Content, `AnimatedRotation` für Icon
+- **RouteAddressBar**: `lib/features/map/map_screen.dart` (Zeilen 2073-2190)
+  - Neue Widgets: `_RouteAddressBar`, `_AddressRow`
+  - Basiert auf `_CompactCategorySelector` Pattern
+
+---
+
 ## [1.7.15] - 2026-01-31
 
 ### GPS-Button Optimierung

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.17 | Plattformen: Android, iOS, Desktop
+Version: 1.7.19 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -100,9 +100,8 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/random_trip/widgets/day_tab_selector.dart` | Tag-Auswahl für mehrtägige Trips (v1.5.7) |
 | `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
 | `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
-| `lib/features/map/widgets/weather_alert_banner.dart` | Proaktives Wetter-Warnbanner (v1.7.6) |
 | `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6) |
-| `lib/features/map/widgets/weather_bar.dart` | Routen-Wetter einklappbar + WeatherBadge für POIs (v1.7.16) |
+| `lib/features/map/widgets/unified_weather_widget.dart` | Intelligentes Wetter-Widget mit Auto-Modus-Wechsel (v1.7.19) |
 
 ### Provider
 
@@ -319,6 +318,8 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.15.md` (GPS-Button Optimierung)
 - `Dokumentation/CHANGELOG-v1.7.16.md` (WeatherBar einklappbar & Dauerhafte Adress-Anzeige)
 - `Dokumentation/CHANGELOG-v1.7.17.md` (Persistente Wetter-Widgets)
+- `Dokumentation/CHANGELOG-v1.7.18.md` (Snackbar Auto-Dismiss)
+- `Dokumentation/CHANGELOG-v1.7.19.md` (GPS Reverse Geocoding & Unified Weather Widget)
 
 ---
 

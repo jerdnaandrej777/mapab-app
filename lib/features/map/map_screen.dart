@@ -16,10 +16,9 @@ import 'providers/route_session_provider.dart';
 import 'providers/weather_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/map_view.dart';
-import 'widgets/weather_bar.dart';
 import 'widgets/weather_chip.dart';
-import 'widgets/weather_alert_banner.dart';
 import 'widgets/weather_details_sheet.dart';
+import 'widgets/unified_weather_widget.dart';
 
 /// Planungs-Modus (Schnell oder AI Trip)
 enum MapPlanMode { schnell, aiTrip }
@@ -257,20 +256,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
 
                   // Wetter-Empfehlung (v1.7.9) - auf beiden Modi sichtbar, Toggle
-                  if (weatherState.hasWeather && !isGenerating)
-                    _WeatherRecommendationBanner(
-                      condition: weatherState.condition,
-                      isApplied: randomTripState.weatherCategoriesApplied,
-                      onApply: () => ref.read(randomTripNotifierProvider.notifier)
-                          .applyWeatherBasedCategories(weatherState.condition),
-                      onReset: () => ref.read(randomTripNotifierProvider.notifier)
-                          .resetWeatherCategories(),
-                    ),
-
                   const SizedBox(height: 12),
 
                   // === SCHNELL-MODUS ===
                   if (_planMode == MapPlanMode.schnell && !isGenerating) ...[
+                    // Unified Weather Widget (v1.7.19) - zeigt Standort- oder Route-Wetter
+                    const UnifiedWeatherWidget(),
                     // Dauerhafte Adress-Anzeige (wenn Route vorhanden)
                     _RouteAddressBar(routePlanner: routePlanner),
 
@@ -329,13 +320,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       const Padding(
                         padding: EdgeInsets.only(top: 12),
                         child: _RouteLoadingIndicator(),
-                      ),
-
-                    // WeatherBar (wenn Route-Session aktiv und bereit)
-                    if (routeSession.isReady)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: WeatherBar(),
                       ),
                   ],
 
@@ -406,14 +390,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ],
               ),
             ),
-
-          // Wetter-Alert-Banner (v1.7.6) - zeigt proaktive Warnungen
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
-            child: WeatherAlertBanner(),
-          ),
 
         ],
       ),
@@ -523,10 +499,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         debugPrint('[GPS] Karte auf Standort zentriert: ${position.latitude}, ${position.longitude}');
       }
 
-      // Standort-Wetter laden (v1.7.6)
+      // Reverse Geocoding für Wetter-Widget
+      String locationName = 'Mein Standort';
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final result = await geocodingRepo.reverseGeocode(location);
+        if (result != null) {
+          locationName = result.shortName ?? result.displayName;
+          debugPrint('[GPS] Reverse Geocoding für Wetter: $locationName');
+        }
+      } catch (e) {
+        debugPrint('[GPS] Reverse Geocoding fehlgeschlagen: $e');
+      }
+
+      // Standort-Wetter laden mit Stadtnamen (v1.7.6)
       ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(
         location,
-        locationName: 'Mein Standort',
+        locationName: locationName,
       );
     } catch (e) {
       debugPrint('[GPS] Position nicht verfügbar: $e - zeige Europa-Zentrum');
@@ -625,9 +614,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       debugPrint('[GPS] Position: ${position.latitude}, ${position.longitude}');
 
-      // Startpunkt setzen
+      // Reverse Geocoding durchführen
       final latLng = LatLng(position.latitude, position.longitude);
-      ref.read(routePlannerProvider.notifier).setStart(latLng, 'Mein Standort');
+      String addressName = 'Mein Standort'; // Fallback
+      try {
+        final geocodingRepo = ref.read(geocodingRepositoryProvider);
+        final result = await geocodingRepo.reverseGeocode(latLng);
+
+        if (result != null) {
+          // Priorität: Stadt > Kurzname > Display-Name
+          addressName = result.shortName ?? result.displayName;
+          debugPrint('[GPS] Reverse Geocoding: $addressName');
+        }
+      } catch (e) {
+        debugPrint('[GPS] Reverse Geocoding fehlgeschlagen: $e');
+        // Fallback auf "Mein Standort"
+      }
+
+      // Startpunkt setzen mit echtem Stadtnamen
+      ref.read(routePlannerProvider.notifier).setStart(latLng, addressName);
 
       // Karte zentrieren
       final mapController = ref.read(mapControllerProvider);
@@ -1348,7 +1353,6 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
   Widget build(BuildContext context) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    final weatherState = ref.watch(locationWeatherNotifierProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -1957,115 +1961,6 @@ class _GeneratingIndicator extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Wetter-Empfehlungs-Banner für Hauptseite (v1.7.8 - auf beiden Modi sichtbar, v1.7.9 - Design + Toggle)
-class _WeatherRecommendationBanner extends StatelessWidget {
-  final WeatherCondition condition;
-  final bool isApplied;
-  final VoidCallback onApply;
-  final VoidCallback onReset;
-
-  const _WeatherRecommendationBanner({
-    required this.condition,
-    required this.isApplied,
-    required this.onApply,
-    required this.onReset,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final (icon, text, color) = _getRecommendation();
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(color.withOpacity(0.15), colorScheme.surface),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.5), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Wetter-Empfehlung',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Anwenden/Deaktivieren-Button (v1.7.9: Toggle)
-          GestureDetector(
-            onTap: isApplied ? onReset : onApply,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: isApplied ? color : color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isApplied) ...[
-                    const Icon(Icons.check, size: 13, color: Colors.white),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(
-                    isApplied ? 'Aktiv' : 'Anwenden',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isApplied ? Colors.white : color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  (String, String, Color) _getRecommendation() {
-    switch (condition) {
-      case WeatherCondition.good:
-        return ('☀️', 'Heute ideal für Outdoor-POIs', Colors.green);
-      case WeatherCondition.mixed:
-        return ('⛅', 'Wechselhaft - flexibel planen', Colors.amber);
-      case WeatherCondition.bad:
-        return ('🌧️', 'Regen - Indoor-POIs empfohlen', Colors.orange);
-      case WeatherCondition.danger:
-        return ('⚠️', 'Unwetter - nur Indoor-POIs!', Colors.red);
-      case WeatherCondition.unknown:
-        return ('❓', 'Wetter unbekannt', Colors.grey);
-    }
   }
 }
 

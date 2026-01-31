@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/utils/format_utils.dart';
-import '../../map/widgets/weather_bar.dart';
+import '../../map/widgets/weather_badge.dart';
 
 /// POI-Karte für Liste - Kompaktes horizontales Layout
 class POICard extends StatelessWidget {
