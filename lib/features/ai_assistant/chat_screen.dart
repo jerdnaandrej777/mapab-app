@@ -883,7 +883,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   List<String>? _getCategoriesFromQuery(String query) {
     final lowerQuery = query.toLowerCase();
 
-    // Kategorie-Mapping
+    // Kategorie-Mapping (v1.7.9: ungueltige IDs gefixt + erweitert)
+    // Gueltige IDs: castle, nature, museum, viewpoint, lake, coast, park,
+    //               city, activity, hotel, restaurant, unesco, church, monument, attraction
     final categoryMapping = <String, List<String>>{
       'sehenswürd': ['museum', 'monument', 'castle', 'viewpoint', 'unesco'],
       'museum': ['museum'],
@@ -891,14 +893,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'schlösser': ['castle'],
       'burg': ['castle'],
       'kirche': ['church'],
-      'natur': ['nature', 'park', 'lake', 'waterfall'],
+      'natur': ['nature', 'park', 'lake', 'coast'],
       'park': ['park', 'nature'],
       'see': ['lake'],
       'restaurant': ['restaurant'],
-      'essen': ['restaurant', 'cafe'],
+      'essen': ['restaurant'],
       'hotel': ['hotel'],
       'übernacht': ['hotel'],
       'aussicht': ['viewpoint'],
+      'kultur': ['museum', 'monument', 'church', 'castle', 'unesco'],
+      'strand': ['coast'],
+      'küste': ['coast'],
+      'aktivität': ['activity'],
+      'sport': ['activity'],
+      'wandern': ['nature', 'viewpoint', 'park'],
+      'familie': ['activity', 'park', 'museum'],
+      'zoo': ['activity'],
+      'freizeitpark': ['activity'],
+      'therme': ['activity'],
+      'stadt': ['city'],
     };
 
     for (final entry in categoryMapping.entries) {

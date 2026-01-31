@@ -14,6 +14,7 @@ import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
 import '../../../core/constants/categories.dart';
 import '../../../data/models/poi.dart';
+import 'route_weather_marker.dart';
 
 /// Karten-Widget mit MapLibre/flutter_map
 class MapView extends ConsumerStatefulWidget {
@@ -44,6 +45,38 @@ class _MapViewState extends ConsumerState<MapView> {
     // Register controller globally after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(mapControllerProvider.notifier).state = _mapController;
+      _setupWeatherListeners();
+    });
+  }
+
+  /// Wetter-Laden fuer alle Routentypen (v1.7.11)
+  void _setupWeatherListeners() {
+    // Normale Route
+    ref.listenManual(routePlannerProvider, (previous, next) {
+      if (next.hasRoute && previous?.route != next.route) {
+        ref.read(routeWeatherNotifierProvider.notifier)
+            .loadWeatherForRoute(next.route!.coordinates);
+      }
+    });
+
+    // AI Trip Preview
+    ref.listenManual(randomTripNotifierProvider, (previous, next) {
+      if (next.step == RandomTripStep.preview &&
+          previous?.step != RandomTripStep.preview) {
+        final route = next.generatedTrip?.trip.route;
+        if (route != null) {
+          ref.read(routeWeatherNotifierProvider.notifier)
+              .loadWeatherForRoute(route.coordinates);
+        }
+      }
+    });
+
+    // Trip State (gespeicherte Route laden)
+    ref.listenManual(tripStateProvider, (previous, next) {
+      if (next.hasRoute && previous?.route != next.route) {
+        ref.read(routeWeatherNotifierProvider.notifier)
+            .loadWeatherForRoute(next.route!.coordinates);
+      }
     });
   }
 
@@ -60,6 +93,7 @@ class _MapViewState extends ConsumerState<MapView> {
     final poiState = ref.watch(pOIStateNotifierProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
     final weatherState = ref.watch(locationWeatherNotifierProvider);
+    final routeWeather = ref.watch(routeWeatherNotifierProvider);
 
     // AI Trip Preview Route und POIs
     final aiTripRoute = randomTripState.generatedTrip?.trip.route;
@@ -108,6 +142,31 @@ class _MapViewState extends ConsumerState<MapView> {
                 borderStrokeWidth: 2,
               ),
             ],
+          ),
+
+        // Routen-Wetter-Marker (v1.7.11) - 5 Punkte entlang der Route
+        if (routeWeather.weatherPoints.isNotEmpty && !routeWeather.isLoading)
+          MarkerLayer(
+            markers: routeWeather.weatherPoints.asMap().entries.map((entry) {
+              final index = entry.key;
+              final point = entry.value;
+              return Marker(
+                point: point.location,
+                width: 72,
+                height: 36,
+                child: RouteWeatherMarker(
+                  weatherPoint: point,
+                  isStart: index == 0,
+                  isEnd: index == routeWeather.weatherPoints.length - 1,
+                  onTap: () => showRouteWeatherDetail(
+                    context,
+                    weatherPoint: point,
+                    index: index,
+                    totalPoints: routeWeather.weatherPoints.length,
+                  ),
+                ),
+              );
+            }).toList(),
           ),
 
         // POI-Marker Layer (normale POIs, nicht während AI Trip Preview) - mit Wetter-Badges (v1.7.9)

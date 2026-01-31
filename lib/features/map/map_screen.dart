@@ -400,21 +400,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     foregroundColor: colorScheme.onSurface,
                     child: const Icon(Icons.settings),
                   ),
-                  const SizedBox(height: 8),
-                  // GPS-Button
-                  FloatingActionButton.small(
-                    heroTag: 'gps',
-                    onPressed: _centerOnLocation,
-                    backgroundColor: colorScheme.surface,
-                    foregroundColor: colorScheme.primary,
-                    child: _isLoadingLocation
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location),
-                  ),
                 ],
               ),
             ),

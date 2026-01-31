@@ -107,6 +107,15 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     debugPrint('[Favorites] Route entfernt: $tripId');
   }
 
+  /// Löscht alle gespeicherten Routen (für Migration nach Bugfix v1.7.13)
+  Future<void> clearAllRoutes() async {
+    final current = await _ensureLoaded();
+
+    await _favoritesBox.put('saved_routes', []);
+    state = AsyncValue.data(current.copyWith(savedRoutes: []));
+    debugPrint('[Favorites] Alle Routen gelöscht (Migration)');
+  }
+
   /// Prüft ob Route gespeichert ist
   bool isRouteSaved(String tripId) {
     final current = state.value;

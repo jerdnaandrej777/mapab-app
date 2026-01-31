@@ -7,6 +7,29 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.7.15] - 2026-01-31
+
+### GPS-Button Optimierung
+
+#### Verbessert
+- **Redundanter GPS-Button entfernt** - FloatingActionButton rechts unten (unter Settings) wurde entfernt
+  - Vorher: 3 GPS-Buttons (Schnell-Modus, AI Trip, Floating rechts)
+  - Nachher: 2 GPS-Buttons (Schnell-Modus, AI Trip) - klarere UX
+- **Verbleibende GPS-Buttons**:
+  - GPS-Button in der Schnell-Modus Suchleiste (setzt Startpunkt)
+  - GPS-Button im AI Trip Panel (setzt Startpunkt für AI Trip)
+
+#### Behoben
+- **UX-Problem**: GPS-Button erschien doppelt - einmal in Suchleiste, einmal als Floating Button
+- GPS-Funktion jetzt nur noch dort, wo sie konkret gebraucht wird (Startpunkt setzen)
+
+#### Technisch
+- **Dateien**: `lib/features/map/map_screen.dart` (Zeilen 403-417 entfernt)
+- **Behält**: WeatherChip und Settings-Button als Floating Buttons
+- `_centerOnLocation()` Methode bleibt für zukünftige Verwendung
+
+---
+
 ## [1.7.14] - 2026-01-31
 
 ### GPS-Standort-Synchronisation zwischen Modi

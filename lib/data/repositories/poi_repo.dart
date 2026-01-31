@@ -426,16 +426,25 @@ class POIRepository {
     ({LatLng southwest, LatLng northeast}) bounds,
   ) async {
     // Overpass QL Query für touristische POIs
+    // ERWEITERT v1.7.9: Museen, Kirchen, Ruinen, Wasserfaelle, Parks hinzugefuegt
+    final bbox = '${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude}';
     final query = '''
 [out:json][timeout:25];
 (
-  node["tourism"="attraction"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  node["tourism"="viewpoint"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  node["historic"="castle"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  node["historic"="monument"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  node["natural"="peak"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  way["tourism"="attraction"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
-  way["historic"="castle"](${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude});
+  node["tourism"="attraction"]($bbox);
+  node["tourism"="viewpoint"]($bbox);
+  node["tourism"="museum"]($bbox);
+  node["historic"="castle"]($bbox);
+  node["historic"="monument"]($bbox);
+  node["historic"="memorial"]["name"]($bbox);
+  node["historic"="ruins"]["name"]($bbox);
+  node["natural"="peak"]($bbox);
+  node["natural"="waterfall"]["name"]($bbox);
+  node["amenity"="place_of_worship"]["name"]["tourism"]($bbox);
+  way["tourism"="attraction"]($bbox);
+  way["tourism"="museum"]($bbox);
+  way["historic"="castle"]($bbox);
+  way["historic"="ruins"]["name"]($bbox);
 );
 out center;
 ''';
@@ -557,17 +566,21 @@ out center;
 
     // Kategorie-Patterns mit Priorität (Tuple: keywords, priority)
     // Höhere Priorität = spezifischere Kategorie
+    // v1.7.9: activity, hotel, restaurant Keywords hinzugefuegt
     const patterns = <String, (List<String>, int)>{
       'museum': (['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'], 100),
       'castle': (['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'], 90),
+      'activity': (['zoo', 'tierpark', 'aquarium', 'freizeitpark', 'theme park', 'therme', 'thermalbad', 'schwimmbad', 'stadion', 'arena', 'erlebnispark', 'kletterpark'], 85),
       'church': (['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'], 85),
-      'nature': (['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve'], 80),
+      'nature': (['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve', 'wasserfall', 'waterfall'], 80),
       'lake': (['see', 'lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre'], 75),
       'viewpoint': (['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'gipfel', 'peak'], 70),
       'park': (['park', 'garten', 'garden', 'botanical'], 65),
-      'monument': (['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue'], 60),
+      'monument': (['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue', 'ruine', 'ruins'], 60),
       'city': (['altstadt', 'old town', 'marktplatz', 'market square', 'rathaus', 'town hall'], 55),
       'coast': (['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port'], 50),
+      'hotel': (['hotel', 'gasthof', 'pension', 'herberge', 'jugendherberge'], 40),
+      'restaurant': (['restaurant', 'brauhaus', 'wirtshaus', 'biergarten'], 40),
     };
 
     String? bestCategory;
@@ -641,7 +654,7 @@ out center;
       lng = (data['lon'] as num).toDouble();
     }
 
-    // Kategorie aus Tags ableiten
+    // Kategorie aus Tags ableiten (v1.7.9: erweitert)
     String category = 'attraction';
     if (tags['historic'] == 'castle') {
       category = 'castle';
@@ -649,10 +662,16 @@ out center;
       category = 'viewpoint';
     } else if (tags['tourism'] == 'museum') {
       category = 'museum';
-    } else if (tags['historic'] == 'monument') {
+    } else if (tags['historic'] == 'monument' || tags['historic'] == 'memorial') {
+      category = 'monument';
+    } else if (tags['historic'] == 'ruins') {
       category = 'monument';
     } else if (tags['historic'] == 'church' || tags['amenity'] == 'place_of_worship') {
       category = 'church';
+    } else if (tags['natural'] == 'waterfall') {
+      category = 'nature';
+    } else if (tags['leisure'] == 'park' || tags['leisure'] == 'garden') {
+      category = 'park';
     }
 
     // OSM Bild-Tags extrahieren
@@ -661,8 +680,11 @@ out center;
     final wikidataTag = tags['wikidata'] as String?;
     final wikipediaTag = tags['wikipedia'] as String?;
 
-    // Bild-URL aus OSM-Tags ableiten
-    String? imageUrl = osmImageTag;
+    // Bild-URL aus OSM-Tags ableiten (v1.7.9: URL-Validierung)
+    String? imageUrl;
+    if (osmImageTag != null && (osmImageTag.startsWith('http://') || osmImageTag.startsWith('https://'))) {
+      imageUrl = osmImageTag;
+    }
     if (imageUrl == null && wikimediaCommonsTag != null) {
       // wikimedia_commons Tag: "File:Name.jpg" → URL
       if (wikimediaCommonsTag.startsWith('File:')) {

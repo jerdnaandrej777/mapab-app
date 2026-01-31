@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.14 | Plattformen: Android, iOS, Desktop
+Version: 1.7.15 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -316,6 +316,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.10.md` (Favoriten: Routen speichern & laden)
 - `Dokumentation/CHANGELOG-v1.7.12.md` (Wetter-Marker auf der Route)
 - `Dokumentation/CHANGELOG-v1.7.14.md` (GPS-Standort-Synchronisation zwischen Modi)
+- `Dokumentation/CHANGELOG-v1.7.15.md` (GPS-Button Optimierung)
 
 ---
 

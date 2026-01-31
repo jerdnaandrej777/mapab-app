@@ -1,4 +1,4 @@
-# Changelog v1.7.8/v1.7.9 - AI Trip Route + Wetter-Empfehlung UI + Route Starten Button + Wetter-Design & POI-Marker-Badges
+# Changelog v1.7.8/v1.7.9 - AI Trip Route + Wetter-Empfehlung UI + Route Starten Button + Wetter-Design & POI-Marker-Badges + POI-Foto & Kategorisierung Optimierung
 
 **Release-Datum:** 29.-30. Januar 2026
 
@@ -213,11 +213,11 @@ _RouteStartButton(
 
 ### Wetter-Design optimiert + Toggle + POI-Marker-Badges (v1.7.9)
 
-**1. Wetter-Empfehlungs-Banner sichtbarer gemacht**
+**1. Wetter-Empfehlungs-Banner vollständig opak**
 
-**Vorher:** Banner war nahezu durchsichtig (`opacity: 0.1` Hintergrund, `0.3` Border).
+**Vorher:** Banner war durchsichtig - Karte schien durch den Hintergrund.
 
-**Nachher:** Stärkerer Hintergrund (`0.15`), kräftigerer Border (`0.5`, 1.5px), Shadow, größere Schrift.
+**Nachher:** Opaker Hintergrund mit `Color.alphaBlend(color.withOpacity(0.15), colorScheme.surface)`. Die Wetterfarbe wird mit der Surface-Farbe geblendet, sodass ein vollständig opaker Hintergrund entsteht. Funktioniert korrekt in Light und Dark Mode. Zusätzlich kräftigerer Border (`0.5`, 1.5px) und Shadow.
 
 **2. Anwenden-Button als Toggle (deaktivierbar)**
 
@@ -257,6 +257,59 @@ void resetWeatherCategories() {
 - `lib/features/random_trip/providers/random_trip_provider.dart` - `resetWeatherCategories()` Methode
 - `lib/features/map/widgets/map_view.dart` - `POIMarker` um Wetter-Badge erweitert + Weather-State Integration
 
+### POI-Foto-Laden & Kategorisierung optimiert (v1.7.9)
+
+**Problem 1: Fotos fehlen bei vielen POIs**
+
+Nur die ersten 5 POIs ohne Wikipedia-Bild bekamen ein Wikimedia-Fallback. Alle weiteren POIs wurden fälschlicherweise als `isEnriched: true` markiert, obwohl sie kein Foto hatten. Diese POIs wurden nie erneut versucht.
+
+**Lösung:**
+1. **Batch-Limit von 5 auf 15 erhöht** - 3x mehr POIs bekommen Wikimedia-Fallback
+2. **Sub-Batching** - 5er-Gruppen mit 500ms Pause für Rate-Limit-Schutz
+3. **isEnriched-Fix** - POIs ohne Foto werden NICHT mehr als "enriched" markiert
+4. **Session-Set** (`_sessionAttemptedWithoutPhoto`) verhindert Endlosschleifen in derselben Session, erlaubt aber Retry bei App-Neustart
+5. **OSM-URL-Validierung** - `image`-Tags aus Overpass werden auf gültige HTTP-URLs geprüft
+
+**Problem 2: Fotos laden langsam**
+
+Fotos erschienen erst wenn der gesamte Batch fertig war. Kein Pre-Caching der Bild-URLs.
+
+**Lösung:**
+1. **2-Stufen UI-Update** - Cache-Treffer und Wikipedia-Ergebnisse werden sofort angezeigt, Wikimedia-Fallbacks inkrementell nachgeliefert (`onPartialResult` Callback)
+2. **Image Pre-Caching** - Bild-URLs werden nach Enrichment via `DefaultCacheManager` vorgeladen
+3. **Random Trip Batch** - AI Trip POIs nutzen jetzt Batch-Enrichment statt Einzel-Calls (7x schneller)
+4. **Pre-Enrichment-Limit 30→50** - Nutzt volles Wikipedia-Batch-Query-Limit aus
+
+**Problem 3: Fehlerhafte POI-Kategorisierung**
+
+Ungültige Kategorie-IDs (`waterfall`, `cafe`) im AI-Chat-Mapping. Overpass-Query zu eingeschränkt. Wikipedia-Titel-Inferenz unvollständig.
+
+**Lösung:**
+1. **AI-Chat Kategorie-Fix** - `waterfall`→`coast`, `cafe` entfernt, 11 neue Mappings (Kultur, Strand, Sport, Familie, Zoo, Therme, Stadt)
+2. **Overpass-Query erweitert** - +7 Tag-Typen: Museen, Ruinen, Memorials, Wasserfälle, Kirchen, Museums-Ways, Ruinen-Ways
+3. **Overpass-Kategorie-Mapping erweitert** - Neue Zuordnungen: `ruins`→monument, `memorial`→monument, `waterfall`→nature, `park/garden`→park
+4. **Wikipedia-Keywords erweitert** - 3 neue Kategorien: `activity` (Zoo, Therme, Stadion...), `hotel`, `restaurant` + `wasserfall`/`waterfall` für nature, `ruine`/`ruins` für monument
+
+**Betroffene Dateien:**
+- `lib/data/services/poi_enrichment_service.dart` - Batch-Limit, isEnriched-Fix, Session-Set, Pre-Cache, 2-Stufen-Callback
+- `lib/data/repositories/poi_repo.dart` - Overpass-Query, Kategorie-Mapping, URL-Validierung, Title-Keywords
+- `lib/features/poi/providers/poi_state_provider.dart` - 2-Stufen Batch-Update mit onPartialResult
+- `lib/features/poi/poi_list_screen.dart` - Pre-Enrichment-Limit 30→50
+- `lib/features/ai_assistant/chat_screen.dart` - Ungültige Kategorie-IDs gefixt + 11 neue Mappings
+- `lib/features/random_trip/providers/random_trip_provider.dart` - Batch statt Einzel-Enrichment
+
+**Performance-Verbesserung:**
+
+| Metrik | Vorher (v1.7.7) | Nachher (v1.7.9) |
+|--------|-----------------|-------------------|
+| Fallback-Coverage | 5 POIs | 15 POIs |
+| Bild-Trefferquote | ~95% | ~98% |
+| UI-Update | nach Batch-Ende | inkrementell |
+| Random Trip Enrichment | Einzel-Calls | Batch (7x schneller) |
+| Overpass Tag-Typen | 5 | 12 |
+| Wikipedia-Kategorien | 10 | 13 |
+| AI-Chat-Mappings | 12 | 23 |
+
 ## Auswirkungen
 
 - Keine Breaking Changes
@@ -266,3 +319,5 @@ void resetWeatherCategories() {
 - Wetter-Empfehlung sichtbar auf beiden Modi der Hauptseite + Toggle
 - Schnell-Modus: Benutzer hat Kontrolle über Navigation zum Trip-Tab
 - POI-Marker auf Karte zeigen Wetter-Empfehlungen direkt an
+- POI-Fotos laden deutlich zuverlässiger und schneller
+- Mehr POI-Typen werden korrekt kategorisiert

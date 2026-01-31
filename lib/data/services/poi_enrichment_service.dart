@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -80,6 +81,10 @@ class POIEnrichmentService {
   /// Completer-Map für wartende Enrichment-Requests (Race Condition Fix)
   static final Map<String, Completer<POI>> _enrichmentCompleters = {};
 
+  /// Session-Set: POIs die in dieser Session bereits versucht wurden (ohne Foto)
+  /// Verhindert endlose Wiederholung, erlaubt Retry bei App-Neustart
+  static final Set<String> _sessionAttemptedWithoutPhoto = {};
+
   POIEnrichmentService({Dio? dio, POICacheService? cacheService})
       : _dio = dio ??
             Dio(BaseOptions(
@@ -96,10 +101,22 @@ class POIEnrichmentService {
     _waitQueue.clear();
     _enrichingPOIs.clear();
     _enrichmentCompleters.clear();
+    _sessionAttemptedWithoutPhoto.clear();
   }
 
   /// Prüft ob ein POI gerade enriched wird
   bool isEnriching(String poiId) => _enrichingPOIs.contains(poiId);
+
+  /// v1.7.9: Image vorladen fuer sofortige Anzeige im UI
+  Future<void> _prefetchImage(String url) async {
+    try {
+      await DefaultCacheManager().getSingleFile(url).timeout(
+            const Duration(seconds: 10),
+          );
+    } catch (_) {
+      // Silent fail - Bild wird beim Widget-Render nachgeladen
+    }
+  }
 
   /// Wartet auf freien Slot im Concurrency-Pool
   Future<void> _acquireSlot() async {
@@ -305,6 +322,11 @@ class POIEnrichmentService {
         debugPrint('[Enrichment] POI mit Bild gecacht: ${poi.name}');
       } else if (!enrichment.hasImage) {
         debugPrint('[Enrichment] ⚠️ POI nicht gecacht (kein Bild): ${poi.name}');
+      }
+
+      // v1.7.9: Image Pre-Caching fuer sofortige Anzeige
+      if (enrichedPOI.imageUrl != null) {
+        unawaited(_prefetchImage(enrichedPOI.imageUrl!));
       }
 
       // Wartende Requests benachrichtigen (Race Condition Fix)
@@ -808,7 +830,13 @@ LIMIT 1
 
   /// Enriched mehrere POIs in einem Batch-Request (OPTIMIERT v1.7.3)
   /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 Titel pro Request
-  Future<Map<String, POI>> enrichPOIsBatch(List<POI> pois) async {
+  /// Batch-Enrichment mit optionalem Progress-Callback
+  /// [onPartialResult] wird nach jeder Stufe aufgerufen (Cache, Wikipedia, Wikimedia)
+  /// fuer sofortige UI-Updates statt Warten auf das Gesamtergebnis
+  Future<Map<String, POI>> enrichPOIsBatch(
+    List<POI> pois, {
+    void Function(Map<String, POI> partialResults)? onPartialResult,
+  }) async {
     if (pois.isEmpty) return {};
 
     debugPrint('[Enrichment] Batch-Request für ${pois.length} POIs');
@@ -830,6 +858,11 @@ LIMIT 1
     }
 
     debugPrint('[Enrichment] ${results.length} Cache-Treffer, ${uncachedPOIs.length} zu laden');
+
+    // Stufe 1: Cache-Treffer sofort melden
+    if (results.isNotEmpty && onPartialResult != null) {
+      onPartialResult(Map.from(results));
+    }
 
     if (uncachedPOIs.isEmpty) return results;
 
@@ -863,71 +896,108 @@ LIMIT 1
 
       debugPrint('[Enrichment] Wikipedia-Batch: ${wikiResults.length} Ergebnisse');
 
+      // Stufe 2: Wikipedia-Ergebnisse sofort melden (Fotos die bereits da sind)
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
+      }
+
       // 3b. Wikipedia-POIs MIT Beschreibung OHNE Bild: Wikimedia Fallback
-      // OPTIMIERT v1.7.6: Viele Wikipedia-Artikel haben keine pageimage
+      // OPTIMIERT v1.7.9: Limit von 5 auf 15 erhoeht, Sub-Batching fuer Rate-Limit-Schutz
       final poisWithWikiButNoImage = poisWithWiki
           .where((poi) {
             final result = results[poi.id];
             return result != null && result.imageUrl == null;
           })
-          .take(5)
+          .where((poi) => !_sessionAttemptedWithoutPhoto.contains(poi.id))
+          .take(15)
           .toList();
 
       if (poisWithWikiButNoImage.isNotEmpty) {
         debugPrint('[Enrichment] Wikimedia Fallback für ${poisWithWikiButNoImage.length} Wikipedia-POIs ohne Bild');
 
-        final fallbackFutures = poisWithWikiButNoImage.map((poi) async {
+        // Sub-Batching: 5er-Gruppen mit 500ms Pause dazwischen (Rate-Limit-Schutz)
+        for (var i = 0; i < poisWithWikiButNoImage.length; i += 5) {
+          final subBatch = poisWithWikiButNoImage.skip(i).take(5).toList();
+
+          final fallbackFutures = subBatch.map((poi) async {
+            final imageUrl = await _fetchWikimediaCommonsImage(
+              poi.latitude,
+              poi.longitude,
+              poi.name,
+            );
+            if (imageUrl != null) {
+              final existingPOI = results[poi.id]!;
+              results[poi.id] = existingPOI.copyWith(imageUrl: imageUrl);
+
+              // Im Cache speichern
+              if (cacheService != null) {
+                await cacheService.cacheEnrichedPOI(results[poi.id]!);
+              }
+            } else {
+              _sessionAttemptedWithoutPhoto.add(poi.id);
+            }
+          });
+
+          await Future.wait(fallbackFutures);
+
+          // Pause zwischen Sub-Batches (Rate-Limit-Schutz)
+          if (i + 5 < poisWithWikiButNoImage.length) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      }
+    }
+
+    // 4. POIs ohne Wikipedia-Titel: Wikimedia Geo-Suche (Sub-Batching, max 15)
+    // OPTIMIERT v1.7.9: Limit von 5 auf 15 erhoeht
+    final poisWithoutWiki = uncachedPOIs
+        .where((p) => p.wikipediaTitle == null || p.wikipediaTitle!.isEmpty)
+        .where((p) => !results.containsKey(p.id))
+        .where((p) => !_sessionAttemptedWithoutPhoto.contains(p.id))
+        .take(15)
+        .toList();
+
+    if (poisWithoutWiki.isNotEmpty) {
+      debugPrint('[Enrichment] Wikimedia Geo-Suche für ${poisWithoutWiki.length} POIs ohne Wikipedia');
+
+      // Sub-Batching: 5er-Gruppen mit 500ms Pause
+      for (var i = 0; i < poisWithoutWiki.length; i += 5) {
+        final subBatch = poisWithoutWiki.skip(i).take(5).toList();
+
+        final futures = subBatch.map((poi) async {
           final imageUrl = await _fetchWikimediaCommonsImage(
             poi.latitude,
             poi.longitude,
             poi.name,
           );
           if (imageUrl != null) {
-            final existingPOI = results[poi.id]!;
-            results[poi.id] = existingPOI.copyWith(imageUrl: imageUrl);
-
-            // Im Cache speichern
-            if (cacheService != null) {
-              await cacheService.cacheEnrichedPOI(results[poi.id]!);
-            }
+            return MapEntry(poi.id, _applyEnrichment(poi, POIEnrichmentData(imageUrl: imageUrl)));
+          } else {
+            // FIX v1.7.9: NICHT als isEnriched markieren wenn kein Bild gefunden
+            // Nur in Session-Set aufnehmen um Endlos-Schleifen zu verhindern
+            _sessionAttemptedWithoutPhoto.add(poi.id);
+            return MapEntry(poi.id, poi);
           }
         });
 
-        await Future.wait(fallbackFutures);
+        final geoResults = await Future.wait(futures);
+        for (final entry in geoResults) {
+          results[entry.key] = entry.value;
+        }
+
+        // Pause zwischen Sub-Batches
+        if (i + 5 < poisWithoutWiki.length) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     }
 
-    // 4. POIs ohne Wikipedia-Titel: Wikimedia Geo-Suche (parallel, max 5)
-    final poisWithoutWiki = uncachedPOIs
-        .where((p) => p.wikipediaTitle == null || p.wikipediaTitle!.isEmpty)
-        .where((p) => !results.containsKey(p.id))
-        .take(5)
-        .toList();
-
-    if (poisWithoutWiki.isNotEmpty) {
-      debugPrint('[Enrichment] Wikimedia Geo-Suche für ${poisWithoutWiki.length} POIs ohne Wikipedia');
-
-      final futures = poisWithoutWiki.map((poi) async {
-        final imageUrl = await _fetchWikimediaCommonsImage(
-          poi.latitude,
-          poi.longitude,
-          poi.name,
-        );
-        return MapEntry(poi.id, imageUrl != null
-            ? _applyEnrichment(poi, POIEnrichmentData(imageUrl: imageUrl))
-            : poi.copyWith(isEnriched: true));
-      });
-
-      final geoResults = await Future.wait(futures);
-      for (final entry in geoResults) {
-        results[entry.key] = entry.value;
-      }
-    }
-
-    // 5. Restliche POIs als "enriched" markieren (ohne Bild)
+    // 5. Restliche POIs: Session-Tracking statt falsches isEnriched-Flag
+    // FIX v1.7.9: POIs NICHT als enriched markieren wenn kein Bild gefunden wurde
+    // So koennen sie bei zukuenftigen Sessions erneut versucht werden
     for (final poi in uncachedPOIs) {
       if (!results.containsKey(poi.id)) {
-        results[poi.id] = poi.copyWith(isEnriched: true);
+        _sessionAttemptedWithoutPhoto.add(poi.id);
       }
     }
 

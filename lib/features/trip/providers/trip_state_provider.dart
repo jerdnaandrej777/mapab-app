@@ -153,6 +153,13 @@ class TripState extends _$TripState {
     _recalculateRoute();
   }
 
+  /// Setzt Route und Stops gleichzeitig OHNE Route-Neuberechnung
+  /// Wird verwendet beim Laden gespeicherter Routen aus Favoriten,
+  /// da die Route bereits korrekt berechnet war
+  void setRouteAndStops(AppRoute route, List<POI> stops) {
+    state = state.copyWith(route: route, stops: stops);
+  }
+
   /// Leert alle Stops
   void clearStops() {
     state = state.copyWith(stops: []);

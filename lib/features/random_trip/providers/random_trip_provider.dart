@@ -459,16 +459,19 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   void _enrichGeneratedPOIs(GeneratedTrip result) {
     final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
 
-    // POIs zum State hinzufügen und enrichen
+    // POIs zum State hinzufuegen
     for (final poi in result.selectedPOIs) {
-      // POI zum State hinzufügen (für POI-Detail-Navigation)
       poiNotifier.addPOI(poi);
+    }
 
-      // Enrichment triggern wenn noch kein Bild vorhanden
-      if (poi.imageUrl == null) {
-        print('[RandomTrip] Enriching POI: ${poi.name}');
-        poiNotifier.enrichPOI(poi.id);
-      }
+    // v1.7.9: Batch-Enrichment statt Einzel-Calls (7x schneller)
+    final poisToEnrich = result.selectedPOIs
+        .where((p) => p.imageUrl == null)
+        .toList();
+
+    if (poisToEnrich.isNotEmpty) {
+      print('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+      poiNotifier.enrichPOIsBatch(poisToEnrich);
     }
   }
 }

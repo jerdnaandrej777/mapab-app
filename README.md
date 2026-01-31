@@ -148,6 +148,11 @@ flutter test
 
 ## Recent Updates (Januar 2026)
 
+### v1.7.15 - GPS-Button Optimierung (31. Januar 2026)
+- **Redundanter GPS-Button entfernt** - FloatingActionButton rechts unten (unter Settings) wurde entfernt
+- **Klarere UX** - GPS-Funktion nur noch dort, wo sie gebraucht wird (Startpunkt setzen)
+- **Verbleibende Buttons** - GPS in Schnell-Modus Suchleiste & AI Trip Panel
+
 ### v1.7.14 - GPS-Standort-Synchronisation (31. Januar 2026)
 - **Automatische Standort-Synchronisation** - GPS-Standort wird automatisch zwischen Schnell & AI Trip Modi übertragen
 - **Nahtloser Modus-Wechsel** - GPS einmal klicken, in beiden Modi verfügbar
@@ -395,6 +400,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.7.14
+**Version:** 1.7.15
 **Release:** 31. Januar 2026
 **Erstellt mit:** Flutter 💙

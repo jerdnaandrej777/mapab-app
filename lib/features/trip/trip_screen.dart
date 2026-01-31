@@ -227,6 +227,77 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     }
   }
 
+  /// Speichert einen AI Trip in die Favoriten
+  Future<void> _saveAITrip(BuildContext context, WidgetRef ref, RandomTripState randomTripState) async {
+    final generatedTrip = randomTripState.generatedTrip;
+    if (generatedTrip == null) return;
+
+    final trip = generatedTrip.trip;
+    final route = trip.route;
+
+    // Dialog für Trip-Namen
+    final nameController = TextEditingController(
+      text: '${route.startAddress} → ${route.endAddress}',
+    );
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Route speichern'),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'Name der Route',
+            hintText: randomTripState.mode == RandomTripMode.daytrip
+                ? 'z.B. AI Tagesausflug'
+                : 'z.B. AI Euro Trip',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, nameController.text),
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    // Trip mit korrektem Typ erstellen
+    final savedTrip = Trip(
+      id: const Uuid().v4(),
+      name: result,
+      type: randomTripState.mode == RandomTripMode.daytrip
+          ? TripType.daytrip
+          : TripType.eurotrip,
+      route: route,
+      stops: generatedTrip.selectedPOIs.map((poi) => TripStop.fromPOI(poi)).toList(),
+      days: trip.actualDays,
+      createdAt: DateTime.now(),
+    );
+
+    // In Favoriten speichern
+    await ref.read(favoritesNotifierProvider.notifier).saveRoute(savedTrip);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Route "$result" gespeichert'),
+          action: SnackBarAction(
+            label: 'Anzeigen',
+            onPressed: () => context.push('/favorites'),
+          ),
+        ),
+      );
+    }
+  }
+
   /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints
   Future<void> _openInGoogleMaps(BuildContext context, TripStateData tripState) async {
     final route = tripState.route;
@@ -728,7 +799,10 @@ $mapsUrl
                     // Trip speichern Button
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => notifier.confirmTrip(),
+                        onPressed: () async {
+                          notifier.confirmTrip();
+                          await _saveAITrip(context, ref, state);
+                        },
                         icon: const Icon(Icons.check),
                         label: const Text('Speichern'),
                         style: ElevatedButton.styleFrom(
@@ -843,7 +917,14 @@ $mapsUrl
               title: const Text('Route speichern'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Speichern
+                final tripState = ref.read(tripStateProvider);
+                final rtState = ref.read(randomTripNotifierProvider);
+                if (rtState.step == RandomTripStep.preview ||
+                    rtState.step == RandomTripStep.confirmed) {
+                  _saveAITrip(context, ref, rtState);
+                } else if (tripState.hasRoute) {
+                  _saveRoute(context, ref, tripState);
+                }
               },
             ),
             ListTile(
@@ -851,7 +932,10 @@ $mapsUrl
               title: const Text('Route teilen'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Teilen
+                final tripState = ref.read(tripStateProvider);
+                if (tripState.hasRoute) {
+                  _shareRoute(context, tripState);
+                }
               },
             ),
             ListTile(

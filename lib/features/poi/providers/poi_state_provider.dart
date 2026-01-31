@@ -238,9 +238,33 @@ class POIStateNotifier extends _$POIStateNotifier {
 
     try {
       final enrichmentService = ref.read(poiEnrichmentServiceProvider);
-      final enrichedPOIs = await enrichmentService.enrichPOIsBatch(unenrichedPOIs);
 
-      // State atomar aktualisieren
+      // v1.7.9: 2-Stufen Update - Fotos sofort anzeigen statt auf Batch-Ende warten
+      final enrichedPOIs = await enrichmentService.enrichPOIsBatch(
+        unenrichedPOIs,
+        onPartialResult: (partialResults) {
+          // Inkrementelles State-Update: Fotos sofort sichtbar machen
+          final currentPOIs = List<POI>.from(state.pois);
+          final updatedIds = <String>{};
+          for (final entry in partialResults.entries) {
+            final index = currentPOIs.indexWhere((p) => p.id == entry.key);
+            if (index != -1) {
+              currentPOIs[index] = entry.value;
+              updatedIds.add(entry.key);
+            }
+          }
+          // Partial enriching IDs entfernen
+          final partialRemainingIds = Set<String>.from(state.enrichingPOIIds)
+            ..removeAll(updatedIds);
+          state = state.copyWith(
+            pois: currentPOIs,
+            isEnriching: partialRemainingIds.isNotEmpty,
+            enrichingPOIIds: partialRemainingIds,
+          );
+        },
+      );
+
+      // Finales State-Update mit allen Ergebnissen
       final currentPOIs = List<POI>.from(state.pois);
       for (final entry in enrichedPOIs.entries) {
         final index = currentPOIs.indexWhere((p) => p.id == entry.key);
@@ -249,9 +273,11 @@ class POIStateNotifier extends _$POIStateNotifier {
         }
       }
 
-      // Loading State entfernen
+      // Loading State entfernen - ALLE gesendeten POIs, nicht nur die mit Ergebnis
+      // FIX v1.7.9: POIs ohne Foto sind nicht mehr im results-Map,
+      // muessen aber trotzdem aus dem Loading-State entfernt werden
       final remainingEnrichingIds = Set<String>.from(state.enrichingPOIIds)
-        ..removeAll(enrichedPOIs.keys);
+        ..removeAll(unenrichedPOIs.map((p) => p.id));
 
       state = state.copyWith(
         pois: currentPOIs,

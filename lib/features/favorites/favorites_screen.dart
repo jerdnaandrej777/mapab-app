@@ -5,7 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
+import '../map/providers/map_controller_provider.dart';
+import '../map/providers/route_planner_provider.dart';
 import '../poi/providers/poi_state_provider.dart';
+import '../random_trip/providers/random_trip_provider.dart';
+import '../trip/providers/trip_state_provider.dart';
 
 /// Favoriten-Screen für gespeicherte Routen und POIs
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -249,12 +253,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
           icon: const Icon(Icons.delete_outline, color: Colors.red),
           onPressed: () => _confirmRemoveRoute(trip),
         ),
-        onTap: () {
-          // TODO: Route öffnen/laden
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Route öffnen: ${trip.name}')),
-          );
-        },
+        onTap: () => _loadSavedRoute(trip),
       ),
     );
   }
@@ -411,6 +410,35 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
           style: const TextStyle(fontSize: 48),
         ),
       ),
+    );
+  }
+
+  /// Laedt eine gespeicherte Route und zeigt sie auf der Karte an
+  void _loadSavedRoute(Trip trip) {
+    // Route-Daten pruefen
+    if (trip.route.coordinates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Route-Daten sind unvollständig')),
+      );
+      return;
+    }
+
+    // Bestehenden State zuruecksetzen
+    ref.read(routePlannerProvider.notifier).clearRoute();
+    ref.read(randomTripNotifierProvider.notifier).reset();
+
+    // Route und Stops setzen (ohne OSRM-Neuberechnung)
+    final stops = trip.stops.map((stop) => stop.toPOI()).toList();
+    ref.read(tripStateProvider.notifier).setRouteAndStops(trip.route, stops);
+
+    // Auto-Zoom auf Route aktivieren
+    ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+    // Zur Karte navigieren
+    context.go('/');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Route "${trip.name}" geladen')),
     );
   }
 

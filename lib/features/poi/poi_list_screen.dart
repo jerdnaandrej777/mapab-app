@@ -192,7 +192,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
             !poi.isEnriched &&
             poi.imageUrl == null &&
             !poiState.enrichingPOIIds.contains(poi.id))
-        .take(30) // OPTIMIERT: Mehr POIs im Batch (schneller durch Multi-Title-Query)
+        .take(50) // OPTIMIERT v1.7.9: Auf 50 erhoeht (Wikipedia Batch-Query Limit)
         .toList();
 
     if (poisToEnrich.isEmpty) {

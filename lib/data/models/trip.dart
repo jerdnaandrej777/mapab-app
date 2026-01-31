@@ -9,6 +9,16 @@ import 'route.dart';
 part 'trip.freezed.dart';
 part 'trip.g.dart';
 
+// JSON Converter für Trip nested objects (top-level Funktionen)
+Map<String, dynamic> _tripRouteToJson(AppRoute route) => route.toJson();
+AppRoute _tripRouteFromJson(Map<String, dynamic> json) =>
+    AppRoute.fromJson(json);
+
+List<Map<String, dynamic>> _tripStopsToJson(List<TripStop> stops) =>
+    stops.map((s) => s.toJson()).toList();
+List<TripStop> _tripStopsFromJson(List<dynamic> json) =>
+    json.map((e) => TripStop.fromJson(e as Map<String, dynamic>)).toList();
+
 /// Trip (Reise) Datenmodell
 /// Übernommen von MapAB Trip-Logik
 @freezed
@@ -25,10 +35,12 @@ class Trip with _$Trip {
     /// Trip-Typ
     required TripType type,
 
-    /// Basis-Route (Start → Ziel)
+    /// Basis-Route (Start → Ziel) mit expliziter JSON-Konvertierung
+    @JsonKey(toJson: _tripRouteToJson, fromJson: _tripRouteFromJson)
     required AppRoute route,
 
-    /// Geplante Stops (POIs)
+    /// Geplante Stops (POIs) mit expliziter JSON-Konvertierung
+    @JsonKey(toJson: _tripStopsToJson, fromJson: _tripStopsFromJson)
     @Default([]) List<TripStop> stops,
 
     /// Anzahl Tage (für Mehrtages-Trips)
@@ -237,6 +249,17 @@ class TripStop with _$TripStop {
   }
 }
 
+// JSON Converter für TripDay nested objects (top-level Funktionen)
+List<Map<String, dynamic>> _tripDayStopsToJson(List<TripStop> stops) =>
+    stops.map((s) => s.toJson()).toList();
+List<TripStop> _tripDayStopsFromJson(List<dynamic> json) =>
+    json.map((e) => TripStop.fromJson(e as Map<String, dynamic>)).toList();
+
+Map<String, dynamic>? _tripDayOvernightStopToJson(TripStop? stop) =>
+    stop?.toJson();
+TripStop? _tripDayOvernightStopFromJson(Map<String, dynamic>? json) =>
+    json != null ? TripStop.fromJson(json) : null;
+
 /// Tages-Aufteilung für Mehrtages-Trips
 @freezed
 class TripDay with _$TripDay {
@@ -249,10 +272,14 @@ class TripDay with _$TripDay {
     /// Titel (z.B. "Tag 1: München → Salzburg")
     required String title,
 
-    /// Stops für diesen Tag
+    /// Stops für diesen Tag mit expliziter JSON-Konvertierung
+    @JsonKey(toJson: _tripDayStopsToJson, fromJson: _tripDayStopsFromJson)
     @Default([]) List<TripStop> stops,
 
-    /// Übernachtungsort (letzter Stop)
+    /// Übernachtungsort (letzter Stop) mit expliziter JSON-Konvertierung
+    @JsonKey(
+        toJson: _tripDayOvernightStopToJson,
+        fromJson: _tripDayOvernightStopFromJson)
     TripStop? overnightStop,
 
     /// Distanz für diesen Tag
