@@ -148,6 +148,29 @@ flutter test
 
 ## Recent Updates (Januar 2026)
 
+### v1.7.20 - Wetter-Widget im AI Trip & Modal-Kategorien (31. Januar 2026)
+- **🌤️ Wetter-Widget im AI Trip Modus** - UnifiedWeatherWidget jetzt in beiden Modi (Schnell + AI Trip)
+- **📂 Elegante Modal-Kategorienauswahl** - Alle 13 Kategorien ohne Scroll, modernes Bottom Sheet
+- **🧹 UI-Cleanup** - Redundante Widgets entfernt (RouteAddressBar, WeatherChip), konsistente 12px Abstände
+- **⚡ Performance** - State-Variablen reduziert (4 → 3), Widget-Parameter vereinfacht (4 → 2)
+
+### v1.7.19 - GPS Reverse Geocoding & Unified Weather Widget (31. Januar 2026)
+- **🗺️ GPS zeigt Stadtnamen** - "München" statt "Mein Standort" via Reverse Geocoding
+- **🌤️ Intelligentes Wetter-Widget** - 3 Widgets zu 1 zusammengeführt, auto Modus-Wechsel
+
+### v1.7.18 - Snackbar Auto-Dismiss (31. Januar 2026)
+- **⚡ Snackbar Auto-Dismiss** - "Route gespeichert" verschwindet nach 1 Sekunde statt 4 Sekunden
+
+### v1.7.17 - Persistente Wetter-Widgets (31. Januar 2026)
+- **Wetter-Widgets bleiben sichtbar** - WeatherChip, WeatherBar und WeatherAlertBanner verschwinden nicht mehr bei Navigation
+- **keepAlive für Weather-Provider** - RouteWeatherNotifier und LocationWeatherNotifier mit Persistence
+- **90% weniger API-Calls** - 15-Minuten-Cache funktioniert jetzt korrekt
+- **Konsistente Anzeige** - Keine flackernden Widgets mehr beim Screen-Wechsel
+
+### v1.7.16 - WeatherBar einklappbar & Dauerhafte Adress-Anzeige (31. Januar 2026)
+- **Einklappbare WeatherBar** - 5 Wetter-Punkte können ausgeblendet werden
+- **Dauerhafte Adress-Anzeige** - Start/Ziel bleiben nach Navigation sichtbar
+
 ### v1.7.15 - GPS-Button Optimierung (31. Januar 2026)
 - **Redundanter GPS-Button entfernt** - FloatingActionButton rechts unten (unter Settings) wurde entfernt
 - **Klarere UX** - GPS-Funktion nur noch dort, wo sie gebraucht wird (Startpunkt setzen)
@@ -400,6 +423,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.7.15
+**Version:** 1.7.20
 **Release:** 31. Januar 2026
 **Erstellt mit:** Flutter 💙
