@@ -255,7 +255,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
 
                   // === SCHNELL-MODUS ===
-                  if (_planMode == MapPlanMode.schnell && !isGenerating)
+                  if (_planMode == MapPlanMode.schnell && !isGenerating) ...[
+                    const SizedBox(height: 12),
                     _SchnellModePanel(
                       routePlanner: routePlanner,
                       routeSession: routeSession,
@@ -268,6 +269,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         context.go('/trip');
                       },
                     ),
+                  ],
 
                   // === AI TRIP MODUS ===
                   if (_planMode == MapPlanMode.aiTrip && !isGenerating) ...[
@@ -277,8 +279,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ],
 
                   // === LOADING (Trip wird generiert) ===
-                  if (isGenerating)
+                  if (isGenerating) ...[
+                    const SizedBox(height: 12),
                     _GeneratingIndicator(),
+                  ],
 
                   // === ROUTE LÖSCHEN BUTTON FÜR AI TRIP ===
                   // v1.6.8: Zeige Löschbutton wenn AI Trip generiert wurde

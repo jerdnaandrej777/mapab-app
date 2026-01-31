@@ -8,7 +8,7 @@ import 'weather_details_sheet.dart';
 
 /// Provider für Collapsed-State des Weather Widgets (v1.7.19)
 /// Persistiert über gesamte Session
-final weatherWidgetCollapsedProvider = StateProvider<bool>((ref) => false);
+final weatherWidgetCollapsedProvider = StateProvider<bool>((ref) => true);
 
 /// Intelligentes Wetter-Widget (v1.7.19)
 /// Wechselt automatisch zwischen Standort-Wetter und Route-Wetter
