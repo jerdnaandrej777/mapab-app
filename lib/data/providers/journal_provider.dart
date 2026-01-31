@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,7 +27,7 @@ class JournalNotifier extends _$JournalNotifier {
         return map.map((key, value) =>
             MapEntry(key, TripJournal.fromJson(Map<String, dynamic>.from(value))));
       } catch (e) {
-        print('[Journal] Laden fehlgeschlagen: $e');
+        debugPrint('[Journal] Laden fehlgeschlagen: $e');
       }
     }
     return {};
@@ -171,7 +172,7 @@ class JournalNotifier extends _$JournalNotifier {
 
       return images.take(maxImages).map((img) => img.path).toList();
     } catch (e) {
-      print('[Journal] Foto-Auswahl fehlgeschlagen: $e');
+      debugPrint('[Journal] Foto-Auswahl fehlgeschlagen: $e');
       return null;
     }
   }
@@ -188,7 +189,7 @@ class JournalNotifier extends _$JournalNotifier {
 
       return image?.path;
     } catch (e) {
-      print('[Journal] Kamera-Fehler: $e');
+      debugPrint('[Journal] Kamera-Fehler: $e');
       return null;
     }
   }

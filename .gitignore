@@ -55,6 +55,11 @@ build_release.bat
 run_dev.sh
 build_release.sh
 
+# Release-Signing (niemals committen!)
+android/key.properties
+*.keystore
+*.jks
+
 # API Keys (niemals committen!)
 **/secrets.dart
 **/api_keys.dart

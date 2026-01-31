@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/traffic.dart';
@@ -48,7 +49,7 @@ class TrafficRepository {
         return _parseTrafficResponse(response.data, routeCoordinates);
       }
     } catch (e) {
-      print('[Traffic] API-Fehler: $e');
+      debugPrint('[Traffic] API-Fehler: $e');
       // Fallback zu simulierten Daten
       return _generateSimulatedTraffic(routeCoordinates);
     }
@@ -82,7 +83,7 @@ class TrafficRepository {
         return _parseIncidentsResponse(response.data);
       }
     } catch (e) {
-      print('[Traffic] Incidents-Fehler: $e');
+      debugPrint('[Traffic] Incidents-Fehler: $e');
     }
 
     return [];
@@ -133,7 +134,7 @@ class TrafficRepository {
         }
       }
     } catch (e) {
-      print('[Traffic] Alternative Route Fehler: $e');
+      debugPrint('[Traffic] Alternative Route Fehler: $e');
     }
 
     return null;
@@ -208,7 +209,7 @@ class TrafficRepository {
           severity: (properties['magnitudeOfDelay'] as num?)?.toDouble() ?? 0.5,
         ));
       } catch (e) {
-        print('[Traffic] Incident parse error: $e');
+        debugPrint('[Traffic] Incident parse error: $e');
       }
     }
 

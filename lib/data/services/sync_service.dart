@@ -18,6 +18,9 @@ class SyncService {
   /// Prüft ob Sync verfügbar ist
   bool get isAvailable => _client != null && isAuthenticated;
 
+  /// Gibt die aktuelle User-ID zurück, oder null wenn nicht eingeloggt
+  String? get _userId => currentUser?.id;
+
   // ============================================
   // TRIPS
   // ============================================
@@ -30,12 +33,14 @@ class SyncService {
     bool isFavorite = false,
   }) async {
     if (!isAvailable) return null;
+    final userId = _userId;
+    if (userId == null) return null;
 
     debugPrint('[Sync] Speichere Trip: $name');
 
     try {
       final tripData = {
-        'user_id': currentUser!.id,
+        'user_id': userId,
         'name': name,
         'start_lat': route.start.latitude,
         'start_lng': route.start.longitude,
@@ -83,6 +88,8 @@ class SyncService {
   /// Lädt alle Trips des Users
   Future<List<Map<String, dynamic>>> loadTrips() async {
     if (!isAvailable) return [];
+    final userId = _userId;
+    if (userId == null) return [];
 
     debugPrint('[Sync] Lade Trips...');
 
@@ -90,7 +97,7 @@ class SyncService {
       final response = await _client!
           .from('trips')
           .select('*, trip_stops(*)')
-          .eq('user_id', currentUser!.id)
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       debugPrint('[Sync] ✓ ${response.length} Trips geladen');
@@ -141,12 +148,14 @@ class SyncService {
   /// Speichert POI als Favorit
   Future<bool> saveFavoritePOI(POI poi) async {
     if (!isAvailable) return false;
+    final userId = _userId;
+    if (userId == null) return false;
 
     debugPrint('[Sync] Speichere Favorit: ${poi.name}');
 
     try {
       await _client!.from('favorite_pois').upsert({
-        'user_id': currentUser!.id,
+        'user_id': userId,
         'poi_id': poi.id,
         'name': poi.name,
         'latitude': poi.latitude,
@@ -166,12 +175,14 @@ class SyncService {
   /// Entfernt POI aus Favoriten
   Future<bool> removeFavoritePOI(String poiId) async {
     if (!isAvailable) return false;
+    final userId = _userId;
+    if (userId == null) return false;
 
     try {
       await _client!
           .from('favorite_pois')
           .delete()
-          .eq('user_id', currentUser!.id)
+          .eq('user_id', userId)
           .eq('poi_id', poiId);
 
       debugPrint('[Sync] ✓ Favorit entfernt: $poiId');
@@ -185,6 +196,8 @@ class SyncService {
   /// Lädt alle Favoriten-POIs
   Future<List<Map<String, dynamic>>> loadFavoritePOIs() async {
     if (!isAvailable) return [];
+    final userId = _userId;
+    if (userId == null) return [];
 
     debugPrint('[Sync] Lade Favoriten...');
 
@@ -192,7 +205,7 @@ class SyncService {
       final response = await _client!
           .from('favorite_pois')
           .select()
-          .eq('user_id', currentUser!.id)
+          .eq('user_id', userId)
           .order('created_at', ascending: false);
 
       debugPrint('[Sync] ✓ ${response.length} Favoriten geladen');
@@ -210,12 +223,14 @@ class SyncService {
   /// Lädt User-Profil
   Future<Map<String, dynamic>?> loadUserProfile() async {
     if (!isAvailable) return null;
+    final userId = _userId;
+    if (userId == null) return null;
 
     try {
       final response = await _client!
           .from('users')
           .select()
-          .eq('id', currentUser!.id)
+          .eq('id', userId)
           .single();
 
       return Map<String, dynamic>.from(response);
@@ -239,11 +254,14 @@ class SyncService {
       if (displayName != null) updates['display_name'] = displayName;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
 
+      final userId = _userId;
+      if (userId == null) return false;
+
       if (updates.isNotEmpty) {
         await _client!
             .from('users')
             .update(updates)
-            .eq('id', currentUser!.id);
+            .eq('id', userId);
       }
 
       return true;
@@ -262,10 +280,13 @@ class SyncService {
     if (!isAvailable) return [];
 
     try {
+      final userId = _userId;
+      if (userId == null) return [];
+
       final response = await _client!
           .from('user_achievements')
           .select()
-          .eq('user_id', currentUser!.id);
+          .eq('user_id', userId);
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -286,10 +307,15 @@ class SyncService {
   /// Decodiert Koordinaten
   List<LatLng> decodeCoordinates(String encoded) {
     if (encoded.isEmpty) return [];
-    return encoded.split(';').map((s) {
-      final parts = s.split(',');
-      return LatLng(double.parse(parts[0]), double.parse(parts[1]));
-    }).toList();
+    try {
+      return encoded.split(';').where((s) => s.contains(',')).map((s) {
+        final parts = s.split(',');
+        return LatLng(double.parse(parts[0]), double.parse(parts[1]));
+      }).toList();
+    } catch (e) {
+      debugPrint('[Sync] Fehler beim Dekodieren der Koordinaten: $e');
+      return [];
+    }
   }
 }
 

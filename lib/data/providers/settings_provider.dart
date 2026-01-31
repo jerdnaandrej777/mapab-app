@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 part 'settings_provider.g.dart';
 
@@ -30,7 +32,6 @@ class AppSettings {
   // Remember Me Feature
   final bool rememberMe;
   final String? savedEmail;
-  final String? savedPasswordEncoded; // Base64-encoded für einfache Obfuskation
 
   const AppSettings({
     this.themeMode = AppThemeMode.system,
@@ -42,7 +43,6 @@ class AppSettings {
     this.soundEffects = true,
     this.rememberMe = false,
     this.savedEmail,
-    this.savedPasswordEncoded,
   });
 
   AppSettings copyWith({
@@ -55,7 +55,6 @@ class AppSettings {
     bool? soundEffects,
     bool? rememberMe,
     String? savedEmail,
-    String? savedPasswordEncoded,
     bool clearCredentials = false,
   }) {
     return AppSettings(
@@ -68,23 +67,12 @@ class AppSettings {
       soundEffects: soundEffects ?? this.soundEffects,
       rememberMe: rememberMe ?? this.rememberMe,
       savedEmail: clearCredentials ? null : (savedEmail ?? this.savedEmail),
-      savedPasswordEncoded: clearCredentials ? null : (savedPasswordEncoded ?? this.savedPasswordEncoded),
     );
   }
 
-  /// Dekodiert das gespeicherte Passwort
-  String? get savedPassword {
-    if (savedPasswordEncoded == null) return null;
-    try {
-      return utf8.decode(base64Decode(savedPasswordEncoded!));
-    } catch (e) {
-      return null;
-    }
-  }
-
   /// Prüft ob gespeicherte Credentials vorhanden sind
-  bool get hasStoredCredentials =>
-      rememberMe && savedEmail != null && savedPasswordEncoded != null;
+  /// Hinweis: Passwort wird über flutter_secure_storage gespeichert, nicht im State
+  bool get hasStoredCredentials => rememberMe && savedEmail != null;
 
   /// Konvertiert den aktuellen ThemeMode zu Flutter's ThemeMode
   ThemeMode get flutterThemeMode {
@@ -113,7 +101,7 @@ class AppSettings {
     'soundEffects': soundEffects,
     'rememberMe': rememberMe,
     'savedEmail': savedEmail,
-    'savedPasswordEncoded': savedPasswordEncoded,
+    // Hinweis: Passwort wird NICHT in Hive gespeichert, sondern in flutter_secure_storage
   };
 
   /// Deserialisiert von Map
@@ -128,10 +116,15 @@ class AppSettings {
       soundEffects: json['soundEffects'] as bool? ?? true,
       rememberMe: json['rememberMe'] as bool? ?? false,
       savedEmail: json['savedEmail'] as String?,
-      savedPasswordEncoded: json['savedPasswordEncoded'] as String?,
     );
   }
 }
+
+/// Secure Storage Instanz für Passwort-Speicherung
+const _secureStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+);
+const _secureKeyPassword = 'mapab_saved_password';
 
 /// Settings Provider mit Hive Persistenz
 @Riverpod(keepAlive: true)
@@ -141,7 +134,30 @@ class SettingsNotifier extends _$SettingsNotifier {
   @override
   AppSettings build() {
     _settingsBox = Hive.box('settings');
+    _migrateOldCredentials();
     return _loadSettings();
+  }
+
+  /// Migriert alte Base64-Passwörter aus Hive zu Secure Storage
+  void _migrateOldCredentials() {
+    try {
+      final json = _settingsBox.get('appSettings');
+      if (json != null) {
+        final oldEncoded = json['savedPasswordEncoded'] as String?;
+        if (oldEncoded != null) {
+          // Altes Base64-Passwort dekodieren und in Secure Storage migrieren
+          final password = utf8.decode(base64Decode(oldEncoded));
+          _secureStorage.write(key: _secureKeyPassword, value: password);
+          // Altes Passwort aus Hive entfernen
+          final updatedJson = Map<String, dynamic>.from(json);
+          updatedJson.remove('savedPasswordEncoded');
+          _settingsBox.put('appSettings', updatedJson);
+          debugPrint('[Settings] Alte Credentials zu Secure Storage migriert');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Settings] Migration fehlgeschlagen: $e');
+    }
   }
 
   AppSettings _loadSettings() {
@@ -203,23 +219,34 @@ class SettingsNotifier extends _$SettingsNotifier {
     await _saveSettings();
   }
 
-  /// Speichert Login-Credentials (verschlüsselt)
+  /// Speichert Login-Credentials (Passwort in Secure Storage, Email in Hive)
   Future<void> saveCredentials(String email, String password) async {
-    final encodedPassword = base64Encode(utf8.encode(password));
+    await _secureStorage.write(key: _secureKeyPassword, value: password);
     state = state.copyWith(
       rememberMe: true,
       savedEmail: email,
-      savedPasswordEncoded: encodedPassword,
     );
     await _saveSettings();
-    debugPrint('[Settings] Anmeldedaten gespeichert für: $email');
+    debugPrint('[Settings] Anmeldedaten gespeichert');
   }
 
   /// Löscht gespeicherte Credentials
   Future<void> clearCredentials() async {
+    await _secureStorage.delete(key: _secureKeyPassword);
     state = state.copyWith(rememberMe: false, clearCredentials: true);
     await _saveSettings();
     debugPrint('[Settings] Gespeicherte Anmeldedaten gelöscht');
+  }
+
+  /// Liest das gespeicherte Passwort aus Secure Storage
+  Future<String?> getSavedPassword() async {
+    if (!state.hasStoredCredentials) return null;
+    try {
+      return await _secureStorage.read(key: _secureKeyPassword);
+    } catch (e) {
+      debugPrint('[Settings] Fehler beim Lesen des Passworts: $e');
+      return null;
+    }
   }
 
   /// Prüft ob Dark Mode basierend auf Sonnenuntergang aktiv sein sollte

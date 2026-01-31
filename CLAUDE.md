@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.22 - UI-Feinschliff | Plattformen: Android, iOS, Desktop
+Version: 1.7.24 - POI-Filter Chip Feedback | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -88,7 +88,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.22: 12px Abstand Toggle→Panel in beiden Modi, Generating-Indicator Spacing) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
-| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
+| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
@@ -137,7 +137,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/poi.dart` | POI Model (Freezed) |
 | `lib/data/models/trip.dart` | Trip Model mit Tages-Helper-Methoden (v1.5.7) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
-| `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query + Kategorie-Inference (v1.7.9) |
+| `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query (v1.7.23: Seen, Küsten, Hotels, Restaurants, Aktivitäten) + Kategorie-Inference (v1.7.9) |
 | `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Radius→Tage Berechnung (v1.5.7) |
 | `lib/core/algorithms/day_planner.dart` | Tages-Planung mit 9-POI-Limit (v1.5.7) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
@@ -268,6 +268,8 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.24.md` (POI-Filter Chip Feedback - Konsistentes Rendering, 100ms Animation, Schatten)
+- `Dokumentation/CHANGELOG-v1.7.23.md` (POI-Kategorien-Filter - Alle Kategorien, Overpass erweitert, Chip-Feedback)
 - `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
 - `Dokumentation/CHANGELOG-v1.7.21.md` (Unified Panel Design - Beide Modi scrollbar)
 - `Dokumentation/CHANGELOG-v1.2.x.md`
@@ -325,6 +327,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.20.md` (Wetter-Widget im AI Trip & Modal-Kategorien)
 - `Dokumentation/CHANGELOG-v1.7.21.md` (AI Trip Panel UI-Optimierungen)
 - `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
+- `Dokumentation/CHANGELOG-v1.7.24.md` (POI-Filter Chip Feedback - Konsistentes Rendering, Schatten)
 
 ---
 
@@ -842,6 +845,48 @@ final isLoading = ref.read(randomTripNotifierProvider).isPOILoading(poiId);
 - **Minimum-Prüfung**: Mindestens 2 POIs müssen im Trip bleiben
 - **Per-POI Loading**: Individuelle Loading-Anzeige pro POI
 - **Auto-Routenberechnung**: Route wird nach jeder Änderung automatisch neu berechnet
+
+### POI-Kategorien-Filter (v1.7.23+)
+
+**Alle 15 Kategorien** sind als horizontale Quick-Filter-Chips auf der POI-Liste verfügbar:
+
+| Kategorie | OSM-Tags | Overpass-Query |
+|-----------|----------|----------------|
+| `castle` | `historic=castle` | ✅ seit v1.0 |
+| `nature` | `natural=*` (excl. water/beach) | ✅ seit v1.0 |
+| `museum` | `tourism=museum` | ✅ seit v1.0 |
+| `viewpoint` | `tourism=viewpoint` | ✅ seit v1.0 |
+| `lake` | `natural=water` + `water=lake` | ✅ seit v1.7.23 |
+| `coast` | `natural=beach`, `leisure=beach_resort`, `place=island` | ✅ seit v1.7.23 |
+| `park` | `leisure=park` | ✅ seit v1.0 |
+| `city` | `place=city/town` | ✅ seit v1.0 |
+| `activity` | `tourism=theme_park/zoo`, `leisure=water_park/swimming_area` | ✅ seit v1.7.23 |
+| `hotel` | `tourism=hotel` + `stars` | ✅ seit v1.7.23 |
+| `restaurant` | `amenity=restaurant` + `cuisine` | ✅ seit v1.7.23 |
+| `unesco` | `heritage=*` | ✅ seit v1.0 |
+| `church` | `amenity=place_of_worship` | ✅ seit v1.0 |
+| `monument` | `historic=monument/memorial` | ✅ seit v1.0 |
+| `attraction` | `tourism=attraction` | ✅ seit v1.0 |
+
+**Filter-Chip Widget (v1.7.24):**
+- `Material(transparent)` + `InkWell` für Ripple-Effekt
+- `AnimatedContainer` (100ms) rendert alles konsistent: Hintergrund, Border, Schatten
+- Ausgewählt: `colorScheme.primary` Hintergrund + weißer Text + Häkchen-Icon + blauer Schatten
+- Alle Chips horizontal scrollbar in `ListView`
+
+```dart
+// Kategorie-Filter setzen
+final notifier = ref.read(pOIStateNotifierProvider.notifier);
+final categories = {POICategory.lake, POICategory.coast};
+notifier.setSelectedCategories(categories);
+
+// Filter zurücksetzen
+notifier.resetFilters();
+
+// Aktive Filter prüfen
+final hasFilters = ref.read(pOIStateNotifierProvider).hasActiveFilters;
+final selected = ref.read(pOIStateNotifierProvider).selectedCategories;
+```
 
 ### POI-Laden mit Cache (v1.3.6+)
 
@@ -1508,7 +1553,7 @@ if (context.hasUserLocation) {
 }
 ```
 
-**Kategorien-Zuordnung (v1.7.9: ungültige IDs gefixt + erweitert):**
+**Kategorien-Zuordnung (v1.7.9: ungültige IDs gefixt + erweitert, v1.7.23: Overpass-Abfragen für alle Kategorien):**
 
 | Anfrage | Kategorien |
 |---------|------------|

@@ -56,6 +56,9 @@ class POIState with _$POIState {
 
     /// Nur POIs auf der Route anzeigen (mit routePosition)
     @Default(false) bool routeOnlyMode,
+
+    /// Nur Indoor/wetter-resistente POIs anzeigen (bei schlechtem Wetter)
+    @Default(false) bool indoorOnlyFilter,
   }) = _POIState;
 
   /// Prüft ob ein bestimmter POI gerade enriched wird
@@ -98,6 +101,16 @@ class POIState with _$POIState {
               poi.detourKm == null || poi.detourKm! <= maxDetourKm)
           .toList();
       debugPrint('[POIState] Filter detourKm (<= $maxDetourKm km): $beforeCount → ${result.length}');
+    }
+
+    // Indoor-Only Filter (bei schlechtem Wetter)
+    if (indoorOnlyFilter) {
+      final beforeCount = result.length;
+      result = result.where((poi) {
+        final cat = POICategory.fromId(poi.categoryId);
+        return cat?.isWeatherResilient ?? false;
+      }).toList();
+      debugPrint('[POIState] Filter indoorOnly: $beforeCount → ${result.length}');
     }
 
     // Suchtext-Filter
@@ -428,6 +441,7 @@ class POIStateNotifier extends _$POIStateNotifier {
       maxDetourKm: 100.0,
       searchQuery: '',
       routeOnlyMode: false,
+      indoorOnlyFilter: false,
     );
   }
 
@@ -435,6 +449,12 @@ class POIStateNotifier extends _$POIStateNotifier {
   void setRouteOnlyMode(bool enabled) {
     state = state.copyWith(routeOnlyMode: enabled);
     debugPrint('[POIState] Route-Only-Modus: $enabled');
+  }
+
+  /// Indoor-Only-Filter setzen (bei schlechtem Wetter)
+  void setIndoorOnly(bool enabled) {
+    state = state.copyWith(indoorOnlyFilter: enabled);
+    debugPrint('[POIState] Indoor-Only-Filter: $enabled');
   }
 
   /// Alle POIs löschen

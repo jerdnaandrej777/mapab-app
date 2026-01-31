@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -8,6 +9,7 @@ import '../../../data/repositories/trip_generator_repo.dart';
 import '../../../data/services/hotel_service.dart';
 import '../../map/providers/route_planner_provider.dart';
 import '../../map/providers/route_session_provider.dart';
+import '../../map/providers/weather_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
 import 'random_trip_state.dart';
@@ -80,28 +82,23 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     switch (condition) {
       case WeatherCondition.danger:
         // Nur Indoor-Kategorien bei Unwetter
-        recommended = [
-          POICategory.museum,
-          POICategory.church,
-        ];
-        print('[RandomTrip] Unwetter erkannt - nur Indoor-Kategorien');
+        recommended = POICategory.indoorCategories;
+        debugPrint('[RandomTrip] Unwetter erkannt - nur Indoor-Kategorien');
         break;
 
       case WeatherCondition.bad:
-        // Indoor bevorzugt, aber auch wetterfeste Outdoor-POIs
+        // Indoor + wetter-resistente Kategorien (castle, activity haben Indoor-Teile)
         recommended = [
-          POICategory.museum,
-          POICategory.church,
-          POICategory.castle, // Hat oft Indoor-Bereiche
-          POICategory.city, // Städte haben Überdachungen
+          ...POICategory.weatherResilientCategories,
+          POICategory.city, // Staedte haben Ueberdachungen
         ];
-        print('[RandomTrip] Schlechtes Wetter - Indoor bevorzugt');
+        debugPrint('[RandomTrip] Schlechtes Wetter - wetter-resistente Kategorien');
         break;
 
       case WeatherCondition.mixed:
         // Flexibel - alle Kategorien erlaubt
         recommended = [];
-        print('[RandomTrip] Wechselhaftes Wetter - alle Kategorien');
+        debugPrint('[RandomTrip] Wechselhaftes Wetter - alle Kategorien');
         break;
 
       case WeatherCondition.good:
@@ -118,7 +115,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           POICategory.castle,
           POICategory.monument,
         ];
-        print('[RandomTrip] Gutes Wetter - Outdoor empfohlen');
+        debugPrint('[RandomTrip] Gutes Wetter - Outdoor empfohlen');
         break;
     }
 
@@ -136,7 +133,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           .toList(),
       weatherCategoriesApplied: false,
     );
-    print('[RandomTrip] Wetter-Kategorien zurückgesetzt');
+    debugPrint('[RandomTrip] Wetter-Kategorien zurückgesetzt');
   }
 
   /// Setzt Startpunkt manuell
@@ -157,7 +154,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       // Location Services Check
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('[RandomTrip] Location Services deaktiviert');
+        debugPrint('[RandomTrip] Location Services deaktiviert');
         state = state.copyWith(
           isLoading: false,
           error: 'Bitte aktiviere die Ortungsdienste in den Einstellungen',
@@ -187,7 +184,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         timeLimit: const Duration(seconds: 10),
       );
 
-      print('[RandomTrip] Position erhalten: ${position.latitude}, ${position.longitude}');
+      debugPrint('[RandomTrip] Position erhalten: ${position.latitude}, ${position.longitude}');
 
       final location = LatLng(position.latitude, position.longitude);
 
@@ -202,7 +199,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
       );
     } catch (e) {
-      print('[RandomTrip] GPS-Fehler: $e');
+      debugPrint('[RandomTrip] GPS-Fehler: $e');
 
       state = state.copyWith(
         isLoading: false,
@@ -246,7 +243,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         );
       } else {
         // Euro Trip: Radius übergeben, Tage werden automatisch berechnet
-        print('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}');
+        debugPrint('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}');
         result = await _tripGenerator.generateEuroTrip(
           startLocation: state.startLocation!,
           startAddress: state.startAddress!,
@@ -254,17 +251,17 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           categories: state.selectedCategories,
           includeHotels: state.includeHotels,
         );
-        print('[RandomTrip] Euro Trip generiert! POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
+        debugPrint('[RandomTrip] Euro Trip generiert! POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }
 
-      print('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
+      debugPrint('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
       state = state.copyWith(
         generatedTrip: result,
         hotelSuggestions: result.hotelSuggestions ?? [],
         step: RandomTripStep.preview,
         isLoading: false,
       );
-      print('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
+      debugPrint('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
 
       // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
       _enrichGeneratedPOIs(result);
@@ -389,7 +386,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     // Alte POIs löschen
     final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
     poiNotifier.clearPOIs();
-    print('[RandomTrip] Alte POIs gelöscht');
+    debugPrint('[RandomTrip] Alte POIs gelöscht');
 
     // Route und Stops an TripStateProvider übergeben
     final tripStateNotifier = ref.read(tripStateProvider.notifier);
@@ -402,6 +399,14 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     tripStateNotifier.setStops(stops);
 
     state = state.copyWith(step: RandomTripStep.confirmed);
+
+    // Routen-Wetter laden fuer die bestaetigte Route
+    final routeCoords = generatedTrip.trip.route.coordinates;
+    if (routeCoords.isNotEmpty) {
+      ref.read(routeWeatherNotifierProvider.notifier)
+          .loadWeatherForRoute(routeCoords);
+      debugPrint('[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
+    }
   }
 
   /// Geht zurück zur Konfiguration
@@ -470,7 +475,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         .toList();
 
     if (poisToEnrich.isNotEmpty) {
-      print('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+      debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
       poiNotifier.enrichPOIsBatch(poisToEnrich);
     }
   }

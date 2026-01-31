@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart';
 import '../../../data/models/weather.dart';
 import '../../../data/repositories/weather_repo.dart';
+import '../../poi/providers/poi_state_provider.dart';
 
 part 'weather_provider.g.dart';
 
@@ -195,6 +196,7 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
 }
 
 /// Provider für Indoor-Only Filter
+/// Synchronisiert mit POIStateNotifier fuer konsistentes Filtern
 @riverpod
 class IndoorOnlyFilter extends _$IndoorOnlyFilter {
   @override
@@ -202,10 +204,20 @@ class IndoorOnlyFilter extends _$IndoorOnlyFilter {
 
   void toggle() {
     state = !state;
+    _syncWithPOIState(state);
   }
 
   void setEnabled(bool enabled) {
     state = enabled;
+    _syncWithPOIState(enabled);
+  }
+
+  void _syncWithPOIState(bool enabled) {
+    try {
+      ref.read(pOIStateNotifierProvider.notifier).setIndoorOnly(enabled);
+    } catch (_) {
+      // POIStateNotifier evtl. noch nicht initialisiert
+    }
   }
 }
 
@@ -216,6 +228,7 @@ class LocationWeatherState {
   final bool isLoading;
   final String? error;
   final DateTime? lastUpdated;
+  final LatLng? lastLocation;
 
   const LocationWeatherState({
     this.weather,
@@ -223,6 +236,7 @@ class LocationWeatherState {
     this.isLoading = false,
     this.error,
     this.lastUpdated,
+    this.lastLocation,
   });
 
   LocationWeatherState copyWith({
@@ -231,6 +245,7 @@ class LocationWeatherState {
     bool? isLoading,
     String? error,
     DateTime? lastUpdated,
+    LatLng? lastLocation,
   }) {
     return LocationWeatherState(
       weather: weather ?? this.weather,
@@ -238,6 +253,7 @@ class LocationWeatherState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      lastLocation: lastLocation ?? this.lastLocation,
     );
   }
 
@@ -272,8 +288,19 @@ class LocationWeatherNotifier extends _$LocationWeatherNotifier {
 
   /// Lädt Wetter für den aktuellen Standort
   Future<void> loadWeatherForLocation(LatLng position, {String? locationName}) async {
-    // Cache pruefen
-    if (state.isCacheValid && state.hasWeather) {
+    // Cache pruefen MIT Positions-Check
+    if (state.isCacheValid && state.hasWeather && state.lastLocation != null) {
+      final distKm = const Distance().as(
+        LengthUnit.Kilometer,
+        state.lastLocation!,
+        position,
+      );
+      if (distKm < 5.0) {
+        debugPrint('[LocationWeather] Cache gueltig (${distKm.toStringAsFixed(1)}km), ueberspringe');
+        return;
+      }
+      debugPrint('[LocationWeather] Standort gewechselt (${distKm.toStringAsFixed(1)}km), lade neu');
+    } else if (state.isCacheValid && state.hasWeather) {
       debugPrint('[LocationWeather] Cache gueltig, ueberspringe');
       return;
     }
@@ -291,6 +318,7 @@ class LocationWeatherNotifier extends _$LocationWeatherNotifier {
         locationName: locationName,
         isLoading: false,
         lastUpdated: DateTime.now(),
+        lastLocation: position,
       );
 
       debugPrint('[LocationWeather] Wetter geladen: ${weather.description}, ${weather.formattedTemperature}');

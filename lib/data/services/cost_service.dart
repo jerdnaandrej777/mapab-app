@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/cost.dart';
@@ -177,7 +178,7 @@ class CostService {
         )).toList();
       }
     } catch (e) {
-      print('[Cost] Tankstellen-Fehler: $e');
+      debugPrint('[Cost] Tankstellen-Fehler: $e');
     }
 
     return [];

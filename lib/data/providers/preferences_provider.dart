@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/user_preferences.dart';
@@ -21,7 +22,7 @@ class UserPreferencesNotifier extends _$UserPreferencesNotifier {
       try {
         return UserPreferences.fromJson(Map<String, dynamic>.from(json));
       } catch (e) {
-        print('[Preferences] Laden fehlgeschlagen: $e');
+        debugPrint('[Preferences] Laden fehlgeschlagen: $e');
       }
     }
     return const UserPreferences();

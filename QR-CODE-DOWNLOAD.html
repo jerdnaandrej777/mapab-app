@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.7.23 - POI-Kategorien-Filter</p>
+        <p class="version">Version 1.7.25 - POI & Wetter Optimierungen</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.23"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.25"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,10 +183,20 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">🏷️ Alle 15 Kategorien als Quick-Filter - Scrollbare Chip-Leiste mit allen Kategorien (NEU v1.7.23)</li>
-                <li class="new">🏞️ Seen-Kategorie funktioniert - Seen werden jetzt aus OpenStreetMap geladen (NEU v1.7.23)</li>
-                <li class="new">🏖️ Küsten & Strände funktioniert - Strände, Beach-Resorts und Inseln (NEU v1.7.23)</li>
-                <li class="new">🎿 Aktivitäten erweitert - Freizeitparks, Wasserparks, Zoos, Schwimmbereiche (NEU v1.7.23)</li>
+                <li class="new">🌍 UNESCO & Kirchen via Overpass - heritage-Tags und historic=church jetzt geladen (NEU)</li>
+                <li class="new">🏙️ Städte-Kategorie - place=city/town mit Population-Filter (NEU)</li>
+                <li class="new">🌫️ Nebel als schlechtes Wetter - Korrekte Warnung bei Nebel für Outdoor-POIs (NEU)</li>
+                <li class="new">🏰 Wetter-resistente Kategorien - Schlösser & Aktivitäten bei Regen empfohlen (NEU)</li>
+                <li class="new">🌤️ Wetter-Cache mit Standort-Check - Korrektes Wetter nach Ortswechsel (NEU)</li>
+                <li class="new">📷 EN-Wikipedia + Wikidata Batch - Mehr Fotos im Batch-Modus (~5-10% mehr) (NEU)</li>
+                <li class="new">🔄 Foto-Retry nach 10 Min - Session-Tracking mit Cooldown statt permanenter Blockade (NEU)</li>
+                <li class="new">🏠 Indoor-Filter synchron - Toggle wirkt auf MapView UND POI-Liste (NEU)</li>
+                <li>🔐 Application ID auf com.mapab.app geändert - Google Play ready (v1.7.23)</li>
+                <li>🔒 Passwort-Sicherheit - flutter_secure_storage statt Base64 (v1.7.23)</li>
+                <li>🛡️ R8/ProGuard Code-Minimierung aktiviert (v1.7.23)</li>
+                <li>📊 Sentry Crash-Reporting integriert (v1.7.23)</li>
+                <li>🌙 Dark Mode Fix - Alle hartcodierten Farben ersetzt (v1.7.23)</li>
+                <li>🏷️ Alle 15 Kategorien als Quick-Filter (v1.7.23)</li>
                 <li>📏 Konsistente 12px Abstände - Mode-Toggle zu Panel einheitlich (v1.7.22)</li>
                 <li>🌤️ Wetter-Widget zugeklappt - Startet collapsed für mehr Kartenplatz (v1.7.22)</li>
                 <li>📜 Unified Panel Design - Beide Modi nutzen scrollbares Panel-Design (v1.7.21)</li>
@@ -290,9 +300,10 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.7.23.apk" herunterladen<br>
-                3. "Aus unbekannten Quellen installieren" erlauben<br>
-                4. APK öffnen und Installation bestätigen
+                2. "MapAB-v1.7.25.apk" herunterladen<br>
+                3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
+                4. "Aus unbekannten Quellen installieren" erlauben<br>
+                5. APK öffnen und Installation bestätigen
             </p>
         </div>
 
@@ -300,7 +311,7 @@
             <p>
                 <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
                 <strong>Build-Datum:</strong> 31. Januar 2026<br>
-                <strong>Größe:</strong> 58 MB
+                <strong>Größe:</strong> 63.4 MB
             </p>
         </div>
     </div>
@@ -310,7 +321,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.23",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.25",
             width: 256,
             height: 256,
             colorDark: "#1a202c",

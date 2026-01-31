@@ -23,6 +23,7 @@ class ElevationChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       height: height,
@@ -135,7 +136,7 @@ class ElevationChart extends StatelessWidget {
                         return LineTooltipItem(
                           '${spot.y.round()}m\n${spot.x.toStringAsFixed(1)}km',
                           TextStyle(
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -223,12 +224,13 @@ class _DifficultyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final badgeColor = _getColor(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _getColor().withOpacity(0.2),
+        color: badgeColor.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _getColor(), width: 1),
+        border: Border.all(color: badgeColor, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -240,7 +242,7 @@ class _DifficultyBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: _getColor(),
+              color: badgeColor,
             ),
           ),
         ],
@@ -248,12 +250,13 @@ class _DifficultyBadge extends StatelessWidget {
     );
   }
 
-  Color _getColor() {
+  Color _getColor(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (difficulty) {
       case RouteDifficulty.easy:
         return Colors.green;
       case RouteDifficulty.moderate:
-        return Colors.orange;
+        return colorScheme.tertiary;
       case RouteDifficulty.difficult:
         return Colors.red;
       case RouteDifficulty.expert:
@@ -277,12 +280,14 @@ class ElevationChartMini extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: width,
       height: height,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: colorScheme.surface.withOpacity(0.9),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

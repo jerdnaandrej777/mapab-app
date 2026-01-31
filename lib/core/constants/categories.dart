@@ -42,8 +42,19 @@ enum POICategory {
         POICategory.hotel,
       ];
 
+  /// Kategorien die auch bei schlechtem Wetter besucht werden koennen
+  /// (haben signifikante Indoor-Anteile oder Ueberdachung)
+  static List<POICategory> get weatherResilientCategories => [
+        ...indoorCategories,
+        POICategory.castle,   // Innenraeume, Ausstellungen, Fuehrungen
+        POICategory.activity, // Aquarien, Hallenbaeder, Indoor-Parks
+      ];
+
   /// Ist diese Kategorie Indoor?
   bool get isIndoor => indoorCategories.contains(this);
+
+  /// Ist auch bei schlechtem Wetter empfehlenswert?
+  bool get isWeatherResilient => weatherResilientCategories.contains(this);
 }
 
 /// Erlebnis-Level für Umweg-Filter

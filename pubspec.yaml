@@ -1,7 +1,7 @@
 name: travel_planner
 description: Eine europäische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.7.23+123
+version: 1.7.25+125
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -28,6 +28,9 @@ dependencies:
   # Lokale Datenbank
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # Sichere Credential-Speicherung (Android Keystore / iOS Keychain)
+  flutter_secure_storage: ^9.2.4
 
   # Cloud Backend (Auth & Sync)
   supabase_flutter: ^2.8.0
@@ -71,6 +74,9 @@ dependencies:
 
   # QR Code (für Sharing)
   qr_flutter: ^4.1.0
+
+  # Crash Reporting
+  sentry_flutter: ^8.12.0
 
   cupertino_icons: ^1.0.6
 

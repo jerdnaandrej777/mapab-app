@@ -438,6 +438,7 @@ class POIRepository {
   node["historic"="monument"]($bbox);
   node["historic"="memorial"]["name"]($bbox);
   node["historic"="ruins"]["name"]($bbox);
+  node["historic"="church"]["name"]($bbox);
   node["natural"="peak"]($bbox);
   node["natural"="waterfall"]["name"]($bbox);
   node["amenity"="place_of_worship"]["name"]["tourism"]($bbox);
@@ -445,6 +446,13 @@ class POIRepository {
   way["tourism"="museum"]($bbox);
   way["historic"="castle"]($bbox);
   way["historic"="ruins"]["name"]($bbox);
+  way["historic"="church"]["name"]($bbox);
+  node["heritage"]["name"]($bbox);
+  way["heritage"]["name"]($bbox);
+  node["heritage:operator"="whc"]["name"]($bbox);
+  way["heritage:operator"="whc"]["name"]($bbox);
+  node["place"="city"]["name"]["population"]($bbox);
+  node["place"="town"]["name"]["population"]($bbox);
   node["natural"="water"]["water"="lake"]["name"]($bbox);
   way["natural"="water"]["water"="lake"]["name"]($bbox);
   node["natural"="beach"]["name"]($bbox);
@@ -672,8 +680,17 @@ out center;
       lng = (data['lon'] as num).toDouble();
     }
 
-    // Kategorie aus Tags ableiten (v1.7.23: alle Kategorien abgedeckt)
+    // Kategorie aus Tags ableiten (v1.7.25: UNESCO, City, historic=church via Overpass)
     String category = 'attraction';
+    final List<String> poiTags = [];
+
+    // UNESCO zuerst pruefen (kann auch andere Kategorien haben)
+    if (tags['heritage'] != null || tags['heritage:operator'] == 'whc') {
+      category = 'unesco';
+      poiTags.add('unesco');
+    }
+
+    // Spezifischere Kategorien ueberschreiben UNESCO-Default
     if (tags['historic'] == 'castle') {
       category = 'castle';
     } else if (tags['tourism'] == 'viewpoint' || tags['natural'] == 'peak') {
@@ -701,6 +718,8 @@ out center;
     } else if (tags['tourism'] == 'theme_park' || tags['tourism'] == 'zoo' ||
                tags['leisure'] == 'water_park' || tags['leisure'] == 'swimming_area') {
       category = 'activity';
+    } else if (tags['place'] == 'city' || tags['place'] == 'town') {
+      category = 'city';
     }
 
     // OSM Bild-Tags extrahieren
@@ -734,13 +753,22 @@ out center;
       }
     }
 
+    // Score anpassen: Cities nach Einwohnerzahl, UNESCO hoeher
+    int score = 40;
+    if (category == 'city') {
+      final population = int.tryParse(tags['population']?.toString() ?? '');
+      score = (population != null && population > 100000) ? 65 : 45;
+    } else if (poiTags.contains('unesco')) {
+      score = 70; // UNESCO-Welterbe hoeher bewerten
+    }
+
     return POI(
       id: 'osm-${data['type']}-${data['id']}',
       name: tags['name'] ?? 'Unbekannt',
       latitude: lat,
       longitude: lng,
       categoryId: category,
-      score: 40, // Niedrigerer Score für OSM-Daten
+      score: score,
       website: tags['website'],
       phone: tags['phone'],
       openingHours: tags['opening_hours'],
@@ -749,6 +777,7 @@ out center;
       wikipediaTitle: wpTitle,
       hasWikipedia: wpTitle != null,
       hasWikidataData: tags['website'] != null || tags['phone'] != null || wikidataTag != null,
+      tags: poiTags,
     );
   }
 }

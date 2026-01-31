@@ -23,6 +23,7 @@ class RouteWeatherMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     final condition = weatherPoint.weather.condition;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -80,13 +81,13 @@ class RouteWeatherMarker extends StatelessWidget {
                       ? Colors.red
                       : Colors.orange,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: colorScheme.surface, width: 1.5),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     '!',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorScheme.surface,
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
                     ),

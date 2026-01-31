@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../data/models/route.dart';
@@ -10,7 +11,7 @@ import 'route_session_provider.dart';
 part 'route_planner_provider.g.dart';
 
 /// Route-Planner State für Start/Ziel und Berechnung
-@riverpod
+@Riverpod(keepAlive: true)
 class RoutePlanner extends _$RoutePlanner {
   @override
   RoutePlannerData build() {
@@ -61,7 +62,7 @@ class RoutePlanner extends _$RoutePlanner {
     // Route-Session stoppen und POIs löschen
     ref.read(routeSessionProvider.notifier).stopRoute();
     ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
-    print('[RoutePlanner] Route, Session und POIs gelöscht');
+    debugPrint('[RoutePlanner] Route, Session und POIs gelöscht');
   }
 
   /// Berechnet Route wenn Start UND Ziel gesetzt
@@ -76,7 +77,7 @@ class RoutePlanner extends _$RoutePlanner {
     ref.read(routeSessionProvider.notifier).stopRoute();
     ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
     ref.read(tripStateProvider.notifier).clearStops();
-    print('[RoutePlanner] Alte Route-Session, POIs und Trip-Stops gelöscht');
+    debugPrint('[RoutePlanner] Alte Route-Session, POIs und Trip-Stops gelöscht');
 
     try {
       final routingRepo = ref.read(routingRepositoryProvider);
@@ -99,9 +100,9 @@ class RoutePlanner extends _$RoutePlanner {
       // Flag setzen, dass beim nächsten MapScreen-Anzeigen auf Route gezoomt werden soll
       ref.read(shouldFitToRouteProvider.notifier).state = true;
 
-      print('[RoutePlanner] Route berechnet: ${route.distanceKm.toStringAsFixed(0)} km');
+      debugPrint('[RoutePlanner] Route berechnet: ${route.distanceKm.toStringAsFixed(0)} km');
     } catch (e) {
-      print('[RoutePlanner] Fehler bei Routenberechnung: $e');
+      debugPrint('[RoutePlanner] Fehler bei Routenberechnung: $e');
       state = state.copyWith(
         isCalculating: false,
         error: e.toString(),

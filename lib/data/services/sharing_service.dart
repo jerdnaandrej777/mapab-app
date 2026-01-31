@@ -111,7 +111,7 @@ class SharingService {
         createdAt: DateTime.now(),
       );
     } catch (e) {
-      print('[Sharing] Dekodierung fehlgeschlagen: $e');
+      debugPrint('[Sharing] Dekodierung fehlgeschlagen: $e');
       return null;
     }
   }

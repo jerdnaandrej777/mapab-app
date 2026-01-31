@@ -81,9 +81,16 @@ class POIEnrichmentService {
   /// Completer-Map für wartende Enrichment-Requests (Race Condition Fix)
   static final Map<String, Completer<POI>> _enrichmentCompleters = {};
 
-  /// Session-Set: POIs die in dieser Session bereits versucht wurden (ohne Foto)
-  /// Verhindert endlose Wiederholung, erlaubt Retry bei App-Neustart
-  static final Set<String> _sessionAttemptedWithoutPhoto = {};
+  /// Session-Map: POIs die kuerzlich versucht wurden (ohne Foto)
+  /// Erlaubt Retry nach 10 Minuten Cooldown statt permanenter Blockade
+  static final Map<String, DateTime> _sessionAttemptedWithoutPhoto = {};
+
+  /// Prueft ob POI kuerzlich (< 10 Min) erfolglos versucht wurde
+  static bool _wasRecentlyAttempted(String poiId) {
+    final lastAttempt = _sessionAttemptedWithoutPhoto[poiId];
+    if (lastAttempt == null) return false;
+    return DateTime.now().difference(lastAttempt).inMinutes < 10;
+  }
 
   POIEnrichmentService({Dio? dio, POICacheService? cacheService})
       : _dio = dio ??
@@ -113,8 +120,8 @@ class POIEnrichmentService {
       await DefaultCacheManager().getSingleFile(url).timeout(
             const Duration(seconds: 10),
           );
-    } catch (_) {
-      // Silent fail - Bild wird beim Widget-Render nachgeladen
+    } catch (e) {
+      debugPrint('[Enrichment] Pre-Cache fehlgeschlagen: $url ($e)');
     }
   }
 
@@ -168,10 +175,11 @@ class POIEnrichmentService {
         final statusCode = e.response?.statusCode;
         final isLastAttempt = attempt == _maxRetries - 1;
 
-        // Rate-Limit spezifisch behandeln (zählt nicht als Versuch)
+        // Rate-Limit: Exponentielles Backoff (zaehlt als Versuch)
         if (statusCode == 429) {
-          debugPrint('[Enrichment] ⚠️ Rate-Limit (429) erreicht! Warte 5 Sekunden...');
-          await Future.delayed(const Duration(seconds: 5));
+          final waitSeconds = 5 * (attempt + 1);
+          debugPrint('[Enrichment] ⚠️ Rate-Limit (429) Versuch ${attempt + 1}/$_maxRetries, warte ${waitSeconds}s');
+          await Future.delayed(Duration(seconds: waitSeconds));
           continue;
         }
 
@@ -908,7 +916,7 @@ LIMIT 1
             final result = results[poi.id];
             return result != null && result.imageUrl == null;
           })
-          .where((poi) => !_sessionAttemptedWithoutPhoto.contains(poi.id))
+          .where((poi) => !_wasRecentlyAttempted(poi.id))
           .take(15)
           .toList();
 
@@ -934,7 +942,7 @@ LIMIT 1
                 await cacheService.cacheEnrichedPOI(results[poi.id]!);
               }
             } else {
-              _sessionAttemptedWithoutPhoto.add(poi.id);
+              _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
             }
           });
 
@@ -953,7 +961,7 @@ LIMIT 1
     final poisWithoutWiki = uncachedPOIs
         .where((p) => p.wikipediaTitle == null || p.wikipediaTitle!.isEmpty)
         .where((p) => !results.containsKey(p.id))
-        .where((p) => !_sessionAttemptedWithoutPhoto.contains(p.id))
+        .where((p) => !_wasRecentlyAttempted(p.id))
         .take(15)
         .toList();
 
@@ -975,7 +983,7 @@ LIMIT 1
           } else {
             // FIX v1.7.9: NICHT als isEnriched markieren wenn kein Bild gefunden
             // Nur in Session-Set aufnehmen um Endlos-Schleifen zu verhindern
-            _sessionAttemptedWithoutPhoto.add(poi.id);
+            _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
             return MapEntry(poi.id, poi);
           }
         });
@@ -992,12 +1000,67 @@ LIMIT 1
       }
     }
 
-    // 5. Restliche POIs: Session-Tracking statt falsches isEnriched-Flag
+    // 5. EN-Wikipedia Fallback fuer POIs mit Wikipedia-Titel aber ohne Bild
+    final poisStillNoImage = poisWithWiki
+        .where((poi) {
+          final result = results[poi.id];
+          return result != null && result.imageUrl == null;
+        })
+        .where((poi) => !_wasRecentlyAttempted(poi.id))
+        .take(10)
+        .toList();
+
+    if (poisStillNoImage.isNotEmpty) {
+      debugPrint('[Enrichment] EN-Wikipedia Fallback fuer ${poisStillNoImage.length} POIs');
+      for (final poi in poisStillNoImage) {
+        final enResult = await _fetchEnglishWikipediaImage(poi.name);
+        if (enResult != null && enResult.imageUrl != null) {
+          results[poi.id] = results[poi.id]!.copyWith(imageUrl: enResult.imageUrl);
+          if (cacheService != null) {
+            await cacheService.cacheEnrichedPOI(results[poi.id]!);
+          }
+          unawaited(_prefetchImage(enResult.imageUrl!));
+        }
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    }
+
+    // 6. Wikidata P18 Fallback fuer POIs mit wikidataId aber ohne Bild
+    final poisForWikidata = uncachedPOIs
+        .where((poi) {
+          final result = results[poi.id];
+          final wikidataId = result?.wikidataId ?? poi.wikidataId;
+          return result != null && result.imageUrl == null && wikidataId != null;
+        })
+        .where((poi) => !_wasRecentlyAttempted(poi.id))
+        .take(5)
+        .toList();
+
+    if (poisForWikidata.isNotEmpty) {
+      debugPrint('[Enrichment] Wikidata Fallback fuer ${poisForWikidata.length} POIs');
+      for (final poi in poisForWikidata) {
+        final wikidataId = results[poi.id]?.wikidataId ?? poi.wikidataId;
+        if (wikidataId != null) {
+          final wikidataInfo = await _fetchWikidataInfo(wikidataId);
+          final imageUrl = wikidataInfo?['imageUrl'] as String?;
+          if (imageUrl != null) {
+            results[poi.id] = results[poi.id]!.copyWith(imageUrl: imageUrl);
+            if (cacheService != null) {
+              await cacheService.cacheEnrichedPOI(results[poi.id]!);
+            }
+            unawaited(_prefetchImage(imageUrl));
+          }
+        }
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+    }
+
+    // 7. Restliche POIs: Session-Tracking statt falsches isEnriched-Flag
     // FIX v1.7.9: POIs NICHT als enriched markieren wenn kein Bild gefunden wurde
-    // So koennen sie bei zukuenftigen Sessions erneut versucht werden
+    // So koennen sie nach 10-Minuten-Cooldown erneut versucht werden
     for (final poi in uncachedPOIs) {
       if (!results.containsKey(poi.id)) {
-        _sessionAttemptedWithoutPhoto.add(poi.id);
+        _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
       }
     }
 

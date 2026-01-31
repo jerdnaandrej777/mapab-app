@@ -8,6 +8,7 @@ import '../../core/constants/categories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/route.dart';
 import '../../data/repositories/geocoding_repo.dart';
+import '../../shared/widgets/app_snackbar.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
 import 'providers/map_controller_provider.dart';
@@ -109,6 +110,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           if (tripState.hasRoute && mounted) {
             _fitMapToRoute(tripState.route!);
           }
+        }
+        // Fehler bei AI Trip anzeigen
+        if (next.error != null && next.error != previous?.error && mounted) {
+          AppSnackbar.showError(context, 'Trip-Generierung fehlgeschlagen: ${next.error}');
+        }
+      });
+
+      // Listener für Routenberechnung-Fehler
+      ref.listenManual(routePlannerProvider, (previous, next) {
+        if (next.error != null && next.error != previous?.error && mounted) {
+          AppSnackbar.showError(context, 'Routenberechnung fehlgeschlagen. Bitte versuche es erneut.');
         }
       });
     });
@@ -674,12 +686,12 @@ class _RouteStartButton extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: colorScheme.onPrimary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.play_arrow_rounded,
-                  color: Colors.white,
+                  color: colorScheme.onPrimary,
                   size: 24,
                 ),
               ),
@@ -689,10 +701,10 @@ class _RouteStartButton extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Route starten',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -701,7 +713,7 @@ class _RouteStartButton extends StatelessWidget {
                     Text(
                       '${route.distanceKm.toStringAsFixed(0)} km · ${_formatDuration(route.durationMinutes)}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
+                        color: colorScheme.onPrimary.withOpacity(0.85),
                         fontSize: 13,
                       ),
                     ),
@@ -711,7 +723,7 @@ class _RouteStartButton extends StatelessWidget {
               // Pfeil
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: Colors.white.withOpacity(0.8),
+                color: colorScheme.onPrimary.withOpacity(0.8),
                 size: 18,
               ),
             ],

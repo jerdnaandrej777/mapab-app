@@ -39,9 +39,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final settings = ref.read(settingsNotifierProvider);
     if (settings.hasStoredCredentials) {
+      final password = await ref.read(settingsNotifierProvider.notifier).getSavedPassword();
+      if (!mounted) return;
       setState(() {
         _emailController.text = settings.savedEmail ?? '';
-        _passwordController.text = settings.savedPassword ?? '';
+        _passwordController.text = password ?? '';
         _rememberMe = true;
       });
       debugPrint('[Login] Gespeicherte Anmeldedaten geladen');

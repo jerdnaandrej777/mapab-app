@@ -1,0 +1,11 @@
+# Release-Keystore Konfiguration für MapAB
+# Kopiere diese Datei als 'key.properties' und trage deine Werte ein.
+# NIEMALS key.properties committen!
+#
+# Keystore erstellen:
+# keytool -genkey -v -keystore mapab-release.keystore -alias mapab -keyalg RSA -keysize 2048 -validity 10000
+#
+storePassword=DEIN_STORE_PASSWORT
+keyPassword=DEIN_KEY_PASSWORT
+keyAlias=mapab
+storeFile=../mapab-release.keystore

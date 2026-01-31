@@ -62,8 +62,11 @@ class Weather with _$Weather {
 
     if (weatherCode == 0 || weatherCode == 1) {
       return WeatherCondition.good;
-    } else if (weatherCode <= 3 || (weatherCode >= 45 && weatherCode <= 48)) {
+    } else if (weatherCode <= 3) {
       return WeatherCondition.mixed;
+    } else if (weatherCode >= 45 && weatherCode <= 48) {
+      // Nebel = schlecht fuer Outdoor (Aussichtspunkte, Wanderungen, Scenic Drives)
+      return WeatherCondition.bad;
     } else if (weatherCode >= 95) {
       return WeatherCondition.danger;
     } else {

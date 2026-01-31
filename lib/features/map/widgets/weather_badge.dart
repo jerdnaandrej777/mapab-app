@@ -14,7 +14,8 @@ class WeatherBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badge = _getBadge();
+    final colorScheme = Theme.of(context).colorScheme;
+    final badge = _getBadge(colorScheme);
     if (badge == null) return const SizedBox.shrink();
 
     return Container(
@@ -30,9 +31,9 @@ class WeatherBadge extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             badge.text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 9,
-              color: Colors.white,
+              color: colorScheme.onPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -41,7 +42,7 @@ class WeatherBadge extends StatelessWidget {
     );
   }
 
-  ({String icon, String text, Color color})? _getBadge() {
+  ({String icon, String text, Color color})? _getBadge(ColorScheme colorScheme) {
     // Bei schlechtem Wetter
     if (overallCondition == WeatherCondition.danger ||
         overallCondition == WeatherCondition.bad) {
@@ -51,7 +52,7 @@ class WeatherBadge extends StatelessWidget {
         if (overallCondition == WeatherCondition.danger) {
           return (icon: '⚠️', text: 'Unwetter', color: Colors.red);
         }
-        return (icon: '🌧️', text: 'Regen', color: Colors.orange);
+        return (icon: '🌧️', text: 'Regen', color: colorScheme.tertiary);
       }
     }
 

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/cost.dart';
@@ -202,7 +203,7 @@ class ServicesService {
         )).toList();
       }
     } catch (e) {
-      print('[Services] Tankerkönig-Fehler: $e');
+      debugPrint('[Services] Tankerkönig-Fehler: $e');
     }
 
     return [];
@@ -252,7 +253,7 @@ class ServicesService {
         }).toList();
       }
     } catch (e) {
-      print('[Services] OpenChargeMap-Fehler: $e');
+      debugPrint('[Services] OpenChargeMap-Fehler: $e');
     }
 
     return [];
@@ -310,7 +311,7 @@ out center tags;
         }).toList();
       }
     } catch (e) {
-      print('[Services] OSM-Fehler für $type: $e');
+      debugPrint('[Services] OSM-Fehler für $type: $e');
     }
 
     return [];

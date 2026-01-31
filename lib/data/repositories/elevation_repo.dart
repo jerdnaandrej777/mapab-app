@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/elevation.dart';
@@ -31,7 +32,7 @@ class ElevationRepository {
         return _buildProfile(simplified, elevations);
       }
     } catch (e) {
-      print('[Elevation] Open-Elevation Fehler: $e');
+      debugPrint('[Elevation] Open-Elevation Fehler: $e');
     }
 
     try {
@@ -41,7 +42,7 @@ class ElevationRepository {
         return _buildProfile(simplified, elevations);
       }
     } catch (e) {
-      print('[Elevation] OpenTopo Fehler: $e');
+      debugPrint('[Elevation] OpenTopo Fehler: $e');
     }
 
     // Fallback: Generiere simulierte Daten

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/statistics.dart';
@@ -21,7 +22,7 @@ class StatisticsNotifier extends _$StatisticsNotifier {
       try {
         return TravelStatistics.fromJson(Map<String, dynamic>.from(json));
       } catch (e) {
-        print('[Statistics] Laden fehlgeschlagen: $e');
+        debugPrint('[Statistics] Laden fehlgeschlagen: $e');
       }
     }
     return const TravelStatistics();

@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/supabase/supabase_client.dart' show isAuthenticated, isSupabaseAvailable;
 import 'data/providers/settings_provider.dart';
 import 'features/map/map_screen.dart';
 import 'features/search/search_screen.dart';
@@ -45,7 +47,7 @@ class TravelPlannerApp extends ConsumerWidget {
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: isDark ? AppTheme.darkSurfaceColor : Colors.white,
+        systemNavigationBarColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor,
         systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
     );
@@ -72,14 +74,24 @@ class TravelPlannerApp extends ConsumerWidget {
 /// GoRouter Konfiguration mit Account-Check
 final _router = GoRouter(
   initialLocation: '/splash',
-  debugLogDiagnostics: true,
+  debugLogDiagnostics: kDebugMode,
 
-  // Redirect zu Login wenn nicht eingeloggt
+  // Auth-Guard: Geschützte Routen erfordern Login
   redirect: (context, state) {
-    // Provider Container aus dem Context holen ist nicht direkt möglich in redirect
-    // Daher verwenden wir einen simpleren Ansatz: Login ist nicht geschützt
-    // Alle anderen Routen checken wir später
-    return null; // Kein Redirect hier
+    final path = state.uri.path;
+
+    // Routen die Login erfordern
+    const authRequired = ['/profile', '/favorites', '/settings'];
+
+    // Prüfe ob die aktuelle Route Auth braucht
+    final needsAuth = authRequired.any((route) => path.startsWith(route));
+
+    if (needsAuth && isSupabaseAvailable && !isAuthenticated) {
+      // Nicht eingeloggt → Redirect zu Login
+      return '/login';
+    }
+
+    return null;
   },
 
   routes: [

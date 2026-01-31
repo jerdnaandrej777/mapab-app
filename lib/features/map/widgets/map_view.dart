@@ -365,13 +365,13 @@ class _MapViewState extends ConsumerState<MapView> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.orange,
+                                color: colorScheme.tertiary,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
+                              child: Text(
                                 '⭐ Must-See',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: colorScheme.onTertiary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -607,6 +607,7 @@ class POIMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double size = isSelected ? 48 : (isHighlight ? 40 : 32);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -623,10 +624,10 @@ class POIMarker extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.blue
-                    : (isHighlight ? Colors.orange : Colors.white),
+                    : (isHighlight ? colorScheme.tertiary : colorScheme.surface),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _getMarkerBorderColor(),
+                  color: _getMarkerBorderColor(colorScheme),
                   width: 2,
                 ),
                 boxShadow: [
@@ -657,7 +658,7 @@ class POIMarker extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _getBadgeColor(),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(color: colorScheme.surface, width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.15),
@@ -703,8 +704,8 @@ class POIMarker extends StatelessWidget {
     return '☀';
   }
 
-  Color _getMarkerBorderColor() {
-    if (isSelected) return Colors.white;
+  Color _getMarkerBorderColor(ColorScheme colorScheme) {
+    if (isSelected) return colorScheme.surface;
     if (weatherCondition == WeatherCondition.danger) return Colors.red.shade300;
     if (weatherCondition == WeatherCondition.bad && !isIndoorPOI) {
       return Colors.orange.shade300;
@@ -719,13 +720,14 @@ class StartMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: 24,
       height: 24,
       decoration: BoxDecoration(
         color: Colors.green,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
+        border: Border.all(color: colorScheme.surface, width: 3),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -743,13 +745,14 @@ class EndMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: 24,
       height: 24,
       decoration: BoxDecoration(
         color: Colors.red,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
+        border: Border.all(color: colorScheme.surface, width: 3),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -774,6 +777,7 @@ class StopMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -782,7 +786,7 @@ class StopMarker extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.blue,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: colorScheme.surface, width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.3),
@@ -793,8 +797,8 @@ class StopMarker extends StatelessWidget {
         child: Center(
           child: Text(
             '$number',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colorScheme.onPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -832,7 +836,7 @@ class _AITripStopMarker extends StatelessWidget {
             decoration: BoxDecoration(
               color: colorScheme.primary,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: colorScheme.surface, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.3),
@@ -856,15 +860,15 @@ class _AITripStopMarker extends StatelessWidget {
               width: 16,
               height: 16,
               decoration: BoxDecoration(
-                color: Colors.orange,
+                color: colorScheme.tertiary,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(color: colorScheme.surface, width: 1.5),
               ),
               child: Center(
                 child: Text(
                   '$number',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colorScheme.onTertiary,
                     fontWeight: FontWeight.bold,
                     fontSize: 9,
                   ),
