@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.15 | Plattformen: Android, iOS, Desktop
+Version: 1.7.16 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner + Wetter-Empfehlung Toggle (v1.7.9) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner + Wetter-Empfehlung Toggle + Dauerhafte Adress-Anzeige (v1.7.16) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
@@ -102,7 +102,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
 | `lib/features/map/widgets/weather_alert_banner.dart` | Proaktives Wetter-Warnbanner (v1.7.6) |
 | `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6) |
-| `lib/features/map/widgets/weather_bar.dart` | Routen-Wetter + WeatherBadge für POIs |
+| `lib/features/map/widgets/weather_bar.dart` | Routen-Wetter einklappbar + WeatherBadge für POIs (v1.7.16) |
 
 ### Provider
 
@@ -317,6 +317,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.12.md` (Wetter-Marker auf der Route)
 - `Dokumentation/CHANGELOG-v1.7.14.md` (GPS-Standort-Synchronisation zwischen Modi)
 - `Dokumentation/CHANGELOG-v1.7.15.md` (GPS-Button Optimierung)
+- `Dokumentation/CHANGELOG-v1.7.16.md` (WeatherBar einklappbar & Dauerhafte Adress-Anzeige)
 
 ---
 

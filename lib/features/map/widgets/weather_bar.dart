@@ -6,11 +6,19 @@ import '../providers/weather_provider.dart';
 
 /// Wetter-Leiste für die Route
 /// Zeigt 5 Punkte entlang der Route mit Wetter-Informationen
-class WeatherBar extends ConsumerWidget {
+/// Mit Ein-/Ausklapp-Funktion
+class WeatherBar extends ConsumerStatefulWidget {
   const WeatherBar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WeatherBar> createState() => _WeatherBarState();
+}
+
+class _WeatherBarState extends ConsumerState<WeatherBar> {
+  bool _isExpanded = true; // Standard: ausgeklappt
+
+  @override
+  Widget build(BuildContext context) {
     final weatherState = ref.watch(routeWeatherNotifierProvider);
 
     // Nicht anzeigen wenn keine Daten
@@ -35,16 +43,36 @@ class WeatherBar extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header mit Zusammenfassung
-          _WeatherHeader(weatherState: weatherState),
+          // Header mit Zusammenfassung (tappable)
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: _WeatherHeader(
+              weatherState: weatherState,
+              isExpanded: _isExpanded,
+            ),
+          ),
 
-          // Wetter-Punkte
-          if (!weatherState.isLoading && weatherState.weatherPoints.isNotEmpty)
-            _WeatherPoints(points: weatherState.weatherPoints),
+          // Wetter-Punkte & Alert (einklappbar)
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Wetter-Punkte
+                if (!weatherState.isLoading && weatherState.weatherPoints.isNotEmpty)
+                  _WeatherPoints(points: weatherState.weatherPoints),
 
-          // Warnung bei schlechtem Wetter
-          if (weatherState.hasDanger || weatherState.hasBadWeather)
-            _WeatherAlert(weatherState: weatherState, ref: ref),
+                // Warnung bei schlechtem Wetter
+                if (weatherState.hasDanger || weatherState.hasBadWeather)
+                  _WeatherAlert(weatherState: weatherState, ref: ref),
+              ],
+            ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
         ],
       ),
     );
@@ -68,23 +96,38 @@ class WeatherBar extends ConsumerWidget {
 
 class _WeatherHeader extends StatelessWidget {
   final RouteWeatherState weatherState;
+  final bool isExpanded;
 
-  const _WeatherHeader({required this.weatherState});
+  const _WeatherHeader({
+    required this.weatherState,
+    required this.isExpanded,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (weatherState.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
+      return Padding(
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 8),
-            Text('Wetter laden...'),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Wetter laden...')),
+            AnimatedRotation(
+              turns: isExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.expand_more,
+                size: 20,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
@@ -139,6 +182,17 @@ class _WeatherHeader extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Expand/Collapse Icon
+          AnimatedRotation(
+            turns: isExpanded ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: Icon(
+              Icons.expand_more,
+              size: 20,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],

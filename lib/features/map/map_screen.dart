@@ -271,6 +271,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
                   // === SCHNELL-MODUS ===
                   if (_planMode == MapPlanMode.schnell && !isGenerating) ...[
+                    // Dauerhafte Adress-Anzeige (wenn Route vorhanden)
+                    _RouteAddressBar(routePlanner: routePlanner),
+
                     // Suchleiste
                     _SearchBar(
                       startAddress: routePlanner.startAddress,
@@ -2063,5 +2066,137 @@ class _WeatherRecommendationBanner extends StatelessWidget {
       case WeatherCondition.unknown:
         return ('❓', 'Wetter unbekannt', Colors.grey);
     }
+  }
+}
+
+/// Dauerhafte Anzeige der Route-Adressen
+/// Zeigt Start/Ziel mit Icons, Distanz/Dauer wenn Route berechnet
+class _RouteAddressBar extends StatelessWidget {
+  final RoutePlannerData routePlanner;
+
+  const _RouteAddressBar({required this.routePlanner});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Nur anzeigen wenn Start ODER Ziel gesetzt
+    if (!routePlanner.hasStart && !routePlanner.hasEnd) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Start-Adresse
+          if (routePlanner.hasStart)
+            _AddressRow(
+              icon: Icons.trip_origin,
+              iconColor: Colors.green,
+              label: 'Start',
+              address: routePlanner.startAddress!,
+            ),
+
+          // Trennlinie wenn beide gesetzt
+          if (routePlanner.hasStart && routePlanner.hasEnd)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Divider(
+                height: 1,
+                color: colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+
+          // Ziel-Adresse
+          if (routePlanner.hasEnd)
+            _AddressRow(
+              icon: Icons.location_on,
+              iconColor: Colors.red,
+              label: 'Ziel',
+              address: routePlanner.endAddress!,
+            ),
+
+          // Distanz/Dauer wenn Route berechnet
+          if (routePlanner.hasRoute)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.route, size: 14, color: colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${routePlanner.route!.formattedDistance} • ${routePlanner.route!.formattedDuration}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Einzelne Adress-Zeile (Start oder Ziel)
+class _AddressRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String address;
+
+  const _AddressRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.address,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: iconColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                address,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
