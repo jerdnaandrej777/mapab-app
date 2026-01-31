@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapAB QR-Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .version {
+            color: #718096;
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 32px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 16px;
+        }
+
+        .url {
+            background: #edf2f7;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #2d3748;
+            margin: 24px 0;
+            word-break: break-all;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 8px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .info {
+            background: #edf2f7;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 24px;
+            text-align: left;
+        }
+
+        .info h3 {
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .info p {
+            color: #4a5568;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🗺️</div>
+        <h1>MapAB QR-Code</h1>
+        <p class="version">Version 1.7.19 - UI-Verbesserungen</p>
+
+        <div id="qrcode"></div>
+
+        <div class="url">
+            https://jerdnaandrej777.github.io/mapab-app/QR-CODE-DOWNLOAD.html
+        </div>
+
+        <button class="download-btn" onclick="downloadQR()">📥 QR-Code als PNG herunterladen</button>
+        <button class="download-btn" onclick="downloadSVG()">📄 QR-Code als SVG herunterladen</button>
+
+        <div class="info">
+            <h3>ℹ️ Verwendung</h3>
+            <p>
+                1. QR-Code herunterladen (PNG oder SVG)<br>
+                2. In Präsentationen, Flyern oder Social Media verwenden<br>
+                3. Benutzer scannen den Code → Gelangen zur Download-Seite<br>
+                4. Von dort aus direkt MapAB v1.7.19 installieren
+            </p>
+        </div>
+
+        <div class="info" style="margin-top: 16px;">
+            <h3>🔗 Direkt-Links</h3>
+            <p>
+                <strong>Download-Seite:</strong><br>
+                <a href="https://jerdnaandrej777.github.io/mapab-app/QR-CODE-DOWNLOAD.html" target="_blank">
+                    https://jerdnaandrej777.github.io/mapab-app/QR-CODE-DOWNLOAD.html
+                </a><br><br>
+                <strong>APK-Direktdownload:</strong><br>
+                <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.19/MapAB-v1.7.19.apk" target="_blank">
+                    MapAB-v1.7.19.apk (57.7MB)
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // QR-Code generieren
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: "https://jerdnaandrej777.github.io/mapab-app/QR-CODE-DOWNLOAD.html",
+            width: 256,
+            height: 256,
+            colorDark: "#1D4ED8",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // PNG Download
+        function downloadQR() {
+            const canvas = document.querySelector('#qrcode canvas');
+            const link = document.createElement('a');
+            link.download = 'MapAB-v1.7.19-QR.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // SVG Download (als Fallback PNG, da qrcode.js kein SVG unterstützt)
+        function downloadSVG() {
+            // Für echten SVG-Export würde man eine andere Library brauchen
+            // Als Workaround laden wir das PNG nochmal runter
+            alert('SVG-Export: Bitte nutze einen Online-Konverter (png2svg.com) um das PNG in SVG zu konvertieren.');
+            downloadQR();
+        }
+    </script>
+</body>
+</html>
