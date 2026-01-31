@@ -426,7 +426,7 @@ class POIRepository {
     ({LatLng southwest, LatLng northeast}) bounds,
   ) async {
     // Overpass QL Query für touristische POIs
-    // ERWEITERT v1.7.9: Museen, Kirchen, Ruinen, Wasserfaelle, Parks hinzugefuegt
+    // ERWEITERT v1.7.23: Seen, Strände, Hotels, Restaurants, Aktivitäten, Zoos, Inseln
     final bbox = '${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude}';
     final query = '''
 [out:json][timeout:25];
@@ -445,6 +445,24 @@ class POIRepository {
   way["tourism"="museum"]($bbox);
   way["historic"="castle"]($bbox);
   way["historic"="ruins"]["name"]($bbox);
+  node["natural"="water"]["water"="lake"]["name"]($bbox);
+  way["natural"="water"]["water"="lake"]["name"]($bbox);
+  node["natural"="beach"]["name"]($bbox);
+  way["natural"="beach"]["name"]($bbox);
+  node["leisure"="beach_resort"]["name"]($bbox);
+  way["leisure"="beach_resort"]["name"]($bbox);
+  node["tourism"="hotel"]["name"]["stars"]($bbox);
+  way["tourism"="hotel"]["name"]["stars"]($bbox);
+  node["amenity"="restaurant"]["name"]["cuisine"]($bbox);
+  node["tourism"="theme_park"]["name"]($bbox);
+  way["tourism"="theme_park"]["name"]($bbox);
+  node["leisure"="water_park"]["name"]($bbox);
+  way["leisure"="water_park"]["name"]($bbox);
+  node["leisure"="swimming_area"]["name"]($bbox);
+  node["tourism"="zoo"]["name"]($bbox);
+  way["tourism"="zoo"]["name"]($bbox);
+  node["place"="island"]["name"]($bbox);
+  way["place"="island"]["name"]($bbox);
 );
 out center;
 ''';
@@ -654,7 +672,7 @@ out center;
       lng = (data['lon'] as num).toDouble();
     }
 
-    // Kategorie aus Tags ableiten (v1.7.9: erweitert)
+    // Kategorie aus Tags ableiten (v1.7.23: alle Kategorien abgedeckt)
     String category = 'attraction';
     if (tags['historic'] == 'castle') {
       category = 'castle';
@@ -672,6 +690,17 @@ out center;
       category = 'nature';
     } else if (tags['leisure'] == 'park' || tags['leisure'] == 'garden') {
       category = 'park';
+    } else if (tags['natural'] == 'water' && tags['water'] == 'lake') {
+      category = 'lake';
+    } else if (tags['natural'] == 'beach' || tags['leisure'] == 'beach_resort' || tags['place'] == 'island') {
+      category = 'coast';
+    } else if (tags['tourism'] == 'hotel') {
+      category = 'hotel';
+    } else if (tags['amenity'] == 'restaurant') {
+      category = 'restaurant';
+    } else if (tags['tourism'] == 'theme_park' || tags['tourism'] == 'zoo' ||
+               tags['leisure'] == 'water_park' || tags['leisure'] == 'swimming_area') {
+      category = 'activity';
     }
 
     // OSM Bild-Tags extrahieren

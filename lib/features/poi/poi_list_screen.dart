@@ -322,7 +322,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                   },
                 ),
                 const SizedBox(width: 8),
-                ...POICategory.values.take(6).map((cat) => Padding(
+                ...POICategory.values.map((cat) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: _FilterChip(
                         label: cat.label,

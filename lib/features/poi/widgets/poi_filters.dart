@@ -42,10 +42,11 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
+        final colorScheme = Theme.of(context).colorScheme;
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
