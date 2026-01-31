@@ -218,6 +218,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Route "$result" gespeichert'),
+          duration: const Duration(seconds: 1),
           action: SnackBarAction(
             label: 'Anzeigen',
             onPressed: () => context.push('/favorites'),
@@ -289,6 +290,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Route "$result" gespeichert'),
+          duration: const Duration(seconds: 1),
           action: SnackBarAction(
             label: 'Anzeigen',
             onPressed: () => context.push('/favorites'),

@@ -28,6 +28,8 @@ Diese Provider behalten ihren State über die gesamte App-Lebensdauer:
 | `pOIStateNotifierProvider` | `poi_state_provider.dart` | POI-Liste + Filter |
 | `onboardingNotifierProvider` | `onboarding_provider.dart` | First-Time-Flag |
 | `routeSessionProvider` | `route_session_provider.dart` | Aktive Route-Session |
+| `routeWeatherNotifierProvider` | `weather_provider.dart` | Routen-Wetter (5 Punkte) - v1.7.17 keepAlive |
+| `locationWeatherNotifierProvider` | `weather_provider.dart` | Standort-Wetter + 7-Tage-Vorhersage - v1.7.17 keepAlive |
 
 ### Service-Provider
 
@@ -51,8 +53,7 @@ Diese Provider behalten ihren State über die gesamte App-Lebensdauer:
 | `favoritePOIsProvider` | Liste aller POI-Favoriten |
 | `savedRoutesProvider` | Liste aller gespeicherten Routen |
 | `routePlannerProvider` | Start/Ziel-Verwaltung |
-| `routeWeatherNotifierProvider` | Wetter-State für Route |
-| `indoorOnlyFilterProvider` | Indoor-Filter bei schlechtem Wetter |
+| `indoorOnlyFilterProvider` | Indoor-Filter bei schlechtem Wetter (AutoDispose) |
 | `effectiveThemeModeProvider` | Berechneter Theme-Modus |
 
 ---

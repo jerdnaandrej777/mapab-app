@@ -1,6 +1,6 @@
 # MapAB Flutter App - Vollständige Feature-Dokumentation
 
-Version: 1.7.6 (29. Januar 2026)
+Version: 1.7.21 (31. Januar 2026)
 
 ## Inhaltsverzeichnis
 
@@ -45,15 +45,15 @@ Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Androi
 
 ### Download & Installation
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.6
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.21
 
 **Direkter APK-Download:**
 ```
-https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.6/MapAB-v1.7.6.apk
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.21/MapAB-v1.7.21.apk
 ```
 
 **Installationsschritte:**
-1. APK herunterladen (57 MB)
+1. APK herunterladen (58 MB)
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen

@@ -255,75 +255,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
 
                   // === SCHNELL-MODUS ===
-                  if (_planMode == MapPlanMode.schnell && !isGenerating) ...[
-                    const SizedBox(height: 12),
-                    // Unified Weather Widget (v1.7.19) - zeigt Standort- oder Route-Wetter
-                    const UnifiedWeatherWidget(),
-                    const SizedBox(height: 12),
-                    // Suchleiste
-                    _SearchBar(
-                      startAddress: routePlanner.startAddress,
-                      endAddress: routePlanner.endAddress,
-                      isCalculating: routePlanner.isCalculating,
-                      onStartTap: () => context.push('/search?type=start'),
-                      onEndTap: () => context.push('/search?type=end'),
-                      onStartClear: routePlanner.hasStart
-                          ? () => ref.read(routePlannerProvider.notifier).clearStart()
-                          : null,
-                      onEndClear: routePlanner.hasEnd
-                          ? () => ref.read(routePlannerProvider.notifier).clearEnd()
-                          : null,
-                      onGpsTap: _handleSchnellModeGPS,
-                      isLoadingGps: _isLoadingSchnellGps,
+                  if (_planMode == MapPlanMode.schnell && !isGenerating)
+                    _SchnellModePanel(
+                      routePlanner: routePlanner,
+                      routeSession: routeSession,
+                      randomTripState: randomTripState,
+                      tripState: tripState,
+                      isLoadingSchnellGps: _isLoadingSchnellGps,
+                      onSchnellModeGPS: _handleSchnellModeGPS,
+                      onStartRoute: () {
+                        _startRoute(routePlanner.route!);
+                        context.go('/trip');
+                      },
                     ),
-
-                    // Route löschen Button (wenn Route, Start/Ziel ODER AI Trip ODER Trip-Route vorhanden)
-                    // v1.6.8: Auch bei AI Trip Preview/Confirmed anzeigen
-                    // v1.7.5: Auch bei AI-Chat Route (tripState) anzeigen
-                    if (routePlanner.hasStart || routePlanner.hasEnd ||
-                        randomTripState.step == RandomTripStep.preview ||
-                        randomTripState.step == RandomTripStep.confirmed ||
-                        tripState.hasRoute)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: _RouteClearButton(
-                          onClear: () {
-                            // Alle Route-States zurücksetzen
-                            ref.read(routePlannerProvider.notifier).clearRoute();
-                            ref.read(randomTripNotifierProvider.notifier).reset();
-                            // Trip-State auch löschen (für AI-Chat Routen)
-                            ref.read(tripStateProvider.notifier).clearAll();
-                          },
-                        ),
-                      ),
-
-                    // Route-Start-Button (wenn Route berechnet und Session nicht aktiv)
-                    if (routePlanner.hasRoute && !routeSession.isActive && !routeSession.isLoading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: _RouteStartButton(
-                          route: routePlanner.route!,
-                          onStart: () {
-                            _startRoute(routePlanner.route!);
-                            context.go('/trip');
-                          },
-                        ),
-                      ),
-
-                    // Loading-Indikator (wenn Session startet)
-                    if (routeSession.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: _RouteLoadingIndicator(),
-                      ),
-                  ],
 
                   // === AI TRIP MODUS ===
                   if (_planMode == MapPlanMode.aiTrip && !isGenerating) ...[
                     const SizedBox(height: 12),
-                    // Unified Weather Widget (v1.7.20) - auch im AI Trip Modus
-                    const UnifiedWeatherWidget(),
-                    const SizedBox(height: 12),
+                    // AI Trip Panel (enthält jetzt auch das Wetter-Widget v1.7.20)
                     const _AITripPanel(),
                   ],
 
@@ -334,13 +283,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   // === ROUTE LÖSCHEN BUTTON FÜR AI TRIP ===
                   // v1.6.8: Zeige Löschbutton wenn AI Trip generiert wurde
                   // v1.7.5: Auch bei AI-Chat Route (tripState) anzeigen
+                  // v1.7.20: Weniger Abstand (8 statt 12) für bessere Sichtbarkeit
                   if (_planMode == MapPlanMode.aiTrip &&
                       !isGenerating &&
                       (randomTripState.step == RandomTripStep.preview ||
                        randomTripState.step == RandomTripStep.confirmed ||
                        tripState.hasRoute))
                     Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 8),
                       child: _RouteClearButton(
                         onClear: () {
                           // Alle Route-States zurücksetzen
@@ -851,6 +801,7 @@ class _SearchBar extends StatelessWidget {
   final VoidCallback? onEndClear;
   final VoidCallback? onGpsTap;
   final bool isLoadingGps;
+  final bool showContainer; // Neu: Optional Container anzeigen
 
   const _SearchBar({
     this.startAddress,
@@ -862,6 +813,7 @@ class _SearchBar extends StatelessWidget {
     this.onEndClear,
     this.onGpsTap,
     this.isLoadingGps = false,
+    this.showContainer = true, // Default: Container anzeigen
   });
 
   @override
@@ -870,19 +822,7 @@ class _SearchBar extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
+    final content = Column(
         children: [
           // Start-Eingabe mit GPS-Button
           Row(
@@ -968,7 +908,36 @@ class _SearchBar extends StatelessWidget {
               ),
             ),
         ],
+    );
+
+    // Mit oder ohne Container
+    if (showContainer) {
+      return Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: content,
+      );
+    }
+
+    // Ohne Container (für Panel-Integration)
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withOpacity(0.2),
+        ),
       ),
+      child: content,
     );
   }
 }
@@ -1050,46 +1019,42 @@ class _RouteClearButton extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onClear,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.red.withOpacity(0.3),
-              width: 1,
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onClear,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.red.withOpacity(0.3),
+                width: 1.5,
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colors.red.shade400,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Route löschen',
-                style: TextStyle(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.delete_outline,
+                  size: 18,
                   color: Colors.red.shade400,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Text(
+                  'Route löschen',
+                  style: TextStyle(
+                    color: Colors.red.shade400,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1196,6 +1161,128 @@ class _ModeButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Schnell-Modus Panel - scrollbares Container mit Wetter + Suchleiste (v1.7.21)
+class _SchnellModePanel extends ConsumerWidget {
+  final RoutePlannerData routePlanner;
+  final RouteSessionState routeSession;
+  final RandomTripState randomTripState;
+  final TripStateData tripState;
+  final bool isLoadingSchnellGps;
+  final VoidCallback onSchnellModeGPS;
+  final VoidCallback onStartRoute;
+
+  const _SchnellModePanel({
+    required this.routePlanner,
+    required this.routeSession,
+    required this.randomTripState,
+    required this.tripState,
+    required this.isLoadingSchnellGps,
+    required this.onSchnellModeGPS,
+    required this.onStartRoute,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Wetter-Widget (nutzt eigenes margin: 12h, 8v)
+              const UnifiedWeatherWidget(),
+
+              // Divider nach Wetter-Widget
+              Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
+
+              // Suchleiste
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: _SearchBar(
+                  startAddress: routePlanner.startAddress,
+                  endAddress: routePlanner.endAddress,
+                  isCalculating: routePlanner.isCalculating,
+                  onStartTap: () => context.push('/search?type=start'),
+                  onEndTap: () => context.push('/search?type=end'),
+                  onStartClear: routePlanner.hasStart
+                      ? () => ref.read(routePlannerProvider.notifier).clearStart()
+                      : null,
+                  onEndClear: routePlanner.hasEnd
+                      ? () => ref.read(routePlannerProvider.notifier).clearEnd()
+                      : null,
+                  onGpsTap: onSchnellModeGPS,
+                  isLoadingGps: isLoadingSchnellGps,
+                  showContainer: false, // Kein eigenes Container, da in Panel integriert
+                ),
+              ),
+
+              // Divider nach Suchleiste (nur wenn Buttons folgen)
+              if (routePlanner.hasStart || routePlanner.hasEnd ||
+                  randomTripState.step == RandomTripStep.preview ||
+                  randomTripState.step == RandomTripStep.confirmed ||
+                  tripState.hasRoute ||
+                  routePlanner.hasRoute ||
+                  routeSession.isLoading)
+                Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
+
+              // Route löschen Button
+              if (routePlanner.hasStart || routePlanner.hasEnd ||
+                  randomTripState.step == RandomTripStep.preview ||
+                  randomTripState.step == RandomTripStep.confirmed ||
+                  tripState.hasRoute)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: _RouteClearButton(
+                    onClear: () {
+                      ref.read(routePlannerProvider.notifier).clearRoute();
+                      ref.read(randomTripNotifierProvider.notifier).reset();
+                      ref.read(tripStateProvider.notifier).clearAll();
+                    },
+                  ),
+                ),
+
+              // Route-Start-Button
+              if (routePlanner.hasRoute && !routeSession.isActive && !routeSession.isLoading)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: _RouteStartButton(
+                    route: routePlanner.route!,
+                    onStart: onStartRoute,
+                  ),
+                ),
+
+              // Loading-Indikator
+              if (routeSession.isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: _RouteLoadingIndicator(),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1346,9 +1433,18 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      // Scrollbar für lange Inhalte (aufgeklapptes Wetter-Widget)
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65, // Max 65% der Bildschirmhöhe
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+          // Wetter-Widget (v1.7.20 - innerhalb des Panels, nutzt eigenes margin)
+          const UnifiedWeatherWidget(),
+
           // AI Trip Type Selector (Tagesausflug / Euro Trip)
           Padding(
             padding: const EdgeInsets.all(12),
@@ -1408,7 +1504,7 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
 
           // Startadresse
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1574,7 +1670,7 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
 
           // Radius Slider (kompakt)
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.all(12),
             child: _CompactRadiusSlider(state: state, notifier: notifier),
           ),
 
@@ -1618,7 +1714,9 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
               ),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1906,11 +2004,11 @@ class _CompactCategorySelector extends StatelessWidget {
           onTap: () => _showCategoryModal(context),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Icon(Icons.category, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 8),
+                Icon(Icons.category, size: 18, color: colorScheme.primary),
+                const SizedBox(width: 10),
                 Text(
                   'Kategorien',
                   style: TextStyle(
@@ -1931,10 +2029,18 @@ class _CompactCategorySelector extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.open_in_new,
-                  size: 16,
-                  color: colorScheme.onSurfaceVariant,
+                // Größerer, auffälligerer Button
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.tune,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
                 ),
               ],
             ),

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.20 | Plattformen: Android, iOS, Desktop
+Version: 1.7.21 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Unified Weather Widget in beiden Modi (v1.7.20: Wetter im AI Trip, Modal-Kategorien, redundante Widgets entfernt) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Unified Weather Widget in beiden Modi (v1.7.21: scrollbares Panel, konsistente Abstände, vergrößerter Kategorien-Button) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
@@ -321,6 +321,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.18.md` (Snackbar Auto-Dismiss)
 - `Dokumentation/CHANGELOG-v1.7.19.md` (GPS Reverse Geocoding & Unified Weather Widget)
 - `Dokumentation/CHANGELOG-v1.7.20.md` (Wetter-Widget im AI Trip & Modal-Kategorien)
+- `Dokumentation/CHANGELOG-v1.7.21.md` (AI Trip Panel UI-Optimierungen)
 
 ---
 
