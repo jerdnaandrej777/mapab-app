@@ -296,26 +296,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     _GeneratingIndicator(),
                   ],
 
-                  // === ROUTE LÖSCHEN BUTTON FÜR AI TRIP ===
-                  // v1.6.8: Zeige Löschbutton wenn AI Trip generiert wurde
-                  // v1.7.5: Auch bei AI-Chat Route (tripState) anzeigen
-                  // v1.7.20: Weniger Abstand (8 statt 12) für bessere Sichtbarkeit
-                  if (_planMode == MapPlanMode.aiTrip &&
-                      !isGenerating &&
-                      (randomTripState.step == RandomTripStep.preview ||
-                       randomTripState.step == RandomTripStep.confirmed ||
-                       tripState.hasRoute))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: _RouteClearButton(
-                        onClear: () {
-                          // Alle Route-States zurücksetzen
-                          ref.read(randomTripNotifierProvider.notifier).reset();
-                          ref.read(routePlannerProvider.notifier).clearRoute();
-                          ref.read(tripStateProvider.notifier).clearAll();
-                        },
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -1730,6 +1710,23 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
               ),
             ),
           ),
+
+          // Route löschen Button (v1.7.25 - ins Panel verschoben, damit nicht abgeschnitten)
+          if (state.step == RandomTripStep.preview ||
+              state.step == RandomTripStep.confirmed ||
+              ref.watch(tripStateProvider).hasRoute) ...[
+            Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: _RouteClearButton(
+                onClear: () {
+                  ref.read(randomTripNotifierProvider.notifier).reset();
+                  ref.read(routePlannerProvider.notifier).clearRoute();
+                  ref.read(tripStateProvider.notifier).clearAll();
+                },
+              ),
+            ),
+          ],
             ],
           ),
         ),
@@ -1873,134 +1870,158 @@ class _CompactCategorySelector extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+      // FIX v1.7.27: Consumer wrappen damit ref.watch() im Modal funktioniert
+      // Vorher: Modal nutzte gefrorenen state-Snapshot, Kategorie-Auswahl
+      // wurde erst nach Schliessen und Neuoeffnen sichtbar
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          final liveState = ref.watch(randomTripNotifierProvider);
+          final liveNotifier = ref.read(randomTripNotifierProvider.notifier);
+          return Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            const SizedBox(height: 16),
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.category, color: colorScheme.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'POI-Kategorien',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                if (state.selectedCategories.isNotEmpty)
-                  TextButton(
-                    onPressed: () {
-                      notifier.setCategories([]);
-                    },
-                    child: const Text('Alle zurücksetzen'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              state.selectedCategories.isEmpty
-                  ? 'Alle Kategorien ausgewählt'
-                  : '${state.selectedCategoryCount} von ${tripCategories.length} ausgewählt',
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Kategorien Grid - KEINE maxHeight!
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: tripCategories.map((category) {
-                final isSelected = state.selectedCategories.contains(category);
-                final categoryColor = Color(category.colorValue);
-                return GestureDetector(
-                  onTap: () => notifier.toggleCategory(category),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? categoryColor.withOpacity(0.2)
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected ? categoryColor : colorScheme.outline.withOpacity(0.3),
-                        width: isSelected ? 2 : 1,
-                      ),
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        Text(category.icon, style: const TextStyle(fontSize: 16)),
-                        const SizedBox(width: 6),
+                        Icon(Icons.category, color: colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
                         Text(
-                          category.label,
+                          'POI-Kategorien',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            color: isSelected ? categoryColor : colorScheme.onSurface,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onSurface,
                           ),
                         ),
-                        if (isSelected) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: categoryColor,
-                          ),
-                        ],
                       ],
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-            // Schließen Button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    if (liveState.selectedCategories.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          liveNotifier.setCategories([]);
+                        },
+                        child: const Text('Alle zurücksetzen'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  liveState.selectedCategories.isEmpty
+                      ? 'Alle Kategorien ausgewählt'
+                      : '${liveState.selectedCategoryCount} von ${tripCategories.length} ausgewählt',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
-                child: const Text('Fertig'),
-              ),
+                const SizedBox(height: 20),
+                // Kategorien Grid - KEINE maxHeight!
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: tripCategories.map((category) {
+                    final isSelected = liveState.selectedCategories.contains(category);
+                    return Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        onTap: () => liveNotifier.toggleCategory(category),
+                        borderRadius: BorderRadius.circular(20),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 100),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? colorScheme.primary
+                                : colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : colorScheme.outline.withOpacity(0.3),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withOpacity(0.3),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(category.icon, style: const TextStyle(fontSize: 16)),
+                              const SizedBox(width: 6),
+                              if (isSelected) ...[
+                                Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: colorScheme.onPrimary,
+                                ),
+                                const SizedBox(width: 2),
+                              ],
+                              Text(
+                                category.label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                // Schließen Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Fertig'),
+                  ),
+                ),
+                // Safe area padding
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
+              ],
             ),
-            // Safe area padding
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -2008,10 +2029,6 @@ class _CompactCategorySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    final tripCategories = POICategory.values
-        .where((cat) => cat != POICategory.hotel && cat != POICategory.restaurant)
-        .toList();
 
     return Column(
       children: [

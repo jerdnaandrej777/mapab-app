@@ -343,7 +343,9 @@ class POIStateNotifier extends _$POIStateNotifier {
       // FIX v1.5.1: Race Condition - State ATOMAR aktualisieren
       // Lese den AKTUELLEN State und aktualisiere nur den einen POI
       // Dies verhindert, dass parallele Enrichments sich gegenseitig überschreiben
-      _updatePOIInState(poiId, enrichedPOI.copyWith(isEnriched: true));
+      // FIX v1.7.27: isEnriched wird jetzt vom Service gesetzt (basierend auf hasImage)
+      // Vorher wurde hier IMMER isEnriched: true gesetzt, auch ohne Bild
+      _updatePOIInState(poiId, enrichedPOI);
 
       debugPrint('[POIState] POI angereichert: ${poi.name}');
     } catch (e) {

@@ -316,6 +316,92 @@ class POIEnrichmentService {
             architectureStyle: wikidataInfo['architectureStyle'],
           );
           debugPrint('[Enrichment] Wikidata-Daten geladen: UNESCO=${enrichment.isUnesco}, Bild=${wikidataImageUrl != null}');
+
+          // v1.7.27: P373 Commons-Category-Fallback wenn kein Bild aber Kategorie vorhanden
+          if (!enrichment.hasImage) {
+            final commonsCategory = wikidataInfo['commonsCategory'] as String?;
+            if (commonsCategory != null) {
+              debugPrint('[Enrichment] Versuche P373 Commons-Kategorie: $commonsCategory');
+              final categoryImage = await _fetchCommonsImageFromCategory(commonsCategory);
+              if (categoryImage != null) {
+                enrichment = POIEnrichmentData(
+                  imageUrl: categoryImage,
+                  thumbnailUrl: enrichment.thumbnailUrl,
+                  description: enrichment.description,
+                  wikidataId: enrichment.wikidataId,
+                  isUnesco: enrichment.isUnesco,
+                  isHistoric: enrichment.isHistoric,
+                  foundedYear: enrichment.foundedYear,
+                  architectureStyle: enrichment.architectureStyle,
+                );
+                debugPrint('[Enrichment] P373 Kategorie-Bild gefunden: $categoryImage');
+              }
+            }
+          }
+        }
+      }
+
+      // 5. v1.7.27: Multi-Sprach-Wikipedia Fallback (FR/IT/ES/NL/PL)
+      if (!enrichment.hasImage) {
+        final countryCode = _detectCountryCode(poi.latitude, poi.longitude);
+        final langOrder = <String>[];
+        if (countryCode != null && _multiLangEndpoints.containsKey(countryCode)) {
+          langOrder.add(countryCode);
+        }
+        for (final lang in ['fr', 'it', 'es']) {
+          if (!langOrder.contains(lang)) langOrder.add(lang);
+          if (langOrder.length >= 3) break;
+        }
+
+        for (final lang in langOrder) {
+          final endpoint = _multiLangEndpoints[lang];
+          if (endpoint == null) continue;
+          final langResult = await _fetchWikipediaImageByLanguage(poi.name, endpoint, lang);
+          if (langResult != null && langResult.imageUrl != null) {
+            enrichment = enrichment.merge(langResult);
+            debugPrint('[Enrichment] $lang-Wikipedia Bild gefunden fuer: ${poi.name}');
+            break;
+          }
+          await Future.delayed(_apiCallDelay);
+        }
+      }
+
+      // 6. v1.7.27: Wikidata Geo-Radius als Fallback
+      if (!enrichment.hasImage) {
+        final geoImages = await _fetchWikidataGeoImages(poi.latitude, poi.longitude);
+        if (geoImages.isNotEmpty) {
+          final matchedUrl = _matchWikidataImage(poi.name, geoImages);
+          if (matchedUrl != null) {
+            enrichment = POIEnrichmentData(
+              imageUrl: matchedUrl,
+              thumbnailUrl: enrichment.thumbnailUrl,
+              description: enrichment.description,
+              wikidataId: enrichment.wikidataId,
+              isUnesco: enrichment.isUnesco,
+              isHistoric: enrichment.isHistoric,
+              foundedYear: enrichment.foundedYear,
+              architectureStyle: enrichment.architectureStyle,
+            );
+            debugPrint('[Enrichment] Wikidata Geo-Match fuer: ${poi.name}');
+          }
+        }
+      }
+
+      // 7. v1.7.27: Openverse CC-Bilder als Last-Resort
+      if (!enrichment.hasImage) {
+        final openverseUrl = await _fetchOpenverseImage(poi.name, poi.latitude, poi.longitude);
+        if (openverseUrl != null) {
+          enrichment = POIEnrichmentData(
+            imageUrl: openverseUrl,
+            thumbnailUrl: enrichment.thumbnailUrl,
+            description: enrichment.description,
+            wikidataId: enrichment.wikidataId,
+            isUnesco: enrichment.isUnesco,
+            isHistoric: enrichment.isHistoric,
+            foundedYear: enrichment.foundedYear,
+            architectureStyle: enrichment.architectureStyle,
+          );
+          debugPrint('[Enrichment] Openverse Bild gefunden fuer: ${poi.name}');
         }
       }
 
@@ -330,6 +416,8 @@ class POIEnrichmentService {
         debugPrint('[Enrichment] POI mit Bild gecacht: ${poi.name}');
       } else if (!enrichment.hasImage) {
         debugPrint('[Enrichment] ⚠️ POI nicht gecacht (kein Bild): ${poi.name}');
+        // v1.7.27: Session-Tracking fuer Single-POI ohne Bild (wie bei Batch)
+        _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
       }
 
       // v1.7.9: Image Pre-Caching fuer sofortige Anzeige
@@ -643,13 +731,16 @@ class POIEnrichmentService {
     // P18 = Bild, P154 = Logo, P94 = Wappen, P41 = Flagge
     // P1435 = Denkmalschutz-Status, P571 = Gründungsdatum, P149 = Architekturstil
     // P856 = Website, P1566 = GeoNames-ID
+    // v1.7.27: Erweitert um P373 (Commons-Kategorie), P948 (Wikivoyage-Banner)
     final query = '''
-SELECT ?image ?logo ?coatOfArms ?heritageStatus ?inception ?archStyle ?archStyleLabel ?website WHERE {
+SELECT ?image ?logo ?coatOfArms ?wikivoyageBanner ?commonsCategory ?heritageStatus ?inception ?archStyle ?archStyleLabel ?website WHERE {
   BIND(wd:$wikidataId AS ?item)
 
   OPTIONAL { ?item wdt:P18 ?image. }
   OPTIONAL { ?item wdt:P154 ?logo. }
   OPTIONAL { ?item wdt:P94 ?coatOfArms. }
+  OPTIONAL { ?item wdt:P948 ?wikivoyageBanner. }
+  OPTIONAL { ?item wdt:P373 ?commonsCategory. }
   OPTIONAL { ?item wdt:P1435 ?heritageStatus. }
   OPTIONAL { ?item wdt:P571 ?inception. }
   OPTIONAL { ?item wdt:P856 ?website. }
@@ -702,8 +793,11 @@ LIMIT 1
       }
     }
 
-    // Bild-URL: Priorität P18 > P154 (Logo) > P94 (Wappen)
+    // Bild-URL: Priorität P18 > P948 (Wikivoyage Banner) > P154 (Logo) > P94 (Wappen)
     String? imageUrl = result['image']?['value'];
+    if (imageUrl == null) {
+      imageUrl = result['wikivoyageBanner']?['value'];
+    }
     if (imageUrl == null) {
       imageUrl = result['logo']?['value'];
     }
@@ -725,7 +819,44 @@ LIMIT 1
       'foundedYear': foundedYear,
       'architectureStyle': result['archStyleLabel']?['value'],
       'website': result['website']?['value'],
+      // v1.7.27: Zusaetzliche Properties fuer Bild-Fallback
+      'commonsCategory': result['commonsCategory']?['value'],
     };
+  }
+
+  /// v1.7.27: Sucht Bild aus einer Wikidata P373 Commons-Kategorie
+  Future<String?> _fetchCommonsImageFromCategory(String categoryName) async {
+    final response = await _requestWithRetry(
+      ApiEndpoints.wikimediaCommons,
+      {
+        'action': 'query',
+        'generator': 'categorymembers',
+        'gcmtitle': 'Category:$categoryName',
+        'gcmtype': 'file',
+        'gcmlimit': '10',
+        'prop': 'imageinfo',
+        'iiprop': 'url',
+        'iiurlwidth': '800',
+        'format': 'json',
+        'origin': '*',
+      },
+    );
+
+    if (response == null) return null;
+
+    final pages = response.data['query']?['pages'] as Map<String, dynamic>?;
+    if (pages == null || pages.isEmpty) return null;
+
+    for (final page in pages.values) {
+      final imageInfo = (page['imageinfo'] as List?)?.firstOrNull;
+      if (imageInfo != null) {
+        final url = imageInfo['thumburl'] ?? imageInfo['url'];
+        if (url != null && _isValidImageUrl(url)) {
+          return url;
+        }
+      }
+    }
+    return null;
   }
 
   /// Konvertiert Wikimedia Commons URL zu Thumb-URL
@@ -799,7 +930,10 @@ LIMIT 1
       foundedYear: poi.foundedYear ?? enrichment.foundedYear,
       architectureStyle: poi.architectureStyle ?? enrichment.architectureStyle,
       hasWikidataData: enrichment.wikidataId != null || poi.hasWikidataData,
-      isEnriched: true,
+      // FIX v1.7.27: Nur als enriched markieren wenn Bild gefunden wurde
+      // Vorher: immer true → POIs ohne Bild konnten nie erneut versucht werden
+      // Jetzt: konsistent mit Batch-Enrichment-Verhalten
+      isEnriched: enrichment.hasImage || enrichment.hasDescription,
       tags: updatedTags,
     );
   }
@@ -834,6 +968,212 @@ LIMIT 1
     }
 
     return false;
+  }
+
+  /// v1.7.27: Erkennt wahrscheinliches Land aus Koordinaten fuer Sprach-Priorisierung
+  static String? _detectCountryCode(double lat, double lng) {
+    // Einfache Bounding-Box-Checks fuer europaeische Laender
+    // Absichtlich ueberlappend - nur fuer Sprach-Priorisierung, keine exakte Geo-Fence
+    if (lat >= 41.3 && lat <= 51.1 && lng >= -5.1 && lng <= 9.6) return 'fr';
+    if (lat >= 36.6 && lat <= 47.1 && lng >= 6.6 && lng <= 18.5) return 'it';
+    if (lat >= 36.0 && lat <= 43.8 && lng >= -9.3 && lng <= 3.3) return 'es';
+    if (lat >= 50.7 && lat <= 53.6 && lng >= 3.4 && lng <= 7.2) return 'nl';
+    if (lat >= 49.0 && lat <= 54.9 && lng >= 14.1 && lng <= 24.2) return 'pl';
+    return null;
+  }
+
+  /// v1.7.27: Gibt Wikipedia-Endpoint fuer einen Laendercode zurueck
+  static String? _getWikipediaEndpointForCountry(String countryCode) {
+    switch (countryCode) {
+      case 'fr': return ApiEndpoints.wikipediaFrSearch;
+      case 'it': return ApiEndpoints.wikipediaItSearch;
+      case 'es': return ApiEndpoints.wikipediaEsSearch;
+      case 'nl': return ApiEndpoints.wikipediaNlSearch;
+      case 'pl': return ApiEndpoints.wikipediaPlSearch;
+      default: return null;
+    }
+  }
+
+  /// v1.7.27: Alle verfuegbaren Sprach-Wikipedia-Endpoints (ohne DE und EN)
+  static const Map<String, String> _multiLangEndpoints = {
+    'fr': 'https://fr.wikipedia.org/w/api.php',
+    'it': 'https://it.wikipedia.org/w/api.php',
+    'es': 'https://es.wikipedia.org/w/api.php',
+    'nl': 'https://nl.wikipedia.org/w/api.php',
+    'pl': 'https://pl.wikipedia.org/w/api.php',
+  };
+
+  /// v1.7.27: Sucht Bild in einer beliebigen Wikipedia-Sprach-Edition
+  Future<POIEnrichmentData?> _fetchWikipediaImageByLanguage(
+    String name,
+    String apiEndpoint,
+    String langCode,
+  ) async {
+    final cleanName = _cleanSearchName(name);
+    final response = await _requestWithRetry(
+      apiEndpoint,
+      {
+        'action': 'query',
+        'titles': cleanName,
+        'prop': 'pageimages|pageprops',
+        'piprop': 'original|thumbnail',
+        'pithumbsize': 400,
+        'ppprop': 'wikibase_item',
+        'format': 'json',
+        'origin': '*',
+      },
+    );
+
+    if (response == null) return null;
+
+    final pages = response.data['query']?['pages'] as Map<String, dynamic>?;
+    if (pages == null || pages.isEmpty) return null;
+
+    final page = pages.values.first as Map<String, dynamic>;
+    if (page['pageid'] == null) return null;
+
+    final imageUrl = page['original']?['source'] as String?;
+    if (imageUrl == null) return null;
+
+    debugPrint('[Enrichment] $langCode-Wikipedia Bild gefunden: $cleanName');
+    return POIEnrichmentData(
+      imageUrl: imageUrl,
+      thumbnailUrl: page['thumbnail']?['source'] as String?,
+      wikidataId: page['pageprops']?['wikibase_item'] as String?,
+    );
+  }
+
+  /// v1.7.27: Wikidata SPARQL Geo-Radius-Suche fuer Entities mit P18-Bildern
+  /// Findet alle Wikidata-Entities mit Bildern in der Naehe einer Koordinate
+  Future<Map<String, String>> _fetchWikidataGeoImages(
+    double lat,
+    double lng, {
+    double radiusKm = 2.0,
+  }) async {
+    final query = '''
+SELECT ?item ?itemLabel ?image WHERE {
+  SERVICE wikibase:around {
+    ?item wdt:P625 ?loc.
+    bd:serviceParam wikibase:center "Point($lng $lat)"^^geo:wktLiteral.
+    bd:serviceParam wikibase:radius "$radiusKm".
+  }
+  ?item wdt:P18 ?image.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "de,en". }
+}
+LIMIT 30
+''';
+
+    final response = await _requestWithRetry(
+      ApiEndpoints.wikidataSparql,
+      {
+        'query': query,
+        'format': 'json',
+        'origin': '*',
+      },
+      options: Options(
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Origin': 'https://mapab.app',
+        },
+      ),
+    );
+
+    if (response == null) return {};
+
+    final bindings = response.data['results']?['bindings'] as List?;
+    if (bindings == null || bindings.isEmpty) return {};
+
+    // Map: Label (lowercase) -> Image-URL
+    final results = <String, String>{};
+    for (final binding in bindings) {
+      final label = binding['itemLabel']?['value'] as String?;
+      final imageUrl = binding['image']?['value'] as String?;
+      if (label != null && imageUrl != null) {
+        // Commons-URLs in Thumb-URLs umwandeln
+        final thumbUrl = imageUrl.contains('commons.wikimedia.org')
+            ? _convertToThumbUrl(imageUrl, 800)
+            : imageUrl;
+        results[label.toLowerCase()] = thumbUrl;
+      }
+    }
+
+    debugPrint('[Enrichment] Wikidata Geo-Radius: ${results.length} Entities mit Bildern gefunden (${radiusKm}km um $lat,$lng)');
+    return results;
+  }
+
+  /// v1.7.27: Name-Matching fuer Wikidata Geo-Suche
+  /// Vergleicht POI-Name mit Wikidata-Label per case-insensitive contains
+  static String? _matchWikidataImage(String poiName, Map<String, String> wikidataImages) {
+    final cleanName = poiName.toLowerCase().trim();
+    // Exakte Uebereinstimmung
+    if (wikidataImages.containsKey(cleanName)) {
+      return wikidataImages[cleanName];
+    }
+    // Contains-Match
+    for (final entry in wikidataImages.entries) {
+      if (cleanName.contains(entry.key) || entry.key.contains(cleanName)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  /// v1.7.27: Openverse CC-Bild-Suche (Last-Resort Fallback)
+  /// Sucht in 800M+ Creative-Commons-Bildern
+  Future<String?> _fetchOpenverseImage(String name, double lat, double lng) async {
+    final cleanName = _cleanSearchName(name);
+    final countryCode = _detectCountryCode(lat, lng);
+
+    // Suchquery mit Laender-Kontext fuer bessere Ergebnisse
+    final searchQuery = countryCode != null
+        ? '$cleanName ${_countryNameForCode(countryCode)}'
+        : cleanName;
+
+    try {
+      final response = await _requestWithRetry(
+        ApiEndpoints.openverseSearch,
+        {
+          'q': searchQuery,
+          'license_type': 'all-cc',
+          'page_size': '5',
+          'mature': 'false',
+        },
+        options: Options(
+          headers: {
+            'User-Agent': ApiConfig.userAgent,
+          },
+        ),
+      );
+
+      if (response == null) return null;
+
+      final results = response.data['results'] as List?;
+      if (results == null || results.isEmpty) return null;
+
+      for (final result in results) {
+        final url = result['url'] as String?;
+        if (url != null && url.startsWith('http')) {
+          debugPrint('[Enrichment] Openverse Bild gefunden: $cleanName → $url');
+          return url;
+        }
+      }
+    } catch (e) {
+      debugPrint('[Enrichment] Openverse-Fehler: $e');
+    }
+
+    return null;
+  }
+
+  /// v1.7.27: Laendername fuer Suchkontext
+  static String _countryNameForCode(String code) {
+    switch (code) {
+      case 'fr': return 'France';
+      case 'it': return 'Italy';
+      case 'es': return 'Spain';
+      case 'nl': return 'Netherlands';
+      case 'pl': return 'Poland';
+      default: return '';
+    }
   }
 
   /// Enriched mehrere POIs in einem Batch-Request (OPTIMIERT v1.7.3)
@@ -941,6 +1281,8 @@ LIMIT 1
               if (cacheService != null) {
                 await cacheService.cacheEnrichedPOI(results[poi.id]!);
               }
+              // v1.7.27: Image Pre-Caching fuer sofortige Anzeige
+              unawaited(_prefetchImage(imageUrl));
             } else {
               _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
             }
@@ -952,6 +1294,11 @@ LIMIT 1
           if (i + 5 < poisWithWikiButNoImage.length) {
             await Future.delayed(const Duration(milliseconds: 500));
           }
+        }
+
+        // v1.7.27: Stufe 3b Ergebnisse sofort melden
+        if (onPartialResult != null) {
+          onPartialResult(Map.from(results));
         }
       }
     }
@@ -979,6 +1326,8 @@ LIMIT 1
             poi.name,
           );
           if (imageUrl != null) {
+            // v1.7.27: Image Pre-Caching
+            unawaited(_prefetchImage(imageUrl));
             return MapEntry(poi.id, _applyEnrichment(poi, POIEnrichmentData(imageUrl: imageUrl)));
           } else {
             // FIX v1.7.9: NICHT als isEnriched markieren wenn kein Bild gefunden
@@ -997,6 +1346,11 @@ LIMIT 1
         if (i + 5 < poisWithoutWiki.length) {
           await Future.delayed(const Duration(milliseconds: 500));
         }
+      }
+
+      // v1.7.27: Stufe 4 Ergebnisse sofort melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
       }
     }
 
@@ -1022,6 +1376,11 @@ LIMIT 1
           unawaited(_prefetchImage(enResult.imageUrl!));
         }
         await Future.delayed(const Duration(milliseconds: 200));
+      }
+
+      // v1.7.27: Stufe 5 Ergebnisse sofort melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
       }
     }
 
@@ -1053,13 +1412,164 @@ LIMIT 1
         }
         await Future.delayed(const Duration(milliseconds: 300));
       }
+
+      // v1.7.27: Stufe 6 Ergebnisse sofort melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
+      }
     }
 
-    // 7. Restliche POIs: Session-Tracking statt falsches isEnriched-Flag
+    // 7. v1.7.27: Wikidata Geo-Radius-Suche fuer POIs ohne Bild
+    // Findet Entities mit P18-Bildern in der Naehe per SPARQL wikibase:around
+    final poisForGeoWikidata = uncachedPOIs
+        .where((poi) {
+          final result = results[poi.id];
+          return (result == null || result.imageUrl == null);
+        })
+        .where((poi) => !_wasRecentlyAttempted(poi.id))
+        .take(10)
+        .toList();
+
+    if (poisForGeoWikidata.isNotEmpty) {
+      debugPrint('[Enrichment] Wikidata Geo-Radius fuer ${poisForGeoWikidata.length} POIs');
+
+      // Gruppiere POIs nach aehnlicher Position (max 10 pro Query)
+      for (var i = 0; i < poisForGeoWikidata.length; i += 5) {
+        final subBatch = poisForGeoWikidata.skip(i).take(5).toList();
+
+        for (final poi in subBatch) {
+          final geoImages = await _fetchWikidataGeoImages(poi.latitude, poi.longitude);
+          if (geoImages.isNotEmpty) {
+            final matchedUrl = _matchWikidataImage(poi.name, geoImages);
+            if (matchedUrl != null) {
+              final existing = results[poi.id];
+              if (existing != null) {
+                results[poi.id] = existing.copyWith(imageUrl: matchedUrl);
+              } else {
+                results[poi.id] = _applyEnrichment(poi, POIEnrichmentData(imageUrl: matchedUrl));
+              }
+              if (cacheService != null) {
+                await cacheService.cacheEnrichedPOI(results[poi.id]!);
+              }
+              unawaited(_prefetchImage(matchedUrl));
+              debugPrint('[Enrichment] Wikidata Geo-Match: ${poi.name} → Bild gefunden');
+            }
+          }
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+
+      // Geo-Radius Ergebnisse melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
+      }
+    }
+
+    // 8. v1.7.27: Multi-Sprach-Wikipedia Fallback (FR/IT/ES/NL/PL)
+    final poisForMultiLang = uncachedPOIs
+        .where((poi) {
+          final result = results[poi.id];
+          return (result == null || result.imageUrl == null);
+        })
+        .where((poi) => !_wasRecentlyAttempted(poi.id))
+        .take(10)
+        .toList();
+
+    if (poisForMultiLang.isNotEmpty) {
+      debugPrint('[Enrichment] Multi-Sprach-Wikipedia fuer ${poisForMultiLang.length} POIs');
+
+      for (final poi in poisForMultiLang) {
+        // Laenderspezifische Sprache zuerst versuchen
+        final countryCode = _detectCountryCode(poi.latitude, poi.longitude);
+        final langOrder = <String>[];
+
+        // Priorisierte Sprache zuerst
+        if (countryCode != null && _multiLangEndpoints.containsKey(countryCode)) {
+          langOrder.add(countryCode);
+        }
+        // Dann die haeufigsten anderen Sprachen (max 2 weitere)
+        for (final lang in ['fr', 'it', 'es']) {
+          if (!langOrder.contains(lang)) langOrder.add(lang);
+          if (langOrder.length >= 3) break;
+        }
+
+        bool found = false;
+        for (final lang in langOrder) {
+          final endpoint = _multiLangEndpoints[lang];
+          if (endpoint == null) continue;
+
+          final langResult = await _fetchWikipediaImageByLanguage(poi.name, endpoint, lang);
+          if (langResult != null && langResult.imageUrl != null) {
+            final existing = results[poi.id];
+            if (existing != null) {
+              results[poi.id] = existing.copyWith(imageUrl: langResult.imageUrl);
+            } else {
+              results[poi.id] = _applyEnrichment(poi, langResult);
+            }
+            if (cacheService != null) {
+              await cacheService.cacheEnrichedPOI(results[poi.id]!);
+            }
+            unawaited(_prefetchImage(langResult.imageUrl!));
+            found = true;
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+
+        if (!found) {
+          _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+        }
+      }
+
+      // Multi-Sprach Ergebnisse melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
+      }
+    }
+
+    // 9. v1.7.27: Openverse CC-Bilder als Last-Resort
+    final poisForOpenverse = uncachedPOIs
+        .where((poi) {
+          final result = results[poi.id];
+          return (result == null || result.imageUrl == null);
+        })
+        .where((poi) => !_wasRecentlyAttempted(poi.id))
+        .take(5)
+        .toList();
+
+    if (poisForOpenverse.isNotEmpty) {
+      debugPrint('[Enrichment] Openverse Last-Resort fuer ${poisForOpenverse.length} POIs');
+
+      for (final poi in poisForOpenverse) {
+        final openverseUrl = await _fetchOpenverseImage(poi.name, poi.latitude, poi.longitude);
+        if (openverseUrl != null) {
+          final existing = results[poi.id];
+          if (existing != null) {
+            results[poi.id] = existing.copyWith(imageUrl: openverseUrl);
+          } else {
+            results[poi.id] = _applyEnrichment(poi, POIEnrichmentData(imageUrl: openverseUrl));
+          }
+          if (cacheService != null) {
+            await cacheService.cacheEnrichedPOI(results[poi.id]!);
+          }
+          unawaited(_prefetchImage(openverseUrl));
+        } else {
+          _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+        }
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      // Openverse Ergebnisse melden
+      if (onPartialResult != null) {
+        onPartialResult(Map.from(results));
+      }
+    }
+
+    // 10. Restliche POIs: Session-Tracking statt falsches isEnriched-Flag
     // FIX v1.7.9: POIs NICHT als enriched markieren wenn kein Bild gefunden wurde
     // So koennen sie nach 10-Minuten-Cooldown erneut versucht werden
     for (final poi in uncachedPOIs) {
-      if (!results.containsKey(poi.id)) {
+      if (!results.containsKey(poi.id) || results[poi.id]?.imageUrl == null) {
         _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
       }
     }

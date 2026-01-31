@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.24 - POI-Filter Chip Feedback | Plattformen: Android, iOS, Desktop
+Version: 1.7.27 - POI-Foto-Optimierung & Kategorie-Modal-Fix | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,10 +85,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.22: 12px Abstand Toggle→Panel in beiden Modi, Generating-Indicator Spacing) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.22: 12px Abstand Toggle→Panel in beiden Modi, Generating-Indicator Spacing) + Route-Löschen-Button im AI Trip Panel scrollbar (v1.7.26) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
-| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
+| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
@@ -152,8 +152,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Overpass | POIs & Hotels | - |
 | Wikipedia DE | Geosearch + Extracts | - |
 | Wikipedia EN | Fallback-Bilder (v1.7.7) | - |
+| Wikipedia FR/IT/ES/NL/PL | Multi-Sprach-Fallback (v1.7.27) | - |
 | Wikimedia Commons | POI-Bilder | - |
-| Wikidata SPARQL | Strukturierte POI-Daten | - |
+| Wikidata SPARQL | Strukturierte POI-Daten + Geo-Radius (v1.7.27) | - |
+| Openverse | CC-Bilder Last-Resort (v1.7.27) | - |
 | Open-Meteo | Wetter | - |
 | OpenAI | AI-Chat | via Backend-Proxy |
 | Supabase | Cloud-DB + Auth | Anon Key |
@@ -268,6 +270,8 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.27.md` (POI-Foto-Optimierung: 6 neue Bildquellen, ~100% Trefferquote + Kategorie-Modal Live-Update Fix)
+- `Dokumentation/CHANGELOG-v1.7.26.md` (Kategorie-Chips Konsistenz + Route-Löschen-Button Fix im AI Trip Panel)
 - `Dokumentation/CHANGELOG-v1.7.24.md` (POI-Filter Chip Feedback - Konsistentes Rendering, 100ms Animation, Schatten)
 - `Dokumentation/CHANGELOG-v1.7.23.md` (POI-Kategorien-Filter - Alle Kategorien, Overpass erweitert, Chip-Feedback)
 - `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
@@ -328,6 +332,8 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.21.md` (AI Trip Panel UI-Optimierungen)
 - `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
 - `Dokumentation/CHANGELOG-v1.7.24.md` (POI-Filter Chip Feedback - Konsistentes Rendering, Schatten)
+- `Dokumentation/CHANGELOG-v1.7.26.md` (Kategorie-Chips Konsistenz + Route-Löschen-Button Fix)
+- `Dokumentation/CHANGELOG-v1.7.27.md` (POI-Foto-Optimierung: 6 neue Bildquellen + Kategorie-Modal Live-Update Fix)
 
 ---
 
@@ -402,6 +408,7 @@ Container(
 - ✅ SearchBar: `showContainer: false` im Panel
 - ✅ 12px Abstand zwischen Mode-Toggle und Panel (v1.7.22)
 - ✅ Wetter-Widget startet zugeklappt (v1.7.22)
+- ✅ Route-Löschen-Button INNERHALB des scrollbaren Panels (v1.7.26, nicht extern in Column)
 
 ### Wetter-Integration (v1.7.6+)
 
@@ -868,11 +875,12 @@ final isLoading = ref.read(randomTripNotifierProvider).isPOILoading(poiId);
 | `monument` | `historic=monument/memorial` | ✅ seit v1.0 |
 | `attraction` | `tourism=attraction` | ✅ seit v1.0 |
 
-**Filter-Chip Widget (v1.7.24):**
+**Filter-Chip Widget (v1.7.24, v1.7.26 als Referenz-Pattern für alle Chips):**
 - `Material(transparent)` + `InkWell` für Ripple-Effekt
 - `AnimatedContainer` (100ms) rendert alles konsistent: Hintergrund, Border, Schatten
 - Ausgewählt: `colorScheme.primary` Hintergrund + weißer Text + Häkchen-Icon + blauer Schatten
 - Alle Chips horizontal scrollbar in `ListView`
+- **v1.7.26:** Modal-Kategorien + AI Trip CategorySelector nutzen dasselbe Pattern
 
 ```dart
 // Kategorie-Filter setzen
@@ -950,15 +958,19 @@ POIEnrichmentService._apiCallDelay = 200;            // 200ms zwischen API-Calls
 4. Wikimedia Commons Titel-Suche (mit Suchvarianten: Umlaute, Präfixe) (v1.7.7)
 5. Wikimedia Commons Kategorie-Suche
 6. Wikipedia EN API (Fallback nur für Bild) (v1.7.7)
-7. Wikidata SPARQL (P18 Bild, P154 Logo, P94 Wappen)
+7. Wikidata SPARQL (P18 Bild, P948 Wikivoyage-Banner, P154 Logo, P94 Wappen) (v1.7.27: P948 + P373)
+8. Wikidata P373 Commons-Category-Search (v1.7.27)
+9. Wikipedia FR/IT/ES/NL/PL (länderspezifisch priorisiert) (v1.7.27)
+10. Wikidata Geo-Radius (wikibase:around, 2km, P18-Bilder) (v1.7.27)
+11. Openverse CC-Bilder (800M+ Creative-Commons, Last-Resort) (v1.7.27)
 
 **Performance-Vergleich:**
-| Metrik | v1.3.6 | v1.3.7 | v1.7.3 | v1.7.7 | v1.7.9 |
-|--------|--------|--------|--------|--------|--------|
-| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek | ~3 Sek | ~2 Sek |
-| API-Calls für 20 POIs | ~160 | ~80 | ~4 | ~4-8 | ~4-8 |
-| Bild-Trefferquote | ~60% | ~85% | ~85% | ~95% | ~98% |
-| Fallback-Coverage | 5 POIs | 5 POIs | 5 POIs | 5 POIs | 15 POIs |
+| Metrik | v1.3.6 | v1.3.7 | v1.7.3 | v1.7.7 | v1.7.9 | v1.7.27 |
+|--------|--------|--------|--------|--------|--------|---------|
+| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek | ~3 Sek | ~2 Sek | ~2 Sek |
+| API-Calls für 20 POIs | ~160 | ~80 | ~4 | ~4-8 | ~4-8 | ~4-12 |
+| Bild-Trefferquote | ~60% | ~85% | ~85% | ~95% | ~98% | ~100% |
+| Fallback-Coverage | 5 POIs | 5 POIs | 5 POIs | 5 POIs | 15 POIs | 15 POIs |
 
 ### POI Enrichment Race Condition Fix (v1.5.1)
 
@@ -1314,35 +1326,39 @@ onTap: () {
 
 **Ergebnis:** POI-Details mit Foto werden jetzt korrekt angezeigt.
 
-### Löschbutton für AI Trip (v1.6.8)
+### Löschbutton für AI Trip (v1.6.8, aktualisiert v1.7.26)
 
-**Problem:** Nach AI Trip Generierung erschien kein Löschbutton auf der Karte.
+**Problem v1.6.8:** Nach AI Trip Generierung erschien kein Löschbutton auf der Karte.
 
 **Ursache:** Der `_RouteClearButton` wurde nur für `routePlanner.hasStart || hasEnd` angezeigt, nicht für AI Trips.
 
-**Lösung:** Zwei Anpassungen in `map_screen.dart`:
+**Lösung v1.6.8:** Schnell-Modus: Erweiterte Bedingung + AI Trip Modus: Separater Button.
+
+**Problem v1.7.26:** Der AI Trip "Route löschen" Button war **außerhalb** des scrollbaren Panels in der äußeren Column positioniert. Bei vollem Panel (Wetter + Konfiguration) wurde der Button von der Bottom Navigation abgeschnitten.
+
+**Lösung v1.7.26:** Button **in** das `_AITripPanel` verschoben (innerhalb von `SingleChildScrollView`):
 
 ```dart
-// 1. Schnell-Modus: Erweiterte Bedingung
-if (routePlanner.hasStart || routePlanner.hasEnd ||
-    randomTripState.step == RandomTripStep.preview ||
-    randomTripState.step == RandomTripStep.confirmed)
-  _RouteClearButton(
-    onClear: () {
-      ref.read(routePlannerProvider.notifier).clearRoute();
-      ref.read(randomTripNotifierProvider.notifier).reset();
-    },
+// AI Trip Panel - Route löschen jetzt INNERHALB des scrollbaren Bereichs
+SingleChildScrollView(
+  child: Column(
+    children: [
+      // ... Wetter, Typ, Start, Radius, Kategorien ...
+      GenerateButton(),             // "Überrasch mich!"
+      // v1.7.26: Route löschen im Panel statt extern
+      if (hasRoute) ...[
+        Divider(),
+        Padding(
+          padding: EdgeInsets.all(12),
+          child: _RouteClearButton(onClear: () { ... }),
+        ),
+      ],
+    ],
   ),
-
-// 2. AI Trip Modus: Separater Button
-if (_planMode == MapPlanMode.aiTrip &&
-    !isGenerating &&
-    (randomTripState.step == RandomTripStep.preview ||
-     randomTripState.step == RandomTripStep.confirmed))
-  _RouteClearButton(...)
+)
 ```
 
-**Ergebnis:** Der "Route löschen" Button erscheint jetzt auch nach AI Trip Generierung.
+**Ergebnis:** Der "Route löschen" Button ist immer durch Scrollen erreichbar und wird nicht mehr abgeschnitten.
 
 ### Auto-Zoom & Route Starten (v1.7.0, aktualisiert v1.7.8)
 

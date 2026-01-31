@@ -31,6 +31,18 @@ class ApiEndpoints {
   static const String wikipediaEnSearch =
       'https://en.wikipedia.org/w/api.php';
 
+  // Wikipedia Multi-Sprach-Fallbacks (v1.7.27 - europäische Sprachen)
+  static const String wikipediaFrSearch =
+      'https://fr.wikipedia.org/w/api.php';
+  static const String wikipediaItSearch =
+      'https://it.wikipedia.org/w/api.php';
+  static const String wikipediaEsSearch =
+      'https://es.wikipedia.org/w/api.php';
+  static const String wikipediaNlSearch =
+      'https://nl.wikipedia.org/w/api.php';
+  static const String wikipediaPlSearch =
+      'https://pl.wikipedia.org/w/api.php';
+
   // Wikidata - Echte POI-Daten (Telefon, Website, etc.)
   static const String wikidataSparql =
       'https://query.wikidata.org/sparql';
@@ -42,6 +54,10 @@ class ApiEndpoints {
   // Open-Meteo - Wettervorhersagen
   static const String openMeteoForecast =
       'https://api.open-meteo.com/v1/forecast';
+
+  // Openverse - Creative Commons Bild-Aggregator (Last-Resort Fallback v1.7.27)
+  static const String openverseSearch =
+      'https://api.openverse.org/v1/images/';
 
   // OpenAI - AI Features
   static const String openAiChat =
