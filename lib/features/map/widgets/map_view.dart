@@ -7,10 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../providers/map_controller_provider.dart';
 import '../providers/route_planner_provider.dart';
+import '../providers/weather_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
+import '../../../core/constants/categories.dart';
 import '../../../data/models/poi.dart';
 
 /// Karten-Widget mit MapLibre/flutter_map
@@ -57,11 +59,15 @@ class _MapViewState extends ConsumerState<MapView> {
     final routePlanner = ref.watch(routePlannerProvider);
     final poiState = ref.watch(pOIStateNotifierProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
+    final weatherState = ref.watch(locationWeatherNotifierProvider);
 
     // AI Trip Preview Route und POIs
     final aiTripRoute = randomTripState.generatedTrip?.trip.route;
     final aiTripPOIs = randomTripState.generatedTrip?.selectedPOIs ?? [];
     final isAITripPreview = randomTripState.step == RandomTripStep.preview;
+
+    // Wetter-Zustand für POI-Marker-Badges
+    final weatherCondition = weatherState.hasWeather ? weatherState.condition : null;
 
     return FlutterMap(
       mapController: _mapController,
@@ -104,19 +110,22 @@ class _MapViewState extends ConsumerState<MapView> {
             ],
           ),
 
-        // POI-Marker Layer (normale POIs, nicht während AI Trip Preview)
+        // POI-Marker Layer (normale POIs, nicht während AI Trip Preview) - mit Wetter-Badges (v1.7.9)
         if (poiState.filteredPOIs.isNotEmpty && !isAITripPreview)
           MarkerLayer(
             markers: poiState.filteredPOIs.map((poi) {
+              final markerSize = _selectedPOIId == poi.id ? 48.0 : (poi.isMustSee ? 40.0 : 32.0);
               return Marker(
                 point: poi.location,
-                width: _selectedPOIId == poi.id ? 48 : (poi.isMustSee ? 40 : 32),
-                height: _selectedPOIId == poi.id ? 48 : (poi.isMustSee ? 40 : 32),
+                width: markerSize + 8,
+                height: markerSize + 8,
                 child: POIMarker(
                   icon: poi.categoryIcon,
                   isHighlight: poi.isMustSee,
                   isSelected: _selectedPOIId == poi.id,
                   onTap: () => _onPOITap(poi),
+                  weatherCondition: weatherCondition,
+                  isIndoorPOI: poi.isIndoor,
                 ),
               );
             }).toList(),
@@ -523,6 +532,8 @@ class POIMarker extends StatelessWidget {
   final bool isHighlight;
   final bool isSelected;
   final VoidCallback? onTap;
+  final WeatherCondition? weatherCondition;
+  final bool isIndoorPOI;
 
   const POIMarker({
     super.key,
@@ -530,42 +541,116 @@ class POIMarker extends StatelessWidget {
     this.isHighlight = false,
     this.isSelected = false,
     this.onTap,
+    this.weatherCondition,
+    this.isIndoorPOI = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double size = isSelected ? 48 : (isHighlight ? 40 : 32);
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: isSelected ? 48 : (isHighlight ? 40 : 32),
-        height: isSelected ? 48 : (isHighlight ? 40 : 32),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.blue
-              : (isHighlight ? Colors.orange : Colors.white),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.grey.shade300,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: SizedBox(
+        width: size + 8,
+        height: size + 8,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.blue
+                    : (isHighlight ? Colors.orange : Colors.white),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _getMarkerBorderColor(),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  icon,
+                  style: TextStyle(
+                    fontSize: isSelected ? 24 : (isHighlight ? 20 : 16),
+                  ),
+                ),
+              ),
             ),
+            // Wetter-Badge oben-rechts
+            if (weatherCondition != null && _shouldShowBadge())
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: _getBadgeColor(),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getBadgeIcon(),
+                      style: const TextStyle(fontSize: 8),
+                    ),
+                  ),
+                ),
+              ),
           ],
-        ),
-        child: Center(
-          child: Text(
-            icon,
-            style: TextStyle(
-              fontSize: isSelected ? 24 : (isHighlight ? 20 : 16),
-            ),
-          ),
         ),
       ),
     );
+  }
+
+  bool _shouldShowBadge() {
+    if (weatherCondition == WeatherCondition.danger) return true;
+    if (weatherCondition == WeatherCondition.bad) return true;
+    if (weatherCondition == WeatherCondition.good && !isIndoorPOI) return true;
+    return false;
+  }
+
+  Color _getBadgeColor() {
+    if (weatherCondition == WeatherCondition.danger) return Colors.red;
+    if (weatherCondition == WeatherCondition.bad) {
+      return isIndoorPOI ? Colors.green : Colors.orange;
+    }
+    return Colors.green;
+  }
+
+  String _getBadgeIcon() {
+    if (weatherCondition == WeatherCondition.danger) return '⚠️';
+    if (weatherCondition == WeatherCondition.bad) {
+      return isIndoorPOI ? '✓' : '!';
+    }
+    return '☀';
+  }
+
+  Color _getMarkerBorderColor() {
+    if (isSelected) return Colors.white;
+    if (weatherCondition == WeatherCondition.danger) return Colors.red.shade300;
+    if (weatherCondition == WeatherCondition.bad && !isIndoorPOI) {
+      return Colors.orange.shade300;
+    }
+    return Colors.grey.shade300;
   }
 }
 

@@ -63,6 +63,9 @@ class RandomTripState with _$RandomTripState {
 
     /// Bereits exportierte/abgeschlossene Tage
     @Default({}) Set<int> completedDays,
+
+    /// Wetter-Kategorien wurden angewendet (v1.7.8)
+    @Default(false) bool weatherCategoriesApplied,
   }) = _RandomTripState;
 
   /// Hat gültigen Startpunkt

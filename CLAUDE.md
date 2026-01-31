@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.7 | Plattformen: Android, iOS, Desktop
+Version: 1.7.8 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,10 +85,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner (v1.7.6) |
-| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview (v1.5.0) |
-| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment (v1.7.3) |
-| `lib/features/poi/poi_detail_screen.dart` | POI-Details |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner + Wetter-Empfehlung Toggle (v1.7.9) |
+| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern (v1.7.9) |
+| `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
+| `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button (v1.7.0) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
@@ -112,10 +112,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/providers/auth_provider.dart` | Auth State (keepAlive) |
 | `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) + Auto-Routenberechnung (v1.7.2) |
 | `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix) |
-| `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Navigation (v1.7.0) |
+| `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Zoom (v1.7.0) |
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
-| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien (v1.7.6) |
+| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) |
 | `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
@@ -328,13 +328,14 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.6.7.md` (POI-Detail Fotos & Highlights Fix)
 - `Dokumentation/CHANGELOG-v1.6.8.md` (GPS-Dialog & Löschbutton & POI-Details Fix)
 - `Dokumentation/CHANGELOG-v1.6.9.md` (POI-Fotos überall - Favoriten, Trip-Stops, AI Trip Preview)
-- `Dokumentation/CHANGELOG-v1.7.0.md` (Auto-Navigation zum Trip-Tab & Auto-Zoom auf Route)
+- `Dokumentation/CHANGELOG-v1.7.0.md` (Auto-Zoom auf Route & Route Starten Button)
 - `Dokumentation/CHANGELOG-v1.7.1.md` (Auto-Zoom Verbesserung - MapController-Timing-Fix)
 - `Dokumentation/CHANGELOG-v1.7.2.md` (AI-Chat mit standortbasierten POI-Vorschlägen)
 - `Dokumentation/CHANGELOG-v1.7.3.md` (POI-Foto Batch-Enrichment - 7x schneller)
 - `Dokumentation/CHANGELOG-v1.7.5.md` (Route Löschen Button für AI-Chat Routen)
 - `Dokumentation/CHANGELOG-v1.7.4.md` (Auto-Route von GPS-Standort zu POI)
 - `Dokumentation/CHANGELOG-v1.7.7.md` (POI-Bildquellen optimiert & Chat-Bilder)
+- `Dokumentation/CHANGELOG-v1.7.8.md` (AI Trip Route mit POI-Stops erweitern)
 
 ---
 
@@ -392,10 +393,26 @@ showWeatherDetailsSheet(
 ref.read(randomTripNotifierProvider.notifier)
     .applyWeatherBasedCategories(weatherState.condition);
 
+// AI Trip: Wetter-Kategorien zurücksetzen (v1.7.9 - Toggle)
+ref.read(randomTripNotifierProvider.notifier)
+    .resetWeatherCategories();
+
+// Prüfen ob Wetter-Kategorien aktiv angewendet sind (v1.7.8)
+final isApplied = ref.watch(randomTripNotifierProvider).weatherCategoriesApplied;
+
 // POI-Karten mit Wetter-Badge (POICard Parameter)
 POICard(
   weatherCondition: weatherState.condition,  // Optional
   // ...
+);
+
+// POI-Marker auf der Karte mit Wetter-Badge (v1.7.9)
+POIMarker(
+  icon: poi.categoryIcon,
+  isHighlight: poi.isMustSee,
+  isSelected: false,
+  weatherCondition: weatherState.condition,  // Optional - zeigt Mini-Badge
+  isIndoorPOI: poi.isIndoor,                // Für Badge-Logik
 );
 ```
 
@@ -415,8 +432,10 @@ POICard(
 |--------|------------|
 | `WeatherChip` | Kompakter Anzeiger auf MapScreen |
 | `WeatherAlertBanner` | Proaktive Warnung bei schlechtem Wetter |
+| `WeatherRecommendationBanner` | Wetter-Empfehlung auf Hauptseite mit Toggle (Schnell + AI Trip, v1.7.9) |
 | `WeatherDetailsSheet` | 7-Tage-Vorhersage Bottom Sheet |
-| `WeatherBadge` | Empfehlungs-Badge auf POI-Karten |
+| `WeatherBadge` | Empfehlungs-Badge auf POI-Karten (Listen) |
+| `POIMarker` (weather) | Mini-Wetter-Badge auf POI-Markern auf der Karte (v1.7.9) |
 | `WeatherBar` | Routen-Wetter mit 5 Punkten |
 
 ### Neuen Provider erstellen
@@ -466,6 +485,22 @@ if (result.success) {
   // Sonst: Stop wurde zu bestehender Route hinzugefügt
 } else if (result.isGpsDisabled) {
   // GPS-Dialog anzeigen
+}
+
+// Stop zu AI Trip hinzufügen (v1.7.8)
+// Wenn ein AI Trip aktiv ist (Preview oder Confirmed), wird die AI-Route übernommen
+final randomTripState = ref.read(randomTripNotifierProvider);
+if (randomTripState.generatedTrip != null &&
+    (randomTripState.step == RandomTripStep.preview ||
+     randomTripState.step == RandomTripStep.confirmed)) {
+  final result = await ref.read(tripStateProvider.notifier).addStopWithAutoRoute(
+    poi,
+    existingAIRoute: randomTripState.generatedTrip!.trip.route,
+    existingAIStops: randomTripState.generatedTrip!.selectedPOIs,
+  );
+  if (result.success) {
+    ref.read(randomTripNotifierProvider.notifier).markAsConfirmed();
+  }
 }
 
 // Stop hinzufügen OHNE Auto-Route (klassisch)
@@ -1138,25 +1173,28 @@ if (_planMode == MapPlanMode.aiTrip &&
 
 **Ergebnis:** Der "Route löschen" Button erscheint jetzt auch nach AI Trip Generierung.
 
-### Auto-Navigation & Zoom (v1.7.0)
+### Auto-Zoom & Route Starten (v1.7.0, aktualisiert v1.7.8)
 
-**Feature 1: Auto-Navigation zum Trip-Tab nach Route-Berechnung**
+**Feature 1: "Route starten" Button statt Auto-Navigation (v1.7.8)**
 
-Nach Berechnung einer Route wird automatisch zum Trip-Tab navigiert.
+Nach Berechnung einer Route wird die Karte auf die Route gezoomt. Der "Route starten" Button erscheint mit Distanz/Dauer-Info. Erst nach Klick navigiert die App zum Trip-Tab.
 
 ```dart
-// map_screen.dart - Listener im initState
+// map_screen.dart - Listener zoomt nur auf Route (keine Auto-Navigation)
 ref.listenManual(routePlannerProvider, (previous, next) {
   if (next.hasRoute && (previous?.route != next.route)) {
     _fitMapToRoute(next.route!);
-    // Nach Route-Berechnung automatisch zum Trip-Tab navigieren
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        context.go('/trip');
-      }
-    });
   }
 });
+
+// "Route starten" Button navigiert zum Trip-Tab
+_RouteStartButton(
+  route: routePlanner.route!,
+  onStart: () {
+    _startRoute(routePlanner.route!);
+    context.go('/trip');
+  },
+),
 ```
 
 **Feature 2: Auto-Zoom auf Route beim Tab-Wechsel**

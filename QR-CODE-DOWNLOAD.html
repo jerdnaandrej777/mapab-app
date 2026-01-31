@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.7.7 - POI-Bildquellen optimiert & Chat-Bilder</p>
+        <p class="version">Version 1.7.14 - GPS-Standort-Synchronisation</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.7"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.14"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,7 +183,28 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">📷 POI-Bildquellen optimiert - ~95% Trefferquote + Chat-Bilder (NEU v1.7.7)</li>
+                <li class="new">🔄 GPS-Standort-Synchronisation - Standort automatisch zwischen Schnell & AI Trip Modi (NEU v1.7.14)</li>
+                <li class="new">✅ Nahtloser Modus-Wechsel - GPS einmal klicken, in beiden Modi verfügbar (NEU v1.7.14)</li>
+                <li>💾 Routen-Favoriten Fix - JSON-Serialisierung für Route & Stops behoben (v1.7.13)</li>
+                <li>🔧 @JsonKey Annotationen - Explizite Konverter für nested Freezed-Klassen (v1.7.13)</li>
+                <li>🧹 clearAllRoutes() Migration - Alte defekte Routen löschen (v1.7.13)</li>
+                <li>🌤️ Wetter-Marker auf Route - 5 Wetterpunkte mit Icon, Temperatur & Empfehlung direkt auf der Karte (v1.7.12)</li>
+                <li>📋 Tap-Details - Bottom Sheet mit Wind, Niederschlag, Regenrisiko & Warnungen (v1.7.12)</li>
+                <li>⚡ Auto-Wetter-Laden - Wetter bei jeder Routenberechnung, AI Trip & gespeicherten Routen (v1.7.12)</li>
+                <li>📷 POI-Foto Coverage ~98% - Batch-Limit 5→15, isEnriched-Fix, Pre-Caching (v1.7.11)</li>
+                <li>⚡ Inkrementelle Foto-Anzeige - 2-Stufen-UI statt Batch-Warten (v1.7.11)</li>
+                <li>🏷️ Kategorisierung erweitert - 12 Overpass-Tags, 23 AI-Chat-Mappings (v1.7.11)</li>
+                <li>💾 AI Trip in Favoriten speichern - Routen dauerhaft in Hive + Supabase (v1.7.10)</li>
+                <li>📂 Gespeicherte Routen laden - Aus Favoriten direkt auf Karte anzeigen (v1.7.10)</li>
+                <li>📤 Route teilen aus More-Options - Share-Funktion jetzt aktiv (v1.7.10)</li>
+                <li>💾 Route speichern aus More-Options - Speicherfunktion jetzt aktiv (v1.7.10)</li>
+                <li>🌤️ Wetter-Banner opak - Karte scheint nicht mehr durch, satter Hintergrund (v1.7.9)</li>
+                <li>🔄 Wetter-Empfehlung Toggle - Anwenden & Deaktivieren per Klick (v1.7.9)</li>
+                <li>📍 POI-Marker Wetter-Badges - Mini-Badges auf Karten-Markern (v1.7.9)</li>
+                <li>▶️ Route Starten Button - Manuell zum Trip-Tab statt Auto-Navigation (v1.7.8)</li>
+                <li>🌤️ Wetter-Empfehlung auf Hauptseite - Banner auf beiden Modi + Aktiv-Status (v1.7.8)</li>
+                <li>🔗 AI Trip + POI-Stops - Stops aus POI-Liste zur AI-Route hinzufügen (v1.7.8)</li>
+                <li>📷 POI-Bildquellen optimiert - ~95% Trefferquote + Chat-Bilder (v1.7.7)</li>
                 <li>🌤️ Wetter-Integration - WeatherChip, AlertBanner, 7-Tage-Vorhersage (v1.7.6)</li>
                 <li>🗑️ Route Löschen für AI-Chat - Button auch bei AI-Assistent Routen (v1.7.5)</li>
                 <li>📍 Auto-Route von GPS zu POI - POI hinzufügen erstellt Route automatisch (v1.7.4)</li>
@@ -191,7 +212,6 @@
                 <li>📍 AI-Chat mit standortbasierten POI-Vorschlägen (v1.7.2)</li>
                 <li>🔄 Dynamische Route-Neuberechnung bei Stop-Änderungen (v1.7.2)</li>
                 <li>📍 GPS-Fallback für Kartenausschnitt ohne Route (v1.7.2)</li>
-                <li>🗺️ Auto-Navigation zum Trip-Tab nach Route-Berechnung (v1.7.0)</li>
                 <li>🔍 Auto-Zoom auf Route beim Tab-Wechsel zur Karte (v1.7.0)</li>
                 <li>📍 Auf Karte anzeigen Button im TripScreen (v1.7.0)</li>
                 <li>📷 POI-Fotos überall - Favoriten, Trip-Stops, AI Trip Preview (v1.6.9)</li>
@@ -249,7 +269,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.7.7.apk" herunterladen<br>
+                2. "MapAB-v1.7.14.apk" herunterladen<br>
                 3. "Aus unbekannten Quellen installieren" erlauben<br>
                 4. APK öffnen und Installation bestätigen
             </p>
@@ -258,7 +278,7 @@
         <div class="footer">
             <p>
                 <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
-                <strong>Build-Datum:</strong> 29. Januar 2026<br>
+                <strong>Build-Datum:</strong> 31. Januar 2026<br>
                 <strong>Größe:</strong> ~57 MB
             </p>
         </div>
@@ -269,7 +289,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.7",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.14",
             width: 256,
             height: 256,
             colorDark: "#1a202c",

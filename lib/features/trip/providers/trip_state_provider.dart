@@ -33,10 +33,28 @@ class TripState extends _$TripState {
   /// Fügt einen Stop hinzu und erstellt automatisch eine Route wenn keine vorhanden
   /// GPS-Standort wird als Startpunkt verwendet, der POI als Ziel
   /// Gibt ein Result-Objekt zurück mit Status und optionaler Fehlermeldung
-  Future<AddStopResult> addStopWithAutoRoute(POI poi) async {
+  ///
+  /// Optional: [existingAIRoute] und [existingAIStops] können übergeben werden,
+  /// wenn ein AI Trip aktiv ist. Die AI-Route wird dann übernommen und der neue
+  /// Stop wird zu den bestehenden AI-Stops hinzugefügt.
+  Future<AddStopResult> addStopWithAutoRoute(
+    POI poi, {
+    AppRoute? existingAIRoute,
+    List<POI>? existingAIStops,
+  }) async {
     // Wenn bereits eine Route existiert, einfach den Stop hinzufügen
     if (state.route != null) {
       addStop(poi);
+      return const AddStopResult(success: true);
+    }
+
+    // AI Trip Route übernehmen wenn vorhanden
+    if (existingAIRoute != null) {
+      debugPrint('[TripState] AI Trip Route übernommen - füge neuen Stop hinzu');
+      final allStops = <POI>[...(existingAIStops ?? <POI>[]), poi];
+      state = state.copyWith(route: existingAIRoute, stops: allStops);
+      _recalculateRoute();
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
       return const AddStopResult(success: true);
     }
 

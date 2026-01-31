@@ -6,7 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/categories.dart';
 import '../../data/models/poi.dart';
+import '../../data/models/route.dart';
 import '../../data/providers/favorites_provider.dart';
+import '../random_trip/providers/random_trip_provider.dart';
+import '../random_trip/providers/random_trip_state.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'providers/poi_state_provider.dart';
 
@@ -666,7 +669,31 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
 
   Future<void> _addToTrip(POI poi) async {
     final tripNotifier = ref.read(tripStateProvider.notifier);
-    final result = await tripNotifier.addStopWithAutoRoute(poi);
+    final tripData = ref.read(tripStateProvider);
+
+    // AI Trip erkennen und Daten übergeben
+    AppRoute? aiRoute;
+    List<POI>? aiStops;
+    if (tripData.route == null) {
+      final randomTripState = ref.read(randomTripNotifierProvider);
+      if (randomTripState.generatedTrip != null &&
+          (randomTripState.step == RandomTripStep.preview ||
+           randomTripState.step == RandomTripStep.confirmed)) {
+        aiRoute = randomTripState.generatedTrip!.trip.route;
+        aiStops = randomTripState.generatedTrip!.selectedPOIs;
+      }
+    }
+
+    final result = await tripNotifier.addStopWithAutoRoute(
+      poi,
+      existingAIRoute: aiRoute,
+      existingAIStops: aiStops,
+    );
+
+    // AI Trip als bestätigt markieren
+    if (aiRoute != null && result.success) {
+      ref.read(randomTripNotifierProvider.notifier).markAsConfirmed();
+    }
 
     if (!mounted) return;
 

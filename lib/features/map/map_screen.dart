@@ -88,13 +88,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         // Wenn eine neue Route berechnet wurde, zoome die Karte darauf
         if (next.hasRoute && (previous?.route != next.route)) {
           _fitMapToRoute(next.route!);
-          // Nach Route-Berechnung automatisch zum Trip-Tab navigieren
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              debugPrint('[MapScreen] Route berechnet - navigiere zu Trip-Tab');
-              context.go('/trip');
-            }
-          });
         }
       });
 
@@ -164,6 +157,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final routeSession = ref.watch(routeSessionProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
     final tripState = ref.watch(tripStateProvider);
+    final weatherState = ref.watch(locationWeatherNotifierProvider);
 
     // Auto-Zoom auf Route bei Tab-Wechsel (v1.7.0)
     final shouldFitToRoute = ref.watch(shouldFitToRouteProvider);
@@ -256,8 +250,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   // Mode-Toggle (Schnell / AI Trip)
                   _ModeToggle(
                     selectedMode: _planMode,
-                    onModeChanged: (mode) => setState(() => _planMode = mode),
+                    onModeChanged: (mode) {
+                      setState(() => _planMode = mode);
+                      _syncLocationBetweenModes(mode);
+                    },
                   ),
+
+                  // Wetter-Empfehlung (v1.7.9) - auf beiden Modi sichtbar, Toggle
+                  if (weatherState.hasWeather && !isGenerating)
+                    _WeatherRecommendationBanner(
+                      condition: weatherState.condition,
+                      isApplied: randomTripState.weatherCategoriesApplied,
+                      onApply: () => ref.read(randomTripNotifierProvider.notifier)
+                          .applyWeatherBasedCategories(weatherState.condition),
+                      onReset: () => ref.read(randomTripNotifierProvider.notifier)
+                          .resetWeatherCategories(),
+                    ),
 
                   const SizedBox(height: 12),
 
@@ -306,7 +314,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         padding: const EdgeInsets.only(top: 12),
                         child: _RouteStartButton(
                           route: routePlanner.route!,
-                          onStart: () => _startRoute(routePlanner.route!),
+                          onStart: () {
+                            _startRoute(routePlanner.route!);
+                            context.go('/trip');
+                          },
                         ),
                       ),
 
@@ -645,6 +656,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoadingSchnellGps = false);
+      }
+    }
+  }
+
+  /// Synchronisiert Standort zwischen Modi beim Wechsel
+  void _syncLocationBetweenModes(MapPlanMode newMode) {
+    if (newMode == MapPlanMode.schnell) {
+      // Wechsel zu Schnell-Modus: AI Trip Startpunkt → RoutePlanner übertragen
+      final randomTripState = ref.read(randomTripNotifierProvider);
+      if (randomTripState.hasValidStart) {
+        final routePlanner = ref.read(routePlannerProvider);
+        // Nur übertragen wenn RoutePlanner noch keinen Start hat
+        if (!routePlanner.hasStart &&
+            randomTripState.startLocation != null &&
+            randomTripState.startAddress != null) {
+          ref.read(routePlannerProvider.notifier).setStart(
+            randomTripState.startLocation!,
+            randomTripState.startAddress!,
+          );
+          debugPrint('[MapScreen] Startpunkt von AI Trip → Schnell-Modus übertragen');
+        }
+      }
+    } else if (newMode == MapPlanMode.aiTrip) {
+      // Wechsel zu AI Trip Modus: RoutePlanner Startpunkt → AI Trip übertragen
+      final routePlanner = ref.read(routePlannerProvider);
+      if (routePlanner.hasStart) {
+        final randomTripState = ref.read(randomTripNotifierProvider);
+        // Nur übertragen wenn AI Trip noch keinen Start hat
+        if (!randomTripState.hasValidStart &&
+            routePlanner.startLocation != null &&
+            routePlanner.startAddress != null) {
+          ref.read(randomTripNotifierProvider.notifier).setStartLocation(
+            routePlanner.startLocation!,
+            routePlanner.startAddress!,
+          );
+          debugPrint('[MapScreen] Startpunkt von Schnell-Modus → AI Trip übertragen');
+        }
       }
     }
   }
@@ -1337,13 +1385,6 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Wetter-Empfehlung (v1.7.6)
-          if (weatherState.hasWeather)
-            _WeatherRecommendationBanner(
-              condition: weatherState.condition,
-              onApply: () => notifier.applyWeatherBasedCategories(weatherState.condition),
-            ),
-
           // AI Trip Type Selector (Tagesausflug / Euro Trip)
           Padding(
             padding: const EdgeInsets.all(12),
@@ -1931,14 +1972,18 @@ class _GeneratingIndicator extends StatelessWidget {
   }
 }
 
-/// Wetter-Empfehlungs-Banner für AI Trip Panel (v1.7.6)
+/// Wetter-Empfehlungs-Banner für Hauptseite (v1.7.8 - auf beiden Modi sichtbar, v1.7.9 - Design + Toggle)
 class _WeatherRecommendationBanner extends StatelessWidget {
   final WeatherCondition condition;
+  final bool isApplied;
   final VoidCallback onApply;
+  final VoidCallback onReset;
 
   const _WeatherRecommendationBanner({
     required this.condition,
+    required this.isApplied,
     required this.onApply,
+    required this.onReset,
   });
 
   @override
@@ -1947,16 +1992,23 @@ class _WeatherRecommendationBanner extends StatelessWidget {
     final (icon, text, color) = _getRecommendation();
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: Color.alphaBlend(color.withOpacity(0.15), colorScheme.surface),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
+          Text(icon, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -1965,7 +2017,7 @@ class _WeatherRecommendationBanner extends StatelessWidget {
                 Text(
                   'Wetter-Empfehlung',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
@@ -1973,29 +2025,38 @@ class _WeatherRecommendationBanner extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
           ),
-          // Anwenden-Button
+          // Anwenden/Deaktivieren-Button (v1.7.9: Toggle)
           GestureDetector(
-            onTap: onApply,
+            onTap: isApplied ? onReset : onApply,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: isApplied ? color : color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                'Anwenden',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isApplied) ...[
+                    const Icon(Icons.check, size: 13, color: Colors.white),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    isApplied ? 'Aktiv' : 'Anwenden',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isApplied ? Colors.white : color,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

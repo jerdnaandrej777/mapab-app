@@ -60,7 +60,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     } else {
       current.add(category);
     }
-    state = state.copyWith(selectedCategories: current);
+    state = state.copyWith(
+      selectedCategories: current,
+      weatherCategoriesApplied: false,
+    );
   }
 
   /// Setzt alle Kategorien
@@ -119,7 +122,21 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         break;
     }
 
-    state = state.copyWith(selectedCategories: recommended);
+    state = state.copyWith(
+      selectedCategories: recommended,
+      weatherCategoriesApplied: true,
+    );
+  }
+
+  /// Setzt Wetter-Kategorien zurück auf Default (alle außer Hotel)
+  void resetWeatherCategories() {
+    state = state.copyWith(
+      selectedCategories: POICategory.values
+          .where((c) => c != POICategory.hotel)
+          .toList(),
+      weatherCategoriesApplied: false,
+    );
+    print('[RandomTrip] Wetter-Kategorien zurückgesetzt');
   }
 
   /// Setzt Startpunkt manuell
@@ -347,6 +364,13 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     final selected = Map<int, HotelSuggestion>.from(state.selectedHotels);
     selected[dayIndex] = hotel;
     state = state.copyWith(selectedHotels: selected);
+  }
+
+  /// Markiert den Trip als bestätigt ohne alte Daten zu löschen
+  /// Wird verwendet wenn ein Stop über die POI-Liste hinzugefügt wird
+  void markAsConfirmed() {
+    if (state.generatedTrip == null) return;
+    state = state.copyWith(step: RandomTripStep.confirmed);
   }
 
   /// Bestätigt den Trip und übergibt ihn an TripStateProvider

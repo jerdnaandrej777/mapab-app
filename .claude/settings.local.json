@@ -35,7 +35,8 @@
       "Bash(cmd /c \"build_release.bat\")",
       "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP && build_release.bat\")",
       "Bash(cmd /c build_release.bat)",
-      "Bash(npx qrcode:*)"
+      "Bash(npx qrcode:*)",
+      "Bash(cmd.exe /c \"flutter build apk --release --dart-define=SUPABASE_URL=https://kcjgnctfjodggpvqwgil.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjamduY3Rmam9kZ2dwdnF3Z2lsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMzcwMjcsImV4cCI6MjA4NDYxMzAyN30.GC5QdENB5APN2rKO6RtjnQqpthHd5DjN3hQnH18DGyo --dart-define=BACKEND_URL=https://backend-gules-gamma-30.vercel.app\")"
     ]
   }
 }
