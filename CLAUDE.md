@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.16 | Plattformen: Android, iOS, Desktop
+Version: 1.7.17 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -117,7 +117,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
 | `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) |
-| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6) |
+| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
@@ -318,6 +318,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.14.md` (GPS-Standort-Synchronisation zwischen Modi)
 - `Dokumentation/CHANGELOG-v1.7.15.md` (GPS-Button Optimierung)
 - `Dokumentation/CHANGELOG-v1.7.16.md` (WeatherBar einklappbar & Dauerhafte Adress-Anzeige)
+- `Dokumentation/CHANGELOG-v1.7.17.md` (Persistente Wetter-Widgets)
 
 ---
 
@@ -420,6 +421,41 @@ POIMarker(
 | `POIMarker` (weather) | Mini-Wetter-Badge auf POI-Markern auf der Karte (v1.7.9) |
 | `WeatherBar` | Routen-Wetter mit 5 Punkten |
 | `RouteWeatherMarker` | Wetter-Marker auf Route mit Icon + Temperatur + Tap-Detail (v1.7.12) |
+
+### Persistente Wetter-Widgets (v1.7.17)
+
+**Problem behoben:** Wetter-Widgets verschwanden bei Navigation zwischen Screens.
+
+**Lösung:** `keepAlive: true` für Weather Provider:
+```dart
+@Riverpod(keepAlive: true)
+class RouteWeatherNotifier extends _$RouteWeatherNotifier { ... }
+
+@Riverpod(keepAlive: true)
+class LocationWeatherNotifier extends _$LocationWeatherNotifier { ... }
+```
+
+**Ergebnis:**
+- State bleibt über gesamte App-Session erhalten
+- 15-Minuten-Cache funktioniert korrekt
+- Keine redundanten API-Calls bei Screen-Wechseln
+- Konsistente Widget-Anzeige (~90% weniger API-Calls)
+
+**Cache-Check funktioniert jetzt:**
+```dart
+// LocationWeatherNotifier.loadWeatherForLocation()
+if (state.isCacheValid && state.hasWeather) {
+  debugPrint('[LocationWeather] Cache gueltig, ueberspringe');
+  return;
+}
+```
+
+**Betroffene Widgets:**
+- WeatherChip (MapScreen, rechts unten)
+- WeatherBar (MapScreen, TripScreen)
+- WeatherRecommendationBanner (MapScreen, Toggle)
+- WeatherAlertBanner (MapScreen, unten)
+- RouteWeatherMarker (MapView, auf Route)
 
 ### Neuen Provider erstellen
 

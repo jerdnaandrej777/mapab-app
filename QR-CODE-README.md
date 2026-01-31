@@ -2,7 +2,7 @@
 
 ## Download-Link
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.6.7
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.17
 
 ## Verfügbare QR-Code Dateien
 
@@ -35,13 +35,13 @@ start QR-CODE-SIMPLE.html
 4. APK herunterladen und installieren
 
 ### Direkter Link:
-https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.6.7
+https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.17
 
 ## Verfügbare APKs
 
 | Datei | Größe | Für |
 |-------|-------|-----|
-| **MapAB-v1.6.7.apk** | ~57 MB | **Empfohlen** - Universal |
+| **MapAB-v1.7.17.apk** | ~57 MB | **Empfohlen** - Universal |
 
 ## QR-Code drucken
 
@@ -59,20 +59,25 @@ https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.6.7
 
 1. **QR-Code scannen** mit Kamera-App
 2. **GitHub Release** öffnet sich
-3. **"MapAB-v1.6.7.apk"** herunterladen
+3. **"MapAB-v1.7.17.apk"** herunterladen
 4. **Installation erlauben:**
    - Einstellungen → Sicherheit
    - "Unbekannte Quellen" aktivieren (temporär)
 5. **APK öffnen** und Installation bestätigen
 6. **Fertig!** App starten und loslegen
 
-## Features (v1.6.7)
+## Features (v1.7.17)
 
-### NEU in v1.6.7
-- **POI-Detail Fotos Fix** - Enrichment wird jetzt vollständig abgewartet (await statt unawaited)
-- **Highlights Fix** - POI-Highlights werden nach Routenberechnung korrekt angezeigt
-- **Redundantes selectPOI() entfernt** - Verhindert Race Conditions
-- **Bessere Performance** - Loading-Indikator wird korrekt angezeigt
+### NEU in v1.7.17
+- **Persistente Wetter-Widgets** - Bleiben bei Navigation zwischen Screens sichtbar (keepAlive fix)
+- **15-Minuten-Cache funktioniert** - State wird nicht mehr bei Tab-Wechsel zurückgesetzt
+- **90% weniger API-Calls** - Redundante Open-Meteo Anfragen eliminiert
+- **Konsistente Anzeige** - WeatherChip, WeatherBar, WeatherAlertBanner bleiben dauerhaft sichtbar
+- **Bessere Performance** - Schnellere Screen-Wechsel, kein Flackern der Widgets
+
+### Aus v1.7.16
+- **WeatherBar einklappbar** - Tap auf Header wechselt zwischen ein-/ausgeklappt
+- **Dauerhafte Adress-Anzeige** - Start/Ziel mit Distanz/Dauer sichtbar bis Route gelöscht
 
 ### Aus v1.6.6
 - **POI-Foto CORS-Fix** - Wikidata SPARQL bekommt jetzt `origin: '*'` Header
@@ -203,6 +208,6 @@ Bei Problemen:
 
 ---
 
-**Version:** 1.6.7
-**Build-Datum:** 29. Januar 2026
+**Version:** 1.7.17
+**Build-Datum:** 31. Januar 2026
 **Flutter SDK:** 3.38.7

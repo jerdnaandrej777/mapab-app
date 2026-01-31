@@ -105,7 +105,7 @@ class RouteWeatherState {
 }
 
 /// Provider für Routen-Wetter
-@riverpod
+@Riverpod(keepAlive: true)
 class RouteWeatherNotifier extends _$RouteWeatherNotifier {
   @override
   RouteWeatherState build() {
@@ -263,7 +263,7 @@ class LocationWeatherState {
 
 /// Provider für Standort-Wetter (v1.7.6)
 /// Zeigt Wetter am aktuellen GPS-Standort, auch ohne Route
-@riverpod
+@Riverpod(keepAlive: true)
 class LocationWeatherNotifier extends _$LocationWeatherNotifier {
   @override
   LocationWeatherState build() {
