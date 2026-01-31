@@ -255,16 +255,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     },
                   ),
 
-                  // Wetter-Empfehlung (v1.7.9) - auf beiden Modi sichtbar, Toggle
-                  const SizedBox(height: 12),
-
                   // === SCHNELL-MODUS ===
                   if (_planMode == MapPlanMode.schnell && !isGenerating) ...[
+                    const SizedBox(height: 12),
                     // Unified Weather Widget (v1.7.19) - zeigt Standort- oder Route-Wetter
                     const UnifiedWeatherWidget(),
+                    const SizedBox(height: 12),
                     // Dauerhafte Adress-Anzeige (wenn Route vorhanden)
                     _RouteAddressBar(routePlanner: routePlanner),
-
+                    const SizedBox(height: 12),
                     // Suchleiste
                     _SearchBar(
                       startAddress: routePlanner.startAddress,
@@ -358,36 +357,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           ),
 
-          // Floating Action Buttons (rechts) - nur im Schnell-Modus anzeigen
+          // Floating Action Button (rechts) - nur im Schnell-Modus anzeigen
           if (_planMode == MapPlanMode.schnell)
             Positioned(
               right: 16,
               bottom: 100,
-              child: Column(
-                children: [
-                  // Weather-Chip (v1.7.6) - zeigt aktuelles Wetter am Standort
-                  WeatherChip(
-                    onTap: () {
-                      final weatherState = ref.read(locationWeatherNotifierProvider);
-                      if (weatherState.hasWeather) {
-                        showWeatherDetailsSheet(
-                          context,
-                          weather: weatherState.weather!,
-                          locationName: weatherState.locationName ?? 'Mein Standort',
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  // Settings-Button
-                  FloatingActionButton.small(
-                    heroTag: 'settings',
-                    onPressed: () => context.push('/settings'),
-                    backgroundColor: colorScheme.surface,
-                    foregroundColor: colorScheme.onSurface,
-                    child: const Icon(Icons.settings),
-                  ),
-                ],
+              child: FloatingActionButton.small(
+                heroTag: 'settings',
+                onPressed: () => context.push('/settings'),
+                backgroundColor: colorScheme.surface,
+                foregroundColor: colorScheme.onSurface,
+                child: const Icon(Icons.settings),
               ),
             ),
 
@@ -1981,7 +1961,6 @@ class _RouteAddressBar extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,

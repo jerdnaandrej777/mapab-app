@@ -2,7 +2,7 @@
 
 ## Download-Link
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.17
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.20
 
 ## Verfügbare QR-Code Dateien
 
