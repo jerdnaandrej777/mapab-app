@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.21 - Unified Panel Design | Plattformen: Android, iOS, Desktop
+Version: 1.7.22 - UI-Feinschliff | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.21: Schnell-Modus Panel scrollbar, Divider, volle-Breite Buttons, konsistente 12px Paddings) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.22: 12px Abstand Toggle→Panel in beiden Modi, Generating-Indicator Spacing) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
@@ -101,7 +101,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
 | `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
 | `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6) |
-| `lib/features/map/widgets/unified_weather_widget.dart` | Intelligentes Wetter-Widget mit Auto-Modus-Wechsel (v1.7.19) |
+| `lib/features/map/widgets/unified_weather_widget.dart` | Intelligentes Wetter-Widget mit Auto-Modus-Wechsel (v1.7.22: startet zugeklappt) |
 
 ### Provider
 
@@ -268,6 +268,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
 - `Dokumentation/CHANGELOG-v1.7.21.md` (Unified Panel Design - Beide Modi scrollbar)
 - `Dokumentation/CHANGELOG-v1.2.x.md`
 - `Dokumentation/CHANGELOG-v1.3.x.md`
@@ -323,6 +324,7 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.19.md` (GPS Reverse Geocoding & Unified Weather Widget)
 - `Dokumentation/CHANGELOG-v1.7.20.md` (Wetter-Widget im AI Trip & Modal-Kategorien)
 - `Dokumentation/CHANGELOG-v1.7.21.md` (AI Trip Panel UI-Optimierungen)
+- `Dokumentation/CHANGELOG-v1.7.22.md` (UI-Feinschliff - Abstände & Wetter-Widget Default)
 
 ---
 
@@ -395,6 +397,8 @@ Container(
 - ✅ Divider zwischen Sections: `height: 1, opacity: 0.2`
 - ✅ Buttons: Volle Breite mit `SizedBox(width: double.infinity)`
 - ✅ SearchBar: `showContainer: false` im Panel
+- ✅ 12px Abstand zwischen Mode-Toggle und Panel (v1.7.22)
+- ✅ Wetter-Widget startet zugeklappt (v1.7.22)
 
 ### Wetter-Integration (v1.7.6+)
 
