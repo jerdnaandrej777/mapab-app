@@ -327,3 +327,61 @@ class ProviderLogger extends ProviderObserver {
   }
 }
 ```
+
+---
+
+## UI-Architektur (v1.7.21+)
+
+### Unified Panel Design
+
+Seit v1.7.21 nutzen beide Modi (Schnell & AI Trip) das gleiche scrollbare Panel-Design.
+
+#### Panel-Komponenten
+
+**Schnell-Modus:**
+```dart
+_SchnellModePanel(
+  routePlanner: RoutePlannerData,
+  routeSession: RouteSessionState,
+  randomTripState: RandomTripState,
+  tripState: TripStateData,
+  isLoadingSchnellGps: bool,
+  onSchnellModeGPS: VoidCallback,
+  onStartRoute: VoidCallback,
+)
+```
+
+**AI Trip-Modus:**
+```dart
+_AITripPanel()
+```
+
+#### Design-Konventionen
+
+**Abstände:**
+- ✅ Alle Elemente: `padding: EdgeInsets.all(12)`
+- ✅ Divider: `height: 1, opacity: 0.2`
+- ✅ Wetter-Widget: Eigenes `margin: 12h/8v`
+
+**Buttons:**
+- ✅ Volle Breite: `SizedBox(width: double.infinity)`
+- ✅ Zentriert: `mainAxisAlignment: MainAxisAlignment.center`
+- ✅ Padding: `vertical: 12px`, Border: `width: 1.5px`
+
+**SearchBar:**
+- ✅ Im Panel: `showContainer: false`
+- ✅ Standalone: `showContainer: true`
+
+#### Scroll-Verhalten
+
+```dart
+constraints: BoxConstraints(
+  maxHeight: MediaQuery.of(context).size.height * 0.65,
+)
+```
+
+**Wann scrollt das Panel:**
+- Wetter-Widget aufgeklappt (7-Tage-Vorhersage)
+- Mehrere Buttons gleichzeitig
+- Kleiner Bildschirm (< 600px Höhe)
+

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.21 | Plattformen: Android, iOS, Desktop
+Version: 1.7.21 - Unified Panel Design | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Unified Weather Widget in beiden Modi (v1.7.21: scrollbares Panel, konsistente Abstände, vergrößerter Kategorien-Button) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.21: Schnell-Modus Panel scrollbar, Divider, volle-Breite Buttons, konsistente 12px Paddings) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
@@ -268,6 +268,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.21.md` (Unified Panel Design - Beide Modi scrollbar)
 - `Dokumentation/CHANGELOG-v1.2.x.md`
 - `Dokumentation/CHANGELOG-v1.3.x.md`
 - `Dokumentation/CHANGELOG-v1.3.4.md` (Route Löschen Feature)
@@ -344,6 +345,56 @@ final days = TripConstants.calculateDaysFromDistance(1800);  // 3
 // Radius aus Tagen berechnen
 final radius = TripConstants.calculateRadiusFromDays(3);  // 1800.0
 ```
+
+### Unified Panel Design (v1.7.21+)
+
+Beide Modi (Schnell & AI Trip) nutzen das gleiche scrollbare Panel-Design:
+
+```dart
+// Schnell-Modus Panel
+_SchnellModePanel(
+  routePlanner: routePlanner,
+  routeSession: routeSession,
+  randomTripState: randomTripState,
+  tripState: tripState,
+  isLoadingSchnellGps: _isLoadingSchnellGps,
+  onSchnellModeGPS: _handleSchnellModeGPS,
+  onStartRoute: () {
+    _startRoute(routePlanner.route!);
+    context.go('/trip');
+  },
+)
+
+// AI Trip Panel (analog)
+_AITripPanel()
+```
+
+**Panel-Struktur:**
+```dart
+Container(
+  decoration: BoxDecoration(surface, borderRadius: 16, shadow),
+  child: ConstrainedBox(
+    constraints: BoxConstraints(maxHeight: screenHeight * 0.65),
+    child: SingleChildScrollView(
+      child: Column(
+        children: [
+          UnifiedWeatherWidget(),  // Nutzt eigenes margin 12h/8v
+          Divider(),
+          Content(padding: all(12)),
+          Divider(),
+          Buttons(padding: all(12), width: double.infinity),
+        ],
+      ),
+    ),
+  ),
+)
+```
+
+**Wichtige Konventionen:**
+- ✅ Alle Elemente: `padding: EdgeInsets.all(12)`
+- ✅ Divider zwischen Sections: `height: 1, opacity: 0.2`
+- ✅ Buttons: Volle Breite mit `SizedBox(width: double.infinity)`
+- ✅ SearchBar: `showContainer: false` im Panel
 
 ### Wetter-Integration (v1.7.6+)
 

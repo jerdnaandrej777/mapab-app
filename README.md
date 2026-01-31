@@ -148,11 +148,12 @@ flutter test
 
 ## Recent Updates (Januar 2026)
 
-### v1.7.21 - AI Trip Panel UI-Optimierungen (31. Januar 2026)
-- **📜 Scrollbares AI Trip Panel** - Max 65% Bildschirmhöhe, alle Elemente immer erreichbar
-- **🌤️ Wetter-Widget integriert** - Jetzt innerhalb des Panels, scrollt zusammen mit Inhalt
-- **🎯 Vergrößerter Kategorien-Button** - 20px Icon mit Container, deutlich besser klickbar
-- **📏 Konsistente Abstände** - 12px Padding überall, harmonisches Layout
+### v1.7.21 - Unified Panel Design (31. Januar 2026)
+- **📜 Scrollbares Panel in beiden Modi** - Schnell & AI Trip nutzen gleiches Design (max 65% Höhe)
+- **🌤️ Wetter-Widget konsistent** - Integriert in beiden Panels, scrollt zusammen
+- **📏 Divider zwischen Elementen** - Saubere optische Trennung mit grauen Linien
+- **🎯 Volle-Breite Buttons** - Route-Löschen & -Starten zentriert, volle Breite
+- **✨ Konsistente Abstände** - 12px Padding + Divider überall, harmonisches Layout
 
 ### v1.7.20 - Wetter-Widget im AI Trip & Modal-Kategorien (31. Januar 2026)
 - **🌤️ Wetter-Widget im AI Trip Modus** - UnifiedWeatherWidget jetzt in beiden Modi (Schnell + AI Trip)

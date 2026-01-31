@@ -5,7 +5,8 @@ Version: 1.7.21 (31. Januar 2026)
 ## Inhaltsverzeichnis
 
 1. [Übersicht](#übersicht)
-2. [Neu in v1.3.6](#neu-in-v136) ⭐ AKTUELL
+2. [Neu in v1.7.21](#neu-in-v1721) ⭐ AKTUELL
+3. [Neu in v1.3.6](#neu-in-v136)
 3. [Neu in v1.3.5](#neu-in-v135)
 4. [Neu in v1.3.4](#neu-in-v134)
 4. [Neu in v1.3.0](#neu-in-v130)
@@ -57,6 +58,87 @@ https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.21/MapAB-v1.
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
+
+---
+
+## Neu in v1.7.21
+
+**Release-Datum:** 31. Januar 2026
+**Typ:** UI/UX Major Update
+**APK-Größe:** 57.6 MB
+
+### 🎨 Haupt-Feature: Unified Panel Design
+
+Version 1.7.21 bringt ein konsistentes Panel-Design für beide Modi (Schnell & AI Trip) mit verbesserter Scrollbarkeit und einheitlichen Abständen.
+
+#### 📜 Scrollbares Panel in beiden Modi
+
+Beide Modi nutzen jetzt das gleiche scrollbare Container-Design:
+
+**Vorher:**
+- Schnell-Modus: Festes Layout, Elemente konnten abgeschnitten werden
+- AI Trip: Scrollbares Panel
+- Unterschiedliches Design
+
+**Nachher:**
+- Beide Modi: Scrollbares Panel (max. 65% Bildschirmhöhe)
+- Konsistentes Design überall
+- Bei aufgeklapptem Wetter-Widget: Alles scrollbar
+
+#### 🌤️ Wetter-Widget konsistent
+
+- **Integriert im Panel:** Kein separates floatendes Element mehr
+- **Beide Modi:** Gleiche Position und Design
+- **Scroll-Funktion:** Widget scrollt zusammen mit Inhalt
+
+#### 📏 Konsistente Abstände & Layout
+
+| Element | Vorher | Nachher |
+|---------|--------|---------|
+| Padding | Gemischt (8px/12px) | Einheitlich 12px |
+| Divider | Keine | Zwischen allen Elementen |
+| Buttons | Verschiedene Breiten | Volle Breite, zentriert |
+| SearchBar | Eigenes Container | Integriert im Panel |
+
+#### 🎯 Verbesserte Buttons
+
+- **Route-Löschen-Button:** Volle Breite, zentriert
+- **Route-Starten-Button:** Volle Breite, zentriert
+- **Konsistente Proportionen:** Border 1.5px, Padding 12px vertikal
+
+### 🔧 Technische Details
+
+**Neue Komponenten:**
+- `_SchnellModePanel` Widget
+- `showContainer` Parameter für `_SearchBar`
+
+**Panel-Struktur:**
+```dart
+Container(
+  decoration: BoxDecoration(surface, borderRadius: 16, shadow),
+  child: ConstrainedBox(
+    constraints: BoxConstraints(maxHeight: screenHeight * 0.65),
+    child: SingleChildScrollView(
+      child: Column(
+        children: [
+          UnifiedWeatherWidget(),
+          Divider(),
+          Content(padding: all(12)),
+          Divider(),
+          Buttons(width: double.infinity),
+        ],
+      ),
+    ),
+  ),
+)
+```
+
+### 📊 Auswirkungen
+
+- ✅ **Konsistenz:** Beide Modi sehen gleich aus
+- ✅ **Scrollbarkeit:** Keine abgeschnittenen Elemente mehr
+- ✅ **Touch-Targets:** Größere Buttons leichter bedienbar
+- ✅ **Professional Look:** Harmonisches, einheitliches Design
 
 ---
 
