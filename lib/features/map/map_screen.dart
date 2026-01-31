@@ -35,7 +35,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _isLoadingLocation = false;
   bool _isLoadingSchnellGps = false;
   MapPlanMode _planMode = MapPlanMode.schnell;
-  bool _categoriesExpanded = false;
 
   @override
   void initState() {
@@ -261,9 +260,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     // Unified Weather Widget (v1.7.19) - zeigt Standort- oder Route-Wetter
                     const UnifiedWeatherWidget(),
                     const SizedBox(height: 12),
-                    // Dauerhafte Adress-Anzeige (wenn Route vorhanden)
-                    _RouteAddressBar(routePlanner: routePlanner),
-                    const SizedBox(height: 12),
                     // Suchleiste
                     _SearchBar(
                       startAddress: routePlanner.startAddress,
@@ -323,11 +319,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ],
 
                   // === AI TRIP MODUS ===
-                  if (showAITripPanel)
-                    _AITripPanel(
-                      categoriesExpanded: _categoriesExpanded,
-                      onCategoriesToggle: () => setState(() => _categoriesExpanded = !_categoriesExpanded),
-                    ),
+                  if (_planMode == MapPlanMode.aiTrip && !isGenerating) ...[
+                    const SizedBox(height: 12),
+                    // Unified Weather Widget (v1.7.20) - auch im AI Trip Modus
+                    const UnifiedWeatherWidget(),
+                    const SizedBox(height: 12),
+                    const _AITripPanel(),
+                  ],
 
                   // === LOADING (Trip wird generiert) ===
                   if (isGenerating)
@@ -1206,13 +1204,7 @@ class _ModeButton extends StatelessWidget {
 
 /// AI Trip Panel - kompakte Konfiguration über der Karte
 class _AITripPanel extends ConsumerStatefulWidget {
-  final bool categoriesExpanded;
-  final VoidCallback onCategoriesToggle;
-
-  const _AITripPanel({
-    required this.categoriesExpanded,
-    required this.onCategoriesToggle,
-  });
+  const _AITripPanel();
 
   @override
   ConsumerState<_AITripPanel> createState() => _AITripPanelState();
@@ -1588,12 +1580,10 @@ class _AITripPanelState extends ConsumerState<_AITripPanel> {
 
           Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
 
-          // Kategorien (aufklappbar)
+          // Kategorien (Modal-basiert, v1.7.20)
           _CompactCategorySelector(
             state: state,
             notifier: notifier,
-            isExpanded: widget.categoriesExpanded,
-            onToggle: widget.onCategoriesToggle,
           ),
 
           // Generate Button - prüft GPS wenn kein Startpunkt gesetzt
@@ -1749,19 +1739,157 @@ class _CompactRadiusSlider extends StatelessWidget {
   }
 }
 
-/// Kompakte Kategorien-Auswahl
+/// Kompakte Kategorien-Auswahl mit Modal (v1.7.20)
 class _CompactCategorySelector extends StatelessWidget {
   final RandomTripState state;
   final RandomTripNotifier notifier;
-  final bool isExpanded;
-  final VoidCallback onToggle;
 
   const _CompactCategorySelector({
     required this.state,
     required this.notifier,
-    required this.isExpanded,
-    required this.onToggle,
   });
+
+  void _showCategoryModal(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tripCategories = POICategory.values
+        .where((cat) => cat != POICategory.hotel && cat != POICategory.restaurant)
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.category, color: colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'POI-Kategorien',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                if (state.selectedCategories.isNotEmpty)
+                  TextButton(
+                    onPressed: () {
+                      notifier.setCategories([]);
+                    },
+                    child: const Text('Alle zurücksetzen'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              state.selectedCategories.isEmpty
+                  ? 'Alle Kategorien ausgewählt'
+                  : '${state.selectedCategoryCount} von ${tripCategories.length} ausgewählt',
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Kategorien Grid - KEINE maxHeight!
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tripCategories.map((category) {
+                final isSelected = state.selectedCategories.contains(category);
+                final categoryColor = Color(category.colorValue);
+                return GestureDetector(
+                  onTap: () => notifier.toggleCategory(category),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? categoryColor.withOpacity(0.2)
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? categoryColor : colorScheme.outline.withOpacity(0.3),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(category.icon, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(width: 6),
+                        Text(
+                          category.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? categoryColor : colorScheme.onSurface,
+                          ),
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: categoryColor,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            // Schließen Button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Fertig'),
+              ),
+            ),
+            // Safe area padding
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1773,15 +1901,16 @@ class _CompactCategorySelector extends StatelessWidget {
 
     return Column(
       children: [
-        // Header
+        // Header - öffnet Modal statt Inline-Expand
         InkWell(
-          onTap: onToggle,
+          onTap: () => _showCategoryModal(context),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
                 Icon(Icons.category, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
                   'Kategorien',
                   style: TextStyle(
@@ -1791,95 +1920,25 @@ class _CompactCategorySelector extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  state.selectedCategories.isEmpty
-                      ? 'Alle'
-                      : '${state.selectedCategoryCount} ausgewählt',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const Spacer(),
-                if (state.selectedCategories.isNotEmpty)
-                  GestureDetector(
-                    onTap: () => notifier.setCategories([]),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                Expanded(
+                  child: Text(
+                    state.selectedCategories.isEmpty
+                        ? 'Alle'
+                        : '${state.selectedCategoryCount} ausgewählt',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                AnimatedRotation(
-                  turns: isExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.expand_more,
-                    size: 20,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                ),
+                Icon(
+                  Icons.open_in_new,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
           ),
-        ),
-        // Kategorien Grid
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: Container(
-            constraints: const BoxConstraints(maxHeight: 120),
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: tripCategories.map((category) {
-                  final isSelected = state.selectedCategories.contains(category);
-                  final categoryColor = Color(category.colorValue);
-                  return GestureDetector(
-                    onTap: () => notifier.toggleCategory(category),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? categoryColor.withOpacity(0.15)
-                            : colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected ? categoryColor : colorScheme.outline.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(category.icon, style: const TextStyle(fontSize: 12)),
-                          const SizedBox(width: 4),
-                          Text(
-                            category.label.length > 10
-                                ? '${category.label.substring(0, 10)}...'
-                                : category.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? categoryColor : colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 200),
         ),
       ],
     );
