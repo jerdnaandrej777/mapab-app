@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.8 | Plattformen: Android, iOS, Desktop
+Version: 1.7.14 | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -86,13 +86,14 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + AI Trip Panel + Weather-Chip + Alert-Banner + Wetter-Empfehlung Toggle (v1.7.9) |
-| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern (v1.7.9) |
+| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
+| `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit Filter + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button (v1.7.0) |
-| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) |
+| `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
-| `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment (v1.6.9) |
+| `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment + Gespeicherte Routen laden (v1.7.10) |
 | `lib/features/auth/login_screen.dart` | Cloud-Login mit Remember Me |
 | `lib/features/onboarding/onboarding_screen.dart` | Animiertes Onboarding |
 | `lib/features/random_trip/random_trip_screen.dart` | AI Trip Generator (Legacy) |
@@ -110,8 +111,8 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/providers/account_provider.dart` | Account State (keepAlive) |
 | `lib/data/providers/favorites_provider.dart` | Favoriten State (keepAlive) |
 | `lib/data/providers/auth_provider.dart` | Auth State (keepAlive) |
-| `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) + Auto-Routenberechnung (v1.7.2) |
-| `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix) |
+| `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) + Auto-Routenberechnung (v1.7.2) + setRouteAndStops (v1.7.10) |
+| `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix, v1.7.9 2-Stufen-Batch) |
 | `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Zoom (v1.7.0) |
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
@@ -125,7 +126,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/data/services/ai_service.dart` | AI via Backend-Proxy + TripContext mit Standort (v1.7.2) |
-| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API (v1.7.3) |
+| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
 | `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7) |
@@ -137,7 +138,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/poi.dart` | POI Model (Freezed) |
 | `lib/data/models/trip.dart` | Trip Model mit Tages-Helper-Methoden (v1.5.7) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
-| `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) |
+| `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query + Kategorie-Inference (v1.7.9) |
 | `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Radius→Tage Berechnung (v1.5.7) |
 | `lib/core/algorithms/day_planner.dart` | Tages-Planung mit 9-POI-Limit (v1.5.7) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
@@ -265,30 +266,6 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 
 ## Dokumentation
 
-Detaillierte Dokumentationen finden sich im `Dokumentation/`-Ordner:
-
-### Feature-Dokumentation
-
-| Datei | Inhalt |
-|-------|--------|
-| [FLUTTER-APP-DOKUMENTATION.md](Dokumentation/FLUTTER-APP-DOKUMENTATION.md) | Vollständige Feature-Übersicht, Download-Links |
-| [BACKEND-SETUP.md](Dokumentation/BACKEND-SETUP.md) | Vercel + Supabase Setup-Anleitung |
-
-### Technische Guides
-
-| Datei | Inhalt |
-|-------|--------|
-| [POI-SYSTEM.md](Dokumentation/POI-SYSTEM.md) | POI-Datenstruktur, Kategorien, Enrichment, Caching |
-| [PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md) | Riverpod Provider, keepAlive, State Flows |
-| [DARK-MODE.md](Dokumentation/DARK-MODE.md) | Theme-Implementierung, Dos/Don'ts, Farbreferenz |
-| [SECURITY.md](Dokumentation/SECURITY.md) | Credentials, --dart-define, Build-Scripts |
-
-### Planung
-
-| Datei | Inhalt |
-|-------|--------|
-| [LARAVEL-MIGRATION.md](Dokumentation/LARAVEL-MIGRATION.md) | Geplante Backend-Migration zu Laravel |
-
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
@@ -335,7 +312,10 @@ Versionsspezifische Änderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.7.5.md` (Route Löschen Button für AI-Chat Routen)
 - `Dokumentation/CHANGELOG-v1.7.4.md` (Auto-Route von GPS-Standort zu POI)
 - `Dokumentation/CHANGELOG-v1.7.7.md` (POI-Bildquellen optimiert & Chat-Bilder)
-- `Dokumentation/CHANGELOG-v1.7.8.md` (AI Trip Route mit POI-Stops erweitern)
+- `Dokumentation/CHANGELOG-v1.7.8.md` (AI Trip Route mit POI-Stops erweitern + POI-Foto & Kategorisierung Optimierung)
+- `Dokumentation/CHANGELOG-v1.7.10.md` (Favoriten: Routen speichern & laden)
+- `Dokumentation/CHANGELOG-v1.7.12.md` (Wetter-Marker auf der Route)
+- `Dokumentation/CHANGELOG-v1.7.14.md` (GPS-Standort-Synchronisation zwischen Modi)
 
 ---
 
@@ -432,11 +412,12 @@ POIMarker(
 |--------|------------|
 | `WeatherChip` | Kompakter Anzeiger auf MapScreen |
 | `WeatherAlertBanner` | Proaktive Warnung bei schlechtem Wetter |
-| `WeatherRecommendationBanner` | Wetter-Empfehlung auf Hauptseite mit Toggle (Schnell + AI Trip, v1.7.9) |
+| `WeatherRecommendationBanner` | Wetter-Empfehlung auf Hauptseite mit Toggle, opaker Hintergrund (Schnell + AI Trip, v1.7.9) |
 | `WeatherDetailsSheet` | 7-Tage-Vorhersage Bottom Sheet |
 | `WeatherBadge` | Empfehlungs-Badge auf POI-Karten (Listen) |
 | `POIMarker` (weather) | Mini-Wetter-Badge auf POI-Markern auf der Karte (v1.7.9) |
 | `WeatherBar` | Routen-Wetter mit 5 Punkten |
+| `RouteWeatherMarker` | Wetter-Marker auf Route mit Icon + Temperatur + Tap-Detail (v1.7.12) |
 
 ### Neuen Provider erstellen
 
@@ -459,6 +440,43 @@ Dann: `flutter pub run build_runner build`
 
 ```dart
 ref.read(favoritesNotifierProvider.notifier).addPOI(poi);
+```
+
+### Route zu Favoriten speichern (v1.7.10)
+
+```dart
+// Trip-Objekt erstellen und in Favoriten speichern
+final trip = Trip(
+  id: const Uuid().v4(),
+  name: 'Meine Route',
+  type: TripType.daytrip,  // oder TripType.eurotrip
+  route: route,             // AppRoute-Objekt
+  stops: pois.map((poi) => TripStop.fromPOI(poi)).toList(),
+  createdAt: DateTime.now(),
+);
+await ref.read(favoritesNotifierProvider.notifier).saveRoute(trip);
+
+// Prüfen ob Route bereits gespeichert
+final isSaved = ref.read(isRouteSavedProvider(tripId));
+
+// Route aus Favoriten entfernen
+await ref.read(favoritesNotifierProvider.notifier).removeRoute(tripId);
+```
+
+### Gespeicherte Route laden (v1.7.10)
+
+```dart
+// State zurücksetzen
+ref.read(routePlannerProvider.notifier).clearRoute();
+ref.read(randomTripNotifierProvider.notifier).reset();
+
+// Route und Stops laden OHNE OSRM-Neuberechnung
+final stops = trip.stops.map((stop) => stop.toPOI()).toList();
+ref.read(tripStateProvider.notifier).setRouteAndStops(trip.route, stops);
+
+// Auto-Zoom auf Karte
+ref.read(shouldFitToRouteProvider.notifier).state = true;
+context.go('/');
 ```
 
 ### Route berechnen
@@ -552,8 +570,13 @@ ref.read(routeSessionProvider.notifier).stopRoute();
 // Einzelner POI
 ref.read(pOIStateNotifierProvider.notifier).enrichPOI(poiId);
 
-// Batch-Enrichment für mehrere POIs (v1.7.3 - 7x schneller)
+// Batch-Enrichment für mehrere POIs (v1.7.3 - 7x schneller, v1.7.9 - 2-Stufen-UI)
+// Fotos erscheinen inkrementell: Cache → Wikipedia → Wikimedia Fallback
 ref.read(pOIStateNotifierProvider.notifier).enrichPOIsBatch(poisList);
+
+// WICHTIG v1.7.9: POIs ohne Foto werden NICHT mehr als isEnriched markiert
+// → Retry bei nächster Session möglich
+// → Session-Set (_sessionAttemptedWithoutPhoto) verhindert Endlosschleifen
 ```
 
 ### POI zum State hinzufügen (v1.6.9+)
@@ -747,7 +770,7 @@ debugPrint('Regions: ${stats['regions']}, Enriched: ${stats['enrichedPOIs']}');
 - **Batch-Enrichment**: Wikipedia Multi-Title-Query für bis zu 50 POIs (v1.7.3)
 - **ListView**: `cacheExtent: 500` für flüssigeres Scrollen
 
-### POI-Foto-Optimierungen (v1.3.7+, v1.6.6, v1.7.3, v1.7.7)
+### POI-Foto-Optimierungen (v1.3.7+, v1.6.6, v1.7.3, v1.7.7, v1.7.9)
 
 ```dart
 // Prüfen ob POI gerade enriched wird (Per-POI Loading State)
@@ -772,9 +795,15 @@ POIEnrichmentService._apiCallDelay = 200;            // 200ms zwischen API-Calls
 - **EN-Wikipedia Fallback**: Englische Wikipedia als Fallback wenn DE kein Bild liefert (v1.7.7)
 - **Suchvarianten**: Umlaute normalisieren + Präfix-Wörter entfernen für bessere Wikimedia-Treffer (v1.7.7)
 - **Batch-Fix**: Wikipedia-POIs ohne Bild bekommen Wikimedia Geo-Suche Fallback (v1.7.7)
+- **Batch-Limit 5→15**: Wikimedia-Fallback jetzt für bis zu 15 POIs statt nur 5 (v1.7.9)
+- **Sub-Batching**: 5er-Gruppen mit 500ms Pause zwischen Batches für Rate-Limit-Schutz (v1.7.9)
+- **isEnriched-Fix**: POIs ohne Foto werden NICHT mehr als "enriched" markiert, Session-Set verhindert Endlosschleifen (v1.7.9)
+- **2-Stufen-UI-Update**: Cache/Wikipedia-Treffer sofort anzeigen, Wikimedia-Fallbacks inkrementell nachliefern (v1.7.9)
+- **Image Pre-Caching**: Bild-URLs werden nach Enrichment im Disk-Cache vorgeladen für sofortige Anzeige (v1.7.9)
+- **OSM-URL-Validierung**: `image`-Tags aus Overpass werden auf gültige HTTP-URLs geprüft (v1.7.9)
 
 **Bildquellen (in Prioritäts-Reihenfolge):**
-1. OSM-Tags aus Overpass: `image`, `wikimedia_commons` Tags (v1.7.7)
+1. OSM-Tags aus Overpass: `image`, `wikimedia_commons` Tags (v1.7.7, v1.7.9: URL-Validierung)
 2. Wikipedia DE API (pageimages) - Hauptbild + Thumbnail
 3. Wikimedia Commons Geo-Suche (10km Radius, 15 Ergebnisse) (v1.7.7: 10km statt 5km)
 4. Wikimedia Commons Titel-Suche (mit Suchvarianten: Umlaute, Präfixe) (v1.7.7)
@@ -783,11 +812,12 @@ POIEnrichmentService._apiCallDelay = 200;            // 200ms zwischen API-Calls
 7. Wikidata SPARQL (P18 Bild, P154 Logo, P94 Wappen)
 
 **Performance-Vergleich:**
-| Metrik | v1.3.6 | v1.3.7 | v1.7.3 | v1.7.7 |
-|--------|--------|--------|--------|--------|
-| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek | ~3 Sek |
-| API-Calls für 20 POIs | ~160 | ~80 | ~4 | ~4-8 |
-| Bild-Trefferquote | ~60% | ~85% | ~85% | ~95% |
+| Metrik | v1.3.6 | v1.3.7 | v1.7.3 | v1.7.7 | v1.7.9 |
+|--------|--------|--------|--------|--------|--------|
+| Zeit für 20 POIs | 60+ Sek | 21+ Sek | ~3 Sek | ~3 Sek | ~2 Sek |
+| API-Calls für 20 POIs | ~160 | ~80 | ~4 | ~4-8 | ~4-8 |
+| Bild-Trefferquote | ~60% | ~85% | ~85% | ~95% | ~98% |
+| Fallback-Coverage | 5 POIs | 5 POIs | 5 POIs | 5 POIs | 15 POIs |
 
 ### POI Enrichment Race Condition Fix (v1.5.1)
 
@@ -1382,14 +1412,21 @@ if (context.hasUserLocation) {
 }
 ```
 
-**Kategorien-Zuordnung:**
+**Kategorien-Zuordnung (v1.7.9: ungültige IDs gefixt + erweitert):**
 
 | Anfrage | Kategorien |
 |---------|------------|
-| "Sehenswürdigkeiten" | `museum`, `monument`, `castle`, `viewpoint` |
-| "Natur", "Parks" | `nature`, `park`, `lake`, `waterfall` |
-| "Restaurants", "Essen" | `restaurant`, `cafe` |
+| "Sehenswürdigkeiten" | `museum`, `monument`, `castle`, `viewpoint`, `unesco` |
+| "Natur", "Parks" | `nature`, `park`, `lake`, `coast` |
+| "Restaurants", "Essen" | `restaurant` |
 | "Hotels" | `hotel` |
+| "Kultur" | `museum`, `monument`, `church`, `castle`, `unesco` |
+| "Strand", "Küste" | `coast` |
+| "Aktivität", "Sport" | `activity` |
+| "Wandern" | `nature`, `viewpoint`, `park` |
+| "Familie" | `activity`, `park`, `museum` |
+| "Zoo", "Freizeitpark", "Therme" | `activity` |
+| "Stadt" | `city` |
 | Unspezifisch | alle Kategorien |
 
 **Feature 6: Hintergrund-Enrichment für POI-Bilder im Chat (v1.7.7)**

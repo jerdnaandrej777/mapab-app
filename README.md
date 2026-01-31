@@ -148,6 +148,36 @@ flutter test
 
 ## Recent Updates (Januar 2026)
 
+### v1.7.14 - GPS-Standort-Synchronisation (31. Januar 2026)
+- **Automatische Standort-Synchronisation** - GPS-Standort wird automatisch zwischen Schnell & AI Trip Modi übertragen
+- **Nahtloser Modus-Wechsel** - GPS einmal klicken, in beiden Modi verfügbar
+- **Intelligente Logik** - Synchronisation nur wenn Ziel-Modus keinen Startpunkt hat
+- **UX-Verbesserung** - Kein doppeltes Klicken mehr notwendig
+
+### v1.7.12 - Wetter-Marker auf der Route (30. Januar 2026)
+- **Wetter-Marker auf Route** - 5 Wetter-Icons entlang der berechneten Route mit Temperatur
+- **Farbcodierte Marker** - Grün/Gelb/Orange/Rot je nach Wetterlage
+- **Tap-Details** - Bottom Sheet mit Wind, Niederschlag, Empfehlung
+- **Auto-Wetter-Laden** - Wetter bei Routenberechnung, AI Trip & gespeicherten Routen
+
+### v1.7.10 - Routen speichern & laden
+- **Route in Favoriten speichern** - AI Trips und normale Routen dauerhaft speichern
+- **Gespeicherte Routen laden** - Aus Favoriten direkt auf Karte anzeigen
+
+### v1.7.8 - AI Trip mit POI-Stops erweitern
+- **POI-Stops zu AI-Route hinzufügen** - POI-Details & POI-Liste Integration
+- **Route Starten Button** - Manuell zum Trip-Tab navigieren (statt Auto-Navigation)
+
+### v1.7.7 - POI-Bildquellen optimiert
+- **~95% Bild-Trefferquote** - OSM-Tags, EN-Wikipedia Fallback, Suchvarianten
+- **Chat-Bilder** - POI-Karten im AI-Chat zeigen Bilder an
+
+### v1.7.6 - Wetter-Integration erweitert
+- **WeatherChip** - Kompakter Wetter-Anzeiger auf MapScreen
+- **WeatherAlertBanner** - Proaktive Warnungen bei schlechtem Wetter
+- **7-Tage-Vorhersage** - Vollständiges Wetter-Dashboard
+- **AI Trip Wetter-Integration** - Wetter-basierte Kategorieauswahl
+
 ### v1.5.7 - Mehrtägige Euro Trips mit tagesweisem Google Maps Export
 - **Automatische Tagesberechnung** - 600km = 1 Tag (max 14 Tage)
 - **Max 9 POIs pro Tag** - Google Maps Waypoint-Limit automatisch beachtet
@@ -365,6 +395,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.5.7
-**Release:** Januar 2026
+**Version:** 1.7.14
+**Release:** 31. Januar 2026
 **Erstellt mit:** Flutter 💙

@@ -7,6 +7,77 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.7.14] - 2026-01-31
+
+### GPS-Standort-Synchronisation zwischen Modi
+
+#### Hinzugefügt
+- **Automatische Standort-Synchronisation** beim Modus-Wechsel
+  - AI Trip → Schnell-Modus: GPS-Standort wird als Startpunkt übertragen
+  - Schnell-Modus → AI Trip: Startpunkt wird ins AI Trip Panel übertragen
+  - Nur wenn Ziel-Modus noch keinen Startpunkt hat (kein Überschreiben)
+- **Neue Methode** `_syncLocationBetweenModes()` in `map_screen.dart`
+  - Prüft aktuellen Modus und synchronisiert Standort-Daten
+  - Verwendet `randomTripNotifierProvider.setStartLocation()` und `routePlannerProvider.setStart()`
+  - Debug-Logging für Transparenz
+
+#### Geändert
+- `_ModeToggle.onModeChanged` Callback erweitert um Synchronisations-Aufruf
+- GPS-Button-Verhalten jetzt konsistent zwischen beiden Modi
+
+#### Behoben
+- **UX-Problem**: GPS-Button im AI Trip Modus setzte Standort nicht im Schnell-Modus
+- Kein redundantes GPS-Abfragen mehr beim Modus-Wechsel
+- Bessere Akku-Effizienz durch weniger GPS-Requests
+
+#### Technisch
+- **Dateien**: `lib/features/map/map_screen.dart` (Zeile 663-697)
+- **Provider**: `randomTripNotifierProvider`, `routePlannerProvider`
+- **Verhalten**: Conditional sync nur wenn Ziel-State leer ist
+
+---
+
+## [1.7.12] - 2026-01-30
+
+### Wetter-Marker auf der Route
+
+#### Hinzugefügt
+- **Wetter-Marker auf Route** - 5 Wetter-Icons entlang der berechneten Route auf der Karte
+  - Wetter-Emoji (☀️/⛅/🌧️/⛈️) mit Temperaturanzeige
+  - Farbcodierter Hintergrund (Grün/Gelb/Orange/Rot) nach Wetterlage
+  - Warning-Badge (!) bei schlechtem Wetter oder Unwetter
+  - Pill-Form (60x32 px) zur Unterscheidung von POI-Markern
+- **Tap-Details** - Bottom Sheet bei Klick auf Wetter-Marker
+  - Ort-Label ("Start", "Ziel" oder "Routenpunkt X von 5")
+  - Großes Wetter-Icon + Temperatur + Beschreibung
+  - Gefühlte Temperatur, Wind, Niederschlag, Regenwahrscheinlichkeit
+  - Kontextbezogene Empfehlung je nach Wetterlage
+- **Auto-Wetter-Laden** - Wetter wird automatisch geladen bei:
+  - Normale Routenberechnung (Start/Ziel)
+  - AI Trip Preview (nach Generierung)
+  - Gespeicherte Route laden (aus Favoriten)
+
+#### Neu
+- `RouteWeatherMarker` Widget - Wetter-Marker-Anzeige auf der Karte
+- `showRouteWeatherDetail()` - Bottom Sheet mit Wetter-Details
+- `_setupWeatherListeners()` - Automatisches Wetter-Laden für alle Routentypen
+
+#### Technisch
+- Layer-Reihenfolge: Wetter-Marker zwischen Route und POI-Markern
+- Listener auf `routePlannerProvider`, `randomTripNotifierProvider`, `tripStateProvider`
+- Dark Mode Support mit brightness-abhängigen Farbvarianten
+- Open-Meteo API × 5 (mit 100ms Delay zwischen Anfragen)
+
+#### Farbschema
+| Wetterlage | Hintergrund | Text | Badge |
+|------------|-------------|------|-------|
+| ☀️ Gut | Grün shade50 | Grün shade800 | - |
+| ⛅ Wechselhaft | Amber shade50 | Amber shade800 | - |
+| 🌧️ Schlecht | Orange shade50 | Orange shade800 | ⚠️ |
+| ⛈️ Unwetter | Rot shade50 | Rot shade800 | ⚠️ |
+
+---
+
 ## [1.7.7] - 2026-01-29
 
 ### POI-Bildquellen optimiert & Chat-Bilder
