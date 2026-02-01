@@ -117,7 +117,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB QR-Code</h1>
-        <p class="version">Version 1.7.27 - POI-Foto-Optimierung</p>
+        <p class="version">Version 1.7.34 - Mehrtägiger Export Fix</p>
 
         <div id="qrcode"></div>
 
@@ -134,7 +134,7 @@
                 1. QR-Code herunterladen (PNG oder SVG)<br>
                 2. In Präsentationen, Flyern oder Social Media verwenden<br>
                 3. Benutzer scannen den Code → Gelangen zur Download-Seite<br>
-                4. Von dort aus direkt MapAB v1.7.27 installieren (POI-Foto-Optimierung)
+                4. Von dort aus direkt MapAB v1.7.34 installieren (Mehrtägiger Export Fix)
             </p>
         </div>
 
@@ -146,8 +146,8 @@
                     https://jerdnaandrej777.github.io/mapab-app/QR-CODE-DOWNLOAD.html
                 </a><br><br>
                 <strong>APK-Direktdownload:</strong><br>
-                <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.27/MapAB-v1.7.27.apk" target="_blank">
-                    MapAB-v1.7.27.apk (57.7MB)
+                <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.34/MapAB-v1.7.34.apk" target="_blank">
+                    MapAB-v1.7.34.apk (57.7MB)
                 </a>
             </p>
         </div>
@@ -168,7 +168,7 @@
         function downloadQR() {
             const canvas = document.querySelector('#qrcode canvas');
             const link = document.createElement('a');
-            link.download = 'MapAB-v1.7.27-QR.png';
+            link.download = 'MapAB-v1.7.34-QR.png';
             link.href = canvas.toDataURL();
             link.click();
         }

@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.7.33 - Aufklappbares Route-Panel nach AI Trip</p>
+        <p class="version">Version 1.7.34 - Mehrtägiger Google Maps Export Fix</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.33"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.34"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,23 +183,11 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">📂 Aufklappbares Route-Panel - Mode-Buttons bleiben nach Generierung sichtbar (NEU)</li>
-                <li class="new">🔽 Panel Toggle - Klick auf aktiven Button klappt Ergebnis-Panel auf/zu (NEU)</li>
-                <li class="new">🌤️ Wetter + Route-Info im Panel - Stops, Distanz, Fahrzeit direkt sichtbar (NEU)</li>
-                <li class="new">🚀 Route starten & loeschen - Beides im aufklappbaren Panel integriert (NEU)</li>
-                <li>🗺️ AI Tagestrip & AI Euro Trip - Zwei klare Modi statt Schnell/AI Trip (v1.7.32)</li>
-                <li>🏁 Optionale Zieleingabe - POIs entlang der Route oder Rundreise ab Start (v1.7.32)</li>
-                <li>🛣️ Korridor-POI-Suche - Bei Ziel werden POIs entlang der Route gefunden (v1.7.32)</li>
-                <li>📍 GPS Auto-Detect - Standort wird beim Panel-Oeffnen automatisch ermittelt (v1.7.30)</li>
-                <li>🛣️ 600 km Tagesausflug-Limit - Route wird automatisch auf max. 600 km optimiert (v1.7.30)</li>
-                <li>🔧 Kategorie-Fallback - Trip-Generierung schlaegt nicht mehr fehl bei einzelner Kategorie (v1.7.29)</li>
-                <li>💾 Euro Trip Persistenz - Mehrtägige Trips speichern & am nächsten Tag fortsetzen (v1.7.28)</li>
-                <li>🔇 Export-Meldung entfernt - Kein "Tag exportiert" Hinweis mehr (v1.7.30)</li>
-                <li>📐 Panel Auto-Collapse - Panel klappt nach Routenberechnung ein, Route besser sichtbar (v1.7.28)</li>
-                <li>🔄 Modus-Persistenz - Schnell/AI Trip Modus bleibt nach Seitenwechsel erhalten (v1.7.28)</li>
-                <li>📊 Eingeklappte Route-Info - Kompakte Distanz/Dauer-Anzeige bei eingeklapptem Panel (v1.7.28)</li>
-                <li>📷 POI-Foto ~100% Trefferquote - 6 neue Bildquellen (v1.7.27)</li>
-                <li>🔧 Kategorie-Modal Live-Update - Sofortige Aktualisierung (v1.7.27)</li>
+                <li class="new">🗓️ Mehrtägiger Google Maps Export Fix - Folgetag startet jetzt korrekt am letzten Stop des Vortags (NEU)</li>
+                <li class="new">🔧 POI entfernen/würfeln behält Tagesaufteilung - day-Feld bleibt bei Mehrtages-Trips erhalten (NEU)</li>
+                <li class="new">💾 Favoriten-Speicherung Fix - Gespeicherte Mehrtages-Trips behalten Tagesaufteilung (NEU)</li>
+                <li>📷 POI-Foto ~100% Trefferquote - 6 neue Bildquellen: Multi-Sprach-Wikipedia, Wikidata Geo-Radius, Openverse CC (v1.7.27)</li>
+                <li>🔧 Kategorie-Modal Live-Update - Auswahl wird sofort angezeigt statt erst nach Neuoeffnen (v1.7.27)</li>
                 <li>🎨 Kategorie-Chips konsistent - Modal & AI Trip Chips wie Quick-Filter (v1.7.26)</li>
                 <li>🔐 Application ID auf com.mapab.app geändert - Google Play ready (v1.7.23)</li>
                 <li>🔒 Passwort-Sicherheit - flutter_secure_storage statt Base64 (v1.7.23)</li>
@@ -310,7 +298,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.7.33.apk" herunterladen<br>
+                2. "MapAB-v1.7.34.apk" herunterladen<br>
                 3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
                 4. "Aus unbekannten Quellen installieren" erlauben<br>
                 5. APK öffnen und Installation bestätigen
@@ -320,8 +308,8 @@
         <div class="footer">
             <p>
                 <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
-                <strong>Build-Datum:</strong> 01. Februar 2026<br>
-                <strong>Größe:</strong> 63.4 MB
+                <strong>Build-Datum:</strong> 2. Februar 2026<br>
+                <strong>Größe:</strong> 61.9 MB
             </p>
         </div>
     </div>
@@ -331,7 +319,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.33",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.34",
             width: 256,
             height: 256,
             colorDark: "#1a202c",
