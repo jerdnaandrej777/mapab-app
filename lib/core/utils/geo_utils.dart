@@ -191,6 +191,38 @@ class GeoUtils {
     );
   }
 
+  /// Berechnet Bounding Box entlang einer Route mit Buffer in km
+  /// Für Korridor-basierte POI-Suche (Start→Ziel mit Puffer)
+  static ({LatLng southwest, LatLng northeast}) calculateBoundsWithBuffer(
+    List<LatLng> coordinates,
+    double bufferKm,
+  ) {
+    if (coordinates.isEmpty) {
+      throw ArgumentError('Coordinates list cannot be empty');
+    }
+
+    final baseBounds = calculateBounds(coordinates);
+
+    // Buffer in Grad umrechnen
+    const latDegreeKm = 111.0;
+    final midLat = (baseBounds.southwest.latitude + baseBounds.northeast.latitude) / 2;
+    final lngDegreeKm = 111.0 * math.cos(midLat * math.pi / 180);
+
+    final latBuffer = bufferKm / latDegreeKm;
+    final lngBuffer = bufferKm / lngDegreeKm;
+
+    return (
+      southwest: LatLng(
+        baseBounds.southwest.latitude - latBuffer,
+        baseBounds.southwest.longitude - lngBuffer,
+      ),
+      northeast: LatLng(
+        baseBounds.northeast.latitude + latBuffer,
+        baseBounds.northeast.longitude + lngBuffer,
+      ),
+    );
+  }
+
   /// Erweitert eine Bounding Box um einen Prozentsatz
   static ({LatLng southwest, LatLng northeast}) expandBounds(
     ({LatLng southwest, LatLng northeast}) bounds,

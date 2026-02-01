@@ -146,6 +146,23 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     );
   }
 
+  /// Setzt Zielpunkt manuell (optional - wenn leer → Rundreise)
+  void setDestination(LatLng location, String address) {
+    state = state.copyWith(
+      destinationLocation: location,
+      destinationAddress: address,
+      error: null,
+    );
+  }
+
+  /// Löscht Zielpunkt (zurück zu Rundreise/Random)
+  void clearDestination() {
+    state = state.copyWith(
+      destinationLocation: null,
+      destinationAddress: null,
+    );
+  }
+
   /// Verwendet GPS-Position als Startpunkt
   Future<void> useCurrentLocation() async {
     state = state.copyWith(isLoading: true, error: null);
@@ -240,16 +257,20 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           radiusKm: state.radiusKm,
           categories: state.selectedCategories,
           poiCount: (state.radiusKm / 20).clamp(3, 8).round(),
+          destinationLocation: state.destinationLocation,
+          destinationAddress: state.destinationAddress,
         );
       } else {
         // Euro Trip: Radius übergeben, Tage werden automatisch berechnet
-        debugPrint('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}');
+        debugPrint('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
         result = await _tripGenerator.generateEuroTrip(
           startLocation: state.startLocation!,
           startAddress: state.startAddress!,
           radiusKm: state.radiusKm,
           categories: state.selectedCategories,
           includeHotels: state.includeHotels,
+          destinationLocation: state.destinationLocation,
+          destinationAddress: state.destinationAddress,
         );
         debugPrint('[RandomTrip] Euro Trip generiert! POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }

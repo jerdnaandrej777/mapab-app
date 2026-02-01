@@ -170,6 +170,87 @@ class POIRepository {
     return result;
   }
 
+  /// Lädt POIs innerhalb einer Bounding Box (für Korridor-basierte Suche)
+  /// Analog zu loadPOIsInRadius, aber mit expliziten Bounds statt Radius
+  Future<List<POI>> loadPOIsInBounds({
+    required ({LatLng southwest, LatLng northeast}) bounds,
+    List<String>? categoryFilter,
+    bool includeCurated = true,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
+  }) async {
+    final allPOIs = <POI>[];
+    final seenIds = <String>{};
+
+    debugPrint('[POI] Starte Korridor-Laden (Bounds)...');
+    final stopwatch = Stopwatch()..start();
+
+    final futures = <Future<List<POI>>>[];
+    final sourceErrors = <String>[];
+    int sourceCount = 0;
+
+    if (includeCurated) {
+      sourceCount++;
+      futures.add(loadCuratedPOIs(bounds).catchError((e) {
+        sourceErrors.add('Kuratiert: $e');
+        return <POI>[];
+      }));
+    }
+
+    if (includeWikipedia) {
+      sourceCount++;
+      // Zentrum und Radius aus Bounds berechnen für Wikipedia Grid
+      final center = LatLng(
+        (bounds.southwest.latitude + bounds.northeast.latitude) / 2,
+        (bounds.southwest.longitude + bounds.northeast.longitude) / 2,
+      );
+      final radiusKm = GeoUtils.haversineDistance(bounds.southwest, bounds.northeast) / 2;
+      futures.add(_loadWikipediaPOIsInRadius(center, radiusKm).catchError((e) {
+        sourceErrors.add('Wikipedia: $e');
+        return <POI>[];
+      }));
+    }
+
+    if (includeOverpass) {
+      sourceCount++;
+      futures.add(loadOverpassPOIs(bounds).catchError((e) {
+        sourceErrors.add('Overpass: $e');
+        return <POI>[];
+      }));
+    }
+
+    final results = await Future.wait(futures);
+
+    for (final poiList in results) {
+      for (final poi in poiList) {
+        if (!seenIds.contains(poi.id) && _isInBounds(poi.location, bounds)) {
+          seenIds.add(poi.id);
+          allPOIs.add(poi);
+        }
+      }
+    }
+
+    stopwatch.stop();
+
+    if (sourceErrors.isNotEmpty) {
+      debugPrint('[POI] ⚠️ Korridor-Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
+    }
+
+    debugPrint('[POI] Korridor geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs');
+
+    // Qualitätsfilter
+    final qualityFiltered = allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
+
+    // Kategorie-Filter
+    if (categoryFilter != null && categoryFilter.isNotEmpty) {
+      return qualityFiltered
+          .where((poi) => categoryFilter.contains(poi.categoryId))
+          .toList();
+    }
+
+    return qualityFiltered;
+  }
+
   /// Erstellt Bounding Box aus Zentrum und Radius
   ({LatLng southwest, LatLng northeast}) _createBoundsFromRadius(
     LatLng center,

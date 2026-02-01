@@ -8,6 +8,7 @@ import '../../core/algorithms/random_poi_selector.dart';
 import '../../core/algorithms/route_optimizer.dart';
 import '../../core/constants/categories.dart';
 import '../../core/constants/trip_constants.dart';
+import '../../core/utils/geo_utils.dart';
 import '../models/poi.dart';
 import '../models/trip.dart';
 import '../services/hotel_service.dart';
@@ -46,30 +47,51 @@ class TripGeneratorRepository {
   ///
   /// [startLocation] - Startpunkt
   /// [startAddress] - Adresse des Startpunkts
-  /// [radiusKm] - Suchradius für POIs
+  /// [radiusKm] - Suchradius für POIs (oder Korridor-Breite bei Ziel)
   /// [categories] - Bevorzugte Kategorien
   /// [poiCount] - Anzahl gewünschter POIs
+  /// [destinationLocation] - Optionaler Zielpunkt (wenn null → Rundreise)
+  /// [destinationAddress] - Optionale Zieladresse
   Future<GeneratedTrip> generateDayTrip({
     required LatLng startLocation,
     required String startAddress,
     double radiusKm = 100,
     List<POICategory> categories = const [],
     int poiCount = 5,
+    LatLng? destinationLocation,
+    String? destinationAddress,
   }) async {
-    // 1. POIs im Radius laden
+    final hasDestination = destinationLocation != null;
+    final endLocation = destinationLocation ?? startLocation;
+    final endAddress = destinationAddress ?? startAddress;
+
+    // 1. POIs laden — Korridor oder Radius
     final categoryIds = categories.isNotEmpty
         ? categories.map((c) => c.id).toList()
         : null;
 
-    final availablePOIs = await _poiRepo.loadPOIsInRadius(
-      center: startLocation,
-      radiusKm: radiusKm,
-      categoryFilter: categoryIds,
-    );
+    List<POI> availablePOIs;
+    if (hasDestination) {
+      debugPrint('[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
+      availablePOIs = await _loadPOIsAlongCorridor(
+        start: startLocation,
+        end: destinationLocation!,
+        bufferKm: radiusKm,
+        categoryFilter: categoryIds,
+      );
+    } else {
+      availablePOIs = await _poiRepo.loadPOIsInRadius(
+        center: startLocation,
+        radiusKm: radiusKm,
+        categoryFilter: categoryIds,
+      );
+    }
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
-        'Keine POIs im Umkreis von ${radiusKm}km gefunden',
+        hasDestination
+            ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
+            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden',
       );
     }
 
@@ -89,17 +111,17 @@ class TripGeneratorRepository {
     final optimizedPOIs = _routeOptimizer.optimizeRoute(
       pois: selectedPOIs,
       startLocation: startLocation,
-      returnToStart: true,
+      returnToStart: !hasDestination,
     );
 
     // 4. Echte Route berechnen
     final waypoints = optimizedPOIs.map((p) => p.location).toList();
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
-      end: startLocation,
+      end: endLocation,
       waypoints: waypoints,
       startAddress: startAddress,
-      endAddress: startAddress,
+      endAddress: endAddress,
     );
 
     // 5. Trip erstellen
@@ -127,19 +149,27 @@ class TripGeneratorRepository {
   ///
   /// [startLocation] - Startpunkt
   /// [startAddress] - Adresse des Startpunkts
-  /// [radiusKm] - Such-Radius in km (Tage werden automatisch berechnet)
+  /// [radiusKm] - Such-Radius in km (oder Korridor-Breite bei Ziel)
   /// [categories] - Bevorzugte Kategorien
   /// [includeHotels] - Hotels vorschlagen
+  /// [destinationLocation] - Optionaler Zielpunkt (wenn null → Rundreise)
+  /// [destinationAddress] - Optionale Zieladresse
   Future<GeneratedTrip> generateEuroTrip({
     required LatLng startLocation,
     required String startAddress,
     double radiusKm = 1000,
     List<POICategory> categories = const [],
     bool includeHotels = true,
+    LatLng? destinationLocation,
+    String? destinationAddress,
   }) async {
+    final hasDestination = destinationLocation != null;
+    final endLocation = destinationLocation ?? startLocation;
+    final endAddress = destinationAddress ?? startAddress;
+
     // Tage basierend auf Radius berechnen (600km = 1 Tag)
     final days = TripConstants.calculateDaysFromDistance(radiusKm);
-    debugPrint('[TripGenerator] Euro Trip: ${radiusKm}km -> $days Tage');
+    debugPrint('[TripGenerator] Euro Trip: ${radiusKm}km -> $days Tage${hasDestination ? ' (Ziel: $endAddress)' : ' (Rundreise)'}');
 
     // POIs pro Tag (max 9 wegen Google Maps Limit)
     final poisPerDay = min(
@@ -149,29 +179,48 @@ class TripGeneratorRepository {
     final totalPOIs = days * poisPerDay;
     debugPrint('[TripGenerator] POIs: $poisPerDay pro Tag, $totalPOIs gesamt');
 
-    // 1. POIs im Radius laden (mit Timeout für große Radien)
+    // 1. POIs laden — Korridor oder Radius
     final categoryIds = categories.isNotEmpty
         ? categories.map((c) => c.id).toList()
         : null;
 
-    final availablePOIs = await _poiRepo.loadPOIsInRadius(
-      center: startLocation,
-      radiusKm: radiusKm,
-      categoryFilter: categoryIds,
-    ).timeout(
-      const Duration(seconds: 45),
-      onTimeout: () {
-        debugPrint('[TripGenerator] ⚠️ POI-Laden Timeout nach 45s');
-        return <POI>[];
-      },
-    );
+    List<POI> availablePOIs;
+    if (hasDestination) {
+      debugPrint('[TripGenerator] Euro Trip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
+      availablePOIs = await _loadPOIsAlongCorridor(
+        start: startLocation,
+        end: destinationLocation!,
+        bufferKm: radiusKm,
+        categoryFilter: categoryIds,
+      ).timeout(
+        const Duration(seconds: 45),
+        onTimeout: () {
+          debugPrint('[TripGenerator] ⚠️ Korridor POI-Laden Timeout nach 45s');
+          return <POI>[];
+        },
+      );
+    } else {
+      availablePOIs = await _poiRepo.loadPOIsInRadius(
+        center: startLocation,
+        radiusKm: radiusKm,
+        categoryFilter: categoryIds,
+      ).timeout(
+        const Duration(seconds: 45),
+        onTimeout: () {
+          debugPrint('[TripGenerator] ⚠️ POI-Laden Timeout nach 45s');
+          return <POI>[];
+        },
+      );
+    }
 
     debugPrint('[TripGenerator] ${availablePOIs.length} POIs gefunden');
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
-        'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
-        'Versuche einen anderen Startpunkt oder kleineren Radius.',
+        hasDestination
+            ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
+            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
+              'Versuche einen anderen Startpunkt oder kleineren Radius.',
       );
     }
 
@@ -192,7 +241,7 @@ class TripGeneratorRepository {
     final optimizedPOIs = _routeOptimizer.optimizeRoute(
       pois: selectedPOIs,
       startLocation: startLocation,
-      returnToStart: true,
+      returnToStart: !hasDestination,
     );
 
     // 4. Auf Tage aufteilen
@@ -201,7 +250,7 @@ class TripGeneratorRepository {
       pois: optimizedPOIs,
       startLocation: startLocation,
       days: days,
-      returnToStart: true,
+      returnToStart: !hasDestination,
     );
     debugPrint('[TripGenerator] TripDays: ${tripDays.length}, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
@@ -243,10 +292,10 @@ class TripGeneratorRepository {
 
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
-      end: startLocation,
+      end: endLocation,
       waypoints: allWaypoints,
       startAddress: startAddress,
-      endAddress: startAddress,
+      endAddress: endAddress,
     );
 
     debugPrint('[TripGenerator] ✓ Route berechnet: ${route.distanceKm.toStringAsFixed(0)}km');
@@ -386,6 +435,38 @@ class TripGeneratorRepository {
       trip: updatedTrip,
       availablePOIs: currentTrip.availablePOIs,
       selectedPOIs: optimizedPOIs,
+    );
+  }
+
+  /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)
+  /// Berechnet eine Direct-Route und sucht POIs in der Bounding Box
+  Future<List<POI>> _loadPOIsAlongCorridor({
+    required LatLng start,
+    required LatLng end,
+    required double bufferKm,
+    List<String>? categoryFilter,
+  }) async {
+    // 1. Direct-Route berechnen (für genaue Korridor-Box)
+    debugPrint('[TripGenerator] Berechne Direct-Route für Korridor...');
+    final directRoute = await _routingRepo.calculateFastRoute(
+      start: start,
+      end: end,
+      startAddress: '',
+      endAddress: '',
+    );
+
+    // 2. Bounding Box entlang der Route mit Buffer
+    final bounds = GeoUtils.calculateBoundsWithBuffer(
+      directRoute.coordinates,
+      bufferKm,
+    );
+
+    debugPrint('[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) → NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
+
+    // 3. POIs in der Box laden
+    return await _poiRepo.loadPOIsInBounds(
+      bounds: bounds,
+      categoryFilter: categoryFilter,
     );
   }
 

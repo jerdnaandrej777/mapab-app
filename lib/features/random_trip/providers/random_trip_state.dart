@@ -25,6 +25,12 @@ class RandomTripState with _$RandomTripState {
     /// Start-Adresse (für Anzeige)
     String? startAddress,
 
+    /// Optionaler Zielpunkt (wenn leer → Rundreise/Random)
+    LatLng? destinationLocation,
+
+    /// Optionale Zieladresse (für Anzeige)
+    String? destinationAddress,
+
     /// Verwendet GPS-Position
     @Default(false) bool useGPS,
 
@@ -70,6 +76,12 @@ class RandomTripState with _$RandomTripState {
 
   /// Hat gültigen Startpunkt
   bool get hasValidStart => startLocation != null && startAddress != null;
+
+  /// Hat ein Ziel gesetzt (kein Rundreise-Modus)
+  bool get hasDestination => destinationLocation != null;
+
+  /// Ist Rundreise (kein Ziel gesetzt)
+  bool get isRoundTrip => !hasDestination;
 
   /// Kann generieren (Startpunkt ist optional - wird automatisch per GPS ermittelt)
   bool get canGenerate => !isLoading;
