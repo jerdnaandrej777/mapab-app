@@ -278,7 +278,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ? TripType.daytrip
           : TripType.eurotrip,
       route: route,
-      stops: generatedTrip.selectedPOIs.map((poi) => TripStop.fromPOI(poi)).toList(),
+      stops: trip.stops,
       days: trip.actualDays,
       createdAt: DateTime.now(),
     );

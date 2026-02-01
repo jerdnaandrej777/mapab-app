@@ -359,13 +359,27 @@ class TripGeneratorRepository {
       endAddress: startAddress,
     );
 
-    // Trip aktualisieren
+    // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
+    final days = currentTrip.trip.actualDays;
+    List<TripStop> newStops;
+    if (days > 1) {
+      final tripDays = _dayPlanner.planDays(
+        pois: optimizedPOIs,
+        startLocation: startLocation,
+        days: days,
+        returnToStart: true,
+      );
+      newStops = tripDays.expand((day) => day.stops).toList();
+    } else {
+      newStops = optimizedPOIs.asMap().entries.map((entry) {
+        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+      }).toList();
+    }
+
     final updatedTrip = currentTrip.trip.copyWith(
       name: _generateTripName(optimizedPOIs),
       route: route,
-      stops: optimizedPOIs.asMap().entries.map((entry) {
-        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
-      }).toList(),
+      stops: newStops,
       updatedAt: DateTime.now(),
     );
 
@@ -422,12 +436,26 @@ class TripGeneratorRepository {
       endAddress: startAddress,
     );
 
-    // Trip aktualisieren
+    // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
+    final days = currentTrip.trip.actualDays;
+    List<TripStop> newStops;
+    if (days > 1) {
+      final tripDays = _dayPlanner.planDays(
+        pois: optimizedPOIs,
+        startLocation: startLocation,
+        days: days,
+        returnToStart: true,
+      );
+      newStops = tripDays.expand((day) => day.stops).toList();
+    } else {
+      newStops = optimizedPOIs.asMap().entries.map((entry) {
+        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+      }).toList();
+    }
+
     final updatedTrip = currentTrip.trip.copyWith(
       route: route,
-      stops: optimizedPOIs.asMap().entries.map((entry) {
-        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
-      }).toList(),
+      stops: newStops,
       updatedAt: DateTime.now(),
     );
 
