@@ -1,4 +1,4 @@
-# Changelog v1.7.28 - Mehrtägiger Google Maps Export Fix
+# Changelog v1.7.34 - Mehrtägiger Google Maps Export Fix
 
 **Datum:** 2. Februar 2026
 **Typ:** Bug-Fix
@@ -90,8 +90,8 @@ stops: trip.stops,
 |-------|----------|
 | `lib/data/repositories/trip_generator_repo.dart` | `removePOI()` + `rerollPOI()` nutzen jetzt `_dayPlanner.planDays()` für Mehrtages-Trips |
 | `lib/features/trip/trip_screen.dart` | `_saveToFavorites()` nutzt `trip.stops` statt `selectedPOIs` |
-| `pubspec.yaml` | Version 1.7.27+127 -> 1.7.28+128 |
-| `QR-CODE-DOWNLOAD.html` | Links und Version auf v1.7.28 aktualisiert |
+| `pubspec.yaml` | Version 1.7.27+127 -> 1.7.34+128 |
+| `QR-CODE-DOWNLOAD.html` | Links und Version auf v1.7.34 aktualisiert |
 | `CLAUDE.md` | Version, Changelog-Referenz und Fix-Dokumentation aktualisiert |
 
 ---

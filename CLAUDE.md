@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.28 - Mehrtägiger Google Maps Export Fix | Plattformen: Android, iOS, Desktop
+Version: 1.7.34 - Mehrtägiger Google Maps Export Fix | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -270,7 +270,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
-- `Dokumentation/CHANGELOG-v1.7.28.md` (Mehrtägiger Google Maps Export Fix: day-Feld bei removePOI/rerollPOI/Favoriten)
+- `Dokumentation/CHANGELOG-v1.7.34.md` (Mehrtägiger Google Maps Export Fix: day-Feld bei removePOI/rerollPOI/Favoriten)
 - `Dokumentation/CHANGELOG-v1.7.27.md` (POI-Foto-Optimierung: 6 neue Bildquellen, ~100% Trefferquote + Kategorie-Modal Live-Update Fix)
 - `Dokumentation/CHANGELOG-v1.7.26.md` (Kategorie-Chips Konsistenz + Route-Löschen-Button Fix im AI Trip Panel)
 - `Dokumentation/CHANGELOG-v1.7.24.md` (POI-Filter Chip Feedback - Konsistentes Rendering, 100ms Animation, Schatten)
@@ -810,7 +810,7 @@ ref.listenManual(randomTripNotifierProvider, (previous, next) {
 - Tagesausflug: 50, 100, 200, 300 km
 - Euro Trip: 1 Tag (600km), 2 Tage (1200km), 4 Tage (2400km), 7 Tage (4200km)
 
-### Mehrtägiger Euro Trip Export (v1.5.7+, Fix v1.7.28)
+### Mehrtägiger Euro Trip Export (v1.5.7+, Fix v1.7.34)
 
 ```dart
 // Tag auswählen (für tagesweisen Export)
@@ -828,7 +828,7 @@ ref.read(randomTripNotifierProvider.notifier).completeDay(2);
 final state = ref.read(randomTripNotifierProvider);
 final isCompleted = state.isDayCompleted(2);
 
-// WICHTIG v1.7.28: Bei removePOI/rerollPOI wird _dayPlanner.planDays()
+// WICHTIG v1.7.34: Bei removePOI/rerollPOI wird _dayPlanner.planDays()
 // aufgerufen, damit das day-Feld der Stops erhalten bleibt.
 // Ohne diesen Fix starteten Folgetage am Trip-Start statt am letzten Stop.
 // Auch _saveToFavorites nutzt jetzt trip.stops (mit day-Feld) statt selectedPOIs.
@@ -858,7 +858,7 @@ final isLoading = ref.read(randomTripNotifierProvider).isPOILoading(poiId);
 - **Minimum-Prüfung**: Mindestens 2 POIs müssen im Trip bleiben
 - **Per-POI Loading**: Individuelle Loading-Anzeige pro POI
 - **Auto-Routenberechnung**: Route wird nach jeder Änderung automatisch neu berechnet
-- **Tagesplanung bleibt erhalten**: Bei Mehrtages-Trips wird `_dayPlanner.planDays()` nach jeder Änderung aufgerufen (v1.7.28 Fix)
+- **Tagesplanung bleibt erhalten**: Bei Mehrtages-Trips wird `_dayPlanner.planDays()` nach jeder Änderung aufgerufen (v1.7.34 Fix)
 
 ### POI-Kategorien-Filter (v1.7.23+)
 
