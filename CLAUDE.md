@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.40 - Tagesweise Karten-Anzeige | Plattformen: Android, iOS, Desktop
+Version: 1.8.0 - Major UI Redesign & AI Integration | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 

@@ -227,6 +227,83 @@ Antworte als JSON-Array: [{"name": "POI-Name", "reason": "Begründung"}]
     return [];
   }
 
+  /// Optimiert einen Trip basierend auf Wetter und POI-Kategorien
+  /// Gibt strukturierte Vorschläge zurück
+  Future<AITripOptimization> optimizeTrip({
+    required Trip trip,
+    required Map<int, String> dayWeather,
+    required List<POI> availablePOIs,
+  }) async {
+    debugPrint('[AI] Sende Trip-Optimierung an Backend...');
+
+    // Erstelle Prompt für Optimierung
+    final stopsInfo = trip.stops.map((s) =>
+      '${s.name} (${s.categoryId}, Tag ${s.day ?? "?"})'
+    ).join(', ');
+
+    final weatherInfo = dayWeather.entries.map((e) =>
+      'Tag ${e.key}: ${e.value}'
+    ).join(', ');
+
+    try {
+      final response = await chat(
+        message: '''
+Optimiere meinen ${trip.actualDays}-Tage-Trip.
+
+Aktuelle Stops: $stopsInfo
+Wetter pro Tag: $weatherInfo
+Route: ${trip.route.distanceKm.toStringAsFixed(0)} km
+
+Prüfe:
+1. Sind Outdoor-POIs an Tagen mit schlechtem Wetter?
+2. Könnte die Reihenfolge optimiert werden?
+3. Gibt es bessere Indoor-Alternativen bei Regen?
+
+Antworte als JSON:
+{
+  "suggestions": [{"message": "...", "type": "weather|optimization", "dayNumber": 1}],
+  "summary": "Zusammenfassung"
+}
+''',
+        context: TripContext(
+          route: trip.route,
+          stops: availablePOIs,
+          dayWeather: dayWeather,
+          totalDays: trip.actualDays,
+        ),
+      );
+
+      // JSON aus Antwort extrahieren
+      try {
+        final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(response);
+        if (jsonMatch != null) {
+          final data = json.decode(jsonMatch.group(0)!) as Map<String, dynamic>;
+          final suggestions = (data['suggestions'] as List?)
+              ?.map((s) => AIOptimizationSuggestion(
+                    message: s['message'] ?? '',
+                    type: s['type'] ?? 'general',
+                    dayNumber: s['dayNumber'] as int?,
+                  ))
+              .toList() ?? [];
+          return AITripOptimization(
+            suggestions: suggestions,
+            summary: data['summary'] ?? '',
+          );
+        }
+      } catch (e) {
+        debugPrint('[AI] Konnte Optimierung nicht parsen: $e');
+      }
+
+      return AITripOptimization(
+        suggestions: [],
+        summary: response,
+      );
+    } catch (e) {
+      debugPrint('[AI] Trip-Optimierung fehlgeschlagen: $e');
+      rethrow;
+    }
+  }
+
   /// Health-Check für Backend
   Future<bool> checkHealth() async {
     // Zuerst prüfen ob Backend-URL konfiguriert ist
@@ -310,10 +387,17 @@ class TripContext {
   final AppRoute? route;
   final List<POI> stops;
 
-  // Standort-Informationen (NEU für standortbasierte Empfehlungen)
+  // Standort-Informationen (für standortbasierte Empfehlungen)
   final double? userLatitude;
   final double? userLongitude;
   final String? userLocationName;
+
+  // Wetter-Informationen (v1.8.0 - für AI Trip Advisor)
+  final String? overallWeather;
+  final Map<int, String>? dayWeather;
+  final int? selectedDay;
+  final int? totalDays;
+  final Set<String>? preferredCategories;
 
   TripContext({
     this.route,
@@ -321,10 +405,18 @@ class TripContext {
     this.userLatitude,
     this.userLongitude,
     this.userLocationName,
+    this.overallWeather,
+    this.dayWeather,
+    this.selectedDay,
+    this.totalDays,
+    this.preferredCategories,
   });
 
   /// Hat der Kontext Standort-Informationen?
   bool get hasUserLocation => userLatitude != null && userLongitude != null;
+
+  /// Hat der Kontext Wetter-Informationen?
+  bool get hasWeatherInfo => overallWeather != null || dayWeather != null;
 }
 
 /// Chat-Nachricht
@@ -389,6 +481,30 @@ class AITripStop {
     required this.category,
     this.duration,
     this.description,
+  });
+}
+
+/// AI Trip-Optimierungsergebnis (v1.8.0)
+class AITripOptimization {
+  final List<AIOptimizationSuggestion> suggestions;
+  final String summary;
+
+  AITripOptimization({
+    required this.suggestions,
+    required this.summary,
+  });
+}
+
+/// Einzelner Optimierungsvorschlag
+class AIOptimizationSuggestion {
+  final String message;
+  final String type; // weather, optimization, alternative, general
+  final int? dayNumber;
+
+  AIOptimizationSuggestion({
+    required this.message,
+    required this.type,
+    this.dayNumber,
   });
 }
 

@@ -12,6 +12,8 @@ import '../../data/repositories/geocoding_repo.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
+import '../trip/widgets/day_editor_overlay.dart';
+import 'providers/app_ui_mode_provider.dart';
 import 'providers/map_controller_provider.dart';
 import 'providers/route_planner_provider.dart';
 import 'providers/route_session_provider.dart';
@@ -33,8 +35,6 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   bool _isLoadingLocation = false;
-  MapPlanMode _planMode = MapPlanMode.aiTagestrip;
-  bool _isPanelExpanded = false;
 
   @override
   void initState() {
@@ -100,8 +100,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           if (aiRoute != null && mounted) {
             _fitMapToRoute(aiRoute);
           }
-          // Panel zuklappen nach Generierung (Modus bleibt erhalten)
-          setState(() => _isPanelExpanded = false);
+          // Generierung abgeschlossen - UI aktualisieren
+          setState(() {});
         }
         // Wenn Trip bestätigt wurde, ebenfalls Route zoomen
         if (next.step == RandomTripStep.confirmed && previous?.step != RandomTripStep.confirmed) {
@@ -259,33 +259,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Mode-Toggle (AI Tagestrip / AI Euro Trip)
-                  _ModeToggle(
-                    selectedMode: _planMode,
-                    onModeChanged: (mode) {
-                      setState(() => _planMode = mode);
-                      // Modus im RandomTripProvider synchronisieren
-                      final targetMode = mode == MapPlanMode.aiTagestrip
-                          ? RandomTripMode.daytrip
-                          : RandomTripMode.eurotrip;
-                      ref.read(randomTripNotifierProvider.notifier).setMode(targetMode);
-                    },
-                  ),
-
                   // === AKTIVER TRIP BANNER (Fortsetzen) ===
                   if (isConfigStep && !isGenerating)
                     _ActiveTripResumeBanner(
                       onRestore: () {
-                        setState(() {
-                          _planMode = MapPlanMode.aiEuroTrip;
-                        });
+                        ref.read(appUIModeNotifierProvider.notifier)
+                            .setMode(MapPlanMode.aiEuroTrip);
                       },
                     ),
 
                   // === TRIP CONFIG PANEL (Konfigurationsphase) ===
                   if (isConfigStep && !isGenerating) ...[
                     const SizedBox(height: 12),
-                    _TripConfigPanel(mode: _planMode),
+                    _TripConfigPanel(
+                      mode: ref.watch(appUIModeNotifierProvider),
+                    ),
                   ],
 
                   // === LOADING (Trip wird generiert) ===
@@ -294,14 +282,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     _GeneratingIndicator(),
                   ],
 
-                  // === POST-GENERIERUNG: Aufklappbares Panel ===
+                  // === POST-GENERIERUNG: Kompakte Info-Leiste ===
                   if (hasGeneratedTrip) ...[
                     const SizedBox(height: 12),
-                    _CollapsibleTripPanel(
-                      isExpanded: _isPanelExpanded,
-                      onToggle: () => setState(() => _isPanelExpanded = !_isPanelExpanded),
-                      planMode: _planMode,
+                    _TripInfoBar(
                       randomTripState: randomTripState,
+                      onEdit: () => _openDayEditor(),
+                      onClearRoute: () {
+                        ref.read(randomTripNotifierProvider.notifier).reset();
+                        ref.read(routePlannerProvider.notifier).clearRoute();
+                        ref.read(tripStateProvider.notifier).clearAll();
+                      },
                     ),
                   ],
 
@@ -490,6 +481,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _startRoute(AppRoute route) async {
     await ref.read(routeSessionProvider.notifier).startRoute(route);
   }
+
+  /// Öffnet den Day Editor als Vollbild-Overlay
+  void _openDayEditor() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const DayEditorOverlay(),
+      ),
+    );
+  }
 }
 
 /// Route löschen Button
@@ -539,111 +540,6 @@ class _RouteClearButton extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Mode-Toggle (Schnell / AI Trip)
-class _ModeToggle extends StatelessWidget {
-  final MapPlanMode selectedMode;
-  final ValueChanged<MapPlanMode> onModeChanged;
-
-  const _ModeToggle({
-    required this.selectedMode,
-    required this.onModeChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ModeButton(
-              label: 'AI Tagestrip',
-              icon: Icons.wb_sunny_outlined,
-              isSelected: selectedMode == MapPlanMode.aiTagestrip,
-              onTap: () => onModeChanged(MapPlanMode.aiTagestrip),
-            ),
-          ),
-          Expanded(
-            child: _ModeButton(
-              label: 'AI Euro Trip',
-              icon: Icons.flight_outlined,
-              isSelected: selectedMode == MapPlanMode.aiEuroTrip,
-              onTap: () => onModeChanged(MapPlanMode.aiEuroTrip),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Mode Button
-class _ModeButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ModeButton({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1818,25 +1714,27 @@ class _GeneratingIndicator extends StatelessWidget {
   }
 }
 
-/// Aufklappbares Trip-Panel nach Routenberechnung
-/// Zeigt kompakte Info-Leiste (zugeklappt) oder volles Config-Panel (aufgeklappt)
-class _CollapsibleTripPanel extends StatelessWidget {
-  final bool isExpanded;
-  final VoidCallback onToggle;
-  final MapPlanMode planMode;
+/// Kompakte Trip-Info-Leiste nach Generierung
+/// Zeigt Route-Zusammenfassung mit "Bearbeiten" und "Löschen" Buttons
+class _TripInfoBar extends StatelessWidget {
   final RandomTripState randomTripState;
+  final VoidCallback onEdit;
+  final VoidCallback onClearRoute;
 
-  const _CollapsibleTripPanel({
-    required this.isExpanded,
-    required this.onToggle,
-    required this.planMode,
+  const _TripInfoBar({
     required this.randomTripState,
+    required this.onEdit,
+    required this.onClearRoute,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final stats = randomTripState.tripStats;
+    final isEuroTrip = randomTripState.mode == RandomTripMode.eurotrip;
+    final trip = randomTripState.generatedTrip?.trip;
+    final poisCount = randomTripState.generatedTrip?.selectedPOIs.length ?? 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -1850,31 +1748,113 @@ class _CollapsibleTripPanel extends StatelessWidget {
           ),
         ],
       ),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Kompakte Info-Leiste (immer sichtbar)
-            _TripInfoBar(
-              randomTripState: randomTripState,
-              isExpanded: isExpanded,
-              onToggle: onToggle,
-            ),
-            // Aufklappbarer Inhalt
-            if (isExpanded) ...[
-              Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.75,
+            // Header-Zeile
+            Row(
+              children: [
+                // Route-Icon
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isEuroTrip ? Icons.flight_outlined : Icons.wb_sunny,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
                 ),
-                child: SingleChildScrollView(
-                  child: _TripConfigPanel(mode: planMode, bare: true),
+                const SizedBox(width: 12),
+                // Titel + Stats
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEuroTrip ? 'AI Euro Trip' : 'AI Tagestrip',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      if (stats != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          stats,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Löschen-Button
+                IconButton(
+                  onPressed: onClearRoute,
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: colorScheme.error,
+                  ),
+                  tooltip: 'Route löschen',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Kompakte Stats-Zeile
+            if (trip != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _MiniStat(
+                    icon: Icons.place,
+                    value: '$poisCount',
+                    label: 'Stops',
+                    color: colorScheme.primary,
+                  ),
+                  _MiniStat(
+                    icon: Icons.straighten,
+                    value: '${trip.route.distanceKm.toStringAsFixed(0)} km',
+                    label: 'Distanz',
+                    color: colorScheme.primary,
+                  ),
+                  if (trip.actualDays > 1)
+                    _MiniStat(
+                      icon: Icons.calendar_today,
+                      value: '${trip.actualDays}',
+                      label: 'Tage',
+                      color: colorScheme.primary,
+                    ),
+                ],
+              ),
+
+            const SizedBox(height: 10),
+
+            // Bearbeiten-Button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit, size: 18),
+                label: const Text('Trip bearbeiten'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -1882,83 +1862,45 @@ class _CollapsibleTripPanel extends StatelessWidget {
   }
 }
 
-/// Kompakte Trip-Info-Leiste mit Route-Zusammenfassung
-class _TripInfoBar extends StatelessWidget {
-  final RandomTripState randomTripState;
-  final bool isExpanded;
-  final VoidCallback onToggle;
+/// Mini-Statistik-Chip fuer TripInfoBar
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
 
-  const _TripInfoBar({
-    required this.randomTripState,
-    required this.isExpanded,
-    required this.onToggle,
+  const _MiniStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final stats = randomTripState.tripStats;
-    final isEuroTrip = randomTripState.mode == RandomTripMode.eurotrip;
 
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Route-Icon
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                isEuroTrip ? Icons.flight_outlined : Icons.route,
-                size: 20,
-                color: colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Titel + Stats
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isEuroTrip ? 'AI Euro Trip' : 'AI Tagestrip',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  if (stats != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      stats,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            // Auf/Zuklapp-Pfeil
-            AnimatedRotation(
-              turns: isExpanded ? 0.5 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                Icons.keyboard_arrow_down,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: colorScheme.onSurface,
+          ),
         ),
-      ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

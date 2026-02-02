@@ -103,6 +103,41 @@ class RouteWeatherState {
         .map((p) => p.weather.windSpeed)
         .reduce((a, b) => a > b ? a : b);
   }
+
+  /// Wetter pro Tag berechnen (v1.8.0)
+  /// Ordnet jedem Tag den naechsten WeatherPoint zu
+  Map<int, WeatherCondition> getWeatherPerDay(int totalDays) {
+    final result = <int, WeatherCondition>{};
+    if (weatherPoints.isEmpty || totalDays <= 0) return result;
+
+    for (int day = 1; day <= totalDays; day++) {
+      // Position des Tages auf der Route (0.0 - 1.0)
+      final dayPosition = totalDays > 1
+          ? (day - 1) / (totalDays - 1)
+          : 0.5;
+
+      // Naechsten WeatherPoint finden
+      WeatherCondition closest = overallCondition;
+      double minDist = double.infinity;
+      for (final wp in weatherPoints) {
+        final dist = (wp.routePosition - dayPosition).abs();
+        if (dist < minDist) {
+          minDist = dist;
+          closest = wp.weather.condition;
+        }
+      }
+      result[day] = closest;
+    }
+
+    return result;
+  }
+
+  /// Wetter als String-Map (fuer AI Service)
+  Map<int, String> getWeatherPerDayAsStrings(int totalDays) {
+    return getWeatherPerDay(totalDays).map(
+      (day, condition) => MapEntry(day, condition.name),
+    );
+  }
 }
 
 /// Provider für Routen-Wetter
