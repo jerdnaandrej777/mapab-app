@@ -27,9 +27,17 @@ class TripConstants {
     return days * kmPerDay;
   }
 
-  /// Quick-Select Werte für Euro Trip Radius (in km)
-  /// Jeder Wert entspricht 1, 2, 4 bzw. 7 Tagen
-  static const List<double> euroTripQuickSelectRadii = [600, 1200, 2400, 4200];
+  /// Quick-Select Werte für Euro Trip Tage
+  static const List<int> euroTripQuickSelectDays = [2, 4, 7, 10];
+
+  /// Minimale Anzahl Tage für Euro Trip
+  static const int euroTripMinDays = 1;
+
+  /// Maximale Anzahl Tage für Euro Trip
+  static const int euroTripMaxDays = 14;
+
+  /// Default-Tage für Euro Trip
+  static const int euroTripDefaultDays = 3;
 
   /// Quick-Select Werte für Tagesausflug Radius (in km)
   static const List<double> dayTripQuickSelectRadii = [50, 100, 200, 300];

@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/categories.dart';
+import '../../core/constants/trip_constants.dart';
 import '../../data/models/route.dart';
 import '../../data/repositories/geocoding_repo.dart';
 import '../../shared/widgets/app_snackbar.dart';
@@ -1266,11 +1267,125 @@ class _CompactRadiusSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    if (state.mode == RandomTripMode.eurotrip) {
+      return _buildDaysSelector(context);
+    }
+    return _buildRadiusSlider(context);
+  }
 
-    final (minRadius, maxRadius) = state.mode == RandomTripMode.daytrip
-        ? (30.0, 300.0)
-        : (100.0, 5000.0);
+  /// Euro Trip: Tage-Auswahl als primärer Input
+  Widget _buildDaysSelector(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final currentDays = state.days.clamp(
+      TripConstants.euroTripMinDays,
+      TripConstants.euroTripMaxDays,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Reisedauer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$currentDays ${currentDays == 1 ? "Tag" : "Tage"}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            _getDaysDescription(currentDays),
+            style: TextStyle(
+              fontSize: 11,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 32,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: colorScheme.primary,
+              inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+              thumbColor: colorScheme.primary,
+              overlayColor: colorScheme.primary.withOpacity(0.1),
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: currentDays.toDouble(),
+              min: TripConstants.euroTripMinDays.toDouble(),
+              max: TripConstants.euroTripMaxDays.toDouble(),
+              divisions: TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
+              onChanged: (value) => notifier.setEuroTripDays(value.round()),
+            ),
+          ),
+        ),
+        // Quick Select Tage
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: TripConstants.euroTripQuickSelectDays.map((days) {
+            final isSelected = currentDays == days;
+            return GestureDetector(
+              onTap: () => notifier.setEuroTripDays(days),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                child: Text(
+                  '$days Tage',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// Tagestrip: Radius-Slider (unverändert)
+  Widget _buildRadiusSlider(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const minRadius = 30.0;
+    const maxRadius = 300.0;
     final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
 
     return Column(
@@ -1326,9 +1441,7 @@ class _CompactRadiusSlider extends StatelessWidget {
               value: currentRadius,
               min: minRadius,
               max: maxRadius,
-              divisions: state.mode == RandomTripMode.daytrip
-                  ? ((maxRadius - minRadius) / 10).round()
-                  : ((maxRadius - minRadius) / 100).round(),
+              divisions: ((maxRadius - minRadius) / 10).round(),
               onChanged: (value) => notifier.setRadius(value),
             ),
           ),
@@ -1336,7 +1449,7 @@ class _CompactRadiusSlider extends StatelessWidget {
         // Quick Select (kompakt)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _getQuickSelectValues(state.mode).map((value) {
+          children: [50.0, 100.0, 200.0, 300.0].map((value) {
             final isSelected = (currentRadius - value).abs() < 10;
             return GestureDetector(
               onTap: () => notifier.setRadius(value),
@@ -1365,11 +1478,13 @@ class _CompactRadiusSlider extends StatelessWidget {
     );
   }
 
-  List<double> _getQuickSelectValues(RandomTripMode mode) {
-    if (mode == RandomTripMode.daytrip) {
-      return [50, 100, 200, 300];
-    }
-    return [500, 1000, 2500, 5000];
+  String _getDaysDescription(int days) {
+    final radiusKm = (days * TripConstants.kmPerDay).round();
+    if (days == 1) return 'Tagesausflug — ca. $radiusKm km';
+    if (days == 2) return 'Wochenend-Trip — ca. $radiusKm km';
+    if (days <= 4) return 'Kurzurlaub — ca. $radiusKm km';
+    if (days <= 7) return 'Wochenreise — ca. $radiusKm km';
+    return 'Epischer Euro Trip — ca. $radiusKm km';
   }
 }
 

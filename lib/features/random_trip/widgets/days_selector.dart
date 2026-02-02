@@ -4,7 +4,7 @@ import '../../../core/constants/trip_constants.dart';
 import '../providers/random_trip_provider.dart';
 
 /// Widget zur Anzeige der Reisedauer und Hotel-Optionen
-/// Die Tage werden automatisch aus dem Radius berechnet (600km = 1 Tag)
+/// Die Tage werden direkt aus dem State gelesen (v1.7.38)
 class DaysSelector extends ConsumerWidget {
   const DaysSelector({super.key});
 
@@ -15,8 +15,8 @@ class DaysSelector extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Tage aus Radius berechnen
-    final calculatedDays = TripConstants.calculateDaysFromDistance(state.radiusKm);
+    // Tage direkt aus State (Euro Trip) oder 1 (Tagestrip)
+    final calculatedDays = state.calculatedDays;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

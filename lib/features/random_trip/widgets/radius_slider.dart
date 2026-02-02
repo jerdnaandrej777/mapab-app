@@ -4,7 +4,7 @@ import '../../../core/constants/trip_constants.dart';
 import '../providers/random_trip_provider.dart';
 import '../providers/random_trip_state.dart';
 
-/// Widget zur Auswahl des Such-Radius
+/// Widget zur Auswahl des Such-Radius (Tagestrip) oder der Reisedauer (Euro Trip)
 class RadiusSlider extends ConsumerWidget {
   const RadiusSlider({super.key});
 
@@ -12,16 +12,25 @@ class RadiusSlider extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
+
+    if (state.mode == RandomTripMode.eurotrip) {
+      return _buildDaysSelector(context, state, notifier);
+    }
+    return _buildRadiusSlider(context, state, notifier);
+  }
+
+  /// Euro Trip: Tage-Auswahl als primärer Input
+  Widget _buildDaysSelector(
+    BuildContext context,
+    RandomTripState state,
+    RandomTripNotifier notifier,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    // Min/Max basierend auf Modus
-    final (minRadius, maxRadius) = state.mode == RandomTripMode.daytrip
-        ? (30.0, 300.0)
-        : (100.0, 5000.0);
-
-    // Radius anpassen falls ausserhalb der Grenzen
-    final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
+    final currentDays = state.days.clamp(
+      TripConstants.euroTripMinDays,
+      TripConstants.euroTripMaxDays,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,10 +39,10 @@ class RadiusSlider extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Radius',
+              'Reisedauer',
               style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                fontWeight: FontWeight.w600,
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -42,7 +51,7 @@ class RadiusSlider extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                _formatRadiusDisplay(currentRadius, state.mode),
+                '$currentDays ${currentDays == 1 ? "Tag" : "Tage"}',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onPrimaryContainer,
@@ -53,7 +62,7 @@ class RadiusSlider extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _getRadiusDescription(currentRadius, state.mode),
+          _getDaysDescription(currentDays),
           style: TextStyle(
             fontSize: 12,
             color: colorScheme.onSurfaceVariant,
@@ -67,29 +76,106 @@ class RadiusSlider extends ConsumerWidget {
             thumbColor: colorScheme.primary,
             overlayColor: colorScheme.primary.withOpacity(0.1),
             trackHeight: 6,
-            thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 10,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+          ),
+          child: Slider(
+            value: currentDays.toDouble(),
+            min: TripConstants.euroTripMinDays.toDouble(),
+            max: TripConstants.euroTripMaxDays.toDouble(),
+            divisions: TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
+            onChanged: (value) => notifier.setEuroTripDays(value.round()),
+          ),
+        ),
+        // Quick Select Tage
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: TripConstants.euroTripQuickSelectDays.map((days) {
+            final isSelected = currentDays == days;
+            return _QuickSelectButton(
+              label: '$days Tage',
+              isSelected: isSelected,
+              onTap: () => notifier.setEuroTripDays(days),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// Tagestrip: Radius-Slider (unverändert)
+  Widget _buildRadiusSlider(
+    BuildContext context,
+    RandomTripState state,
+    RandomTripNotifier notifier,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    const minRadius = 30.0;
+    const maxRadius = 300.0;
+    final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Radius',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '${currentRadius.round()} km',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _getRadiusDescription(currentRadius),
+          style: TextStyle(
+            fontSize: 12,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: colorScheme.primary,
+            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            thumbColor: colorScheme.primary,
+            overlayColor: colorScheme.primary.withOpacity(0.1),
+            trackHeight: 6,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
           ),
           child: Slider(
             value: currentRadius,
             min: minRadius,
             max: maxRadius,
-            divisions: state.mode == RandomTripMode.daytrip
-                ? ((maxRadius - minRadius) / 10).round()
-                : ((maxRadius - minRadius) / 100).round(),
+            divisions: ((maxRadius - minRadius) / 10).round(),
             onChanged: (value) => notifier.setRadius(value),
           ),
         ),
         // Quick Select Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _getQuickSelectValues(state.mode).map((value) {
+          children: TripConstants.dayTripQuickSelectRadii.map((value) {
             final isSelected = (currentRadius - value).abs() < 50;
             return _QuickSelectButton(
-              value: value,
+              label: '${value.round()} km',
               isSelected: isSelected,
-              isEuroTrip: state.mode == RandomTripMode.eurotrip,
               onTap: () => notifier.setRadius(value),
             );
           }).toList(),
@@ -98,64 +184,38 @@ class RadiusSlider extends ConsumerWidget {
     );
   }
 
-  String _getRadiusDescription(double radius, RandomTripMode mode) {
-    if (mode == RandomTripMode.daytrip) {
-      if (radius <= 50) return 'Kurzer Ausflug in der Nähe';
-      if (radius <= 100) return 'Idealer Tagesausflug';
-      if (radius <= 150) return 'Ausgedehnter Tagesausflug';
-      if (radius <= 200) return 'Langer Tagesausflug mit viel Fahrzeit';
-      return 'Sehr weiter Tagesausflug';
-    } else {
-      if (radius <= 300) return 'Regionale Erkundung';
-      if (radius <= 600) return 'Mehrere Bundesländer/Kantone';
-      if (radius <= 1000) return 'Länder-übergreifend';
-      if (radius <= 2000) return 'Großer Euro Trip';
-      if (radius <= 3500) return 'Kontinentale Reise';
-      return 'Epischer Europa-Trip';
-    }
+  String _getRadiusDescription(double radius) {
+    if (radius <= 50) return 'Kurzer Ausflug in der Nähe';
+    if (radius <= 100) return 'Idealer Tagesausflug';
+    if (radius <= 150) return 'Ausgedehnter Tagesausflug';
+    if (radius <= 200) return 'Langer Tagesausflug mit viel Fahrzeit';
+    return 'Sehr weiter Tagesausflug';
   }
 
-  List<double> _getQuickSelectValues(RandomTripMode mode) {
-    if (mode == RandomTripMode.daytrip) {
-      return TripConstants.dayTripQuickSelectRadii;
-    }
-    return TripConstants.euroTripQuickSelectRadii;
-  }
-
-  String _formatRadiusDisplay(double radius, RandomTripMode mode) {
-    if (mode == RandomTripMode.eurotrip) {
-      final days = TripConstants.calculateDaysFromDistance(radius);
-      return '$days ${days == 1 ? 'Tag' : 'Tage'} (${radius.round()} km)';
-    }
-    return '${radius.round()} km';
+  String _getDaysDescription(int days) {
+    final radiusKm = (days * TripConstants.kmPerDay).round();
+    if (days == 1) return 'Tagesausflug — ca. $radiusKm km';
+    if (days == 2) return 'Wochenend-Trip — ca. $radiusKm km';
+    if (days <= 4) return 'Kurzurlaub — ca. $radiusKm km';
+    if (days <= 7) return 'Wochenreise — ca. $radiusKm km';
+    return 'Epischer Euro Trip — ca. $radiusKm km';
   }
 }
 
 class _QuickSelectButton extends StatelessWidget {
-  final double value;
+  final String label;
   final bool isSelected;
-  final bool isEuroTrip;
   final VoidCallback onTap;
 
   const _QuickSelectButton({
-    required this.value,
+    required this.label,
     required this.isSelected,
     required this.onTap,
-    this.isEuroTrip = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    // Label erstellen: Bei Euro Trip Tage anzeigen
-    String label;
-    if (isEuroTrip) {
-      final days = TripConstants.calculateDaysFromDistance(value);
-      label = '$days ${days == 1 ? 'Tag' : 'Tage'}';
-    } else {
-      label = '${value.round()} km';
-    }
 
     return Material(
       color: isSelected

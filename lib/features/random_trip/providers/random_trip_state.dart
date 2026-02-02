@@ -121,10 +121,8 @@ class RandomTripState with _$RandomTripState {
   /// Prüft ob der ausgewählte Tag das Google Maps Limit überschreitet
   bool get selectedDayOverLimit => stopsCountForSelectedDay > 9;
 
-  /// Berechnete Anzahl Tage basierend auf Radius (für Euro Trip)
-  int get calculatedDays => mode == RandomTripMode.eurotrip
-      ? (radiusKm / 600).ceil().clamp(1, 14)
-      : 1;
+  /// Anzahl Tage (für Euro Trip direkt aus State, für Tagestrip immer 1)
+  int get calculatedDays => mode == RandomTripMode.eurotrip ? days : 1;
 
   /// Trip-Statistiken
   String? get tripStats {

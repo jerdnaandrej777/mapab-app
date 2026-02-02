@@ -158,6 +158,7 @@ class TripGeneratorRepository {
     required LatLng startLocation,
     required String startAddress,
     double radiusKm = 1000,
+    int? days,
     List<POICategory> categories = const [],
     bool includeHotels = true,
     LatLng? destinationLocation,
@@ -167,16 +168,16 @@ class TripGeneratorRepository {
     final endLocation = destinationLocation ?? startLocation;
     final endAddress = destinationAddress ?? startAddress;
 
-    // Tage basierend auf Radius berechnen (600km = 1 Tag)
-    final days = TripConstants.calculateDaysFromDistance(radiusKm);
-    debugPrint('[TripGenerator] Euro Trip: ${radiusKm}km -> $days Tage${hasDestination ? ' (Ziel: $endAddress)' : ' (Rundreise)'}');
+    // Tage: direkt übergeben oder aus Radius berechnen (Fallback)
+    final effectiveDays = days ?? TripConstants.calculateDaysFromDistance(radiusKm);
+    debugPrint('[TripGenerator] Euro Trip: $effectiveDays Tage (${radiusKm}km Suchradius)${hasDestination ? ' (Ziel: $endAddress)' : ' (Rundreise)'}');
 
     // POIs pro Tag (max 9 wegen Google Maps Limit)
     final poisPerDay = min(
       DayPlanner.estimatePoisPerDay(),
       TripConstants.maxPoisPerDay,
     );
-    final totalPOIs = days * poisPerDay;
+    final totalPOIs = effectiveDays * poisPerDay;
     debugPrint('[TripGenerator] POIs: $poisPerDay pro Tag, $totalPOIs gesamt');
 
     // 1. POIs laden — Korridor oder Radius
@@ -245,18 +246,18 @@ class TripGeneratorRepository {
     );
 
     // 4. Auf Tage aufteilen
-    debugPrint('[TripGenerator] Plane $days Tage mit ${optimizedPOIs.length} POIs...');
+    debugPrint('[TripGenerator] Plane $effectiveDays Tage mit ${optimizedPOIs.length} POIs...');
     var tripDays = _dayPlanner.planDays(
       pois: optimizedPOIs,
       startLocation: startLocation,
-      days: days,
+      days: effectiveDays,
       returnToStart: !hasDestination,
     );
     debugPrint('[TripGenerator] TripDays: ${tripDays.length}, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
     // 5. Hotels hinzufügen (optional)
     List<List<HotelSuggestion>> hotelSuggestions = [];
-    if (includeHotels && days > 1) {
+    if (includeHotels && effectiveDays > 1) {
       final overnightLocations = _dayPlanner.calculateOvernightLocations(
         tripDays: tripDays,
         startLocation: startLocation,
@@ -309,7 +310,7 @@ class TripGeneratorRepository {
       type: TripType.eurotrip,
       route: route,
       stops: allStops,
-      days: days,
+      days: effectiveDays,
       createdAt: DateTime.now(),
       preferredCategories: categories.map((c) => c.id).toList(),
     );

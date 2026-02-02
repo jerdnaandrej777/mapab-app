@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart'; // Enthält WeatherCondition
+import '../../../core/constants/trip_constants.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
 import '../../../data/services/hotel_service.dart';
@@ -33,16 +34,33 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Setzt den Trip-Modus (Tagesausflug/Euro Trip)
   void setMode(RandomTripMode mode) {
+    final days = mode == RandomTripMode.daytrip
+        ? 1
+        : TripConstants.euroTripDefaultDays;
     state = state.copyWith(
       mode: mode,
-      days: mode == RandomTripMode.daytrip ? 1 : 3,
-      radiusKm: mode == RandomTripMode.daytrip ? 100 : 1000,
+      days: days,
+      radiusKm: mode == RandomTripMode.daytrip
+          ? 100
+          : TripConstants.calculateRadiusFromDays(days),
     );
   }
 
-  /// Setzt den Radius
+  /// Setzt den Radius (für Tagestrip)
   void setRadius(double radiusKm) {
     state = state.copyWith(radiusKm: radiusKm);
+  }
+
+  /// Setzt die Anzahl der Tage für Euro Trip und berechnet Radius automatisch
+  void setEuroTripDays(int days) {
+    final clampedDays = days.clamp(
+      TripConstants.euroTripMinDays,
+      TripConstants.euroTripMaxDays,
+    );
+    state = state.copyWith(
+      days: clampedDays,
+      radiusKm: TripConstants.calculateRadiusFromDays(clampedDays),
+    );
   }
 
   /// Setzt die Anzahl der Tage
@@ -279,18 +297,19 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           destinationAddress: state.destinationAddress,
         );
       } else {
-        // Euro Trip: Radius übergeben, Tage werden automatisch berechnet
-        debugPrint('[RandomTrip] Euro Trip starten: ${state.radiusKm}km, Start: ${state.startAddress}${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
+        // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
+        debugPrint('[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: ${state.startAddress}${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
         result = await _tripGenerator.generateEuroTrip(
           startLocation: state.startLocation!,
           startAddress: state.startAddress!,
           radiusKm: state.radiusKm,
+          days: state.days,
           categories: state.selectedCategories,
           includeHotels: state.includeHotels,
           destinationLocation: state.destinationLocation,
           destinationAddress: state.destinationAddress,
         );
-        debugPrint('[RandomTrip] Euro Trip generiert! POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
+        debugPrint('[RandomTrip] Euro Trip generiert! ${state.days} Tage, POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }
 
       debugPrint('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
