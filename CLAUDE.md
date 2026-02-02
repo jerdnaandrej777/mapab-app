@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi (v1.7.22: 12px Abstand Toggle→Panel in beiden Modi, Generating-Indicator Spacing) + Route-Löschen-Button im AI Trip Panel scrollbar (v1.7.26) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
@@ -270,6 +270,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.37.md` (AppBar-Fix: Buttons nicht mehr verdeckt + Panel-Kompaktierung + GPS-Fix)
 - `Dokumentation/CHANGELOG-v1.7.34.md` (Mehrtägiger Google Maps Export Fix: day-Feld bei removePOI/rerollPOI/Favoriten)
 - `Dokumentation/CHANGELOG-v1.7.27.md` (POI-Foto-Optimierung: 6 neue Bildquellen, ~100% Trefferquote + Kategorie-Modal Live-Update Fix)
 - `Dokumentation/CHANGELOG-v1.7.26.md` (Kategorie-Chips Konsistenz + Route-Löschen-Button Fix im AI Trip Panel)
