@@ -427,19 +427,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         if (context.mounted) {
           _showTripCompletedDialog(context, trip);
         }
-      } else if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Tag $dayNumber exportiert'),
-            action: SnackBarAction(
-              label: 'Rückgängig',
-              onPressed: () {
-                ref.read(randomTripNotifierProvider.notifier).uncompleteDay(dayNumber);
-              },
-            ),
-          ),
-        );
       }
+      // Kein Snackbar - DayTabSelector zeigt Häkchen für abgeschlossene Tage
     } catch (e) {
       debugPrint('[GoogleMaps] Error: $e');
       if (context.mounted) {
@@ -804,6 +793,16 @@ $mapsUrl
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Google Maps berechnet eine eigene Route durch die Stops',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                 ],

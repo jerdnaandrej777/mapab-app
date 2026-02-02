@@ -96,9 +96,48 @@ class _MapViewState extends ConsumerState<MapView> {
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
 
     // AI Trip Preview Route und POIs
-    final aiTripRoute = randomTripState.generatedTrip?.trip.route;
-    final aiTripPOIs = randomTripState.generatedTrip?.selectedPOIs ?? [];
+    final fullAIRoute = randomTripState.generatedTrip?.trip.route;
+    final allAITripPOIs = randomTripState.generatedTrip?.selectedPOIs ?? [];
     final isAITripPreview = randomTripState.step == RandomTripStep.preview;
+    final aiTrip = randomTripState.generatedTrip?.trip;
+    final isMultiDay = aiTrip != null && aiTrip.actualDays > 1;
+    final selectedDay = randomTripState.selectedDay;
+
+    // Bei Mehrtages-Trips: Nur POIs des ausgewählten Tages anzeigen
+    List<POI> aiTripPOIs;
+    List<LatLng> aiRouteCoordinates;
+    if (isMultiDay && fullAIRoute != null) {
+      final stopsForDay = aiTrip.getStopsForDay(selectedDay);
+      final dayPOIIds = stopsForDay.map((s) => s.poiId).toSet();
+      aiTripPOIs = allAITripPOIs.where((p) => dayPOIIds.contains(p.id)).toList();
+
+      // Route-Segment für den ausgewählten Tag extrahieren
+      if (stopsForDay.isNotEmpty) {
+        LatLng segStart;
+        LatLng segEnd;
+        if (selectedDay == 1) {
+          segStart = fullAIRoute.start;
+        } else {
+          final prevDayStops = aiTrip.getStopsForDay(selectedDay - 1);
+          segStart = prevDayStops.isNotEmpty
+              ? prevDayStops.last.location
+              : stopsForDay.first.location;
+        }
+        if (selectedDay == aiTrip.actualDays) {
+          segEnd = fullAIRoute.end;
+        } else {
+          segEnd = stopsForDay.last.location;
+        }
+        aiRouteCoordinates = _extractRouteSegment(
+          fullAIRoute.coordinates, segStart, segEnd,
+        );
+      } else {
+        aiRouteCoordinates = fullAIRoute.coordinates;
+      }
+    } else {
+      aiTripPOIs = allAITripPOIs;
+      aiRouteCoordinates = fullAIRoute?.coordinates ?? [];
+    }
 
     // Wetter-Zustand für POI-Marker-Badges
     final weatherCondition = weatherState.hasWeather ? weatherState.condition : null;
@@ -126,13 +165,14 @@ class _MapViewState extends ConsumerState<MapView> {
 
         // Route-Polyline (wenn Route vorhanden - inkl. AI Trip Preview)
         // WICHTIG: AI Trip Preview hat Priorität über andere Routen
-        if (tripState.hasRoute || routePlanner.route != null || (isAITripPreview && aiTripRoute != null))
+        if (tripState.hasRoute || routePlanner.route != null || (isAITripPreview && aiRouteCoordinates.isNotEmpty))
           PolylineLayer(
             polylines: [
               Polyline(
                 // AI Trip Preview hat Priorität, dann TripState, dann RoutePlanner
-                points: (isAITripPreview && aiTripRoute != null)
-                    ? aiTripRoute.coordinates
+                // Bei Mehrtages-Trips: Nur Segment des ausgewählten Tages
+                points: (isAITripPreview && aiRouteCoordinates.isNotEmpty)
+                    ? aiRouteCoordinates
                     : (tripState.route?.coordinates ??
                         routePlanner.route?.coordinates ??
                         []),
@@ -210,14 +250,22 @@ class _MapViewState extends ConsumerState<MapView> {
           ),
 
         // Start-Marker (für normale Route oder AI Trip)
-        // WICHTIG: AI Trip Preview hat Priorität
+        // Bei Mehrtages-Trips: Start des ausgewählten Tages anzeigen
         if (routePlanner.startLocation != null || (isAITripPreview && randomTripState.startLocation != null))
           MarkerLayer(
             markers: [
               Marker(
-                point: (isAITripPreview && randomTripState.startLocation != null)
-                    ? randomTripState.startLocation!
-                    : routePlanner.startLocation!,
+                point: () {
+                  if (isAITripPreview && isMultiDay && selectedDay > 1) {
+                    // Ab Tag 2: Letzter Stop des Vortages als Start
+                    final prevDayStops = aiTrip!.getStopsForDay(selectedDay - 1);
+                    if (prevDayStops.isNotEmpty) return prevDayStops.last.location;
+                  }
+                  if (isAITripPreview && randomTripState.startLocation != null) {
+                    return randomTripState.startLocation!;
+                  }
+                  return routePlanner.startLocation!;
+                }(),
                 width: 24,
                 height: 24,
                 child: const StartMarker(),
@@ -257,6 +305,41 @@ class _MapViewState extends ConsumerState<MapView> {
           ),
       ],
     );
+  }
+
+  /// Extrahiert das Polyline-Segment zwischen zwei Punkten
+  List<LatLng> _extractRouteSegment(
+    List<LatLng> fullCoordinates,
+    LatLng startPoint,
+    LatLng endPoint,
+  ) {
+    if (fullCoordinates.isEmpty) return fullCoordinates;
+
+    int startIdx = _findNearestIndex(fullCoordinates, startPoint);
+    int endIdx = _findNearestIndex(fullCoordinates, endPoint);
+
+    if (startIdx > endIdx) {
+      final temp = startIdx;
+      startIdx = endIdx;
+      endIdx = temp;
+    }
+
+    return fullCoordinates.sublist(startIdx, (endIdx + 1).clamp(0, fullCoordinates.length));
+  }
+
+  int _findNearestIndex(List<LatLng> coords, LatLng target) {
+    int bestIdx = 0;
+    double bestDist = double.infinity;
+    for (int i = 0; i < coords.length; i++) {
+      final dLat = coords[i].latitude - target.latitude;
+      final dLng = coords[i].longitude - target.longitude;
+      final dist = dLat * dLat + dLng * dLng;
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng point) {
