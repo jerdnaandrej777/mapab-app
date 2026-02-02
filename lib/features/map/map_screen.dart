@@ -218,7 +218,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         randomTripState.generatedTrip != null;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
       appBar: AppBar(
         title: const Text('MapAB'),
         backgroundColor: colorScheme.surface,
@@ -249,10 +249,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // Karte (Hintergrund)
           const MapView(),
 
-          // Such-Header
+          // Such-Header (kein SafeArea top nötig - AppBar übernimmt)
           SafeArea(
+            top: false,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -926,7 +927,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
 
           // Startadresse (kompakt mit inline GPS-Button)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1002,7 +1003,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 // Adress-Eingabe
                 Container(
                   decoration: BoxDecoration(
@@ -1043,7 +1044,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
                                     )
                                   : null,
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           isDense: true,
                         ),
                         onChanged: _searchAddress,
@@ -1096,12 +1097,12 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
 
           // Ziel-Eingabe (kompakt - öffnet BottomSheet)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: InkWell(
               onTap: () => _showDestinationSheet(context, state, notifier, colorScheme),
               borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
@@ -1160,7 +1161,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
 
           // Radius Slider (kompakt)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: _CompactRadiusSlider(state: state, notifier: notifier),
           ),
 
@@ -1174,7 +1175,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
 
           // Generate Button - prüft GPS wenn kein Startpunkt gesetzt
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1182,7 +1183,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1211,7 +1212,7 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
               ref.watch(tripStateProvider).hasRoute) ...[
             Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: _RouteClearButton(
                 onClear: () {
                   ref.read(randomTripNotifierProvider.notifier).reset();
@@ -1714,7 +1715,7 @@ class _CollapsibleTripPanel extends StatelessWidget {
               Divider(height: 1, color: colorScheme.outline.withOpacity(0.2)),
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.65,
+                  maxHeight: MediaQuery.of(context).size.height * 0.75,
                 ),
                 child: SingleChildScrollView(
                   child: _TripConfigPanel(mode: planMode, bare: true),
