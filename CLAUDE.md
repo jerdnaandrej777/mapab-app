@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.38 - Euro Trip Tage-Auswahl | Plattformen: Android, iOS, Desktop
+Version: 1.7.39 - Aktiver Trip Persistenz | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,12 +85,12 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + ActiveTripResumeBanner + Überschreib-Dialog (v1.7.39) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
 | `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment + Gespeicherte Routen laden (v1.7.10) |
@@ -114,8 +114,9 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix, v1.7.9 2-Stufen-Batch) |
 | `lib/features/map/providers/route_planner_provider.dart` | Route-Planner mit Auto-Zoom (v1.7.0) |
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
+| `lib/data/providers/active_trip_provider.dart` | Aktiver Trip Persistenz (keepAlive, v1.7.39) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
-| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) |
+| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) |
 | `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
@@ -128,7 +129,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
-| `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7) |
+| `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7, v1.7.39 erweitert: POIs, Konfiguration) |
 
 ### Daten
 
@@ -270,6 +271,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.39.md` (Aktiver Trip Persistenz: Resume-Banner, Überschreib-Dialog, Abschluss-Dialog)
 - `Dokumentation/CHANGELOG-v1.7.38.md` (Euro Trip: Tage statt Radius als primärer Input, Quick-Select 2/4/7/10 Tage)
 - `Dokumentation/CHANGELOG-v1.7.37.md` (AppBar-Fix: Buttons nicht mehr verdeckt + Panel-Kompaktierung + GPS-Fix)
 - `Dokumentation/CHANGELOG-v1.7.34.md` (Mehrtägiger Google Maps Export Fix: day-Feld bei removePOI/rerollPOI/Favoriten)
@@ -859,6 +861,48 @@ final isCompleted = state.isDayCompleted(2);
 // Ohne diesen Fix starteten Folgetage am Trip-Start statt am letzten Stop.
 // Auch _saveToFavorites nutzt jetzt trip.stops (mit day-Feld) statt selectedPOIs.
 ```
+
+### Aktiver Trip Persistenz (v1.7.39+)
+
+```dart
+// Aktiver Trip wird automatisch gespeichert bei Multi-Day Euro Trips
+// Nach confirmTrip(), completeDay(), selectDay(), uncompleteDay()
+
+// Aktiven Trip aus Hive laden (Provider)
+final activeTripAsync = ref.watch(activeTripNotifierProvider);
+activeTripAsync.when(
+  data: (data) {
+    if (data != null) {
+      // Aktiver Trip vorhanden
+      print('${data.trip.name} - ${data.completedDays.length}/${data.trip.actualDays} Tage');
+    }
+  },
+  loading: () {},
+  error: (e, s) {},
+);
+
+// Trip wiederherstellen (aus ActiveTripData)
+await ref.read(randomTripNotifierProvider.notifier).restoreFromActiveTrip(data);
+
+// Aktiven Trip löschen
+await ref.read(activeTripNotifierProvider.notifier).clear();
+
+// Provider refreshen (nach externem Save)
+await ref.read(activeTripNotifierProvider.notifier).refresh();
+```
+
+**Automatisches Verhalten:**
+- `confirmTrip()` → Speichert bei Multi-Day
+- `completeDay(N)` → Speichert nach Tag-Export
+- `selectDay(N)` → Aktualisiert ausgewählten Tag
+- `uncompleteDay(N)` → Speichert nach Rückgängig
+- `reset()` → Löscht aktiven Trip
+- `generateTrip()` → Löscht alten aktiven Trip
+
+**UI-Komponenten:**
+- `_ActiveTripResumeBanner` auf MapScreen (Banner mit Fortschritt + Fortsetzen Button)
+- Überschreib-Dialog bei neuem Trip während aktiver Trip existiert
+- Trip-Abschluss-Dialog nach letztem Tag-Export
 
 ### AI Trip POIs bearbeiten (v1.4.4+)
 

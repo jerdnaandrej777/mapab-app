@@ -6,9 +6,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart'; // Enthält WeatherCondition
 import '../../../core/constants/trip_constants.dart';
+import '../../../data/providers/active_trip_provider.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
+import '../../../data/services/active_trip_service.dart';
 import '../../../data/services/hotel_service.dart';
+import '../../map/providers/map_controller_provider.dart';
 import '../../map/providers/route_planner_provider.dart';
 import '../../map/providers/route_session_provider.dart';
 import '../../map/providers/weather_provider.dart';
@@ -277,10 +280,16 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       }
     }
 
+    // Alten aktiven Trip löschen (neuer Trip ersetzt ihn)
+    await ref.read(activeTripServiceProvider).clearTrip();
+    ref.read(activeTripNotifierProvider.notifier).refresh();
+
     state = state.copyWith(
       step: RandomTripStep.generating,
       isLoading: true,
       error: null,
+      completedDays: {},
+      selectedDay: 1,
     );
 
     try {
@@ -458,6 +467,11 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
     state = state.copyWith(step: RandomTripStep.confirmed);
 
+    // Mehrtägige Trips sofort persistieren
+    if (state.isMultiDay) {
+      _persistActiveTrip();
+    }
+
     // Routen-Wetter laden fuer die bestaetigte Route
     final routeCoords = generatedTrip.trip.route.coordinates;
     if (routeCoords.isNotEmpty) {
@@ -476,8 +490,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     );
   }
 
-  /// Setzt den State zurück
+  /// Setzt den State zurück und löscht aktiven Trip
   void reset() {
+    ref.read(activeTripServiceProvider).clearTrip();
+    ref.read(activeTripNotifierProvider.notifier).refresh();
     state = const RandomTripState();
   }
 
@@ -491,6 +507,11 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     final maxDay = state.generatedTrip?.trip.actualDays ?? 1;
     final clampedDay = dayNumber.clamp(1, maxDay);
     state = state.copyWith(selectedDay: clampedDay);
+
+    // Ausgewählten Tag in Hive aktualisieren
+    if (state.isMultiDay) {
+      ref.read(activeTripServiceProvider).updateSelectedDay(clampedDay);
+    }
   }
 
   /// Markiert einen Tag als abgeschlossen/exportiert
@@ -503,18 +524,101 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     if (dayNumber < maxDay) {
       state = state.copyWith(selectedDay: dayNumber + 1);
     }
+
+    // Aktiven Trip persistieren (nur Mehrtages-Trips)
+    if (state.isMultiDay && state.generatedTrip != null) {
+      _persistActiveTrip();
+    }
   }
 
   /// Setzt den Abschluss-Status eines Tages zurück
   void uncompleteDay(int dayNumber) {
     final updatedDays = Set<int>.from(state.completedDays)..remove(dayNumber);
     state = state.copyWith(completedDays: updatedDays);
+
+    // Aktiven Trip aktualisieren
+    if (state.isMultiDay && state.generatedTrip != null) {
+      _persistActiveTrip();
+    }
   }
 
   /// Prüft ob alle Tage abgeschlossen sind
   bool get allDaysCompleted {
     final totalDays = state.generatedTrip?.trip.actualDays ?? 1;
     return state.completedDays.length >= totalDays;
+  }
+
+  /// Persistiert den aktuellen State als aktiven Trip in Hive
+  Future<void> _persistActiveTrip() async {
+    final generatedTrip = state.generatedTrip;
+    if (generatedTrip == null) return;
+
+    try {
+      await ref.read(activeTripServiceProvider).saveTrip(
+        trip: generatedTrip.trip,
+        completedDays: state.completedDays,
+        selectedDay: state.selectedDay,
+        selectedPOIs: generatedTrip.selectedPOIs,
+        availablePOIs: generatedTrip.availablePOIs,
+        startLocation: state.startLocation,
+        startAddress: state.startAddress,
+        mode: state.mode,
+        days: state.days,
+        radiusKm: state.radiusKm,
+        destinationLocation: state.destinationLocation,
+        destinationAddress: state.destinationAddress,
+      );
+      ref.read(activeTripNotifierProvider.notifier).refresh();
+    } catch (e) {
+      debugPrint('[RandomTrip] Fehler beim Persistieren des aktiven Trips: $e');
+    }
+  }
+
+  /// Stellt einen aktiven Trip aus Hive wieder her
+  Future<void> restoreFromActiveTrip(ActiveTripData data) async {
+    debugPrint('[RandomTrip] Aktiven Trip wiederherstellen: ${data.trip.name}');
+
+    // GeneratedTrip rekonstruieren
+    final generatedTrip = GeneratedTrip(
+      trip: data.trip,
+      selectedPOIs: data.selectedPOIs,
+      availablePOIs: data.availablePOIs,
+    );
+
+    state = state.copyWith(
+      step: RandomTripStep.confirmed,
+      mode: data.mode,
+      startLocation: data.startLocation,
+      startAddress: data.startAddress,
+      radiusKm: data.radiusKm,
+      days: data.days,
+      generatedTrip: generatedTrip,
+      selectedDay: data.selectedDay,
+      completedDays: data.completedDays,
+      destinationLocation: data.destinationLocation,
+      destinationAddress: data.destinationAddress,
+      isLoading: false,
+      error: null,
+    );
+
+    // Bestehende Routen-Daten aufräumen
+    final routePlannerNotifier = ref.read(routePlannerProvider.notifier);
+    routePlannerNotifier.clearStart();
+    routePlannerNotifier.clearEnd();
+    ref.read(routeSessionProvider.notifier).stopRoute();
+
+    // Route und Stops an TripStateProvider übergeben
+    final tripStateNotifier = ref.read(tripStateProvider.notifier);
+    tripStateNotifier.setRouteAndStops(data.trip.route, data.selectedPOIs);
+
+    // Auto-Zoom auf Route
+    ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+    // POIs enrichen für Foto-Anzeige
+    _enrichGeneratedPOIs(generatedTrip);
+
+    debugPrint('[RandomTrip] Trip wiederhergestellt: Tag ${data.selectedDay}, '
+        '${data.completedDays.length}/${data.trip.actualDays} Tage abgeschlossen');
   }
 
   /// v1.6.9: Enriched die generierten POIs für Foto-Anzeige

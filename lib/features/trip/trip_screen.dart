@@ -420,7 +420,14 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       // Tag als abgeschlossen markieren
       ref.read(randomTripNotifierProvider.notifier).completeDay(dayNumber);
 
-      if (context.mounted) {
+      // Prüfen ob alle Tage abgeschlossen sind
+      final updatedState = ref.read(randomTripNotifierProvider);
+      if (updatedState.completedDays.length >= trip.actualDays) {
+        // Alle Tage exportiert
+        if (context.mounted) {
+          _showTripCompletedDialog(context, trip);
+        }
+      } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Tag $dayNumber exportiert'),
@@ -443,6 +450,38 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// Zeigt Dialog wenn alle Tage eines mehrtägigen Trips exportiert wurden
+  Future<void> _showTripCompletedDialog(BuildContext context, Trip trip) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Trip abgeschlossen!'),
+        content: Text(
+          'Alle ${trip.actualDays} Tage wurden erfolgreich exportiert. '
+          'Möchtest du den Trip in deinen Favoriten speichern?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'keep'),
+            child: const Text('Behalten'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: const Text('In Favoriten speichern'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == 'save' && context.mounted) {
+      // Trip in Favoriten speichern und State aufräumen
+      final randomTripState = ref.read(randomTripNotifierProvider);
+      await _saveAITrip(context, ref, randomTripState);
+      ref.read(randomTripNotifierProvider.notifier).reset();
+      if (context.mounted) context.go('/');
     }
   }
 
