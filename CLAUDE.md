@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.7.37 - AppBar-Fix & Panel-Kompaktierung | Plattformen: Android, iOS, Desktop
+Version: 1.7.38 - Euro Trip Tage-Auswahl | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
 | `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
@@ -138,7 +138,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/trip.dart` | Trip Model mit Tages-Helper-Methoden (v1.5.7) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query (v1.7.23: Seen, Küsten, Hotels, Restaurants, Aktivitäten) + Kategorie-Inference (v1.7.9) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Radius→Tage Berechnung (v1.5.7) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38, vorher Radius→Tage) |
 | `lib/core/algorithms/day_planner.dart` | Tages-Planung mit 9-POI-Limit (v1.5.7) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
 
@@ -270,6 +270,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.7.38.md` (Euro Trip: Tage statt Radius als primärer Input, Quick-Select 2/4/7/10 Tage)
 - `Dokumentation/CHANGELOG-v1.7.37.md` (AppBar-Fix: Buttons nicht mehr verdeckt + Panel-Kompaktierung + GPS-Fix)
 - `Dokumentation/CHANGELOG-v1.7.34.md` (Mehrtägiger Google Maps Export Fix: day-Feld bei removePOI/rerollPOI/Favoriten)
 - `Dokumentation/CHANGELOG-v1.7.27.md` (POI-Foto-Optimierung: 6 neue Bildquellen, ~100% Trefferquote + Kategorie-Modal Live-Update Fix)
@@ -341,7 +342,7 @@ Versionsspezifische Änderungen finden sich in:
 
 ## Quick Reference
 
-### Trip-Konstanten (v1.5.7+)
+### Trip-Konstanten (v1.5.7+, v1.7.38+)
 
 ```dart
 import '../../core/constants/trip_constants.dart';
@@ -357,6 +358,12 @@ final days = TripConstants.calculateDaysFromDistance(1800);  // 3
 
 // Radius aus Tagen berechnen
 final radius = TripConstants.calculateRadiusFromDays(3);  // 1800.0
+
+// Euro Trip Tage-Konstanten (v1.7.38)
+TripConstants.euroTripQuickSelectDays;  // [2, 4, 7, 10]
+TripConstants.euroTripMinDays;          // 1
+TripConstants.euroTripMaxDays;          // 14
+TripConstants.euroTripDefaultDays;      // 3
 ```
 
 ### Unified Panel Design (v1.7.21+)
@@ -777,7 +784,7 @@ context.push('/trip?mode=ai');
 Das AI Trip Panel enthält folgende Elemente:
 - **Modus-Auswahl**: Tagestrip / Euro Trip Buttons
 - **Startpunkt**: Adress-Eingabe mit Autocomplete + GPS-Button
-- **Radius-Slider**: Mit Quick-Select Buttons
+- **Reisedauer/Radius**: Tage-Slider (Euro Trip, v1.7.38) / Radius-Slider (Tagestrip)
 - **Kategorien**: Aufklappbare Kategorie-Auswahl
 - **Generate Button**: "Überrasch mich!"
 
@@ -795,21 +802,39 @@ ref.listenManual(randomTripNotifierProvider, (previous, next) {
 });
 ```
 
-### AI Trip Radius-Einstellungen (v1.5.7+)
+### AI Trip Einstellungen (v1.5.7+, v1.7.38: Tage statt Radius)
 
-| Modus | Min | Max | Default |
-|-------|-----|-----|---------|
-| Tagesausflug | 30 km | 300 km | 100 km |
-| Euro Trip | 100 km | 5000 km | 1000 km |
+**Tagestrip-Modus (Radius-Slider, unverändert):**
 
-**Euro Trip Tagesberechnung:**
-- Formel: `Tage = ceil(Radius / 600km)`
-- Beispiel: 1800km = 3 Tage
+| Einstellung | Min | Max | Default |
+|-------------|-----|-----|---------|
+| Radius | 30 km | 300 km | 100 km |
+
+**Euro Trip-Modus (v1.7.38: Tage-Slider als primärer Input):**
+
+| Einstellung | Min | Max | Default |
+|-------------|-----|-----|---------|
+| Reisedauer | 1 Tag | 14 Tage | 3 Tage |
+| Suchradius (auto) | 600 km | 8400 km | 1800 km |
+
+**Euro Trip Radius-Berechnung (v1.7.38):**
+- Formel: `Radius = Tage × 600km` (Umkehrung von vorher)
+- Benutzer wählt Tage, Radius wird automatisch berechnet
 - Max 9 POIs pro Tag (Google Maps Limit)
 
 **Quick-Select Buttons:**
 - Tagesausflug: 50, 100, 200, 300 km
-- Euro Trip: 1 Tag (600km), 2 Tage (1200km), 4 Tage (2400km), 7 Tage (4200km)
+- Euro Trip: 2 Tage, 4 Tage, 7 Tage, 10 Tage (v1.7.38)
+
+**Tage-Beschreibungen (Euro Trip):**
+
+| Tage | Beschreibung |
+|------|-------------|
+| 1 | Tagesausflug |
+| 2 | Wochenend-Trip |
+| 3-4 | Kurzurlaub |
+| 5-7 | Wochenreise |
+| 8+ | Epischer Euro Trip |
 
 ### Mehrtägiger Euro Trip Export (v1.5.7+, Fix v1.7.34)
 
