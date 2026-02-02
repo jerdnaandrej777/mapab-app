@@ -473,11 +473,22 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     }
 
     // Routen-Wetter laden fuer die bestaetigte Route
+    // Bei Multi-Day: Vorhersage mit Tages-Forecast (max 7 Tage)
     final routeCoords = generatedTrip.trip.route.coordinates;
     if (routeCoords.isNotEmpty) {
-      ref.read(routeWeatherNotifierProvider.notifier)
-          .loadWeatherForRoute(routeCoords);
-      debugPrint('[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
+      final tripDays = generatedTrip.trip.actualDays;
+      if (tripDays > 1) {
+        ref.read(routeWeatherNotifierProvider.notifier)
+            .loadWeatherForRouteWithForecast(
+              routeCoords,
+              forecastDays: tripDays.clamp(2, 7),
+            );
+        debugPrint('[RandomTrip] Routen-Wetter mit ${tripDays.clamp(2, 7)}-Tage-Forecast geladen');
+      } else {
+        ref.read(routeWeatherNotifierProvider.notifier)
+            .loadWeatherForRoute(routeCoords);
+        debugPrint('[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
+      }
     }
   }
 

@@ -106,13 +106,21 @@ class EditablePOICard extends ConsumerWidget {
                           ),
                           if (showWeatherWarning) ...[
                             const SizedBox(width: 6),
-                            Tooltip(
-                              message: 'Outdoor bei schlechtem Wetter',
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                size: 14,
-                                color: Colors.orange.shade600,
-                              ),
+                            _WeatherBadgeInline(
+                              condition: dayWeather!,
+                              isIndoor: false,
+                            ),
+                          ] else if (hasBadWeather && !isOutdoor) ...[
+                            const SizedBox(width: 6),
+                            _WeatherBadgeInline(
+                              condition: dayWeather!,
+                              isIndoor: true,
+                            ),
+                          ] else if (dayWeather == WeatherCondition.good && isOutdoor) ...[
+                            const SizedBox(width: 6),
+                            _WeatherBadgeInline(
+                              condition: dayWeather!,
+                              isIndoor: false,
                             ),
                           ],
                         ],
@@ -204,5 +212,65 @@ class EditablePOICard extends ConsumerWidget {
       POICategory.hotel,
     };
     return indoorCategories.contains(category);
+  }
+}
+
+/// Inline Wetter-Badge fuer EditablePOICard
+class _WeatherBadgeInline extends StatelessWidget {
+  final WeatherCondition condition;
+  final bool isIndoor;
+
+  const _WeatherBadgeInline({
+    required this.condition,
+    required this.isIndoor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    String text;
+    Color bgColor;
+    Color fgColor;
+
+    if (condition == WeatherCondition.good && !isIndoor) {
+      // Outdoor bei gutem Wetter → Ideal
+      text = 'Ideal';
+      bgColor = Colors.green.withOpacity(0.15);
+      fgColor = Colors.green.shade700;
+    } else if ((condition == WeatherCondition.bad ||
+            condition == WeatherCondition.danger) &&
+        isIndoor) {
+      // Indoor bei schlechtem Wetter → Empfohlen
+      text = 'Empfohlen';
+      bgColor = Colors.green.withOpacity(0.15);
+      fgColor = Colors.green.shade700;
+    } else if (condition == WeatherCondition.danger) {
+      // Outdoor bei Unwetter
+      text = 'Unwetter';
+      bgColor = colorScheme.errorContainer;
+      fgColor = colorScheme.onErrorContainer;
+    } else {
+      // Outdoor bei Regen
+      text = 'Regen';
+      bgColor = Colors.orange.withOpacity(0.15);
+      fgColor = Colors.orange.shade700;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: fgColor,
+        ),
+      ),
+    );
   }
 }

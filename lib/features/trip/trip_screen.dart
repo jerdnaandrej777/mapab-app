@@ -17,6 +17,7 @@ import '../random_trip/providers/random_trip_state.dart';
 import '../random_trip/widgets/trip_preview_card.dart';
 import '../random_trip/widgets/hotel_suggestion_card.dart';
 import 'providers/trip_state_provider.dart';
+import 'widgets/corridor_browser_sheet.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
 
@@ -656,6 +657,25 @@ $mapsUrl
                     label: const Text('Auf Karte anzeigen'),
                   ),
                 ),
+                // POIs entdecken Button
+                if (route != null && route.coordinates.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => CorridorBrowserSheet.show(
+                          context: context,
+                          route: route,
+                          existingStopIds: tripState.stops
+                              .map((s) => s.id)
+                              .toSet(),
+                        ),
+                        icon: const Icon(Icons.add_location_alt_rounded),
+                        label: const Text('POIs entlang der Route'),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -759,6 +779,28 @@ $mapsUrl
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                // POIs entdecken Button
+                if (trip != null && trip.route.coordinates.isNotEmpty)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => CorridorBrowserSheet.show(
+                        context: context,
+                        route: trip.route,
+                        existingStopIds:
+                            trip.stops.map((s) => s.poiId).toSet(),
+                      ),
+                      icon: const Icon(Icons.add_location_alt_rounded),
+                      label: const Text('POIs entlang der Route'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 // Tagesweiser Export (nur bei Mehrtages-Trips)
                 if (isMultiDay) ...[

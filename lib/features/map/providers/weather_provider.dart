@@ -15,6 +15,8 @@ class WeatherPoint {
   final Weather weather;
   final double routePosition; // 0.0 = Start, 1.0 = Ziel
   final int? hoursFromNow;
+  final List<DailyForecast>? dailyForecast; // 7-Tage-Vorhersage
+  final int? dayNumber; // Welcher Reisetag (1-basiert)
 
   WeatherPoint({
     required this.location,
@@ -22,6 +24,8 @@ class WeatherPoint {
     required this.weather,
     required this.routePosition,
     this.hoursFromNow,
+    this.dailyForecast,
+    this.dayNumber,
   });
 }
 
@@ -138,6 +142,77 @@ class RouteWeatherState {
       (day, condition) => MapEntry(day, condition.name),
     );
   }
+
+  /// Hat Forecast-Daten (von loadWeatherForRouteWithForecast)
+  bool get hasForecast =>
+      weatherPoints.any((p) => p.dailyForecast != null && p.dailyForecast!.isNotEmpty);
+
+  /// Vorhersage fuer einen bestimmten Reisetag (1-basiert)
+  /// Tag 1 = heute (dailyForecast[0]), Tag 2 = morgen, etc.
+  /// Findet den naechsten WeatherPoint fuer die Route-Position des Tages
+  DailyForecast? getDayForecast(int day, int totalDays) {
+    if (weatherPoints.isEmpty || day < 1) return null;
+
+    // Position des Tages auf der Route
+    final dayPosition = totalDays > 1 ? (day - 1) / (totalDays - 1) : 0.5;
+
+    // Naechsten WeatherPoint mit Forecast finden
+    WeatherPoint? closest;
+    double minDist = double.infinity;
+    for (final wp in weatherPoints) {
+      if (wp.dailyForecast == null || wp.dailyForecast!.isEmpty) continue;
+      final dist = (wp.routePosition - dayPosition).abs();
+      if (dist < minDist) {
+        minDist = dist;
+        closest = wp;
+      }
+    }
+
+    if (closest == null || closest.dailyForecast == null) return null;
+
+    // Forecast-Index: Tag 1 = Index 0 (heute), Tag 2 = Index 1, etc.
+    final forecastIndex = day - 1;
+    if (forecastIndex >= closest.dailyForecast!.length) {
+      return closest.dailyForecast!.last; // Letzter verfuegbarer Tag
+    }
+    return closest.dailyForecast![forecastIndex];
+  }
+
+  /// Vorhersage-Condition pro Tag aus den DailyForecast-Daten
+  /// Nutzt echte Tages-Vorhersage statt aktuellem Wetter
+  Map<int, WeatherCondition> getForecastPerDay(int totalDays) {
+    if (!hasForecast) return getWeatherPerDay(totalDays); // Fallback
+
+    final result = <int, WeatherCondition>{};
+    for (int day = 1; day <= totalDays; day++) {
+      final forecast = getDayForecast(day, totalDays);
+      if (forecast != null) {
+        result[day] = forecast.condition;
+      } else {
+        // Fallback auf Position-basiertes Mapping
+        final dayCondition = getWeatherPerDay(1);
+        result[day] = dayCondition[1] ?? overallCondition;
+      }
+    }
+    return result;
+  }
+
+  /// Forecast als String-Map fuer AI Service (mit Temperatur)
+  Map<int, String> getForecastPerDayAsStrings(int totalDays) {
+    final result = <int, String>{};
+    for (int day = 1; day <= totalDays; day++) {
+      final forecast = getDayForecast(day, totalDays);
+      if (forecast != null) {
+        result[day] = '${forecast.condition.name} '
+            '(${forecast.temperatureRange}, '
+            '${forecast.precipitationProbabilityMax}% Regen)';
+      } else {
+        final condition = getWeatherPerDay(totalDays)[day];
+        result[day] = condition?.name ?? 'unknown';
+      }
+    }
+    return result;
+  }
 }
 
 /// Provider für Routen-Wetter
@@ -203,6 +278,74 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       state = state.copyWith(
         isLoading: false,
         error: 'Wetter konnte nicht geladen werden',
+      );
+    }
+  }
+
+  /// Laedt Wetter mit 7-Tage-Vorhersage fuer Punkte entlang der Route
+  /// Fuer mehrtaegige Trips: Jeder Tag erhaelt echte Tagesvorhersage
+  Future<void> loadWeatherForRouteWithForecast(
+    List<LatLng> routeCoords, {
+    int forecastDays = 7,
+  }) async {
+    if (routeCoords.isEmpty) {
+      state = const RouteWeatherState();
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final weatherRepo = ref.read(weatherRepositoryProvider);
+
+      // 5 Punkte gleichmaessig auf der Route verteilen
+      final points = <WeatherPoint>[];
+      final step = (routeCoords.length / 5).floor().clamp(1, routeCoords.length);
+
+      for (int i = 0; i < 5 && i * step < routeCoords.length; i++) {
+        final index = i * step;
+        final location = routeCoords[index];
+        final routePosition = index / (routeCoords.length - 1);
+
+        try {
+          // Wetter MIT Vorhersage laden statt nur aktuell
+          final weather = await weatherRepo.getWeatherWithForecast(
+            location,
+            forecastDays: forecastDays,
+          );
+
+          points.add(WeatherPoint(
+            location: location,
+            weather: weather,
+            routePosition: routePosition,
+            dailyForecast: weather.dailyForecast,
+          ));
+        } catch (e) {
+          debugPrint('[Weather] Forecast Punkt $i fehlgeschlagen: $e');
+        }
+
+        // Rate Limiting
+        if (i < 4) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+
+      final overallCondition = _calculateOverallCondition(points);
+
+      state = RouteWeatherState(
+        weatherPoints: points,
+        overallCondition: overallCondition,
+        isLoading: false,
+        lastUpdated: DateTime.now(),
+      );
+
+      debugPrint(
+          '[Weather] ${points.length} Punkte mit Forecast geladen, Zustand: $overallCondition');
+    } catch (e) {
+      debugPrint('[Weather] Forecast Fehler: $e');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Wetter-Vorhersage konnte nicht geladen werden',
       );
     }
   }

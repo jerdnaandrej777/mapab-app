@@ -20,6 +20,8 @@ class AISuggestion {
   final String? targetPOIId;
   final POI? alternativePOI;
   final WeatherCondition? weather;
+  final String? replacementPOIName;
+  final String? actionType; // swap, remove, reorder
 
   const AISuggestion({
     required this.message,
@@ -27,6 +29,8 @@ class AISuggestion {
     this.targetPOIId,
     this.alternativePOI,
     this.weather,
+    this.replacementPOIName,
+    this.actionType,
   });
 }
 
@@ -164,6 +168,108 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       POICategory.hotel,
     };
     return indoor.contains(category);
+  }
+
+  /// AI-basierte Alternativen fuer einen bestimmten Tag vorschlagen
+  /// Nutzt AIService.optimizeTrip() via GPT-4o Backend
+  Future<void> suggestAlternativesForDay({
+    required int day,
+    required Trip trip,
+    required RouteWeatherState routeWeather,
+    required List<POI> availablePOIs,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    debugPrint('[AIAdvisor] Fordere AI-Alternativen fuer Tag $day an...');
+
+    try {
+      final aiService = ref.read(aiServiceProvider);
+
+      // Wetter-Strings fuer AI erstellen
+      final dayWeatherStrings = routeWeather.hasForecast
+          ? routeWeather.getForecastPerDayAsStrings(trip.actualDays)
+          : routeWeather.getWeatherPerDayAsStrings(trip.actualDays);
+
+      final optimization = await aiService.optimizeTrip(
+        trip: trip,
+        dayWeather: dayWeatherStrings,
+        availablePOIs: availablePOIs,
+      );
+
+      // AI-Vorschlaege in AISuggestion-Objekte umwandeln
+      final suggestions = <AISuggestion>[];
+      for (final suggestion in optimization.suggestions) {
+        final targetDay = suggestion.dayNumber ?? day;
+        if (targetDay != day) continue; // Nur Vorschlaege fuer den gewaehlten Tag
+
+        suggestions.add(AISuggestion(
+          message: suggestion.message,
+          type: suggestion.type == 'weather'
+              ? SuggestionType.weather
+              : suggestion.type == 'alternative'
+                  ? SuggestionType.alternative
+                  : SuggestionType.optimization,
+          weather: routeWeather.getForecastPerDay(trip.actualDays)[day],
+          actionType: suggestion.type,
+        ));
+      }
+
+      // Zusammenfassung als allgemeinen Vorschlag hinzufuegen
+      if (optimization.summary.isNotEmpty && suggestions.isEmpty) {
+        suggestions.add(AISuggestion(
+          message: optimization.summary,
+          type: SuggestionType.general,
+        ));
+      }
+
+      // Bestehende Vorschlaege fuer den Tag ersetzen
+      final updatedSuggestions =
+          Map<int, List<AISuggestion>>.from(state.suggestionsPerDay);
+      updatedSuggestions[day] = suggestions;
+
+      state = state.copyWith(
+        suggestionsPerDay: updatedSuggestions,
+        isLoading: false,
+        lastUpdated: DateTime.now(),
+      );
+
+      debugPrint('[AIAdvisor] ${suggestions.length} AI-Vorschlaege fuer Tag $day erhalten');
+    } catch (e) {
+      debugPrint('[AIAdvisor] AI-Vorschlaege fehlgeschlagen: $e');
+
+      // Fallback auf regelbasierte Vorschlaege
+      final fallbackSuggestions = <AISuggestion>[];
+      final dayWeather = _getDayWeather(day, trip.actualDays, routeWeather);
+      final stopsForDay = trip.getStopsForDay(day);
+
+      if (dayWeather == WeatherCondition.bad ||
+          dayWeather == WeatherCondition.danger) {
+        final outdoorStops = stopsForDay
+            .where((s) => s.category != null && !_isIndoor(s.category!))
+            .toList();
+
+        for (final stop in outdoorStops) {
+          fallbackSuggestions.add(AISuggestion(
+            message:
+                '${stop.name} ist eine Outdoor-Aktivitaet. Ersetze diesen Stop fuer eine Indoor-Alternative.',
+            type: SuggestionType.alternative,
+            targetPOIId: stop.poiId,
+            weather: dayWeather,
+            actionType: 'swap',
+          ));
+        }
+      }
+
+      final updatedSuggestions =
+          Map<int, List<AISuggestion>>.from(state.suggestionsPerDay);
+      updatedSuggestions[day] = fallbackSuggestions;
+
+      state = state.copyWith(
+        suggestionsPerDay: updatedSuggestions,
+        isLoading: false,
+        error: 'AI nicht erreichbar - zeige lokale Vorschlaege',
+        lastUpdated: DateTime.now(),
+      );
+    }
   }
 
   /// Zuruecksetzen

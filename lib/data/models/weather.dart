@@ -194,6 +194,15 @@ class DailyForecast with _$DailyForecast {
   factory DailyForecast.fromJson(Map<String, dynamic> json) =>
       _$DailyForecastFromJson(json);
 
+  /// Wetter-Zustand basierend auf Code
+  WeatherCondition get condition {
+    if (weatherCode == 0 || weatherCode == 1) return WeatherCondition.good;
+    if (weatherCode <= 3) return WeatherCondition.mixed;
+    if (weatherCode >= 45 && weatherCode <= 48) return WeatherCondition.bad;
+    if (weatherCode >= 95) return WeatherCondition.danger;
+    return WeatherCondition.bad;
+  }
+
   /// Wetter-Icon
   String get icon {
     if (weatherCode == 0) return '☀️';
