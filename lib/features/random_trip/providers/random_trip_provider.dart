@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -197,8 +198,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       // Position abrufen
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
       );
 
       debugPrint('[RandomTrip] Position erhalten: ${position.latitude}, ${position.longitude}');
@@ -215,12 +216,29 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         useGPS: true,
         isLoading: false,
       );
+    } on TimeoutException catch (_) {
+      debugPrint('[RandomTrip] GPS-Timeout');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'GPS-Standort konnte nicht rechtzeitig ermittelt werden. Bitte versuche es erneut oder gib eine Adresse ein.',
+      );
+    } on LocationServiceDisabledException catch (_) {
+      debugPrint('[RandomTrip] Location Services deaktiviert');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Bitte aktiviere die Ortungsdienste in den Einstellungen',
+      );
     } catch (e) {
       debugPrint('[RandomTrip] GPS-Fehler: $e');
 
+      // Spezifischere Fehlermeldung je nach Ausnahme-Typ
+      final errorMsg = e.toString().contains('permission')
+          ? 'GPS-Berechtigung verweigert. Bitte in den App-Einstellungen aktivieren.'
+          : 'Standort konnte nicht ermittelt werden. Bitte gib eine Adresse manuell ein.';
+
       state = state.copyWith(
         isLoading: false,
-        error: 'Standort konnte nicht ermittelt werden: ${e.toString()}',
+        error: errorMsg,
       );
     }
   }

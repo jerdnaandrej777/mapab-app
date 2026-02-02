@@ -38,7 +38,7 @@ class UnifiedWeatherWidget extends ConsumerWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: hasRoute
             ? _getBackgroundColor(routeWeather.overallCondition, context)
@@ -145,16 +145,16 @@ class _LocationWeatherHeader extends StatelessWidget {
 
     if (weatherState.isLoading) {
       return Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
             const SizedBox(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: 8),
-            const Expanded(child: Text('Wetter laden...')),
+            Expanded(child: Text('Wetter laden...', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
             _ExpandIcon(isCollapsed: isCollapsed, colorScheme: colorScheme),
           ],
         ),
@@ -169,13 +169,13 @@ class _LocationWeatherHeader extends StatelessWidget {
     final condition = weather.condition;
 
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
           // Icon
           Text(
             weather.icon,
-            style: const TextStyle(fontSize: 24),
+            style: const TextStyle(fontSize: 20),
           ),
           const SizedBox(width: 8),
           // Temperatur & Stadtname
@@ -187,13 +187,13 @@ class _LocationWeatherHeader extends StatelessWidget {
                   '${weather.formattedTemperature} · ${weatherState.locationName ?? "Mein Standort"}',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 Text(
                   weather.description,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -206,12 +206,12 @@ class _LocationWeatherHeader extends StatelessWidget {
               condition == WeatherCondition.danger
                   ? Icons.warning_amber_rounded
                   : Icons.umbrella,
-              size: 18,
+              size: 16,
               color: condition == WeatherCondition.danger
                   ? Colors.red.shade700
                   : Colors.orange.shade700,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
           // Details-Button
           IconButton(
@@ -224,10 +224,12 @@ class _LocationWeatherHeader extends StatelessWidget {
             },
             icon: Icon(
               Icons.info_outline,
-              size: 18,
+              size: 16,
               color: colorScheme.onSurfaceVariant,
             ),
             visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             tooltip: '7-Tage-Vorhersage',
           ),
           // Expand/Collapse Icon
@@ -254,16 +256,16 @@ class _RouteWeatherHeader extends StatelessWidget {
 
     if (weatherState.isLoading) {
       return Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
             const SizedBox(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: 8),
-            const Expanded(child: Text('Wetter laden...')),
+            Expanded(child: Text('Wetter laden...', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
             _ExpandIcon(isCollapsed: isCollapsed, colorScheme: colorScheme),
           ],
         ),
@@ -273,13 +275,13 @@ class _RouteWeatherHeader extends StatelessWidget {
     final condition = weatherState.overallCondition;
 
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
           // Icon
           Text(
             _getConditionIcon(condition, weatherState),
-            style: const TextStyle(fontSize: 24),
+            style: const TextStyle(fontSize: 20),
           ),
           const SizedBox(width: 8),
           // Beschreibung
@@ -291,14 +293,14 @@ class _RouteWeatherHeader extends StatelessWidget {
                   _getConditionTitle(condition, weatherState),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 if (weatherState.temperatureRange != null)
                   Text(
                     weatherState.temperatureRange!,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -307,7 +309,7 @@ class _RouteWeatherHeader extends StatelessWidget {
           ),
           // Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: _getBadgeColor(condition, weatherState),
               borderRadius: BorderRadius.circular(12),
