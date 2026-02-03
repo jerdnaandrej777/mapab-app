@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
 import '../../../data/models/weather.dart';
 
-/// Zeigt das Wetter-Details Bottom Sheet an (v1.7.6)
+/// Zeigt das Wetter-Details Bottom Sheet an (v1.7.6, v2.0.0: Vollbild)
 void showWeatherDetailsSheet(
   BuildContext context, {
   required Weather weather,
@@ -12,9 +12,15 @@ void showWeatherDetailsSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => WeatherDetailsSheet(
-      weather: weather,
-      locationName: locationName,
+    builder: (context) => DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) => WeatherDetailsSheet(
+        weather: weather,
+        locationName: locationName,
+        scrollController: scrollController,
+      ),
     ),
   );
 }
@@ -24,11 +30,13 @@ void showWeatherDetailsSheet(
 class WeatherDetailsSheet extends StatelessWidget {
   final Weather weather;
   final String? locationName;
+  final ScrollController? scrollController;
 
   const WeatherDetailsSheet({
     super.key,
     required this.weather,
     this.locationName,
+    this.scrollController,
   });
 
   @override
@@ -42,7 +50,6 @@ class WeatherDetailsSheet extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           // Handle
           Container(
@@ -55,7 +62,7 @@ class WeatherDetailsSheet extends StatelessWidget {
             ),
           ),
 
-          // Header
+          // Header (fixiert oben)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -88,22 +95,32 @@ class WeatherDetailsSheet extends StatelessWidget {
             ),
           ),
 
-          // Aktuelles Wetter
-          _buildCurrentWeather(context, colorScheme),
+          // Scrollbarer Inhalt
+          Expanded(
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                children: [
+                  // Aktuelles Wetter
+                  _buildCurrentWeather(context, colorScheme),
 
-          const Divider(height: 32),
+                  const Divider(height: 32),
 
-          // 7-Tage-Vorhersage
-          if (weather.dailyForecast.isNotEmpty)
-            _buildForecast(context, colorScheme),
+                  // 7-Tage-Vorhersage
+                  if (weather.dailyForecast.isNotEmpty)
+                    _buildForecast(context, colorScheme),
 
-          // Zusatz-Infos (UV, Sonnenzeiten)
-          _buildExtraInfo(context, colorScheme),
+                  // Zusatz-Infos (UV, Sonnenzeiten)
+                  _buildExtraInfo(context, colorScheme),
 
-          // Empfehlung
-          _buildRecommendation(context, colorScheme),
+                  // Empfehlung
+                  _buildRecommendation(context, colorScheme),
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
