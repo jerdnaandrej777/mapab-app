@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.2 - 3D Navigation mit MapLibre GL, Pitch/Tilt & Vektor-Tiles | Plattformen: Android, iOS, Desktop
+Version: 1.9.4 - DayEditor Button-Redesign: Dominanter Navi-Button, Route Teilen, 3-Ebenen Layout | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -91,11 +91,11 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) |
-| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.2: Scroll/Rotate-Gesten im Nav-Modus deaktiviert) |
+| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.3: nativer User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert) |
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden Buttons (v1.9.0) |
 | `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
-| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) |
+| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) |
 | `lib/features/trip/widgets/editable_poi_card.dart` | POI-Karte im DayEditor mit Reroll/Delete + kontext-aware Wetter-Badges (v1.8.0: Regen/Unwetter/Empfohlen/Ideal) |
 | `lib/features/trip/widgets/corridor_browser_sheet.dart` | Bottom Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) |
 | `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) |
@@ -284,7 +284,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 7. **AI-Chat**: Benötigt `--dart-define=BACKEND_URL=...` (sonst Demo-Modus)
 8. **Open-Meteo Vorhersage**: Max 16 Tage → Trips > 7 Tage zeigen nur 7 Tage Vorhersage (v1.8.0)
 9. **AI-Vorschlaege**: Backend muss erreichbar sein → Fallback auf regelbasierte Vorschlaege (v1.8.0)
-10. **Navigation**: GPS-Stream benoetigt physisches Geraet (Emulator unzuverlaessig), Rerouting benoetigt OSRM-Erreichbarkeit (v1.9.0)
+10. **Navigation**: GPS-Stream benoetigt physisches Geraet (Emulator unzuverlaessig), Rerouting benoetigt OSRM-Erreichbarkeit (v1.9.0). Pan-Gesten aktiviert seit v1.9.3, Kamera re-zentriert bei naechstem GPS-Tick
 11. **MapLibre GL**: OpenFreeMap Tile-Server muss erreichbar sein fuer 3D-Navigation, Fallback auf flutter_map nicht automatisch (v1.9.1)
 
 ## Android-Berechtigungen
@@ -305,6 +305,8 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.4.md` (DayEditor Button-Redesign: Dominanter Navigation-Button, Route Teilen, 3-Ebenen Column-Layout, Google Maps als OutlinedButton)
+- `Dokumentation/CHANGELOG-v1.9.3.md` (Navigation-Fix: Nativer MapLibre User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert, kein Zoom-Versatz mehr)
 - `Dokumentation/CHANGELOG-v1.9.2.md` (Standort-Marker Fix: Scroll/Rotate-Gesten im Navigations-Modus deaktiviert, Kamera nur per GPS gesteuert)
 - `Dokumentation/CHANGELOG-v1.9.1.md` (3D Navigation: MapLibre GL mit Pitch/Tilt, OpenFreeMap Vektor-Tiles, GeoJSON Route-Rendering)
 - `Dokumentation/CHANGELOG-v1.9.0.md` (OSRM In-App Navigation: Turn-by-Turn, GPS-Tracking, TTS-Sprachansagen, Rerouting, POI-Waypoints, DayEditor tagesspezifische Navigation)

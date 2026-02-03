@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
@@ -232,7 +233,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     ),
                   ),
 
-                const SizedBox(height: 80), // Platz fuer Bottom Buttons
+                const SizedBox(height: 160), // Platz fuer Bottom Buttons
               ],
             ),
           ),
@@ -564,56 +565,86 @@ class _BottomActions extends ConsumerWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // POIs entdecken Button
-              IconButton(
-                onPressed: () => CorridorBrowserSheet.show(
-                  context: context,
-                  route: trip.route,
-                  existingStopIds:
-                      trip.stops.map((s) => s.poiId).toSet(),
-                ),
-                icon: const Icon(Icons.add_location_alt_rounded),
-                tooltip: 'POIs entdecken',
-                style: IconButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
-                  backgroundColor:
-                      colorScheme.primaryContainer.withOpacity(0.5),
-                ),
+              // Ebene 1: POIs hinzufuegen + Route Teilen
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => CorridorBrowserSheet.show(
+                        context: context,
+                        route: trip.route,
+                        existingStopIds:
+                            trip.stops.map((s) => s.poiId).toSet(),
+                      ),
+                      icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                      label: const Text('POIs hinzufuegen'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _shareDayRoute(context, ref),
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text('Route Teilen'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              // In-App Navigation starten
-              IconButton(
-                onPressed: () =>
-                    _startDayNavigation(context, ref),
-                icon: const Icon(Icons.navigation_rounded),
-                tooltip: 'Navigation starten',
-                style: IconButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
-                  backgroundColor:
-                      colorScheme.primaryContainer.withOpacity(0.5),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Google Maps Export
-              Expanded(
+              const SizedBox(height: 8),
+              // Ebene 2: Navigation starten (dominant)
+              SizedBox(
+                width: double.infinity,
                 child: FilledButton.icon(
+                  onPressed: () => _startDayNavigation(context, ref),
+                  icon: const Icon(Icons.navigation_rounded),
+                  label: const Text('Navigation starten'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Ebene 3: Google Maps Export (tertiaer)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: () => _openDayInGoogleMaps(context, ref),
                   icon: Icon(
-                    isCompleted ? Icons.check_circle : Icons.navigation,
-                    size: 20,
+                    isCompleted ? Icons.check_circle : Icons.open_in_new,
+                    size: 18,
                   ),
                   label: Text(
                     isCompleted
                         ? 'Tag $selectedDay erneut oeffnen'
                         : 'Tag $selectedDay in Google Maps',
                   ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isCompleted
-                        ? Colors.green
-                        : colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    foregroundColor: isCompleted ? Colors.green : null,
+                    side: isCompleted
+                        ? const BorderSide(color: Colors.green)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -782,5 +813,78 @@ class _BottomActions extends ConsumerWidget {
       'route': dayRoute,
       'stops': stopsForDay,
     });
+  }
+
+  Future<void> _shareDayRoute(BuildContext context, WidgetRef ref) async {
+    final stopsForDay = trip.getStopsForDay(selectedDay);
+    if (stopsForDay.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Keine Stops fuer Tag $selectedDay')),
+      );
+      return;
+    }
+
+    // Start bestimmen (gleiche Logik wie Google Maps Export)
+    LatLng origin;
+    if (selectedDay == 1) {
+      origin = startLocation;
+    } else {
+      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
+      origin = prevDayStops.isNotEmpty
+          ? prevDayStops.last.location
+          : startLocation;
+    }
+
+    // Ziel bestimmen
+    LatLng destination;
+    if (selectedDay == trip.actualDays) {
+      destination = startLocation;
+    } else {
+      final nextDayStops = trip.getStopsForDay(selectedDay + 1);
+      destination = nextDayStops.isNotEmpty
+          ? nextDayStops.first.location
+          : startLocation;
+    }
+
+    // Google Maps URL bauen
+    final waypoints = stopsForDay
+        .take(TripConstants.maxPoisPerDay)
+        .map((s) =>
+            '${s.location.latitude.toStringAsFixed(6)},${s.location.longitude.toStringAsFixed(6)}')
+        .join('|');
+    final originStr =
+        '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
+    final destinationStr =
+        '${destination.latitude.toStringAsFixed(6)},${destination.longitude.toStringAsFixed(6)}';
+    final mapsUrl = 'https://www.google.com/maps/dir/?api=1'
+        '&origin=$originStr'
+        '&destination=$destinationStr'
+        '&waypoints=$waypoints'
+        '&travelmode=driving';
+
+    // Share-Text
+    final stopNames = stopsForDay
+        .asMap()
+        .entries
+        .map((e) => '${e.key + 1}. ${e.value.name}')
+        .join('\n');
+    final shareText = 'Meine Route - Tag $selectedDay mit MapAB\n\n'
+        'Stops:\n$stopNames\n\n'
+        'In Google Maps oeffnen:\n$mapsUrl';
+
+    try {
+      await Share.share(shareText, subject: 'MapAB Route - Tag $selectedDay');
+      debugPrint('[Share] Tag $selectedDay Route geteilt');
+    } catch (e) {
+      debugPrint('[Share] Error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Route konnte nicht geteilt werden'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
