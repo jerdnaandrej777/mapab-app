@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.9 - Smart AI-Empfehlungen & 700km-Tageslimit Fix | Plattformen: Android, iOS, Desktop
+Version: 1.9.10 - Wetter-Details Vollbild-Sheet | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -110,7 +110,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/random_trip/widgets/day_tab_selector.dart` | Tag-Auswahl für mehrtägige Trips (v1.5.7) |
 | `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
 | `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
-| `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6) |
+| `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6, v1.9.10: Vollbild DraggableScrollableSheet 85%) |
 | `lib/features/map/widgets/unified_weather_widget.dart` | Intelligentes Wetter-Widget mit Auto-Modus-Wechsel (v1.7.22: startet zugeklappt) |
 
 ### Provider
@@ -307,6 +307,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.10.md` (Wetter-Details Vollbild-Sheet: DraggableScrollableSheet 85%, scrollbarer Inhalt, fixierter Header, nicht mehr von Bottom Navigation abgeschnitten)
 - `Dokumentation/CHANGELOG-v1.9.9.md` (Smart AI-Empfehlungen: Alle Kategorien + Must-See + Wetter-Gewichtung, MiniMap Vorschau-Marker, wetterunabhaengiger Empfehlungen-Button, 700km-Tageslimit hart durchgesetzt)
 - `Dokumentation/CHANGELOG-v1.9.8.md` (AI-POI-Empfehlungen: GPT-4o Indoor-Ranking + actionable POI-Karten im DayEditor, POI-Entfernen im Korridor-Browser mit Bestaetigungs-Dialog)
 - `Dokumentation/CHANGELOG-v1.9.7.md` (Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent extrahiert, Modal-Sheet durch Layout-Toggle ersetzt, Auto-Close bei Tageswechsel)
@@ -506,7 +507,8 @@ if (weatherState.showWarning) {
   // danger oder bad mit hoher Niederschlagswahrscheinlichkeit
 }
 
-// Wetter-Details-Sheet öffnen
+// Wetter-Details-Sheet öffnen (v1.9.10: Vollbild DraggableScrollableSheet 85%)
+// Sheet ist ziehbar (50%-95%), Header fixiert, Inhalt scrollbar
 showWeatherDetailsSheet(
   context,
   weather: weatherState.weather!,
@@ -557,7 +559,7 @@ POIMarker(
 | `WeatherChip` | Kompakter Anzeiger auf MapScreen |
 | `WeatherAlertBanner` | Proaktive Warnung bei schlechtem Wetter |
 | `WeatherRecommendationBanner` | Wetter-Empfehlung auf Hauptseite mit Toggle, opaker Hintergrund (Schnell + AI Trip, v1.7.9) |
-| `WeatherDetailsSheet` | 7-Tage-Vorhersage Bottom Sheet |
+| `WeatherDetailsSheet` | 7-Tage-Vorhersage Vollbild-Sheet (v1.9.10: DraggableScrollableSheet 85%) |
 | `WeatherBadge` | Empfehlungs-Badge auf POI-Karten (Listen) |
 | `POIMarker` (weather) | Mini-Wetter-Badge auf POI-Markern auf der Karte (v1.7.9) |
 | `WeatherBar` | Routen-Wetter mit 5 Punkten |

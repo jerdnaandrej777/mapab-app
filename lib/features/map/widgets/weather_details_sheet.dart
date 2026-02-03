@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
 import '../../../data/models/weather.dart';
 
-/// Zeigt das Wetter-Details Bottom Sheet an (v1.7.6, v2.0.0: Vollbild)
+/// Zeigt das Wetter-Details Bottom Sheet an (v1.7.6, v1.9.10: Vollbild)
 void showWeatherDetailsSheet(
   BuildContext context, {
   required Weather weather,
