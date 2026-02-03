@@ -2,15 +2,18 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
 
 /// Mini-Karte für den Day Editor, zeigt Route + POIs des ausgewählten Tages
 /// Aktualisiert den Kartenausschnitt automatisch bei POI-Aenderungen (Reroll/Delete)
+/// Zeigt optional empfohlene POIs als halbtransparente Marker
 class DayMiniMap extends StatefulWidget {
   final Trip trip;
   final int selectedDay;
   final LatLng startLocation;
   final List<LatLng>? routeSegment;
+  final List<POI> recommendedPOIs;
   final VoidCallback? onMarkerTap;
 
   const DayMiniMap({
@@ -19,6 +22,7 @@ class DayMiniMap extends StatefulWidget {
     required this.selectedDay,
     required this.startLocation,
     this.routeSegment,
+    this.recommendedPOIs = const [],
     this.onMarkerTap,
   });
 
@@ -70,6 +74,10 @@ class _DayMiniMapState extends State<DayMiniMap> {
     }
     if (widget.routeSegment != null && widget.routeSegment!.isNotEmpty) {
       allPoints.addAll(widget.routeSegment!);
+    }
+    // Empfohlene POIs einbeziehen (fuer korrektes Bounds-Fitting)
+    for (final poi in widget.recommendedPOIs) {
+      allPoints.add(poi.location);
     }
     return allPoints;
   }
@@ -177,6 +185,29 @@ class _DayMiniMapState extends State<DayMiniMap> {
                       ),
                     ),
                   ),
+                  // Empfohlene POIs (halbtransparent, Stern-Icon)
+                  ...widget.recommendedPOIs.map((poi) {
+                    return Marker(
+                      point: poi.location,
+                      width: 30,
+                      height: 30,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.tertiary.withOpacity(0.6),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colorScheme.tertiary.withOpacity(0.8),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.auto_awesome,
+                          color: colorScheme.onTertiary,
+                          size: 14,
+                        ),
+                      ),
+                    );
+                  }),
                   // POI-Marker mit Nummern
                   ...stopsForDay.asMap().entries.map((entry) {
                     final index = entry.key;

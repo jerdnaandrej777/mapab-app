@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart'; // Enthält WeatherCondition
+import '../../../data/models/poi.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../data/providers/active_trip_provider.dart';
 import '../../../data/repositories/geocoding_repo.dart';
@@ -435,6 +436,116 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   void markAsConfirmed() {
     if (state.generatedTrip == null) return;
     state = state.copyWith(step: RandomTripStep.confirmed);
+  }
+
+  /// Fuegt einen POI zu einem bestimmten Tag des AI Trips hinzu.
+  /// Wird vom Korridor-Browser im DayEditor aufgerufen.
+  Future<bool> addPOIToDay(POI poi, int dayNumber) async {
+    if (state.generatedTrip == null) return false;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final result = await _tripGenerator.addPOIToTrip(
+        currentTrip: state.generatedTrip!,
+        newPOI: poi,
+        targetDay: dayNumber,
+        startLocation: state.startLocation!,
+        startAddress: state.startAddress ?? '',
+      );
+
+      state = state.copyWith(
+        generatedTrip: result,
+        isLoading: false,
+      );
+
+      // POI enrichen fuer Foto-Anzeige
+      final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+      poiNotifier.addPOI(poi);
+      if (poi.imageUrl == null) {
+        poiNotifier.enrichPOI(poi.id);
+      }
+
+      // TripStateProvider synchronisieren (fuer TripScreen/MapView)
+      final tripStateNotifier = ref.read(tripStateProvider.notifier);
+      tripStateNotifier.setRouteAndStops(
+        result.trip.route,
+        result.selectedPOIs,
+      );
+
+      // Aktiven Trip persistieren (bei Multi-Day)
+      if (state.isMultiDay) {
+        _persistActiveTrip();
+      }
+
+      debugPrint('[RandomTrip] POI "${poi.name}" zu Tag $dayNumber hinzugefuegt');
+      return true;
+    } catch (e) {
+      debugPrint('[RandomTrip] Fehler beim Hinzufuegen zu Tag $dayNumber: $e');
+      final errorMsg = e is TripGenerationException
+          ? 'Tageslimit (700km) wuerde ueberschritten'
+          : 'POI konnte nicht hinzugefuegt werden: $e';
+      state = state.copyWith(
+        isLoading: false,
+        error: errorMsg,
+      );
+      return false;
+    }
+  }
+
+  /// Entfernt einen POI von einem bestimmten Tag.
+  /// Wird vom Korridor-Browser im DayEditor aufgerufen.
+  Future<bool> removePOIFromDay(String poiId, int dayNumber) async {
+    if (state.generatedTrip == null) return false;
+
+    // Pruefen: Tag muss nach Entfernung mindestens 1 Stop haben
+    final dayStops = state.generatedTrip!.trip.getStopsForDay(dayNumber);
+    if (dayStops.length <= 1) {
+      state = state.copyWith(
+        error: 'Mindestens 1 Stop pro Tag erforderlich',
+      );
+      return false;
+    }
+
+    state = state.copyWith(isLoading: true, loadingPOIId: poiId);
+
+    try {
+      final result = await _tripGenerator.removePOI(
+        currentTrip: state.generatedTrip!,
+        poiIdToRemove: poiId,
+        startLocation: state.startLocation!,
+        startAddress: state.startAddress ?? '',
+      );
+
+      state = state.copyWith(
+        generatedTrip: result,
+        isLoading: false,
+        loadingPOIId: null,
+      );
+
+      // TripStateProvider synchronisieren
+      final tripStateNotifier = ref.read(tripStateProvider.notifier);
+      tripStateNotifier.setRouteAndStops(
+        result.trip.route,
+        result.selectedPOIs,
+      );
+
+      // Aktiven Trip persistieren (bei Multi-Day)
+      if (state.isMultiDay) {
+        _persistActiveTrip();
+      }
+
+      debugPrint('[RandomTrip] POI "$poiId" von Tag $dayNumber entfernt');
+      return true;
+    } catch (e) {
+      debugPrint('[RandomTrip] Fehler beim Entfernen von Tag $dayNumber: $e');
+      state = state.copyWith(
+        isLoading: false,
+        loadingPOIId: null,
+        error: 'POI konnte nicht entfernt werden: $e',
+      );
+      return false;
+    }
   }
 
   /// Bestätigt den Trip und übergibt ihn an TripStateProvider

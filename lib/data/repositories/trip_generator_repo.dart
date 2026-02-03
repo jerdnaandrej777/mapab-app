@@ -274,11 +274,35 @@ class TripGeneratorRepository {
       returnToStart: !hasDestination,
     );
     // Tatsaechliche Tagesanzahl kann von angefragter abweichen (distanzbasiert)
-    final actualDays = tripDays.length;
+    var actualDays = tripDays.length;
     if (actualDays != effectiveDays) {
       debugPrint('[TripGenerator] Tagesanzahl angepasst: $effectiveDays angefragt → $actualDays optimal');
     }
     debugPrint('[TripGenerator] TripDays: $actualDays, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
+
+    // Post-Validierung: Kein Tag darf 700km Display-Distanz ueberschreiten
+    // Falls doch, nochmals mit einem zusaetzlichen Tag splitten
+    bool needsResplit = false;
+    for (final day in tripDays) {
+      if (day.distanceKm != null) {
+        final displayKm = day.distanceKm! * TripConstants.haversineToDisplayFactor;
+        if (displayKm > TripConstants.maxDisplayKmPerDay) {
+          debugPrint('[TripGenerator] Tag ${day.dayNumber} = ~${displayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km → Re-Split');
+          needsResplit = true;
+          break;
+        }
+      }
+    }
+    if (needsResplit) {
+      tripDays = _dayPlanner.planDays(
+        pois: optimizedPOIs,
+        startLocation: startLocation,
+        days: actualDays + 1,
+        returnToStart: !hasDestination,
+      );
+      actualDays = tripDays.length;
+      debugPrint('[TripGenerator] Re-Split: $actualDays Tage nach erneutem planDays()');
+    }
 
     // 5. Hotels hinzufügen (optional)
     List<List<HotelSuggestion>> hotelSuggestions = [];
@@ -420,6 +444,62 @@ class TripGeneratorRepository {
       route: route,
       stops: newStops,
       days: updatedDays,
+      updatedAt: DateTime.now(),
+    );
+
+    return GeneratedTrip(
+      trip: updatedTrip,
+      availablePOIs: currentTrip.availablePOIs,
+      selectedPOIs: optimizedPOIs,
+    );
+  }
+
+  /// Fuegt einen POI zu einem bestimmten Tag des Trips hinzu.
+  /// Bei Multi-Day: Nur der Zieltag wird modifiziert, andere Tage bleiben erhalten.
+  /// Bei Single-Day: POI wird angefuegt und global re-optimiert.
+  Future<GeneratedTrip> addPOIToTrip({
+    required GeneratedTrip currentTrip,
+    required POI newPOI,
+    required int targetDay,
+    required LatLng startLocation,
+    required String startAddress,
+  }) async {
+    // Multi-Day: Tag-beschraenkte Bearbeitung
+    if (currentTrip.trip.actualDays > 1) {
+      return _addPOIToDay(
+        currentTrip: currentTrip,
+        newPOI: newPOI,
+        targetDay: targetDay,
+        startLocation: startLocation,
+        startAddress: startAddress,
+      );
+    }
+
+    // Single-Day: Globale Re-Optimierung
+    final newSelectedPOIs = [...currentTrip.selectedPOIs, newPOI];
+
+    final optimizedPOIs = _routeOptimizer.optimizeRoute(
+      pois: newSelectedPOIs,
+      startLocation: startLocation,
+      returnToStart: true,
+    );
+
+    final waypoints = optimizedPOIs.map((p) => p.location).toList();
+    final route = await _routingRepo.calculateFastRoute(
+      start: startLocation,
+      end: startLocation,
+      waypoints: waypoints,
+      startAddress: startAddress,
+      endAddress: startAddress,
+    );
+
+    final newStops = optimizedPOIs.asMap().entries.map((entry) {
+      return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+    }).toList();
+
+    final updatedTrip = currentTrip.trip.copyWith(
+      route: route,
+      stops: newStops,
       updatedAt: DateTime.now(),
     );
 
@@ -694,12 +774,85 @@ class TripGeneratorRepository {
     debugPrint('[TripGenerator] RemovePOI Tag $targetDay: ${newDayStops.length} Stops verbleibend');
 
     // Alle Stops zusammenfuehren und Route neu berechnen
-    return _rebuildRouteForDayEdit(
+    final result = await _rebuildRouteForDayEdit(
       currentTrip: currentTrip,
       allStops: [...otherDaysStops, ...newDayStops],
       startLocation: startLocation,
       startAddress: startAddress,
     );
+
+    // Post-Validierung: Display-Distanz des modifizierten Tages prüfen
+    final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
+    if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
+      debugPrint('[TripGenerator] ⚠️ WARNING: RemovePOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+    }
+
+    return result;
+  }
+
+  /// Fuegt einen POI zu einem bestimmten Tag hinzu (Multi-Day).
+  /// Andere Tage bleiben vollstaendig erhalten.
+  Future<GeneratedTrip> _addPOIToDay({
+    required GeneratedTrip currentTrip,
+    required POI newPOI,
+    required int targetDay,
+    required LatLng startLocation,
+    required String startAddress,
+  }) async {
+    final trip = currentTrip.trip;
+
+    // Alle Stops anderer Tage beibehalten
+    final otherDaysStops = trip.stops
+        .where((s) => s.day != targetDay)
+        .toList();
+
+    // Aktuelle Stops des Zieltages
+    final dayStops = trip.getStopsForDay(targetDay);
+    final dayStart = _getDayStartLocation(trip, targetDay, startLocation);
+
+    debugPrint('[TripGenerator] AddPOI Tag $targetDay: Fuege ${newPOI.name} hinzu');
+
+    // Alle Day-POIs inkl. neuem POI
+    final allDayPOIs = [
+      ...dayStops.map((s) => s.toPOI()),
+      newPOI,
+    ];
+
+    // Tag re-optimieren (Nearest-Neighbor + 2-opt)
+    final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
+      pois: allDayPOIs,
+      startLocation: dayStart,
+      returnToStart: false,
+    );
+
+    // Neue Stops fuer diesen Tag mit korrekter Order
+    final newDayStops = optimizedDayPOIs.asMap().entries.map((entry) {
+      return TripStop.fromPOI(entry.value).copyWith(
+        day: targetDay,
+        order: entry.key,
+      );
+    }).toList();
+
+    debugPrint('[TripGenerator] AddPOI Tag $targetDay: ${newDayStops.length} Stops total');
+
+    // Alle Stops zusammenfuehren und Route neu berechnen
+    final result = await _rebuildRouteForDayEdit(
+      currentTrip: currentTrip,
+      allStops: [...otherDaysStops, ...newDayStops],
+      startLocation: startLocation,
+      startAddress: startAddress,
+    );
+
+    // Post-Validierung: Bei >700km Display-Distanz den POI ablehnen
+    final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
+    if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
+      debugPrint('[TripGenerator] REJECTED: AddPOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+      throw TripGenerationException(
+        'Tag $targetDay wuerde ~${dayDisplayKm.toStringAsFixed(0)}km ueberschreiten (max ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km)',
+      );
+    }
+
+    return result;
   }
 
   /// Wuerfelt einen POI nur innerhalb des betroffenen Tages neu (Multi-Day).

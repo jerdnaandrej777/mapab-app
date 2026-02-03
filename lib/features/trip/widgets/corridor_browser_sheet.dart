@@ -10,16 +10,21 @@ import '../../map/widgets/compact_poi_card.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../providers/corridor_browser_provider.dart';
 
-/// Bottom Sheet zum Entdecken von POIs entlang der Route
-/// Zeigt POIs im Korridor mit Filter, Slider und Add-Buttons
+/// Bottom Sheet zum Entdecken von POIs entlang der Route (TripScreen: Vollbild)
 class CorridorBrowserSheet extends ConsumerStatefulWidget {
   final AppRoute route;
   final Set<String> existingStopIds;
+  final Future<bool> Function(POI poi)? onAddPOI;
+  final Future<bool> Function(POI poi)? onRemovePOI;
+  final double initialChildSize;
 
   const CorridorBrowserSheet({
     super.key,
     required this.route,
     required this.existingStopIds,
+    this.onAddPOI,
+    this.onRemovePOI,
+    this.initialChildSize = 1.0,
   });
 
   /// Oeffnet den Korridor-Browser als Bottom Sheet
@@ -27,6 +32,9 @@ class CorridorBrowserSheet extends ConsumerStatefulWidget {
     required BuildContext context,
     required AppRoute route,
     Set<String> existingStopIds = const {},
+    Future<bool> Function(POI poi)? onAddPOI,
+    Future<bool> Function(POI poi)? onRemovePOI,
+    double initialChildSize = 1.0,
   }) {
     showModalBottomSheet(
       context: context,
@@ -36,6 +44,9 @@ class CorridorBrowserSheet extends ConsumerStatefulWidget {
       builder: (context) => CorridorBrowserSheet(
         route: route,
         existingStopIds: existingStopIds,
+        onAddPOI: onAddPOI,
+        onRemovePOI: onRemovePOI,
+        initialChildSize: initialChildSize,
       ),
     );
   }
@@ -46,6 +57,89 @@ class CorridorBrowserSheet extends ConsumerStatefulWidget {
 }
 
 class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DraggableScrollableSheet(
+      initialChildSize: widget.initialChildSize,
+      minChildSize: 0.4,
+      maxChildSize: 1.0,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: widget.initialChildSize < 1.0
+                ? const BorderRadius.vertical(top: Radius.circular(20))
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.shadow.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Drag-Handle bei Partial-Height
+              if (widget.initialChildSize < 1.0)
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8, bottom: 4),
+                    width: 32,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: CorridorBrowserContent(
+                  route: widget.route,
+                  existingStopIds: widget.existingStopIds,
+                  onAddPOI: widget.onAddPOI,
+                  onRemovePOI: widget.onRemovePOI,
+                  onClose: () => Navigator.pop(context),
+                  scrollController: scrollController,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Wiederverwendbarer Korridor-Browser Inhalt.
+/// Wird inline im DayEditor und als Sheet-Inhalt im TripScreen genutzt.
+class CorridorBrowserContent extends ConsumerStatefulWidget {
+  final AppRoute route;
+  final Set<String> existingStopIds;
+  final Future<bool> Function(POI poi)? onAddPOI;
+  final Future<bool> Function(POI poi)? onRemovePOI;
+  final VoidCallback? onClose;
+  final ScrollController? scrollController;
+
+  const CorridorBrowserContent({
+    super.key,
+    required this.route,
+    required this.existingStopIds,
+    this.onAddPOI,
+    this.onRemovePOI,
+    this.onClose,
+    this.scrollController,
+  });
+
+  @override
+  ConsumerState<CorridorBrowserContent> createState() =>
+      _CorridorBrowserContentState();
+}
+
+class _CorridorBrowserContentState
+    extends ConsumerState<CorridorBrowserContent> {
   bool _initialLoadDone = false;
 
   @override
@@ -70,71 +164,32 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final state = ref.watch(corridorBrowserNotifierProvider);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(20),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withOpacity(0.15),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
+    return Column(
+      children: [
+        // Header
+        _buildHeader(colorScheme, state),
 
-              // Header
-              _buildHeader(colorScheme, state),
+        Divider(
+          height: 1,
+          color: colorScheme.outline.withOpacity(0.15),
+        ),
 
-              Divider(
-                height: 1,
-                color: colorScheme.outline.withOpacity(0.15),
-              ),
+        // Buffer Slider
+        _buildBufferSlider(colorScheme, state),
 
-              // Buffer Slider
-              _buildBufferSlider(colorScheme, state),
+        // Kategorie-Filter
+        _buildCategoryFilter(colorScheme, state),
 
-              // Kategorie-Filter
-              _buildCategoryFilter(colorScheme, state),
+        Divider(
+          height: 1,
+          color: colorScheme.outline.withOpacity(0.15),
+        ),
 
-              Divider(
-                height: 1,
-                color: colorScheme.outline.withOpacity(0.15),
-              ),
-
-              // POI-Liste
-              Expanded(
-                child: _buildPOIList(
-                  colorScheme,
-                  state,
-                  scrollController,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+        // POI-Liste
+        Expanded(
+          child: _buildPOIList(colorScheme, state),
+        ),
+      ],
     );
   }
 
@@ -176,7 +231,7 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
             ),
           ),
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onClose,
             icon: const Icon(Icons.close_rounded),
             style: IconButton.styleFrom(
               foregroundColor: colorScheme.onSurfaceVariant,
@@ -334,7 +389,6 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
   Widget _buildPOIList(
     ColorScheme colorScheme,
     CorridorBrowserState state,
-    ScrollController scrollController,
   ) {
     // Loading State
     if (state.isLoading) {
@@ -447,7 +501,7 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
 
     // POI-Liste
     return ListView.builder(
-      controller: scrollController,
+      controller: widget.scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       itemCount: filteredPOIs.length,
       itemBuilder: (context, index) {
@@ -463,9 +517,10 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
           imageUrl: poi.imageUrl,
           isAdded: isAdded,
           onTap: () => _navigateToPOI(poi),
-          onAdd: isAdded
-              ? null
-              : () => _addPOI(poi),
+          onAdd: isAdded ? null : () => _addPOI(poi),
+          onRemove: isAdded && widget.onRemovePOI != null
+              ? () => _removePOI(poi)
+              : null,
         );
       },
     );
@@ -478,16 +533,73 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
   }
 
   Future<void> _addPOI(POI poi) async {
-    await POITripHelper.addPOIWithFeedback(
-      ref: ref,
+    if (widget.onAddPOI != null) {
+      final success = await widget.onAddPOI!(poi);
+      if (success && mounted) {
+        ref
+            .read(corridorBrowserNotifierProvider.notifier)
+            .markAsAdded(poi.id);
+      }
+    } else {
+      await POITripHelper.addPOIWithFeedback(
+        ref: ref,
+        context: context,
+        poi: poi,
+      );
+      if (mounted) {
+        ref
+            .read(corridorBrowserNotifierProvider.notifier)
+            .markAsAdded(poi.id);
+      }
+    }
+  }
+
+  Future<void> _removePOI(POI poi) async {
+    if (widget.onRemovePOI == null || !mounted) return;
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      poi: poi,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Stop entfernen?'),
+        content: Text('"${poi.name}" aus dem Trip entfernen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Entfernen'),
+          ),
+        ],
+      ),
     );
 
-    if (mounted) {
+    if (confirmed != true || !mounted) return;
+
+    final success = await widget.onRemovePOI!(poi);
+    if (success && mounted) {
       ref
           .read(corridorBrowserNotifierProvider.notifier)
-          .markAsAdded(poi.id);
+          .markAsRemoved(poi.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${poi.name}" entfernt'),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mindestens 1 Stop pro Tag erforderlich'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

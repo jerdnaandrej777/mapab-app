@@ -12,6 +12,7 @@ class CompactPOICard extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback onTap;
   final VoidCallback? onAdd;
+  final VoidCallback? onRemove;
   final bool isAdded;
 
   const CompactPOICard({
@@ -22,6 +23,7 @@ class CompactPOICard extends StatelessWidget {
     this.imageUrl,
     required this.onTap,
     this.onAdd,
+    this.onRemove,
     this.isAdded = false,
   });
 
@@ -123,26 +125,36 @@ class CompactPOICard extends StatelessWidget {
                 ),
               ),
 
-              // Add/Check Button
-              if (onAdd != null || isAdded) ...[
+              // Add/Check/Remove Button
+              if (onAdd != null || onRemove != null || isAdded) ...[
                 const SizedBox(width: 6),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: isAdded ? null : onAdd,
+                    onTap: isAdded ? onRemove : onAdd,
                     borderRadius: BorderRadius.circular(20),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 100),
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: isAdded
-                            ? colorScheme.primary.withOpacity(0.15)
+                            ? (onRemove != null
+                                ? colorScheme.errorContainer.withOpacity(0.3)
+                                : colorScheme.primary.withOpacity(0.15))
                             : colorScheme.primaryContainer.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
-                        isAdded ? Icons.check_rounded : Icons.add_rounded,
-                        color: colorScheme.primary,
+                        isAdded
+                            ? (onRemove != null
+                                ? Icons.remove_rounded
+                                : Icons.check_rounded)
+                            : Icons.add_rounded,
+                        color: isAdded
+                            ? (onRemove != null
+                                ? colorScheme.error
+                                : colorScheme.primary)
+                            : colorScheme.primary,
                         size: 18,
                       ),
                     ),

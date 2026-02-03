@@ -61,4 +61,9 @@ class TripConstants {
   /// Anzeige-Distanz = Haversine × haversineToDisplayFactor
   /// 700km ist die absolute Obergrenze pro Reisetag
   static const double maxDisplayKmPerDay = 700.0;
+
+  /// Maximale Haversine-Distanz pro Tag, die das Display-Limit einhält
+  /// 700 / 1.35 ≈ 518.5km Haversine
+  static double get maxHaversineKmForDisplay =>
+      maxDisplayKmPerDay / haversineToDisplayFactor;
 }

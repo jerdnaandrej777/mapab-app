@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
+import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/models/weather.dart';
@@ -30,9 +31,19 @@ class DayEditorOverlay extends ConsumerStatefulWidget {
 
 class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   bool _weatherBannerDismissed = false;
+  bool _isCorridorBrowserActive = false;
 
   @override
   Widget build(BuildContext context) {
+    // Auto-Close Korridor-Browser bei Tageswechsel
+    ref.listen<int>(
+      randomTripNotifierProvider.select((s) => s.selectedDay),
+      (previous, next) {
+        if (previous != next && _isCorridorBrowserActive) {
+          setState(() => _isCorridorBrowserActive = false);
+        }
+      },
+    );
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
     final poiState = ref.watch(pOIStateNotifierProvider);
@@ -129,124 +140,184 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               child: const DayTabSelector(),
             ),
 
-          // Scrollbarer Content
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Mini-Map
-                DayMiniMap(
-                  key: ValueKey(selectedDay),
-                  trip: trip,
-                  selectedDay: selectedDay,
-                  startLocation: startLocation,
-                  routeSegment: routeSegment,
-                ),
-                const SizedBox(height: 12),
-
-                // Statistiken
-                _DayStats(
-                  stopsForDay: stopsForDay,
-                  selectedDay: selectedDay,
-                  isMultiDay: isMultiDay,
-                  trip: trip,
-                  dayForecast: dayForecast,
-                  dayWeather: dayWeather,
-                ),
-                const SizedBox(height: 8),
-
-                // AI Wetter-Banner
-                if (!_weatherBannerDismissed)
-                  AISuggestionBanner(
-                    dayWeather: dayWeather,
-                    outdoorCount: outdoorCount,
-                    totalCount: stopsForDay.length,
-                    dayNumber: selectedDay,
-                    onSuggestAlternatives: () {
-                      ref
-                          .read(aITripAdvisorNotifierProvider.notifier)
-                          .suggestAlternativesForDay(
-                            day: selectedDay,
-                            trip: trip,
-                            routeWeather: routeWeather,
-                            availablePOIs:
-                                state.generatedTrip?.availablePOIs ?? [],
-                          );
-                    },
-                    onDismiss: () {
-                      setState(() => _weatherBannerDismissed = true);
-                    },
-                  ),
-
-                // AI-Vorschlaege anzeigen
-                _AISuggestionsSection(
-                  dayNumber: selectedDay,
-                ),
-                const SizedBox(height: 4),
-
-                // POI-Liste
-                ...stopsForDay.asMap().entries.map((entry) {
-                  final stop = entry.value;
-                  final poiFromState = poiState.pois
-                      .where((p) => p.id == stop.poiId)
-                      .firstOrNull;
-
-                  return EditablePOICard(
-                    stop: stop,
-                    poiFromState: poiFromState,
-                    isLoading: state.loadingPOIId == stop.poiId,
-                    canDelete: state.canRemovePOI,
-                    onReroll: () => notifier.rerollPOI(stop.poiId),
-                    onDelete: () => notifier.removePOI(stop.poiId),
-                    dayWeather: dayWeather,
-                  );
-                }),
-
-                const SizedBox(height: 16),
-
-                // Hinweis Google Maps
-                if (stopsForDay.length > TripConstants.maxPoisPerDay)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber,
-                            color: Colors.orange, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Max ${TripConstants.maxPoisPerDay} Stops pro Tag in Google Maps moeglich',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 160), // Platz fuer Bottom Buttons
-              ],
+          // Fixierter Bereich: Mini-Map + Stats (scrollt NICHT)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: DayMiniMap(
+              key: ValueKey('$selectedDay-${stopsForDay.length}'),
+              trip: trip,
+              selectedDay: selectedDay,
+              startLocation: startLocation,
+              routeSegment: routeSegment,
+              recommendedPOIs: ref
+                  .watch(aITripAdvisorNotifierProvider)
+                  .getRecommendedPOIsForDay(selectedDay),
             ),
           ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _DayStats(
+              stopsForDay: stopsForDay,
+              selectedDay: selectedDay,
+              isMultiDay: isMultiDay,
+              trip: trip,
+              dayForecast: dayForecast,
+              dayWeather: dayWeather,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Wechselbarer Bereich: Normal-Modus oder Korridor-Browser
+          if (_isCorridorBrowserActive)
+            Expanded(
+              child: CorridorBrowserContent(
+                route: trip.route,
+                existingStopIds:
+                    trip.stops.map((s) => s.poiId).toSet(),
+                onAddPOI: (poi) async {
+                  final success = await ref
+                      .read(randomTripNotifierProvider.notifier)
+                      .addPOIToDay(poi, selectedDay);
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            '"${poi.name}" zu Tag $selectedDay hinzugefuegt'),
+                        duration: const Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                  return success;
+                },
+                onRemovePOI: (poi) async {
+                  final success = await ref
+                      .read(randomTripNotifierProvider.notifier)
+                      .removePOIFromDay(poi.id, selectedDay);
+                  return success;
+                },
+                onClose: () {
+                  setState(() => _isCorridorBrowserActive = false);
+                },
+              ),
+            )
+          else
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                children: [
+                  // AI Wetter-Banner
+                  if (!_weatherBannerDismissed)
+                    AISuggestionBanner(
+                      dayWeather: dayWeather,
+                      outdoorCount: outdoorCount,
+                      totalCount: stopsForDay.length,
+                      dayNumber: selectedDay,
+                      onSuggestAlternatives: () {
+                        ref
+                            .read(aITripAdvisorNotifierProvider.notifier)
+                            .loadSmartRecommendations(
+                              day: selectedDay,
+                              trip: trip,
+                              route: trip.route,
+                              routeWeather: routeWeather,
+                              existingStopIds:
+                                  trip.stops.map((s) => s.poiId).toSet(),
+                            );
+                      },
+                      onDismiss: () {
+                        setState(() => _weatherBannerDismissed = true);
+                      },
+                    ),
+
+                  // AI-Vorschlaege / Empfehlungen-Button
+                  _AISuggestionsSection(
+                    dayNumber: selectedDay,
+                    trip: trip,
+                    onLoadRecommendations: () {
+                      ref
+                          .read(aITripAdvisorNotifierProvider.notifier)
+                          .loadSmartRecommendations(
+                            day: selectedDay,
+                            trip: trip,
+                            route: trip.route,
+                            routeWeather: routeWeather,
+                            existingStopIds:
+                                trip.stops.map((s) => s.poiId).toSet(),
+                          );
+                    },
+                  ),
+                  const SizedBox(height: 4),
+
+                  // POI-Liste
+                  ...stopsForDay.asMap().entries.map((entry) {
+                    final stop = entry.value;
+                    final poiFromState = poiState.pois
+                        .where((p) => p.id == stop.poiId)
+                        .firstOrNull;
+
+                    return EditablePOICard(
+                      stop: stop,
+                      poiFromState: poiFromState,
+                      isLoading: state.loadingPOIId == stop.poiId,
+                      canDelete: state.canRemovePOI,
+                      onReroll: () => notifier.rerollPOI(stop.poiId),
+                      onDelete: () => notifier.removePOI(stop.poiId),
+                      dayWeather: dayWeather,
+                    );
+                  }),
+
+                  const SizedBox(height: 16),
+
+                  // Hinweis Google Maps
+                  if (stopsForDay.length > TripConstants.maxPoisPerDay)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber,
+                              color: Colors.orange, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Max ${TripConstants.maxPoisPerDay} Stops pro Tag in Google Maps moeglich',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 160), // Platz fuer Bottom Buttons
+                ],
+              ),
+            ),
         ],
       ),
-      // Bottom Action Buttons
-      bottomNavigationBar: _BottomActions(
-        trip: trip,
-        selectedDay: selectedDay,
-        startLocation: startLocation,
-        startAddress: state.startAddress ?? '',
-        isCompleted: state.isDayCompleted(selectedDay),
-      ),
+      // Bottom Action Buttons (ausgeblendet im Korridor-Browser-Modus)
+      bottomNavigationBar: _isCorridorBrowserActive
+          ? null
+          : _BottomActions(
+              trip: trip,
+              selectedDay: selectedDay,
+              startLocation: startLocation,
+              startAddress: state.startAddress ?? '',
+              isCompleted: state.isDayCompleted(selectedDay),
+              onOpenCorridorBrowser: () {
+                setState(() => _isCorridorBrowserActive = true);
+              },
+            ),
     );
   }
 
@@ -317,6 +388,17 @@ class _DayStats extends StatelessWidget {
     final isDistanceOverLimit = dayDistance > TripConstants.maxDisplayKmPerDay;
     final hasAnyWarning = isStopOverLimit || isDistanceOverLimit;
 
+    // Geschaetzte Fahrzeit (~80 km/h Durchschnitt)
+    final estimatedMinutes = (dayDistance / 80 * 60).round();
+    String formattedTime;
+    if (estimatedMinutes < 60) {
+      formattedTime = '~$estimatedMinutes Min.';
+    } else {
+      final hours = estimatedMinutes ~/ 60;
+      final mins = estimatedMinutes % 60;
+      formattedTime = mins == 0 ? '~${hours}h' : '~${hours}h ${mins}m';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -339,6 +421,11 @@ class _DayStats extends StatelessWidget {
             value: '~${dayDistance.toStringAsFixed(0)} km',
             label: 'Distanz',
             isWarning: isDistanceOverLimit,
+          ),
+          _StatChip(
+            icon: Icons.access_time,
+            value: formattedTime,
+            label: 'Fahrzeit',
           ),
           // Wetter fuer den Tag (Vorhersage oder aktuell)
           if (dayForecast != null)
@@ -418,10 +505,17 @@ class _StatChip extends StatelessWidget {
 }
 
 /// Zeigt AI-generierte Vorschlaege fuer den ausgewaehlten Tag
+/// Bei keinen Suggestions: "Empfehlungen laden" Button (wetterunabhaengig)
 class _AISuggestionsSection extends ConsumerWidget {
   final int dayNumber;
+  final Trip trip;
+  final VoidCallback onLoadRecommendations;
 
-  const _AISuggestionsSection({required this.dayNumber});
+  const _AISuggestionsSection({
+    required this.dayNumber,
+    required this.trip,
+    required this.onLoadRecommendations,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -449,7 +543,7 @@ class _AISuggestionsSection extends ConsumerWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              'AI analysiert Alternativen...',
+              'Suche POI-Empfehlungen...',
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurface.withOpacity(0.7),
@@ -461,11 +555,44 @@ class _AISuggestionsSection extends ConsumerWidget {
     }
 
     final suggestions = advisorState.getSuggestionsForDay(dayNumber);
-    if (suggestions.isEmpty) return const SizedBox.shrink();
+    if (suggestions.isEmpty) {
+      // "Empfehlungen laden" Button (wetterunabhaengig)
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: OutlinedButton.icon(
+          onPressed: onLoadRecommendations,
+          icon: Icon(Icons.auto_awesome, size: 18, color: colorScheme.primary),
+          label: const Text('POI-Empfehlungen laden'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 40),
+            side: BorderSide(color: colorScheme.primary.withOpacity(0.3)),
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                'AI-Empfehlungen',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Fehler-Hinweis wenn AI nicht erreichbar
         if (advisorState.error != null)
           Padding(
@@ -480,8 +607,21 @@ class _AISuggestionsSection extends ConsumerWidget {
             ),
           ),
         ...suggestions.map((suggestion) {
+          // Actionable POI-Karte wenn alternativePOI vorhanden
+          if (suggestion.alternativePOI != null) {
+            return _AIRecommendedPOICard(
+              poi: suggestion.alternativePOI!,
+              reasoning: suggestion.aiReasoning ?? suggestion.message,
+              actionType: suggestion.actionType ?? 'add',
+              targetPOIId: suggestion.targetPOIId,
+              dayNumber: dayNumber,
+            );
+          }
+
+          // Text-Vorschlag (bestehend)
           final isWeather = suggestion.type == SuggestionType.weather;
-          final isAlternative = suggestion.type == SuggestionType.alternative;
+          final isAlternative =
+              suggestion.type == SuggestionType.alternative;
 
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 3),
@@ -491,7 +631,8 @@ class _AISuggestionsSection extends ConsumerWidget {
                   ? colorScheme.tertiaryContainer.withOpacity(0.3)
                   : isAlternative
                       ? colorScheme.primaryContainer.withOpacity(0.3)
-                      : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      : colorScheme.surfaceContainerHighest
+                          .withOpacity(0.3),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: colorScheme.outline.withOpacity(0.1),
@@ -530,12 +671,209 @@ class _AISuggestionsSection extends ConsumerWidget {
   }
 }
 
+/// Actionable POI-Karte fuer AI-Empfehlungen
+class _AIRecommendedPOICard extends ConsumerWidget {
+  final POI poi;
+  final String reasoning;
+  final String actionType;
+  final String? targetPOIId;
+  final int dayNumber;
+
+  const _AIRecommendedPOICard({
+    required this.poi,
+    required this.reasoning,
+    required this.actionType,
+    this.targetPOIId,
+    required this.dayNumber,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.primary.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // POI-Info-Zeile
+          Row(
+            children: [
+              // Kategorie-Icon
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    poi.category?.icon ?? '📍',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Name + Kategorie
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      poi.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          poi.category?.label ?? '',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (poi.detourKm != null) ...[
+                          Text(
+                            ' • +${poi.detourKm!.toStringAsFixed(1)} km',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Empfohlen',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Action-Button
+              _buildActionButton(context, ref, colorScheme),
+            ],
+          ),
+          // AI-Reasoning
+          if (reasoning.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                reasoning,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: colorScheme.onSurface.withOpacity(0.6),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context,
+    WidgetRef ref,
+    ColorScheme colorScheme,
+  ) {
+    final isSwap = actionType == 'swap' && targetPOIId != null;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => isSwap
+            ? _handleSwap(context, ref)
+            : _handleAdd(context, ref),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(
+            isSwap ? Icons.swap_horiz_rounded : Icons.add_rounded,
+            color: colorScheme.primary,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAdd(BuildContext context, WidgetRef ref) async {
+    final success = await ref
+        .read(randomTripNotifierProvider.notifier)
+        .addPOIToDay(poi, dayNumber);
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${poi.name}" zu Tag $dayNumber hinzugefuegt'),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSwap(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(randomTripNotifierProvider.notifier);
+
+    // 1. Alten POI entfernen
+    await notifier.removePOI(targetPOIId!);
+
+    // 2. Neuen POI hinzufuegen
+    final success = await notifier.addPOIToDay(poi, dayNumber);
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${poi.name}" eingetauscht'),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
+
 class _BottomActions extends ConsumerWidget {
   final Trip trip;
   final int selectedDay;
   final LatLng startLocation;
   final String startAddress;
   final bool isCompleted;
+  final VoidCallback onOpenCorridorBrowser;
 
   const _BottomActions({
     required this.trip,
@@ -543,6 +881,7 @@ class _BottomActions extends ConsumerWidget {
     required this.startLocation,
     required this.startAddress,
     required this.isCompleted,
+    required this.onOpenCorridorBrowser,
   });
 
   @override
@@ -573,12 +912,7 @@ class _BottomActions extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => CorridorBrowserSheet.show(
-                        context: context,
-                        route: trip.route,
-                        existingStopIds:
-                            trip.stops.map((s) => s.poiId).toSet(),
-                      ),
+                      onPressed: onOpenCorridorBrowser,
                       icon: const Icon(Icons.add_location_alt_rounded, size: 18),
                       label: const Text('POIs hinzufuegen'),
                       style: OutlinedButton.styleFrom(

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.4 - DayEditor Button-Redesign: Dominanter Navi-Button, Route Teilen, 3-Ebenen Layout | Plattformen: Android, iOS, Desktop
+Version: 1.9.9 - Smart AI-Empfehlungen & 700km-Tageslimit Fix | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -78,7 +78,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/main.dart` | Entry Point, Hive Init |
 | `lib/core/theme/app_theme.dart` | Theme-Definition |
 | `lib/core/constants/api_config.dart` | Backend-URL (--dart-define) |
-| `lib/core/constants/trip_constants.dart` | Trip-Konstanten: maxPoisPerDay, kmPerDay, minKmPerDay, maxKmPerDay (v1.5.7, v1.8.1) |
+| `lib/core/constants/trip_constants.dart` | Trip-Konstanten: maxPoisPerDay, kmPerDay, minKmPerDay, maxKmPerDay (v1.5.7, v1.8.1) + maxHaversineKmForDisplay Getter (v1.9.5) |
 | `lib/core/supabase/supabase_config.dart` | Supabase Credentials (--dart-define) |
 
 ### Features
@@ -95,10 +95,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden Buttons (v1.9.0) |
 | `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
-| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) |
+| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) + Fahrzeit-Chip in DayStats (v1.9.6) + Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent inline statt Modal-Sheet, Auto-Close bei Tageswechsel (v1.9.7) + AI-POI-Empfehlungen als actionable Karten (_AIRecommendedPOICard), POI-Entfernen via onRemovePOI-Callback (v1.9.8) + Smart-Empfehlungen Button wetterunabhaengig, MiniMap recommendedPOIs Vorschau-Marker (v1.9.9) |
 | `lib/features/trip/widgets/editable_poi_card.dart` | POI-Karte im DayEditor mit Reroll/Delete + kontext-aware Wetter-Badges (v1.8.0: Regen/Unwetter/Empfohlen/Ideal) |
-| `lib/features/trip/widgets/corridor_browser_sheet.dart` | Bottom Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) |
-| `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) |
+| `lib/features/trip/widgets/corridor_browser_sheet.dart` | Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) + onAddPOI-Callback (v1.9.5) + CorridorBrowserContent als wiederverwendbares Widget extrahiert, DraggableScrollableSheet fuer TripScreen-Vollbild beibehalten (v1.9.7) + onRemovePOI-Callback mit Bestaetigungs-Dialog + markAsRemoved (v1.9.8) |
+| `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) + onRemove-Callback mit Minus-Icon (rot) fuer hinzugefuegte POIs (v1.9.8) |
 | `lib/features/map/utils/poi_trip_helper.dart` | Shared Utility: POI zu Trip hinzufuegen mit Feedback + GPS-Dialog (v1.8.0) |
 | `lib/features/ai/widgets/ai_suggestion_banner.dart` | Wetter-Warnung im DayEditor mit "Indoor-Alternativen vorschlagen" Button (v1.8.0: verbunden) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
@@ -126,10 +126,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/active_trip_provider.dart` | Aktiver Trip Persistenz (keepAlive, v1.7.39) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
-| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) |
+| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) + addPOIToDay() fuer Korridor-Browser DayEditor-Integration (v1.9.5+152) + removePOIFromDay() mit Min-1-Stop-Validierung (v1.9.8) + 700km-Fehlermeldung bei TripGenerationException (v1.9.9) |
 | `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) + Tages-Vorhersage: loadWeatherForRouteWithForecast, getDayForecast, getForecastPerDay (v1.8.0) |
-| `lib/features/trip/providers/corridor_browser_provider.dart` | Korridor-POI-Browser State: loadCorridorPOIs, bufferKm, Kategorie-Filter (v1.8.0) |
-| `lib/features/ai/providers/ai_trip_advisor_provider.dart` | AI Trip Advisor: analyzeTrip (regelbasiert) + suggestAlternativesForDay (GPT-4o) (v1.8.0) |
+| `lib/features/trip/providers/corridor_browser_provider.dart` | Korridor-POI-Browser State: loadCorridorPOIs, bufferKm, Kategorie-Filter (v1.8.0) + markAsRemoved() fuer POI-Entfernen (v1.9.8) |
+| `lib/features/ai/providers/ai_trip_advisor_provider.dart` | AI Trip Advisor: analyzeTrip (regelbasiert) + suggestAlternativesForDay (GPT-4o) (v1.8.0) + loadSmartRecommendations() alle Kategorien + Wetter-Gewichtung + Must-See-Bonus + _calculateSmartScore(), AISuggestion um aiReasoning/relevanceScore erweitert, recommendedPOIsPerDay State (v1.9.8, v1.9.9: Smart statt nur Indoor) |
 | `lib/features/navigation/providers/navigation_provider.dart` | Navigation State Machine: GPS-Stream, Route-Matching, Rerouting, POI-Erkennung (keepAlive, v1.9.0) |
 | `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) |
 
@@ -161,10 +161,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query (v1.7.23: Seen, Küsten, Hotels, Restaurants, Aktivitäten) + Kategorie-Inference (v1.7.9) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) |
 | `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte A→B Routen (v1.8.1) |
 | `lib/core/utils/navigation_instruction_generator.dart` | OSRM Maneuver → Deutsche Instruktionen (Abbiegen, Kreisverkehr, Auffahrt, etc.) (v1.9.0) |
-| `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) |
+| `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) + Display-basiertes Splitting, Merge-Guard, _splitLastDayIfOverLimit (v1.9.5) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
 
 ## API-Abhängigkeiten
@@ -307,6 +307,11 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.9.md` (Smart AI-Empfehlungen: Alle Kategorien + Must-See + Wetter-Gewichtung, MiniMap Vorschau-Marker, wetterunabhaengiger Empfehlungen-Button, 700km-Tageslimit hart durchgesetzt)
+- `Dokumentation/CHANGELOG-v1.9.8.md` (AI-POI-Empfehlungen: GPT-4o Indoor-Ranking + actionable POI-Karten im DayEditor, POI-Entfernen im Korridor-Browser mit Bestaetigungs-Dialog)
+- `Dokumentation/CHANGELOG-v1.9.7.md` (Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent extrahiert, Modal-Sheet durch Layout-Toggle ersetzt, Auto-Close bei Tageswechsel)
+- `Dokumentation/CHANGELOG-v1.9.6.md` (Korridor-Browser Echtzeit-Vorschau: Partial-Height 55% im DayEditor, MiniMap bleibt sichtbar, Fahrzeit-Chip in DayStats, robusterer MiniMap ValueKey)
+- `Dokumentation/CHANGELOG-v1.9.5.md` (700km Tageslimit: Display-basiertes Splitting, Rueckkehr-Segment, Merge-Guard, Post-Validierung)
 - `Dokumentation/CHANGELOG-v1.9.4.md` (DayEditor Button-Redesign: Dominanter Navigation-Button, Route Teilen, 3-Ebenen Column-Layout, Google Maps als OutlinedButton)
 - `Dokumentation/CHANGELOG-v1.9.3.md` (Navigation-Fix: Nativer MapLibre User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert, kein Zoom-Versatz mehr)
 - `Dokumentation/CHANGELOG-v1.9.2.md` (Standort-Marker Fix: Scroll/Rotate-Gesten im Navigations-Modus deaktiviert, Kamera nur per GPS gesteuert)
@@ -418,6 +423,11 @@ TripConstants.euroTripDefaultDays;      // 3
 TripConstants.minKmPerDay;    // 150.0  (~200km real)
 TripConstants.maxKmPerDay;    // 500.0  (~700km real)
 TripConstants.idealKmPerDay;  // 350.0  (~450km real)
+
+// 700km Tageslimit (v1.9.5)
+TripConstants.maxDisplayKmPerDay;         // 700.0 (absolute Obergrenze Anzeige)
+TripConstants.maxHaversineKmForDisplay;   // ~518.5 (700 / 1.35)
+TripConstants.haversineToDisplayFactor;   // 1.35
 ```
 
 ### Unified Panel Design (v1.7.21+)
@@ -1864,11 +1874,24 @@ import '../providers/corridor_browser_provider.dart';
 import '../widgets/corridor_browser_sheet.dart';
 import '../../map/utils/poi_trip_helper.dart';
 
-// Bottom Sheet oeffnen (empfohlene Methode)
+// Bottom Sheet oeffnen (Standard: POITripHelper)
 CorridorBrowserSheet.show(
   context: context,
   route: route,                 // AppRoute
   existingStopIds: stopIds,     // Set<String> bereits hinzugefuegte POIs
+);
+
+// Bottom Sheet oeffnen mit Callback (v1.9.5+152: DayEditor-Integration)
+CorridorBrowserSheet.show(
+  context: context,
+  route: trip.route,
+  existingStopIds: trip.stops.map((s) => s.poiId).toSet(),
+  onAddPOI: (poi) async {
+    final success = await ref
+        .read(randomTripNotifierProvider.notifier)
+        .addPOIToDay(poi, selectedDay);
+    return success;
+  },
 );
 
 // Provider direkt nutzen
@@ -1903,8 +1926,8 @@ final count = corridorState.newPOICount;
 ```
 
 **Einstiegspunkte:**
-1. `TripScreen` → "POIs entlang der Route" Button (sowohl normale Route als auch AI Trip)
-2. `DayEditorOverlay` → IconButton "POIs entdecken" in BottomActions
+1. `TripScreen` → "POIs entlang der Route" Button (sowohl normale Route als auch AI Trip) — nutzt Standard-POITripHelper
+2. `DayEditorOverlay` → IconButton "POIs entdecken" in BottomActions — nutzt `onAddPOI`-Callback fuer direktes Hinzufuegen zum randomTripNotifier (v1.9.5+152)
 
 **CompactPOICard Widget:**
 ```dart

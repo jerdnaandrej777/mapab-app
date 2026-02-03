@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.9.4 - DayEditor: Dominanter Navi-Button, Route Teilen, Button-Redesign</p>
+        <p class="version">Version 1.9.9 - Smart AI-Empfehlungen & 700km-Tageslimit Fix</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.4"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.9"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,9 +183,21 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">🧭 Dominanter Navi-Button - Navigation starten als primaere Aktion im Tag-Editor (NEU v1.9.4)</li>
-                <li class="new">📤 Route Teilen im Tag-Editor - Tages-Route mit Stops per System-Share teilen (NEU v1.9.4)</li>
-                <li class="new">🎨 Button-Redesign - 3-Ebenen Layout: POIs + Teilen, Navigation, Google Maps (NEU v1.9.4)</li>
+                <li class="new">🤖 Smart AI-Empfehlungen - Must-See POIs + Wetter-Gewichtung, alle Kategorien statt nur Indoor (NEU v1.9.9)</li>
+                <li class="new">🗺️ Vorschau-Marker - Empfohlene POIs als Stern-Marker auf der MiniMap sichtbar (NEU v1.9.9)</li>
+                <li class="new">📏 700km-Tageslimit Fix - Hartes Limit statt nur Warning, Re-Split bei Ueberschreitung (NEU v1.9.9)</li>
+                <li>🤖 AI-POI-Empfehlungen - GPT-4o rankt Indoor-Alternativen bei schlechtem Wetter als actionable POI-Karten (v1.9.8)</li>
+                <li>➖ POI-Entfernen - Hinzugefuegte POIs direkt im Korridor-Browser wieder entfernen (v1.9.8)</li>
+                <li>🎯 Hinzufuegen/Tauschen - AI empfiehlt POIs mit Begruendung, direkt zum Trip hinzufuegen oder Outdoor-Stop ersetzen (v1.9.8)</li>
+                <li>📌 Korridor-Browser Inline - POI-Browser direkt im Tag-Editor statt als Modal-Sheet (v1.9.7)</li>
+                <li>🔒 Fixierte MiniMap + Stats - Karte und Tages-Statistiken bleiben beim Scrollen sichtbar (v1.9.7)</li>
+                <li>🔄 Layout-Umschaltung - Nahtloser Wechsel zwischen POI-Liste und Korridor-Browser (v1.9.7)</li>
+                <li>🗺️ Korridor-Browser Echtzeit-Vorschau - POIs hinzufuegen und sofort auf MiniMap sehen (v1.9.6)</li>
+                <li>⏱️ Fahrzeit-Anzeige im Tag-Editor - Geschaetzte Fahrdauer pro Tag (~80 km/h) (v1.9.6)</li>
+                <li>📏 700km Tageslimit - Kein Tag ueberschreitet mehr 700km Display-Distanz (v1.9.5)</li>
+                <li>🧭 Dominanter Navi-Button - Navigation starten als primaere Aktion im Tag-Editor (v1.9.4)</li>
+                <li>📤 Route Teilen im Tag-Editor - Tages-Route mit Stops per System-Share teilen (v1.9.4)</li>
+                <li>🎨 Button-Redesign - 3-Ebenen Layout: POIs + Teilen, Navigation, Google Maps (v1.9.4)</li>
                 <li>🗺️ 3D Navigation - Echte 3D-Perspektive mit 50° Neigung via MapLibre GL</li>
                 <li>🎯 Vektor-Tiles - OpenFreeMap statt Raster, schaerfer & schneller</li>
                 <li>🔄 Heading-Up Kamera - Karte rotiert automatisch in Fahrtrichtung</li>
@@ -334,7 +346,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.9.4.apk" herunterladen (oder app-release.apk)<br>
+                2. "MapAB-v1.9.9.apk" herunterladen<br>
 
                 3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
                 4. "Aus unbekannten Quellen installieren" erlauben<br>
@@ -346,7 +358,7 @@
             <p>
                 <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
                 <strong>Build-Datum:</strong> 3. Februar 2026<br>
-                <strong>Größe:</strong> 99.6 MB
+                <strong>Groesse:</strong> 99.6 MB
             </p>
         </div>
     </div>
@@ -356,7 +368,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.4",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.9",
             width: 256,
             height: 256,
             colorDark: "#1a202c",

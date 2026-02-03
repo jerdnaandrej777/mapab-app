@@ -175,6 +175,13 @@ class CorridorBrowserNotifier extends _$CorridorBrowserNotifier {
     );
   }
 
+  /// POI als entfernt markieren (aus dem Trip geloescht)
+  void markAsRemoved(String poiId) {
+    state = state.copyWith(
+      addedPOIIds: Set<String>.from(state.addedPOIIds)..remove(poiId),
+    );
+  }
+
   /// Zuruecksetzen
   void reset() {
     state = const CorridorBrowserState();
