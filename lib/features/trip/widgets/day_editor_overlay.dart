@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
+import '../../../data/models/route.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/models/weather.dart';
 import '../../map/providers/weather_provider.dart';
@@ -133,6 +135,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               children: [
                 // Mini-Map
                 DayMiniMap(
+                  key: ValueKey(selectedDay),
                   trip: trip,
                   selectedDay: selectedDay,
                   startLocation: startLocation,
@@ -308,12 +311,15 @@ class _DayStats extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final stopCount = stopsForDay.length;
-    final isOverLimit = stopCount > TripConstants.maxPoisPerDay;
+    final isStopOverLimit = stopCount > TripConstants.maxPoisPerDay;
+    final dayDistance = trip.getDistanceForDay(selectedDay);
+    final isDistanceOverLimit = dayDistance > TripConstants.maxDisplayKmPerDay;
+    final hasAnyWarning = isStopOverLimit || isDistanceOverLimit;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: isOverLimit
+        color: hasAnyWarning
             ? Colors.orange.withOpacity(0.1)
             : colorScheme.primaryContainer.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
@@ -325,12 +331,13 @@ class _DayStats extends StatelessWidget {
             icon: Icons.place,
             value: '$stopCount',
             label: 'Stops',
-            isWarning: isOverLimit,
+            isWarning: isStopOverLimit,
           ),
           _StatChip(
             icon: Icons.straighten,
-            value: '~${trip.getDistanceForDay(selectedDay).toStringAsFixed(0)} km',
+            value: '~${dayDistance.toStringAsFixed(0)} km',
             label: 'Distanz',
+            isWarning: isDistanceOverLimit,
           ),
           // Wetter fuer den Tag (Vorhersage oder aktuell)
           if (dayForecast != null)
@@ -576,6 +583,19 @@ class _BottomActions extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              // In-App Navigation starten
+              IconButton(
+                onPressed: () =>
+                    _startDayNavigation(context, ref),
+                icon: const Icon(Icons.navigation_rounded),
+                tooltip: 'Navigation starten',
+                style: IconButton.styleFrom(
+                  foregroundColor: colorScheme.primary,
+                  backgroundColor:
+                      colorScheme.primaryContainer.withOpacity(0.5),
+                ),
+              ),
+              const SizedBox(width: 8),
               // Google Maps Export
               Expanded(
                 child: FilledButton.icon(
@@ -700,5 +720,67 @@ class _BottomActions extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _startDayNavigation(BuildContext context, WidgetRef ref) {
+    final stopsForDay = trip.getStopsForDay(selectedDay);
+    if (stopsForDay.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Keine Stops fuer Tag $selectedDay')),
+      );
+      return;
+    }
+
+    // Start bestimmen (gleiche Logik wie Google Maps Export)
+    LatLng origin;
+    String originAddress;
+    if (selectedDay == 1) {
+      origin = startLocation;
+      originAddress = startAddress;
+    } else {
+      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
+      if (prevDayStops.isNotEmpty) {
+        origin = prevDayStops.last.location;
+        originAddress = prevDayStops.last.name;
+      } else {
+        origin = startLocation;
+        originAddress = startAddress;
+      }
+    }
+
+    // Ziel bestimmen
+    LatLng destination;
+    String destinationAddress;
+    if (selectedDay == trip.actualDays) {
+      destination = startLocation;
+      destinationAddress = startAddress;
+    } else {
+      final nextDayStops = trip.getStopsForDay(selectedDay + 1);
+      if (nextDayStops.isNotEmpty) {
+        destination = nextDayStops.first.location;
+        destinationAddress = nextDayStops.first.name;
+      } else {
+        destination = startLocation;
+        destinationAddress = startAddress;
+      }
+    }
+
+    // Tages-Route erstellen (OSRM berechnet echte Route)
+    final dayRoute = AppRoute(
+      start: origin,
+      end: destination,
+      startAddress: originAddress,
+      endAddress: destinationAddress,
+      coordinates: [origin, destination],
+      distanceKm: 0,
+      durationMinutes: 0,
+    );
+
+    // Overlay schliessen und Navigation starten
+    Navigator.pop(context);
+    context.push('/navigation', extra: {
+      'route': dayRoute,
+      'stops': stopsForDay,
+    });
   }
 }

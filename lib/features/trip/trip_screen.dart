@@ -676,6 +676,29 @@ $mapsUrl
                       ),
                     ),
                   ),
+                // In-App Navigation starten
+                if (route != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/navigation',
+                          extra: {
+                            'route': route,
+                            'stops': tripState.stops
+                                .asMap()
+                                .entries
+                                .map((e) => TripStop.fromPOI(e.value, order: e.key))
+                                .toList(),
+                          },
+                        ),
+                        icon: const Icon(Icons.navigation),
+                        label: const Text('Navigation starten'),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -797,6 +820,31 @@ $mapsUrl
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                // In-App Navigation starten (v1.9.0)
+                if (trip != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/navigation',
+                          extra: {
+                            'route': trip.route,
+                            'stops': trip.stops,
+                          },
+                        ),
+                        icon: const Icon(Icons.navigation),
+                        label: const Text('Navigation starten'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),

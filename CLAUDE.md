@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.8.0 - Major UI Redesign & AI Integration | Plattformen: Android, iOS, Desktop
+Version: 1.9.1 - 3D Navigation mit MapLibre GL, Pitch/Tilt & Vektor-Tiles | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -14,7 +14,7 @@ Version: 1.8.0 - Major UI Redesign & AI Integration | Plattformen: Android, iOS,
 | Framework | Flutter 3.38.7+ |
 | State Management | Riverpod 2.x mit Code-Generierung |
 | Routing | GoRouter mit Bottom Navigation |
-| Karte | flutter_map mit MapLibre |
+| Karte | flutter_map (2D) + maplibre_gl (3D Navigation) |
 | HTTP | Dio mit Cache |
 | Lokale Daten | Hive (Favoriten, Settings, Account) |
 | Cloud-Backend | Supabase (PostgreSQL + Auth) |
@@ -78,19 +78,29 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/main.dart` | Entry Point, Hive Init |
 | `lib/core/theme/app_theme.dart` | Theme-Definition |
 | `lib/core/constants/api_config.dart` | Backend-URL (--dart-define) |
-| `lib/core/constants/trip_constants.dart` | Trip-Konstanten: maxPoisPerDay, kmPerDay (v1.5.7) |
+| `lib/core/constants/trip_constants.dart` | Trip-Konstanten: maxPoisPerDay, kmPerDay, minKmPerDay, maxKmPerDay (v1.5.7, v1.8.1) |
 | `lib/core/supabase/supabase_config.dart` | Supabase Credentials (--dart-define) |
 
 ### Features
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + ActiveTripResumeBanner + Überschreib-Dialog (v1.7.39) + Ziel als BottomSheet (v1.7.36) + GPS-Fix _ensureGPSReady (v1.7.36) |
-| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) + Tagesweise Route/POIs bei Mehrtages-Trips (v1.7.40) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + ActiveTripResumeBanner + Überschreib-Dialog (v1.7.39) + Ziel als BottomSheet (v1.7.36: 50% Hoehe + Expanded Vorschlagsliste v1.8.1) + GPS-Fix _ensureGPSReady (v1.7.36) + "Navigation starten" Button in TripInfoBar (v1.9.0) |
+| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) + Tagesweise Route/POIs bei Mehrtages-Trips (v1.7.40) + Auto-Zoom bei Tageswechsel (v1.8.1) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) |
+| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl) |
+| `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
+| `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden Buttons (v1.9.0) |
+| `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
+| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) |
+| `lib/features/trip/widgets/editable_poi_card.dart` | POI-Karte im DayEditor mit Reroll/Delete + kontext-aware Wetter-Badges (v1.8.0: Regen/Unwetter/Empfohlen/Ideal) |
+| `lib/features/trip/widgets/corridor_browser_sheet.dart` | Bottom Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) |
+| `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) |
+| `lib/features/map/utils/poi_trip_helper.dart` | Shared Utility: POI zu Trip hinzufuegen mit Feedback + GPS-Dialog (v1.8.0) |
+| `lib/features/ai/widgets/ai_suggestion_banner.dart` | Wetter-Warnung im DayEditor mit "Indoor-Alternativen vorschlagen" Button (v1.8.0: verbunden) |
 | `lib/features/ai_assistant/chat_screen.dart` | AI-Chat mit standortbasierten POI-Vorschlägen + Hintergrund-Enrichment (v1.7.7) + Kategorie-Fix (v1.7.9) |
 | `lib/features/account/profile_screen.dart` | Profil mit XP |
 | `lib/features/favorites/favorites_screen.dart` | Favoriten mit Auto-Enrichment + Gespeicherte Routen laden (v1.7.10) |
@@ -117,7 +127,11 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/providers/active_trip_provider.dart` | Aktiver Trip Persistenz (keepAlive, v1.7.39) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
 | `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) |
-| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) |
+| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) + Tages-Vorhersage: loadWeatherForRouteWithForecast, getDayForecast, getForecastPerDay (v1.8.0) |
+| `lib/features/trip/providers/corridor_browser_provider.dart` | Korridor-POI-Browser State: loadCorridorPOIs, bufferKm, Kategorie-Filter (v1.8.0) |
+| `lib/features/ai/providers/ai_trip_advisor_provider.dart` | AI Trip Advisor: analyzeTrip (regelbasiert) + suggestAlternativesForDay (GPT-4o) (v1.8.0) |
+| `lib/features/navigation/providers/navigation_provider.dart` | Navigation State Machine: GPS-Stream, Route-Matching, Rerouting, POI-Erkennung (keepAlive, v1.9.0) |
+| `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
@@ -130,17 +144,25 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
 | `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7, v1.7.39 erweitert: POIs, Konfiguration) |
+| `lib/data/services/voice_service.dart` | TTS (de-DE), Spracherkennung, Navigation-Befehle + speakManeuver, speakRerouting, speakPOIApproaching, speakArrived (v1.9.0) |
+| `lib/features/navigation/utils/latlong_converter.dart` | Konvertierung latlong2 <-> maplibre_gl, GeoJSON Builder, Bounds-Berechnung (v1.9.1) |
+| `lib/features/navigation/services/route_matcher_service.dart` | Snap-to-Road: snapToRoute, isOffRoute, getDistanceAlongRoute, calculateBearing (v1.9.0) |
 
 ### Daten
 
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/data/models/poi.dart` | POI Model (Freezed) |
-| `lib/data/models/trip.dart` | Trip Model mit Tages-Helper-Methoden (v1.5.7) |
+| `lib/data/models/trip.dart` | Trip Model mit Tages-Helper-Methoden (v1.5.7) + echte Haversine-Distanz pro Tag (v1.8.1) + getStopsForDay sort by order Fix (v1.8.2) |
+| `lib/data/models/weather.dart` | Weather + DailyForecast Models (Freezed) mit WMO-Code-Interpretation + condition Getter (v1.8.0) |
+| `lib/data/models/navigation_step.dart` | NavigationStep, NavigationLeg, NavigationRoute Models (Freezed) mit ManeuverType/ManeuverModifier Enums (v1.9.0) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden (3-Layer, parallel + Region-Cache) + erweiterte Overpass-Query (v1.7.23: Seen, Küsten, Hotels, Restaurants, Aktivitäten) + Kategorie-Inference (v1.7.9) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38, vorher Radius→Tage) |
-| `lib/core/algorithms/day_planner.dart` | Tages-Planung mit 9-POI-Limit (v1.5.7) |
+| `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) |
+| `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte A→B Routen (v1.8.1) |
+| `lib/core/utils/navigation_instruction_generator.dart` | OSRM Maneuver → Deutsche Instruktionen (Abbiegen, Kreisverkehr, Auffahrt, etc.) (v1.9.0) |
+| `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
 
 ## API-Abhängigkeiten
@@ -176,6 +198,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 /settings           → SettingsScreen
 /search             → SearchScreen
 /random-trip        → RandomTripScreen (Legacy, jetzt in /trip integriert)
+/navigation         → NavigationScreen (Turn-by-Turn, v1.9.0)
 /login              → LoginScreen (Supabase)
 /register           → RegisterScreen
 /forgot-password    → ForgotPasswordScreen
@@ -245,6 +268,10 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 | `[DayExport]` | Tagesweiser Google Maps Export (v1.5.7) |
 | `[ActiveTrip]` | Active Trip Persistenz (v1.5.7) |
 | `[Share]` | Route Teilen |
+| `[Corridor]` | Korridor-POI-Browser (v1.8.0) |
+| `[AIAdvisor]` | AI Trip Advisor Vorschlaege (v1.8.0) |
+| `[Navigation]` | In-App Navigation: GPS-Tracking, Route-Matching, Rerouting (v1.9.0) |
+| `[NavigationTTS]` | TTS-Manoever-Ansagen (v1.9.0) |
 
 ## Bekannte Einschränkungen
 
@@ -255,13 +282,20 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 5. **OpenAI**: Benötigt aktives Guthaben
 6. **GPS**: Nur mit HTTPS/Release Build zuverlässig; bei deaktiviertem GPS erscheint Dialog (v1.5.4)
 7. **AI-Chat**: Benötigt `--dart-define=BACKEND_URL=...` (sonst Demo-Modus)
+8. **Open-Meteo Vorhersage**: Max 16 Tage → Trips > 7 Tage zeigen nur 7 Tage Vorhersage (v1.8.0)
+9. **AI-Vorschlaege**: Backend muss erreichbar sein → Fallback auf regelbasierte Vorschlaege (v1.8.0)
+10. **Navigation**: GPS-Stream benoetigt physisches Geraet (Emulator unzuverlaessig), Rerouting benoetigt OSRM-Erreichbarkeit (v1.9.0)
+11. **MapLibre GL**: OpenFreeMap Tile-Server muss erreichbar sein fuer 3D-Navigation, Fallback auf flutter_map nicht automatisch (v1.9.1)
 
 ## Android-Berechtigungen
 
 ```xml
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 ```
 
 ---
@@ -271,6 +305,12 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.1.md` (3D Navigation: MapLibre GL mit Pitch/Tilt, OpenFreeMap Vektor-Tiles, GeoJSON Route-Rendering)
+- `Dokumentation/CHANGELOG-v1.9.0.md` (OSRM In-App Navigation: Turn-by-Turn, GPS-Tracking, TTS-Sprachansagen, Rerouting, POI-Waypoints, DayEditor tagesspezifische Navigation)
+- `Dokumentation/CHANGELOG-v1.8.3.md` (Tag-Editor Fix: POI Reroll/Delete aendert nur betroffenen Tag, Folgetage bleiben erhalten, schnellere Tag-Bearbeitung)
+- `Dokumentation/CHANGELOG-v1.8.2.md` (Google Maps Export-Fix: getStopsForDay sort by order, Distanz-Anzeige mit Destination-Segment + Faktor 1.35, MiniMap ValueKey bei Tageswechsel)
+- `Dokumentation/CHANGELOG-v1.8.1.md` (Richtungs-optimierte Routen, Distanz-basierte Tagesaufteilung 200-700km/Tag, Auto-Zoom bei Tageswechsel, Ziel-BottomSheet Fix)
+- `Dokumentation/CHANGELOG-v1.8.0.md` (Tages-Wettervorhersage, AI Indoor/Outdoor-Vorschlaege, Korridor-POI-Browser, Wetter-Badges)
 - `Dokumentation/CHANGELOG-v1.7.40.md` (Tagesweise Karten-Anzeige, Export-Snackbar entfernt, Google Maps Hinweis)
 - `Dokumentation/CHANGELOG-v1.7.39.md` (Aktiver Trip Persistenz: Resume-Banner, Überschreib-Dialog, Abschluss-Dialog)
 - `Dokumentation/CHANGELOG-v1.7.38.md` (Euro Trip: Tage statt Radius als primärer Input, Quick-Select 2/4/7/10 Tage)
@@ -345,7 +385,7 @@ Versionsspezifische Änderungen finden sich in:
 
 ## Quick Reference
 
-### Trip-Konstanten (v1.5.7+, v1.7.38+)
+### Trip-Konstanten (v1.5.7+, v1.7.38+, v1.8.1+)
 
 ```dart
 import '../../core/constants/trip_constants.dart';
@@ -353,7 +393,7 @@ import '../../core/constants/trip_constants.dart';
 // Google Maps Waypoint Limit
 TripConstants.maxPoisPerDay;  // 9
 
-// Kilometer pro Reisetag
+// Kilometer pro Reisetag (fuer Radius-Berechnung)
 TripConstants.kmPerDay;  // 600.0
 
 // Tage aus Distanz berechnen
@@ -367,6 +407,12 @@ TripConstants.euroTripQuickSelectDays;  // [2, 4, 7, 10]
 TripConstants.euroTripMinDays;          // 1
 TripConstants.euroTripMaxDays;          // 14
 TripConstants.euroTripDefaultDays;      // 3
+
+// Distanz-basierte Tagesaufteilung (v1.8.1)
+// Haversine-Werte (~30% kuerzer als echte Fahrstrecke)
+TripConstants.minKmPerDay;    // 150.0  (~200km real)
+TripConstants.maxKmPerDay;    // 500.0  (~700km real)
+TripConstants.idealKmPerDay;  // 350.0  (~450km real)
 ```
 
 ### Unified Panel Design (v1.7.21+)
@@ -501,6 +547,10 @@ POIMarker(
 | `POIMarker` (weather) | Mini-Wetter-Badge auf POI-Markern auf der Karte (v1.7.9) |
 | `WeatherBar` | Routen-Wetter mit 5 Punkten |
 | `RouteWeatherMarker` | Wetter-Marker auf Route mit Icon + Temperatur + Tap-Detail (v1.7.12) |
+| `_WeatherBadgeInline` | Kontext-aware Badge auf EditablePOICard: Regen/Unwetter/Empfohlen/Ideal (v1.8.0) |
+| `_AISuggestionsSection` | AI-Vorschlaege-Liste im DayEditorOverlay (v1.8.0) |
+| `CorridorBrowserSheet` | Bottom Sheet mit POIs entlang der Route + Filter (v1.8.0) |
+| `CompactPOICard` | Kompakte POI-Karte fuer Korridor-Browser (v1.8.0) |
 
 ### Persistente Wetter-Widgets (v1.7.17)
 
@@ -929,7 +979,7 @@ final isLoading = ref.read(randomTripNotifierProvider).isPOILoading(poiId);
 - **Minimum-Prüfung**: Mindestens 2 POIs müssen im Trip bleiben
 - **Per-POI Loading**: Individuelle Loading-Anzeige pro POI
 - **Auto-Routenberechnung**: Route wird nach jeder Änderung automatisch neu berechnet
-- **Tagesplanung bleibt erhalten**: Bei Mehrtages-Trips wird `_dayPlanner.planDays()` nach jeder Änderung aufgerufen (v1.7.34 Fix)
+- **Tag-beschraenkte Bearbeitung (v1.8.3)**: Bei Mehrtages-Trips wird nur der betroffene Tag modifiziert, alle anderen Tage bleiben unveraendert. Kein globales `planDays()` mehr — stattdessen `_removePOIFromDay()` / `_rerollPOIForDay()` in `trip_generator_repo.dart`
 
 ### POI-Kategorien-Filter (v1.7.23+)
 
@@ -1699,3 +1749,167 @@ if (poisToEnrich.isNotEmpty) {
 ```
 
 **Ergebnis:** Der AI-Chat schlägt POIs basierend auf dem aktuellen Standort vor. Benutzer können den Such-Radius anpassen und direkt zu POI-Details navigieren. POI-Bilder werden im Hintergrund geladen und erscheinen nach 1-3 Sekunden (v1.7.7).
+
+### Tages-Wettervorhersage (v1.8.0+)
+
+Bei mehrtaegigen Trips wird jetzt eine echte 7-Tage-Vorhersage pro Routenpunkt geladen statt nur das aktuelle Wetter.
+
+```dart
+import '../providers/weather_provider.dart';
+
+// Multi-Day Trip: Vorhersage laden (statt nur aktuelles Wetter)
+ref.read(routeWeatherNotifierProvider.notifier)
+    .loadWeatherForRouteWithForecast(
+      routeCoords,
+      forecastDays: tripDays,  // max 7 (Open-Meteo Limit)
+    );
+
+// Wetter-State
+final routeWeather = ref.watch(routeWeatherNotifierProvider);
+
+// Vorhersage fuer einen bestimmten Tag (1-basiert)
+final dayForecast = routeWeather.getDayForecast(2, totalDays);
+// → DailyForecast? mit temperatureMax, Min, weatherCode, precipitationProbabilityMax
+
+// Wetter-Condition pro Tag aus Vorhersage
+final forecastPerDay = routeWeather.getForecastPerDay(totalDays);
+// → Map<int, WeatherCondition> {1: good, 2: bad, 3: mixed}
+
+// Formatierte Strings fuer AI-Kontext
+final weatherStrings = routeWeather.getForecastPerDayAsStrings(totalDays);
+// → Map<int, String> {1: "good (12°/18°, 10% Regen)", 2: "bad (8°/14°, 80% Regen)"}
+
+// Pruefen ob Vorhersage-Daten vorhanden
+if (routeWeather.hasForecast) {
+  // Echte Vorhersage verfuegbar
+} else {
+  // Fallback auf positionsbasiertes Mapping
+}
+```
+
+**WeatherPoint Erweiterung:**
+```dart
+class WeatherPoint {
+  final LatLng location;
+  final Weather weather;
+  final double routePosition;       // 0.0-1.0
+  final List<DailyForecast>? dailyForecast;  // NEU v1.8.0
+  final int? dayNumber;                       // NEU v1.8.0 (1-basiert)
+}
+```
+
+**Wetter-Badges auf EditablePOICard:**
+
+| Situation | Badge | Farbe |
+|-----------|-------|-------|
+| Outdoor + gut | "Ideal" | Gruen |
+| Indoor + schlecht | "Empfohlen" | Gruen |
+| Outdoor + Regen | "Regen" | Orange |
+| Outdoor + Unwetter | "Unwetter" | Rot |
+
+### AI-Vorschlaege bei schlechtem Wetter (v1.8.0+)
+
+GPT-4o schlaegt Indoor-Alternativen vor wenn Outdoor-POIs auf Regentage fallen.
+
+```dart
+import '../../ai/providers/ai_trip_advisor_provider.dart';
+
+// AI-Vorschlaege fuer einen Tag anfordern
+await ref.read(aITripAdvisorNotifierProvider.notifier)
+    .suggestAlternativesForDay(
+      day: selectedDay,
+      trip: trip,
+      routeWeather: routeWeather,
+      availablePOIs: availablePOIs,
+    );
+
+// State abfragen
+final advisorState = ref.watch(aITripAdvisorNotifierProvider);
+final suggestions = advisorState.getSuggestionsForDay(selectedDay);
+// → List<AISuggestion> mit message, type, replacementPOIName, actionType
+
+// Pruefen ob Vorschlaege vorhanden
+if (advisorState.hasSuggestionsForDay(selectedDay)) {
+  for (final suggestion in suggestions) {
+    print('${suggestion.type}: ${suggestion.message}');
+    // type: weather | optimization | alternative | general
+    // actionType: swap | remove | reorder (optional)
+  }
+}
+
+// Loading-State
+if (advisorState.isLoading) {
+  // Shimmer/Skeleton anzeigen
+}
+
+// Regelbasierte Analyse (ohne AI-Backend)
+ref.read(aITripAdvisorNotifierProvider.notifier).analyzeTrip(trip, routeWeather);
+```
+
+**Fallback-Verhalten:**
+- Backend erreichbar → GPT-4o Vorschlaege
+- Backend nicht erreichbar → Regelbasierte Vorschlaege (Outdoor auf Regentag → Indoor vorschlagen)
+
+### Korridor-POI-Browser (v1.8.0+)
+
+Entdecke und fuege POIs entlang einer berechneten Route hinzu.
+
+```dart
+import '../providers/corridor_browser_provider.dart';
+import '../widgets/corridor_browser_sheet.dart';
+import '../../map/utils/poi_trip_helper.dart';
+
+// Bottom Sheet oeffnen (empfohlene Methode)
+CorridorBrowserSheet.show(
+  context: context,
+  route: route,                 // AppRoute
+  existingStopIds: stopIds,     // Set<String> bereits hinzugefuegte POIs
+);
+
+// Provider direkt nutzen
+final corridorState = ref.watch(corridorBrowserNotifierProvider);
+
+// POIs laden
+ref.read(corridorBrowserNotifierProvider.notifier).loadCorridorPOIs(
+  route: route,
+  bufferKm: 30.0,            // Korridor-Breite (10-100km)
+  categories: {POICategory.museum, POICategory.castle},  // Optional
+);
+
+// Korridor-Breite aendern
+ref.read(corridorBrowserNotifierProvider.notifier).setBufferKm(50.0);
+
+// Kategorie-Filter
+ref.read(corridorBrowserNotifierProvider.notifier).toggleCategory(POICategory.nature);
+
+// POI zum Trip hinzufuegen (mit Feedback)
+await POITripHelper.addPOIWithFeedback(
+  context: context,
+  ref: ref,
+  poi: poi,
+);
+
+// POI als hinzugefuegt markieren (im Browser)
+ref.read(corridorBrowserNotifierProvider.notifier).markAsAdded(poi.id);
+
+// Gefilterte POIs (ohne bereits hinzugefuegte)
+final pois = corridorState.filteredPOIs;
+final count = corridorState.newPOICount;
+```
+
+**Einstiegspunkte:**
+1. `TripScreen` → "POIs entlang der Route" Button (sowohl normale Route als auch AI Trip)
+2. `DayEditorOverlay` → IconButton "POIs entdecken" in BottomActions
+
+**CompactPOICard Widget:**
+```dart
+CompactPOICard(
+  name: poi.name,
+  category: poi.category,
+  imageUrl: poi.imageUrl,
+  detourKm: '${poi.detourKm?.toStringAsFixed(1)} km',  // Optional
+  isAdded: isAlreadyInTrip,
+  onTap: () => navigateToPOI(poi),
+  onAdd: () => addPOIToTrip(poi),
+);
+```

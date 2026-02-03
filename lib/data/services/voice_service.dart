@@ -267,6 +267,51 @@ class VoiceService {
     await speak(text);
   }
 
+  /// Spricht Manöver-Ansage (Navigation)
+  Future<void> speakManeuver({
+    required String instruction,
+    required double distanceMeters,
+  }) async {
+    String text;
+    if (distanceMeters <= 50) {
+      text = 'Jetzt $instruction';
+    } else if (distanceMeters < 1000) {
+      final rounded = (distanceMeters / 50).round() * 50;
+      text = 'In $rounded Metern $instruction';
+    } else {
+      final km = (distanceMeters / 1000).toStringAsFixed(1);
+      text = 'In $km Kilometern $instruction';
+    }
+    await speak(text);
+  }
+
+  /// Spricht Rerouting-Ansage
+  Future<void> speakRerouting() async {
+    await speak('Route wird neu berechnet');
+  }
+
+  /// Spricht POI-Annäherung
+  Future<void> speakPOIApproaching({
+    required String poiName,
+    required double distanceMeters,
+  }) async {
+    if (distanceMeters < 100) {
+      await speak('$poiName erreicht');
+    } else {
+      final rounded = (distanceMeters / 50).round() * 50;
+      await speak('In $rounded Metern erreichen Sie $poiName');
+    }
+  }
+
+  /// Spricht Ziel-Erreicht-Ansage
+  Future<void> speakArrived({String? destinationName}) async {
+    if (destinationName != null && destinationName.isNotEmpty) {
+      await speak('Sie haben Ihr Ziel erreicht: $destinationName');
+    } else {
+      await speak('Sie haben Ihr Ziel erreicht');
+    }
+  }
+
   /// Prüft verfügbare Sprachen
   Future<List<String>> getAvailableLanguages() async {
     try {

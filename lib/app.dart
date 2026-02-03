@@ -20,6 +20,7 @@ import 'features/auth/register_screen.dart';
 import 'features/auth/forgot_password_screen.dart';
 import 'features/account/splash_screen.dart';
 import 'features/favorites/favorites_screen.dart';
+import 'features/navigation/navigation_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 /// Haupt-App Widget
@@ -166,6 +167,19 @@ final _router = GoRouter(
       path: '/trip',
       name: 'trip',
       builder: (context, state) => const TripScreen(),
+    ),
+
+    // Navigation (Turn-by-Turn)
+    GoRoute(
+      path: '/navigation',
+      name: 'navigation',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return NavigationScreen(
+          route: extra['route'],
+          stops: extra['stops'],
+        );
+      },
     ),
 
     // Zufalls-Trip Generator

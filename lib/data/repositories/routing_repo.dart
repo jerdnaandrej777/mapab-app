@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/navigation_instruction_generator.dart';
+import '../models/navigation_step.dart';
 import '../models/route.dart';
 
 part 'routing_repo.g.dart';
@@ -74,6 +77,134 @@ class RoutingRepository {
       );
     } on DioException catch (e) {
       throw RoutingException('Routenberechnung fehlgeschlagen: ${e.message}');
+    }
+  }
+
+  /// Berechnet Navigationsroute via OSRM mit Abbiegehinweisen
+  /// Gibt NavigationRoute mit Steps und Manövern zurück
+  Future<NavigationRoute> calculateNavigationRoute({
+    required LatLng start,
+    required LatLng end,
+    List<LatLng>? waypoints,
+    required String startAddress,
+    required String endAddress,
+  }) async {
+    // Koordinaten für OSRM vorbereiten (lng,lat Format)
+    final coords = <String>[];
+    coords.add('${start.longitude},${start.latitude}');
+
+    if (waypoints != null) {
+      for (final wp in waypoints) {
+        coords.add('${wp.longitude},${wp.latitude}');
+      }
+    }
+
+    coords.add('${end.longitude},${end.latitude}');
+
+    final url =
+        '${ApiEndpoints.osrmRoute}/${coords.join(';')}'
+        '?overview=full&geometries=geojson&steps=true&annotations=distance,duration';
+
+    try {
+      final response = await _dio.get(url);
+
+      if (response.data['code'] != 'Ok') {
+        throw RoutingException(
+            'OSRM Fehler: ${response.data['message'] ?? 'Unbekannt'}');
+      }
+
+      final route = response.data['routes'][0];
+      final geometry = route['geometry'];
+      final coordinates = (geometry['coordinates'] as List)
+          .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+          .toList();
+
+      // Legs und Steps parsen
+      final legsData = route['legs'] as List;
+      final legs = <NavigationLeg>[];
+
+      for (final legData in legsData) {
+        final stepsData = legData['steps'] as List? ?? [];
+        final steps = <NavigationStep>[];
+
+        for (final stepData in stepsData) {
+          final maneuver = stepData['maneuver'] as Map<String, dynamic>? ?? {};
+          final location = maneuver['location'] as List?;
+          final stepGeometry = stepData['geometry'];
+
+          // Step-Polyline parsen
+          List<LatLng> stepCoords = [];
+          if (stepGeometry != null && stepGeometry['coordinates'] != null) {
+            stepCoords = (stepGeometry['coordinates'] as List)
+                .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+                .toList();
+          }
+
+          final type = ManeuverType.fromOsrm(
+              maneuver['type']?.toString() ?? 'unknown');
+          final modifier = ManeuverModifier.fromOsrm(
+              maneuver['modifier']?.toString());
+          final streetName = stepData['name']?.toString() ?? '';
+          final roundaboutExit = maneuver['exit'] as int?;
+
+          // Deutsche Instruktion generieren
+          final instruction = NavigationInstructionGenerator.generate(
+            type: type,
+            modifier: modifier,
+            streetName: streetName,
+            roundaboutExit: roundaboutExit,
+          );
+
+          steps.add(NavigationStep(
+            type: type,
+            modifier: modifier,
+            location: location != null && location.length >= 2
+                ? LatLng(location[1].toDouble(), location[0].toDouble())
+                : start,
+            distanceMeters: (stepData['distance'] as num?)?.toDouble() ?? 0,
+            durationSeconds: (stepData['duration'] as num?)?.toDouble() ?? 0,
+            streetName: streetName,
+            instruction: instruction,
+            bearingBefore:
+                (maneuver['bearing_before'] as num?)?.toInt() ?? 0,
+            bearingAfter:
+                (maneuver['bearing_after'] as num?)?.toInt() ?? 0,
+            geometry: stepCoords,
+            roundaboutExit: roundaboutExit,
+          ));
+        }
+
+        legs.add(NavigationLeg(
+          steps: steps,
+          distanceMeters: (legData['distance'] as num?)?.toDouble() ?? 0,
+          durationSeconds: (legData['duration'] as num?)?.toDouble() ?? 0,
+          summary: legData['summary']?.toString() ?? '',
+        ));
+      }
+
+      final baseRoute = AppRoute(
+        start: start,
+        end: end,
+        startAddress: startAddress,
+        endAddress: endAddress,
+        coordinates: coordinates,
+        distanceKm: route['distance'] / 1000,
+        durationMinutes: (route['duration'] / 60).round(),
+        type: RouteType.fast,
+        waypoints: waypoints ?? [],
+        calculatedAt: DateTime.now(),
+      );
+
+      debugPrint('[Navigation] Route berechnet: ${legs.length} Legs, '
+          '${legs.fold<int>(0, (sum, l) => sum + l.steps.length)} Steps');
+
+      return NavigationRoute(
+        baseRoute: baseRoute,
+        legs: legs,
+      );
+    } on DioException catch (e) {
+      throw RoutingException(
+          'Navigationsroute fehlgeschlagen: ${e.message}');
     }
   }
 

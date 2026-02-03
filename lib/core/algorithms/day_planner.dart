@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
 import '../constants/trip_constants.dart';
+import '../utils/geo_utils.dart';
 import 'route_optimizer.dart';
 
 /// Algorithmus zur Tagesaufteilung für Mehrtages-Trips
@@ -49,8 +51,8 @@ class DayPlanner {
       ];
     }
 
-    // Mehrtages-Trip: Geografische Cluster bilden
-    final clusters = _clusterPOIsByGeography(pois, days);
+    // Mehrtages-Trip: Distanz-basierte Cluster bilden
+    final clusters = _clusterPOIsByDistance(pois, days, startLocation);
 
     // Cluster zu TripDays konvertieren
     final tripDays = <TripDay>[];
@@ -108,54 +110,128 @@ class DayPlanner {
     return tripDays;
   }
 
-  /// Clustert POIs geografisch in [days] Gruppen
-  /// Beachtet das Google Maps Limit von max 9 POIs pro Tag
-  List<List<POI>> _clusterPOIsByGeography(List<POI> pois, int days) {
-    if (pois.length <= days) {
-      // Weniger POIs als Tage: jeder POI ein Tag
-      return pois.map((p) => [p]).toList();
-    }
-
-    // Berechne POIs pro Tag, aber max 9 (Google Maps Limit)
-    var poisPerDay = (pois.length / days).ceil();
-    poisPerDay = poisPerDay.clamp(
-      TripConstants.minPoisPerDay,
-      TripConstants.maxPoisPerDay,
-    );
+  /// Clustert POIs nach kumulativer Fahrdistanz in Tages-Gruppen
+  ///
+  /// POIs sind bereits in optimierter Reihenfolge (Nearest-Neighbor + 2-opt).
+  /// Der Algorithmus iteriert durch die Liste und schneidet einen neuen Tag ab,
+  /// wenn die kumulative Distanz maxKmPerDay uebersteigt.
+  ///
+  /// Garantien:
+  /// - Mindestens 1 POI pro Tag
+  /// - Maximal maxPoisPerDay (9) pro Tag
+  /// - Tages-Distanz idealerweise zwischen minKmPerDay und maxKmPerDay
+  /// - Tagesanzahl wird dynamisch bestimmt (kann von [requestedDays] abweichen)
+  List<List<POI>> _clusterPOIsByDistance(
+    List<POI> pois,
+    int requestedDays,
+    LatLng startLocation,
+  ) {
+    if (pois.isEmpty) return [];
+    if (pois.length == 1) return [pois];
 
     final clusters = <List<POI>>[];
-    var currentIndex = 0;
+    var currentCluster = <POI>[];
+    var currentDayKm = 0.0;
+    var lastLocation = startLocation;
 
-    // Verteile POIs auf Tage
-    for (int i = 0; i < days && currentIndex < pois.length; i++) {
-      final remaining = pois.length - currentIndex;
-      final remainingDays = days - i;
+    for (int i = 0; i < pois.length; i++) {
+      final poi = pois[i];
+      final segmentKm = GeoUtils.haversineDistance(lastLocation, poi.location);
+      final projectedDayKm = currentDayKm + segmentKm;
 
-      // Berechne, wie viele POIs für diesen Tag
-      var countForThisDay = (remaining / remainingDays).ceil();
-      countForThisDay = countForThisDay.clamp(
-        TripConstants.minPoisPerDay,
-        TripConstants.maxPoisPerDay,
-      );
+      // Entscheide ob neuer Tag beginnen soll
+      bool shouldStartNewDay = false;
 
-      // Stelle sicher, dass wir nicht über das Ende hinausgehen
-      final endIdx = (currentIndex + countForThisDay).clamp(0, pois.length);
-
-      if (currentIndex < pois.length) {
-        clusters.add(pois.sublist(currentIndex, endIdx));
-        currentIndex = endIdx;
+      if (currentCluster.isNotEmpty) {
+        // Fall 1: Maximale Distanz pro Tag ueberschritten
+        if (projectedDayKm > TripConstants.maxKmPerDay) {
+          shouldStartNewDay = true;
+        }
+        // Fall 2: Google Maps Waypoint-Limit erreicht
+        if (currentCluster.length >= TripConstants.maxPoisPerDay) {
+          shouldStartNewDay = true;
+        }
       }
+
+      // Sicherheit: Nicht neuen Tag starten wenn nur 1 POI uebrig
+      // und der aktuelle Tag noch Platz hat
+      final remainingPOIs = pois.length - i;
+      if (shouldStartNewDay && remainingPOIs == 1 &&
+          currentCluster.length < TripConstants.maxPoisPerDay) {
+        shouldStartNewDay = false;
+      }
+
+      if (shouldStartNewDay) {
+        clusters.add(currentCluster);
+        currentCluster = <POI>[];
+        // Neuer Tag: Distanz startet von letztem POI des vorherigen Tages
+        currentDayKm = segmentKm;
+      } else {
+        currentDayKm = projectedDayKm;
+      }
+
+      currentCluster.add(poi);
+      lastLocation = poi.location;
     }
 
-    // Falls POIs übrig sind (wegen 9er-Limit), verteile sie auf zusätzliche Tage
-    while (currentIndex < pois.length) {
-      final endIdx = (currentIndex + TripConstants.maxPoisPerDay)
-          .clamp(0, pois.length);
-      clusters.add(pois.sublist(currentIndex, endIdx));
-      currentIndex = endIdx;
+    // Letzten Cluster hinzufuegen
+    if (currentCluster.isNotEmpty) {
+      clusters.add(currentCluster);
+    }
+
+    // Post-Processing: Zu kurze letzte Tage mit vorherigem Tag zusammenlegen
+    _mergeShortDays(clusters, startLocation);
+
+    debugPrint('[DayPlanner] Distanz-Clustering: $requestedDays angefragt → ${clusters.length} Tage');
+    for (int i = 0; i < clusters.length; i++) {
+      final km = _calculateClusterDistance(
+        clusters[i],
+        i > 0 ? clusters[i - 1].last.location : startLocation,
+      );
+      debugPrint('[DayPlanner]   Tag ${i + 1}: ${clusters[i].length} POIs, ${km.toStringAsFixed(0)}km (Haversine)');
     }
 
     return clusters;
+  }
+
+  /// Mergt zu kurze Tage (< minKmPerDay) mit dem vorherigen Tag,
+  /// solange das Google Maps Limit nicht ueberschritten wird
+  void _mergeShortDays(List<List<POI>> clusters, LatLng startLocation) {
+    if (clusters.length < 2) return;
+
+    var i = clusters.length - 1;
+    while (i > 0) {
+      final cluster = clusters[i];
+      final prevCluster = clusters[i - 1];
+
+      // Distanz dieses Tages berechnen
+      final dayKm = _calculateClusterDistance(
+        cluster,
+        prevCluster.isNotEmpty ? prevCluster.last.location : startLocation,
+      );
+
+      // Wenn zu kurz und Merge moeglich (POI-Limit)
+      if (dayKm < TripConstants.minKmPerDay &&
+          prevCluster.length + cluster.length <= TripConstants.maxPoisPerDay) {
+        clusters[i - 1] = [...prevCluster, ...cluster];
+        clusters.removeAt(i);
+        debugPrint('[DayPlanner] Merge: Tag ${i + 1} (${dayKm.toStringAsFixed(0)}km) mit Tag $i zusammengelegt');
+      }
+      i--;
+    }
+  }
+
+  /// Berechnet die kumulative Haversine-Distanz eines Clusters
+  double _calculateClusterDistance(List<POI> cluster, LatLng startPoint) {
+    if (cluster.isEmpty) return 0;
+    double total = GeoUtils.haversineDistance(startPoint, cluster.first.location);
+    for (int i = 0; i < cluster.length - 1; i++) {
+      total += GeoUtils.haversineDistance(
+        cluster[i].location,
+        cluster[i + 1].location,
+      );
+    }
+    return total;
   }
 
   /// Generiert einen beschreibenden Titel für einen Tag

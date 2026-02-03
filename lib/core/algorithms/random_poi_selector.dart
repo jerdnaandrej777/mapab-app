@@ -150,12 +150,19 @@ class RandomPOISelector {
   }
 
   /// Würfelt einen einzelnen POI neu (für Reroll-Funktion)
+  ///
+  /// [previousLocation] - Position des vorherigen POIs/Starts in der Route
+  /// [nextLocation] - Position des naechsten POIs/Ziels in der Route
+  /// [maxSegmentKm] - Maximale Haversine-Distanz zum Nachbarn (optional)
   POI? rerollSinglePOI({
     required List<POI> availablePOIs,
     required List<POI> currentSelection,
     required POI poiToReplace,
     required LatLng startLocation,
     List<POICategory> preferredCategories = const [],
+    LatLng? previousLocation,
+    LatLng? nextLocation,
+    double? maxSegmentKm,
   }) {
     // Bereits ausgewählte IDs
     final selectedIds = currentSelection
@@ -164,11 +171,32 @@ class RandomPOISelector {
         .toSet();
 
     // Verfügbare POIs filtern (nicht bereits ausgewählt)
-    final available = availablePOIs
+    var available = availablePOIs
         .where((p) => !selectedIds.contains(p.id) && p.id != poiToReplace.id)
         .toList();
 
     if (available.isEmpty) return null;
+
+    // Distanz-Filter: nur POIs in akzeptabler Entfernung zu Nachbarn
+    if (maxSegmentKm != null && (previousLocation != null || nextLocation != null)) {
+      final distanceFiltered = available.where((p) {
+        if (previousLocation != null) {
+          final dist = GeoUtils.haversineDistance(previousLocation, p.location);
+          if (dist > maxSegmentKm) return false;
+        }
+        if (nextLocation != null) {
+          final dist = GeoUtils.haversineDistance(p.location, nextLocation);
+          if (dist > maxSegmentKm) return false;
+        }
+        return true;
+      }).toList();
+
+      // Nur verwenden wenn Kandidaten gefunden
+      if (distanceFiltered.isNotEmpty) {
+        available = distanceFiltered;
+      }
+      // Sonst: Fallback auf alle verfuegbaren POIs (ohne Distanz-Constraint)
+    }
 
     // Gleiche Kategorie bevorzugen (50% Chance)
     final sameCategory = available

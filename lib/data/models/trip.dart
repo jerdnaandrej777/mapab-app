@@ -116,18 +116,71 @@ class Trip with _$Trip {
   }
 
   /// Gibt alle Stops für einen bestimmten Tag zurück (1-basiert)
+  /// Sortiert nach `order` (optimierte Tages-Reihenfolge vom DayPlanner),
+  /// NICHT nach `routePosition` (Gesamt-Route) — wichtig fuer Google Maps Export
   List<TripStop> getStopsForDay(int dayNumber) {
-    return sortedStops.where((s) => s.day == dayNumber).toList();
+    final dayStops = stops.where((s) => s.day == dayNumber).toList();
+    dayStops.sort((a, b) => a.order.compareTo(b.order));
+    return dayStops;
   }
 
-  /// Berechnet die Distanz für einen bestimmten Tag (approximiert)
+  /// Berechnet die geschaetzte Fahrdistanz fuer einen bestimmten Tag
+  /// Haversine-Summe inkl. Segment zum Tagesziel × Faktor 1.35 (≈ echte Fahrstrecke)
   double getDistanceForDay(int dayNumber) {
     final dayStops = getStopsForDay(dayNumber);
     if (dayStops.isEmpty) return 0;
 
-    // Approximation: Gesamtdistanz / Anzahl Tage
-    // (Exakte Berechnung würde separate Routen pro Tag erfordern)
-    return route.distanceKm / actualDays;
+    double total = 0;
+    LatLng? prevLocation;
+
+    // Start des Tages bestimmen
+    if (dayNumber == 1) {
+      prevLocation = route.start;
+    } else {
+      final prevDayStops = getStopsForDay(dayNumber - 1);
+      if (prevDayStops.isNotEmpty) {
+        prevLocation = prevDayStops.last.location;
+      }
+    }
+
+    if (prevLocation == null) {
+      // Fallback: gleichmaessige Aufteilung
+      return route.distanceKm / actualDays;
+    }
+
+    for (final stop in dayStops) {
+      total += _haversineDistance(prevLocation!, stop.location);
+      prevLocation = stop.location;
+    }
+
+    // Segment zum Tagesziel (wie im Google Maps Export)
+    if (dayNumber == actualDays) {
+      // Letzter Tag: zurueck zum Start
+      total += _haversineDistance(prevLocation!, route.start);
+    } else {
+      // Naechster Tag: erster Stop des Folgetages
+      final nextDayStops = getStopsForDay(dayNumber + 1);
+      if (nextDayStops.isNotEmpty) {
+        total += _haversineDistance(prevLocation!, nextDayStops.first.location);
+      }
+    }
+
+    // Haversine → geschaetzte Fahrstrecke (Faktor ~1.35)
+    return total * 1.35;
+  }
+
+  /// Haversine-Distanz in km (inline, da Freezed kein GeoUtils-Import erlaubt)
+  static double _haversineDistance(LatLng a, LatLng b) {
+    const r = 6371.0;
+    final dLat = (b.latitude - a.latitude) * (pi / 180);
+    final dLon = (b.longitude - a.longitude) * (pi / 180);
+    final lat1 = a.latitude * (pi / 180);
+    final lat2 = b.latitude * (pi / 180);
+
+    final hav = sin(dLat / 2) * sin(dLat / 2) +
+        sin(dLon / 2) * sin(dLon / 2) * cos(lat1) * cos(lat2);
+    final c = 2 * atan2(sqrt(hav), sqrt(1 - hav));
+    return r * c;
   }
 
   /// Anzahl der tatsächlichen Tage (basierend auf Stop-Verteilung)

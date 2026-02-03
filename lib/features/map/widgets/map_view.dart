@@ -78,6 +78,69 @@ class _MapViewState extends ConsumerState<MapView> {
             .loadWeatherForRoute(next.route!.coordinates);
       }
     });
+
+    // Auto-Zoom bei Tageswechsel (v1.8.1)
+    ref.listenManual(randomTripNotifierProvider, (previous, next) {
+      if (previous?.selectedDay != next.selectedDay &&
+          next.generatedTrip != null &&
+          next.generatedTrip!.trip.actualDays > 1) {
+        _zoomToDaySegment(next);
+      }
+    });
+  }
+
+  /// Zoomt die Karte auf das Routensegment des ausgewaehlten Tages
+  void _zoomToDaySegment(RandomTripState state) {
+    final trip = state.generatedTrip!.trip;
+    final selectedDay = state.selectedDay;
+    final stopsForDay = trip.getStopsForDay(selectedDay);
+    if (stopsForDay.isEmpty) return;
+
+    final allPoints = <LatLng>[];
+
+    // Start-Punkt des Tages
+    if (selectedDay == 1) {
+      allPoints.add(trip.route.start);
+    } else {
+      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
+      if (prevDayStops.isNotEmpty) {
+        allPoints.add(prevDayStops.last.location);
+      }
+    }
+
+    // Alle Stop-Positionen des Tages
+    for (final stop in stopsForDay) {
+      allPoints.add(stop.location);
+    }
+
+    if (allPoints.length < 2) return;
+
+    // Bounds berechnen
+    double minLat = allPoints.first.latitude;
+    double maxLat = allPoints.first.latitude;
+    double minLng = allPoints.first.longitude;
+    double maxLng = allPoints.first.longitude;
+
+    for (final point in allPoints) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    final bounds = LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
+
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(60),
+      ),
+    );
+
+    debugPrint('[MapView] Auto-Zoom auf Tag $selectedDay (${stopsForDay.length} Stops)');
   }
 
   @override

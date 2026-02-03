@@ -5,7 +5,8 @@ import 'package:latlong2/latlong.dart';
 import '../../../data/models/trip.dart';
 
 /// Mini-Karte für den Day Editor, zeigt Route + POIs des ausgewählten Tages
-class DayMiniMap extends StatelessWidget {
+/// Aktualisiert den Kartenausschnitt automatisch bei POI-Aenderungen (Reroll/Delete)
+class DayMiniMap extends StatefulWidget {
   final Trip trip;
   final int selectedDay;
   final LatLng startLocation;
@@ -22,19 +23,80 @@ class DayMiniMap extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final stopsForDay = trip.getStopsForDay(selectedDay);
-    final isMultiDay = trip.actualDays > 1;
+  State<DayMiniMap> createState() => _DayMiniMapState();
+}
 
-    // Punkte für Bounds berechnen
-    final allPoints = <LatLng>[startLocation];
+class _DayMiniMapState extends State<DayMiniMap> {
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant DayMiniMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Kartenausschnitt anpassen wenn Trip-Daten sich geaendert haben (Reroll/Delete)
+    if (oldWidget.trip != widget.trip ||
+        oldWidget.selectedDay != widget.selectedDay ||
+        _routeSegmentChanged(oldWidget.routeSegment, widget.routeSegment)) {
+      _refitCamera();
+    }
+  }
+
+  bool _routeSegmentChanged(List<LatLng>? a, List<LatLng>? b) {
+    if (a == null && b == null) return false;
+    if (a == null || b == null) return true;
+    if (a.length != b.length) return true;
+    if (a.isNotEmpty && b.isNotEmpty) {
+      if (a.first != b.first || a.last != b.last) return true;
+    }
+    return false;
+  }
+
+  List<LatLng> _collectAllPoints() {
+    final allPoints = <LatLng>[widget.startLocation];
+    final stopsForDay = widget.trip.getStopsForDay(widget.selectedDay);
     for (final stop in stopsForDay) {
       allPoints.add(stop.location);
     }
-    if (routeSegment != null && routeSegment!.isNotEmpty) {
-      allPoints.addAll(routeSegment!);
+    if (widget.routeSegment != null && widget.routeSegment!.isNotEmpty) {
+      allPoints.addAll(widget.routeSegment!);
     }
+    return allPoints;
+  }
+
+  void _refitCamera() {
+    final allPoints = _collectAllPoints();
+    if (allPoints.length < 2) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(allPoints),
+            padding: const EdgeInsets.all(40),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final stopsForDay = widget.trip.getStopsForDay(widget.selectedDay);
+    final isMultiDay = widget.trip.actualDays > 1;
+
+    // Punkte für Bounds berechnen
+    final allPoints = _collectAllPoints();
 
     // Fallback wenn keine Punkte
     if (allPoints.length < 2) {
@@ -43,13 +105,13 @@ class DayMiniMap extends StatelessWidget {
 
     // Start-Punkt für diesen Tag
     LatLng dayStart;
-    if (!isMultiDay || selectedDay == 1) {
-      dayStart = startLocation;
+    if (!isMultiDay || widget.selectedDay == 1) {
+      dayStart = widget.startLocation;
     } else {
-      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
+      final prevDayStops = widget.trip.getStopsForDay(widget.selectedDay - 1);
       dayStart = prevDayStops.isNotEmpty
           ? prevDayStops.last.location
-          : startLocation;
+          : widget.startLocation;
     }
 
     return ClipRRect(
@@ -58,6 +120,7 @@ class DayMiniMap extends StatelessWidget {
         child: SizedBox(
           height: 180,
           child: FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
               initialCameraFit: CameraFit.bounds(
                 bounds: LatLngBounds.fromPoints(allPoints),
@@ -75,11 +138,11 @@ class DayMiniMap extends StatelessWidget {
                 maxZoom: 19,
               ),
               // Route-Segment
-              if (routeSegment != null && routeSegment!.isNotEmpty)
+              if (widget.routeSegment != null && widget.routeSegment!.isNotEmpty)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: routeSegment!,
+                      points: widget.routeSegment!,
                       strokeWidth: 4,
                       color: colorScheme.primary,
                       borderColor: colorScheme.primary.withOpacity(0.3),

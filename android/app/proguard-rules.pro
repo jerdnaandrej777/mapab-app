@@ -32,6 +32,11 @@
 -dontwarn com.google.android.play.core.splitinstall.**
 -dontwarn com.google.android.play.core.tasks.**
 
+# MapLibre GL Native
+-keep class org.maplibre.android.** { *; }
+-keep class com.mapbox.mapboxsdk.** { *; }
+-dontwarn org.maplibre.android.**
+
 # Prevent R8 from removing classes used via reflection
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;

@@ -1,7 +1,7 @@
 name: travel_planner
 description: Eine europäische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.8.0+142
+version: 1.9.1+147
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   # Karten
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
+  maplibre_gl: ^0.25.0        # 3D Navigation mit Pitch/Tilt
 
   # HTTP & Networking
   dio: ^5.4.0

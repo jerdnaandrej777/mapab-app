@@ -41,4 +41,24 @@ class TripConstants {
 
   /// Quick-Select Werte für Tagesausflug Radius (in km)
   static const List<double> dayTripQuickSelectRadii = [50, 100, 200, 300];
+
+  /// Minimale Fahrdistanz pro Tag in km (Haversine)
+  /// Entspricht ca. 200km echte Fahrtstrecke (Faktor ~1.3)
+  static const double minKmPerDay = 150.0;
+
+  /// Maximale Fahrdistanz pro Tag in km (Haversine)
+  /// Entspricht ca. 650-700km echte Fahrtstrecke (Faktor ~1.3)
+  static const double maxKmPerDay = 500.0;
+
+  /// Ideale Fahrdistanz pro Tag in km (Haversine)
+  /// Mitte des Zielbereichs
+  static const double idealKmPerDay = 350.0;
+
+  /// Faktor Haversine → geschaetzte reale Fahrstrecke
+  static const double haversineToDisplayFactor = 1.35;
+
+  /// Absolutes Maximum angezeigte Distanz pro Tag in km
+  /// Anzeige-Distanz = Haversine × haversineToDisplayFactor
+  /// 700km ist die absolute Obergrenze pro Reisetag
+  static const double maxDisplayKmPerDay = 700.0;
 }

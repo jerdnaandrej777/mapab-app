@@ -108,11 +108,21 @@ class TripGeneratorRepository {
     }
 
     // 3. Route optimieren
-    final optimizedPOIs = _routeOptimizer.optimizeRoute(
-      pois: selectedPOIs,
-      startLocation: startLocation,
-      returnToStart: !hasDestination,
-    );
+    final List<POI> optimizedPOIs;
+    if (hasDestination) {
+      // Richtungs-Optimierung: POIs vorwaerts entlang Start → Ziel
+      optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
+        pois: selectedPOIs,
+        startLocation: startLocation,
+        endLocation: destinationLocation!,
+      );
+    } else {
+      optimizedPOIs = _routeOptimizer.optimizeRoute(
+        pois: selectedPOIs,
+        startLocation: startLocation,
+        returnToStart: true,
+      );
+    }
 
     // 4. Echte Route berechnen
     final waypoints = optimizedPOIs.map((p) => p.location).toList();
@@ -238,12 +248,22 @@ class TripGeneratorRepository {
       throw TripGenerationException('Keine passenden POIs gefunden');
     }
 
-    // 3. Route optimieren
-    final optimizedPOIs = _routeOptimizer.optimizeRoute(
-      pois: selectedPOIs,
-      startLocation: startLocation,
-      returnToStart: !hasDestination,
-    );
+    // 3. Route optimieren (Richtungs-Optimierung bei A→B Trips)
+    final List<POI> optimizedPOIs;
+    if (hasDestination) {
+      optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
+        pois: selectedPOIs,
+        startLocation: startLocation,
+        endLocation: destinationLocation!,
+      );
+      debugPrint('[TripGenerator] Directional optimization (A→B): ${optimizedPOIs.length} POIs');
+    } else {
+      optimizedPOIs = _routeOptimizer.optimizeRoute(
+        pois: selectedPOIs,
+        startLocation: startLocation,
+        returnToStart: true,
+      );
+    }
 
     // 4. Auf Tage aufteilen
     debugPrint('[TripGenerator] Plane $effectiveDays Tage mit ${optimizedPOIs.length} POIs...');
@@ -253,11 +273,16 @@ class TripGeneratorRepository {
       days: effectiveDays,
       returnToStart: !hasDestination,
     );
-    debugPrint('[TripGenerator] TripDays: ${tripDays.length}, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
+    // Tatsaechliche Tagesanzahl kann von angefragter abweichen (distanzbasiert)
+    final actualDays = tripDays.length;
+    if (actualDays != effectiveDays) {
+      debugPrint('[TripGenerator] Tagesanzahl angepasst: $effectiveDays angefragt → $actualDays optimal');
+    }
+    debugPrint('[TripGenerator] TripDays: $actualDays, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
     // 5. Hotels hinzufügen (optional)
     List<List<HotelSuggestion>> hotelSuggestions = [];
-    if (includeHotels && effectiveDays > 1) {
+    if (includeHotels && actualDays > 1) {
       final overnightLocations = _dayPlanner.calculateOvernightLocations(
         tripDays: tripDays,
         startLocation: startLocation,
@@ -310,7 +335,7 @@ class TripGeneratorRepository {
       type: TripType.eurotrip,
       route: route,
       stops: allStops,
-      days: effectiveDays,
+      days: actualDays,
       createdAt: DateTime.now(),
       preferredCategories: categories.map((c) => c.id).toList(),
     );
@@ -338,6 +363,17 @@ class TripGeneratorRepository {
       );
     }
 
+    // Multi-Day: Nur den betroffenen Tag modifizieren, andere Tage beibehalten
+    if (currentTrip.trip.actualDays > 1) {
+      return _removePOIFromDay(
+        currentTrip: currentTrip,
+        poiIdToRemove: poiIdToRemove,
+        startLocation: startLocation,
+        startAddress: startAddress,
+      );
+    }
+
+    // Single-Day: Globale Re-Optimierung (bestehendes Verhalten)
     // POI aus der Liste entfernen
     final newSelectedPOIs = currentTrip.selectedPOIs
         .where((p) => p.id != poiIdToRemove)
@@ -363,6 +399,7 @@ class TripGeneratorRepository {
     // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
     final days = currentTrip.trip.actualDays;
     List<TripStop> newStops;
+    int updatedDays = days;
     if (days > 1) {
       final tripDays = _dayPlanner.planDays(
         pois: optimizedPOIs,
@@ -370,6 +407,7 @@ class TripGeneratorRepository {
         days: days,
         returnToStart: true,
       );
+      updatedDays = tripDays.length;
       newStops = tripDays.expand((day) => day.stops).toList();
     } else {
       newStops = optimizedPOIs.asMap().entries.map((entry) {
@@ -381,6 +419,7 @@ class TripGeneratorRepository {
       name: _generateTripName(optimizedPOIs),
       route: route,
       stops: newStops,
+      days: updatedDays,
       updatedAt: DateTime.now(),
     );
 
@@ -392,6 +431,7 @@ class TripGeneratorRepository {
   }
 
   /// Würfelt einen einzelnen POI neu
+  /// Validiert 700km-Limit pro Tag und versucht bei Ueberschreitung andere POIs
   Future<GeneratedTrip> rerollPOI({
     required GeneratedTrip currentTrip,
     required String poiIdToReroll,
@@ -402,33 +442,179 @@ class TripGeneratorRepository {
     final poiToReplace = currentTrip.selectedPOIs
         .firstWhere((p) => p.id == poiIdToReroll);
 
-    // Neuen POI auswählen
-    final newPOI = _poiSelector.rerollSinglePOI(
-      availablePOIs: currentTrip.availablePOIs,
-      currentSelection: currentTrip.selectedPOIs,
-      poiToReplace: poiToReplace,
-      startLocation: startLocation,
-      preferredCategories: categories,
-    );
-
-    if (newPOI == null) {
-      throw TripGenerationException('Kein alternativer POI verfügbar');
+    // Multi-Day: Nur den betroffenen Tag modifizieren, andere Tage beibehalten
+    if (currentTrip.trip.actualDays > 1) {
+      return _rerollPOIForDay(
+        currentTrip: currentTrip,
+        poiToReplace: poiToReplace,
+        poiIdToReroll: poiIdToReroll,
+        startLocation: startLocation,
+        startAddress: startAddress,
+        categories: categories,
+      );
     }
 
-    // Neue POI-Liste erstellen
-    final newSelectedPOIs = currentTrip.selectedPOIs.map((p) {
-      return p.id == poiIdToReroll ? newPOI : p;
-    }).toList();
+    // Single-Day: Globale Re-Optimierung (bestehendes Verhalten)
+    // Nachbar-Positionen fuer Distanz-bewusste Auswahl ermitteln
+    final currentIndex = currentTrip.selectedPOIs.indexOf(poiToReplace);
+    final previousLocation = currentIndex > 0
+        ? currentTrip.selectedPOIs[currentIndex - 1].location
+        : startLocation;
+    final nextLocation = currentIndex < currentTrip.selectedPOIs.length - 1
+        ? currentTrip.selectedPOIs[currentIndex + 1].location
+        : startLocation;
 
-    // Route neu optimieren
-    final optimizedPOIs = _routeOptimizer.optimizeRoute(
-      pois: newSelectedPOIs,
-      startLocation: startLocation,
-      returnToStart: true,
-    );
+    // Max Segment = halbe Tagesbudget (ein Segment soll nicht den ganzen Tag verbrauchen)
+    final maxSegmentKm = TripConstants.maxKmPerDay / 2;
 
-    // Neue Route berechnen
-    final waypoints = optimizedPOIs.map((p) => p.location).toList();
+    final triedPOIIds = <String>{poiIdToReroll};
+    GeneratedTrip? lastResult;
+    final days = currentTrip.trip.actualDays;
+    const maxRetries = 3;
+
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      // POIs die bereits probiert wurden herausfiltern
+      final filteredAvailable = currentTrip.availablePOIs
+          .where((p) => !triedPOIIds.contains(p.id))
+          .toList();
+
+      // Neuen POI auswählen (Attempt 0: mit Distanz-Constraint, danach ohne)
+      final newPOI = _poiSelector.rerollSinglePOI(
+        availablePOIs: filteredAvailable,
+        currentSelection: currentTrip.selectedPOIs,
+        poiToReplace: poiToReplace,
+        startLocation: startLocation,
+        preferredCategories: categories,
+        previousLocation: previousLocation,
+        nextLocation: nextLocation,
+        maxSegmentKm: attempt == 0 ? maxSegmentKm : null,
+      );
+
+      if (newPOI == null) {
+        if (lastResult != null) {
+          debugPrint('[TripGenerator] Reroll: Keine weiteren POIs verfuegbar, nutze letztes Ergebnis');
+          return lastResult;
+        }
+        throw TripGenerationException('Kein alternativer POI verfügbar');
+      }
+
+      triedPOIIds.add(newPOI.id);
+
+      // Neue POI-Liste erstellen
+      final newSelectedPOIs = currentTrip.selectedPOIs.map((p) {
+        return p.id == poiIdToReroll ? newPOI : p;
+      }).toList();
+
+      // Route neu optimieren
+      final optimizedPOIs = _routeOptimizer.optimizeRoute(
+        pois: newSelectedPOIs,
+        startLocation: startLocation,
+        returnToStart: true,
+      );
+
+      // Neue Route berechnen
+      final waypoints = optimizedPOIs.map((p) => p.location).toList();
+      final route = await _routingRepo.calculateFastRoute(
+        start: startLocation,
+        end: startLocation,
+        waypoints: waypoints,
+        startAddress: startAddress,
+        endAddress: startAddress,
+      );
+
+      // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
+      List<TripStop> newStops;
+      int updatedDays = days;
+      if (days > 1) {
+        final tripDays = _dayPlanner.planDays(
+          pois: optimizedPOIs,
+          startLocation: startLocation,
+          days: days,
+          returnToStart: true,
+        );
+        updatedDays = tripDays.length;
+        newStops = tripDays.expand((day) => day.stops).toList();
+      } else {
+        newStops = optimizedPOIs.asMap().entries.map((entry) {
+          return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+        }).toList();
+      }
+
+      final updatedTrip = currentTrip.trip.copyWith(
+        route: route,
+        stops: newStops,
+        days: updatedDays,
+        updatedAt: DateTime.now(),
+      );
+
+      final result = GeneratedTrip(
+        trip: updatedTrip,
+        availablePOIs: currentTrip.availablePOIs,
+        selectedPOIs: optimizedPOIs,
+      );
+
+      // 700km-Validierung: kein Tag darf maxDisplayKmPerDay ueberschreiten
+      if (days > 1) {
+        bool anyDayOverLimit = false;
+        for (int d = 1; d <= updatedDays; d++) {
+          final displayKm = updatedTrip.getDistanceForDay(d);
+          if (displayKm > TripConstants.maxDisplayKmPerDay) {
+            anyDayOverLimit = true;
+            debugPrint('[TripGenerator] Reroll Versuch $attempt: Tag $d = ${displayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+            break;
+          }
+        }
+
+        lastResult = result;
+
+        if (!anyDayOverLimit) {
+          debugPrint('[TripGenerator] Reroll Versuch $attempt: Alle Tage unter ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+          return result;
+        }
+
+        // Naechster Versuch mit anderem POI
+        continue;
+      }
+
+      // Single-Day Trip: kein Tages-Check noetig
+      return result;
+    }
+
+    // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
+    debugPrint('[TripGenerator] WARNING: ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit nach $maxRetries Versuchen nicht erreicht');
+    return lastResult!;
+  }
+
+  // ===== Multi-Day: Tag-beschraenkte POI-Bearbeitung =====
+
+  /// Bestimmt den Start-Punkt eines Tages (letzter Stop des Vortages)
+  LatLng _getDayStartLocation(Trip trip, int day, LatLng tripStart) {
+    if (day == 1) return tripStart;
+    final prevStops = trip.getStopsForDay(day - 1);
+    return prevStops.isNotEmpty ? prevStops.last.location : tripStart;
+  }
+
+  /// Baut Route und Trip nach einer Tag-Bearbeitung neu auf.
+  /// Alle Stops werden in Tag/Order-Reihenfolge sortiert und OSRM-Route berechnet.
+  /// Andere Tage bleiben vollstaendig erhalten.
+  Future<GeneratedTrip> _rebuildRouteForDayEdit({
+    required GeneratedTrip currentTrip,
+    required List<TripStop> allStops,
+    required LatLng startLocation,
+    required String startAddress,
+  }) async {
+    // Stops sortieren nach Tag + Order
+    final sortedStops = List<TripStop>.from(allStops);
+    sortedStops.sort((a, b) {
+      final dayCompare = a.day.compareTo(b.day);
+      if (dayCompare != 0) return dayCompare;
+      return a.order.compareTo(b.order);
+    });
+
+    // Waypoints in Tag-Reihenfolge fuer OSRM
+    final waypoints = sortedStops.map((s) => s.location).toList();
+
+    // OSRM-Route berechnen
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
       end: startLocation,
@@ -437,34 +623,206 @@ class TripGeneratorRepository {
       endAddress: startAddress,
     );
 
-    // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
-    final days = currentTrip.trip.actualDays;
-    List<TripStop> newStops;
-    if (days > 1) {
-      final tripDays = _dayPlanner.planDays(
-        pois: optimizedPOIs,
-        startLocation: startLocation,
-        days: days,
-        returnToStart: true,
-      );
-      newStops = tripDays.expand((day) => day.stops).toList();
-    } else {
-      newStops = optimizedPOIs.asMap().entries.map((entry) {
-        return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
-      }).toList();
-    }
+    // selectedPOIs aus geordneten Stops rekonstruieren
+    final newSelectedPOIs = sortedStops.map((s) => s.toPOI()).toList();
 
     final updatedTrip = currentTrip.trip.copyWith(
       route: route,
-      stops: newStops,
+      stops: sortedStops,
       updatedAt: DateTime.now(),
     );
 
     return GeneratedTrip(
       trip: updatedTrip,
       availablePOIs: currentTrip.availablePOIs,
-      selectedPOIs: optimizedPOIs,
+      selectedPOIs: newSelectedPOIs,
     );
+  }
+
+  /// Entfernt einen POI nur aus dem betroffenen Tag (Multi-Day).
+  /// Andere Tage bleiben vollstaendig erhalten.
+  Future<GeneratedTrip> _removePOIFromDay({
+    required GeneratedTrip currentTrip,
+    required String poiIdToRemove,
+    required LatLng startLocation,
+    required String startAddress,
+  }) async {
+    // Tag des zu loeschenden POIs ermitteln
+    final stopToRemove = currentTrip.trip.stops.firstWhere(
+      (s) => s.poiId == poiIdToRemove,
+      orElse: () => throw TripGenerationException('POI nicht im Trip gefunden'),
+    );
+    final targetDay = stopToRemove.day;
+
+    // Pruefen: Tag muss nach Entfernung mindestens 1 Stop haben
+    final dayStops = currentTrip.trip.getStopsForDay(targetDay);
+    if (dayStops.length <= 1) {
+      throw TripGenerationException(
+        'Mindestens 1 Stop pro Tag erforderlich',
+      );
+    }
+
+    debugPrint('[TripGenerator] RemovePOI Tag $targetDay: Entferne ${stopToRemove.name}');
+
+    // Andere Tage unverändert beibehalten
+    final otherDaysStops = currentTrip.trip.stops
+        .where((s) => s.day != targetDay)
+        .toList();
+
+    // Modifizierter Tag: POI entfernen und Reihenfolge neu optimieren
+    final modifiedDayPOIs = dayStops
+        .where((s) => s.poiId != poiIdToRemove)
+        .map((s) => s.toPOI())
+        .toList();
+
+    final dayStart = _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
+
+    final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
+      pois: modifiedDayPOIs,
+      startLocation: dayStart,
+      returnToStart: false,
+    );
+
+    // Neue Stops fuer diesen Tag mit korrekter Order
+    final newDayStops = optimizedDayPOIs.asMap().entries.map((entry) {
+      return TripStop.fromPOI(entry.value).copyWith(
+        day: targetDay,
+        order: entry.key,
+      );
+    }).toList();
+
+    debugPrint('[TripGenerator] RemovePOI Tag $targetDay: ${newDayStops.length} Stops verbleibend');
+
+    // Alle Stops zusammenfuehren und Route neu berechnen
+    return _rebuildRouteForDayEdit(
+      currentTrip: currentTrip,
+      allStops: [...otherDaysStops, ...newDayStops],
+      startLocation: startLocation,
+      startAddress: startAddress,
+    );
+  }
+
+  /// Wuerfelt einen POI nur innerhalb des betroffenen Tages neu (Multi-Day).
+  /// Andere Tage bleiben vollstaendig erhalten.
+  Future<GeneratedTrip> _rerollPOIForDay({
+    required GeneratedTrip currentTrip,
+    required POI poiToReplace,
+    required String poiIdToReroll,
+    required LatLng startLocation,
+    required String startAddress,
+    List<POICategory> categories = const [],
+  }) async {
+    // Tag des zu ersetzenden POIs ermitteln
+    final stopToReroll = currentTrip.trip.stops.firstWhere(
+      (s) => s.poiId == poiIdToReroll,
+    );
+    final targetDay = stopToReroll.day;
+    final dayStops = currentTrip.trip.getStopsForDay(targetDay);
+    final dayStart = _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
+
+    debugPrint('[TripGenerator] RerollPOI Tag $targetDay: Ersetze ${poiToReplace.name}');
+
+    // Nachbar-Positionen innerhalb des Tages (nicht global)
+    final dayStopIndex = dayStops.indexWhere((s) => s.poiId == poiIdToReroll);
+    final previousLocation = dayStopIndex > 0
+        ? dayStops[dayStopIndex - 1].location
+        : dayStart;
+
+    LatLng nextLocation;
+    if (dayStopIndex < dayStops.length - 1) {
+      nextLocation = dayStops[dayStopIndex + 1].location;
+    } else if (targetDay < currentTrip.trip.actualDays) {
+      // Letzter Stop des Tages: Richtung naechster Tag
+      final nextDayStops = currentTrip.trip.getStopsForDay(targetDay + 1);
+      nextLocation = nextDayStops.isNotEmpty
+          ? nextDayStops.first.location
+          : startLocation;
+    } else {
+      // Letzter Stop des letzten Tages: Richtung Start (Rueckreise)
+      nextLocation = startLocation;
+    }
+
+    final maxSegmentKm = TripConstants.maxKmPerDay / 2;
+    final triedPOIIds = <String>{poiIdToReroll};
+    GeneratedTrip? lastResult;
+    const maxRetries = 3;
+
+    // Andere Tage unverändert beibehalten
+    final otherDaysStops = currentTrip.trip.stops
+        .where((s) => s.day != targetDay)
+        .toList();
+
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      // Verfuegbare POIs filtern (bereits probierte ausschliessen)
+      final filteredAvailable = currentTrip.availablePOIs
+          .where((p) => !triedPOIIds.contains(p.id))
+          .toList();
+
+      // Neuen POI auswaehlen (Tag-bewusste Distanz-Beschraenkung)
+      final newPOI = _poiSelector.rerollSinglePOI(
+        availablePOIs: filteredAvailable,
+        currentSelection: currentTrip.selectedPOIs,
+        poiToReplace: poiToReplace,
+        startLocation: startLocation,
+        preferredCategories: categories,
+        previousLocation: previousLocation,
+        nextLocation: nextLocation,
+        maxSegmentKm: attempt == 0 ? maxSegmentKm : null,
+      );
+
+      if (newPOI == null) {
+        if (lastResult != null) {
+          debugPrint('[TripGenerator] Reroll Tag $targetDay: Keine weiteren POIs, nutze letztes Ergebnis');
+          return lastResult;
+        }
+        throw TripGenerationException('Kein alternativer POI verfügbar');
+      }
+
+      triedPOIIds.add(newPOI.id);
+
+      // POI nur in diesem Tag ersetzen
+      final modifiedDayPOIs = dayStops.map((s) {
+        return s.poiId == poiIdToReroll ? newPOI : s.toPOI();
+      }).toList();
+
+      // Nur diesen Tag re-optimieren
+      final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
+        pois: modifiedDayPOIs,
+        startLocation: dayStart,
+        returnToStart: false,
+      );
+
+      // Neue Stops fuer diesen Tag
+      final newDayStops = optimizedDayPOIs.asMap().entries.map((entry) {
+        return TripStop.fromPOI(entry.value).copyWith(
+          day: targetDay,
+          order: entry.key,
+        );
+      }).toList();
+
+      // Route neu berechnen
+      final result = await _rebuildRouteForDayEdit(
+        currentTrip: currentTrip,
+        allStops: [...otherDaysStops, ...newDayStops],
+        startLocation: startLocation,
+        startAddress: startAddress,
+      );
+
+      // Tages-Distanz validieren
+      final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
+      if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
+        debugPrint('[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+        lastResult = result;
+        continue;
+      }
+
+      debugPrint('[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km OK');
+      return result;
+    }
+
+    // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
+    debugPrint('[TripGenerator] WARNING: Distanz-Limit nach $maxRetries Versuchen nicht erreicht (Tag $targetDay)');
+    return lastResult!;
   }
 
   /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)

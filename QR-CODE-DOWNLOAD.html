@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.8.0 - Major UI Redesign & AI Integration</p>
+        <p class="version">Version 1.9.1 - 3D Navigation mit MapLibre GL & Turn-by-Turn</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.8.0"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.1"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,10 +183,25 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">🌤️ Tages-Wettervorhersage - Echte Vorhersage pro Reisetag statt nur aktuelles Wetter (NEU)</li>
-                <li class="new">🤖 AI Indoor/Outdoor-Vorschlaege - GPT-4o schlaegt Alternativen bei schlechtem Wetter vor (NEU)</li>
-                <li class="new">🔍 Korridor-POI-Browser - Weitere POIs entlang der Route entdecken & hinzufuegen (NEU)</li>
-                <li class="new">📊 Wetter-Badges pro POI - Outdoor bei Regen? Indoor-Empfehlung! Kontext-aware Badges (NEU)</li>
+                <li class="new">🗺️ 3D Navigation - Echte 3D-Perspektive mit 50° Neigung via MapLibre GL (NEU v1.9.1)</li>
+                <li class="new">🎯 Vektor-Tiles - OpenFreeMap statt Raster, schaerfer & schneller (NEU v1.9.1)</li>
+                <li class="new">🔄 Heading-Up Kamera - Karte rotiert automatisch in Fahrtrichtung (NEU v1.9.1)</li>
+                <li>🧭 In-App Navigation - Vollwertige Turn-by-Turn Navigation mit OSRM</li>
+                <li>📍 GPS-Tracking - Positionsverfolgung mit Route-Matching</li>
+                <li>🔊 TTS-Sprachansagen - Deutsche Abbiegehinweise (500m, 200m, jetzt)</li>
+                <li>🔄 Auto-Rerouting - Neuberechnung bei Abweichung >75m</li>
+                <li>📌 POI-Waypoints - Annaeherungs-Cards bei POI-Stops</li>
+                <li>🗺️ Google Maps Export-Fix - Stops in korrekter Reihenfolge, keine Zickzack-Routen mehr</li>
+                <li>📏 Realistische Distanz-Anzeige - Geschaetzte Fahrstrecke inkl. Tagesziel-Segment</li>
+                <li>🗺️ Tag-Editor Mini-Map Fix - Kartenausschnitt aktualisiert bei Tageswechsel</li>
+                <li>🎯 Ziel-Eingabe BottomSheet - Oeffnet jetzt vollstaendig, keine abgeschnittenen Vorschlaege mehr</li>
+                <li>🧭 Richtungs-optimierte Routen - Kein Hin-und-Her bei A→B Trips, POIs vorwaerts entlang der Reiserichtung</li>
+                <li>📏 Distanz-basierte Tagesaufteilung - 200-700 km pro Tag statt gleichmaessige POI-Verteilung</li>
+                <li>🗺️ Auto-Zoom bei Tageswechsel - Hauptkarte zoomt auf jeweiliges Tages-Segment</li>
+                <li>🌤️ Tages-Wettervorhersage - Echte Vorhersage pro Reisetag statt nur aktuelles Wetter</li>
+                <li>🤖 AI Indoor/Outdoor-Vorschlaege - GPT-4o schlaegt Alternativen bei schlechtem Wetter vor</li>
+                <li>🔍 Korridor-POI-Browser - Weitere POIs entlang der Route entdecken & hinzufuegen</li>
+                <li>📊 Wetter-Badges pro POI - Outdoor bei Regen? Indoor-Empfehlung! Kontext-aware Badges</li>
                 <li>🗺️ Tagesweise Karten-Anzeige - Nur Route & POIs des ausgewählten Tages</li>
                 <li>📍 Tages-POI-Nummerierung - 1, 2, 3... pro Tag statt global</li>
                 <li>🎨 Major UI Redesign - 2 grosse Buttons: AI Tagestrip & AI Euro Trip</li>
@@ -316,7 +331,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.8.0.apk" herunterladen<br>
+                2. "MapAB-v1.9.1.apk" herunterladen (oder app-release.apk)<br>
 
                 3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
                 4. "Aus unbekannten Quellen installieren" erlauben<br>
@@ -327,8 +342,8 @@
         <div class="footer">
             <p>
                 <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
-                <strong>Build-Datum:</strong> 2. Februar 2026<br>
-                <strong>Größe:</strong> 63.0 MB
+                <strong>Build-Datum:</strong> 3. Februar 2026<br>
+                <strong>Größe:</strong> 63.5 MB
             </p>
         </div>
     </div>
@@ -338,7 +353,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.8.0",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.1",
             width: 256,
             height: 256,
             colorDark: "#1a202c",

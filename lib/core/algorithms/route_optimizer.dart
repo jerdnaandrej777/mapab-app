@@ -34,6 +34,87 @@ class RouteOptimizer {
     return currentOrder;
   }
 
+  /// Optimiert Route mit Richtungs-Constraint fuer A→B Trips
+  ///
+  /// POIs werden entlang der Hauptachse (Start→Ziel) sortiert,
+  /// sodass die Route immer vorwaerts verlaeuft ohne Hin-und-Her.
+  /// Danach lokale 2-opt Optimierung mit begrenztem Fenster.
+  ///
+  /// [pois] - Zu besuchende POIs
+  /// [startLocation] - Startpunkt der Route
+  /// [endLocation] - Zielpunkt der Route
+  List<POI> optimizeDirectionalRoute({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required LatLng endLocation,
+  }) {
+    if (pois.isEmpty) return [];
+    if (pois.length == 1) return pois;
+
+    // 1. Projiziere jeden POI auf die Hauptachse (Start → Ziel)
+    final axisLat = endLocation.latitude - startLocation.latitude;
+    final axisLng = endLocation.longitude - startLocation.longitude;
+    final axisLengthSq = axisLat * axisLat + axisLng * axisLng;
+
+    // Wenn Start und Ziel fast identisch: Fallback auf Standard-TSP
+    if (axisLengthSq < 0.0001) {
+      return optimizeRoute(
+        pois: pois,
+        startLocation: startLocation,
+        returnToStart: true,
+      );
+    }
+
+    // Projektion auf Hauptachse: t=0.0 (Start) bis t=1.0 (Ziel)
+    final projections = <_POIProjection>[];
+    for (final poi in pois) {
+      final poiLat = poi.location.latitude - startLocation.latitude;
+      final poiLng = poi.location.longitude - startLocation.longitude;
+      final t = (poiLat * axisLat + poiLng * axisLng) / axisLengthSq;
+      projections.add(_POIProjection(poi: poi, projection: t));
+    }
+
+    // 2. Sortiere nach Projektion (vorwaerts entlang der Hauptachse)
+    projections.sort((a, b) => a.projection.compareTo(b.projection));
+    var sorted = projections.map((p) => p.poi).toList();
+
+    // 3. Lokale 2-opt mit begrenztem Fenster (erhaelt Gesamtrichtung)
+    sorted = _localTwoOpt(sorted, startLocation, windowSize: 4);
+
+    return sorted;
+  }
+
+  /// 2-opt mit begrenztem Fenster
+  /// Tauscht nur benachbarte Segmente (innerhalb windowSize),
+  /// um die Gesamtrichtung der Route beizubehalten
+  List<POI> _localTwoOpt(
+    List<POI> pois,
+    LatLng start, {
+    int windowSize = 4,
+    int maxIterations = 50,
+  }) {
+    var current = List<POI>.from(pois);
+    var improved = true;
+    var iterations = 0;
+
+    while (improved && iterations < maxIterations) {
+      improved = false;
+      iterations++;
+
+      for (int i = 0; i < current.length - 1; i++) {
+        final maxJ = (i + windowSize).clamp(0, current.length - 1);
+        for (int j = i + 2; j <= maxJ; j++) {
+          if (_improvesWith2Opt(current, i, j, start, false)) {
+            current = _swap2Opt(current, i, j);
+            improved = true;
+          }
+        }
+      }
+    }
+
+    return current;
+  }
+
   /// Nearest-Neighbor Algorithmus (Greedy)
   /// Wählt immer den nächsten unbesuchten POI
   List<POI> _nearestNeighbor(List<POI> pois, LatLng startLocation) {
@@ -313,4 +394,12 @@ class RouteStats {
       avgDistanceBetweenStops: avgDistance,
     );
   }
+}
+
+/// Hilfsklasse fuer POI-Projektion auf Hauptachse
+class _POIProjection {
+  final POI poi;
+  final double projection;
+
+  _POIProjection({required this.poi, required this.projection});
 }

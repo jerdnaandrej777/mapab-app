@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../core/constants/categories.dart';
 import '../../core/constants/trip_constants.dart';
 import '../../data/models/route.dart';
+import '../../data/models/trip.dart';
 import '../../data/providers/active_trip_provider.dart';
 import '../../data/repositories/geocoding_repo.dart';
 import '../../shared/widgets/app_snackbar.dart';
@@ -288,6 +289,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     _TripInfoBar(
                       randomTripState: randomTripState,
                       onEdit: () => _openDayEditor(),
+                      onStartNavigation: () {
+                        final trip = randomTripState.generatedTrip?.trip;
+                        if (trip != null) {
+                          context.push(
+                            '/navigation',
+                            extra: {
+                              'route': trip.route,
+                              'stops': trip.stops,
+                            },
+                          );
+                        }
+                      },
                       onClearRoute: () {
                         ref.read(randomTripNotifierProvider.notifier).reset();
                         ref.read(routePlannerProvider.notifier).clearRoute();
@@ -798,27 +811,32 @@ class _TripConfigPanelState extends ConsumerState<_TripConfigPanel> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        final keyboardHeight = MediaQuery.of(ctx).viewInsets.bottom;
+        final screenHeight = MediaQuery.of(ctx).size.height;
+        final sheetHeight = screenHeight * 0.5;
+
         return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: _DestinationSheetContent(
-            destinationController: _destinationController,
-            destinationFocusNode: _destinationFocusNode,
-            isSearching: _isSearchingDestination,
-            suggestions: _destinationSuggestions,
-            onSearch: _searchDestination,
-            onSelect: (result) {
-              _selectDestinationSuggestion(result);
-              Navigator.pop(ctx);
-            },
-            onClear: () {
-              notifier.clearDestination();
-              _destinationController.clear();
-              setState(() => _destinationSuggestions = []);
-              Navigator.pop(ctx);
-            },
-            hasDestination: state.hasDestination,
+          padding: EdgeInsets.only(bottom: keyboardHeight),
+          child: SizedBox(
+            height: sheetHeight,
+            child: _DestinationSheetContent(
+              destinationController: _destinationController,
+              destinationFocusNode: _destinationFocusNode,
+              isSearching: _isSearchingDestination,
+              suggestions: _destinationSuggestions,
+              onSearch: _searchDestination,
+              onSelect: (result) {
+                _selectDestinationSuggestion(result);
+                Navigator.pop(ctx);
+              },
+              onClear: () {
+                notifier.clearDestination();
+                _destinationController.clear();
+                setState(() => _destinationSuggestions = []);
+                Navigator.pop(ctx);
+              },
+              hasDestination: state.hasDestination,
+            ),
           ),
         );
       },
@@ -1720,11 +1738,13 @@ class _TripInfoBar extends StatelessWidget {
   final RandomTripState randomTripState;
   final VoidCallback onEdit;
   final VoidCallback onClearRoute;
+  final VoidCallback? onStartNavigation;
 
   const _TripInfoBar({
     required this.randomTripState,
     required this.onEdit,
     required this.onClearRoute,
+    this.onStartNavigation,
   });
 
   @override
@@ -1855,6 +1875,25 @@ class _TripInfoBar extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Navigation starten Button (v1.9.0)
+            if (onStartNavigation != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onStartNavigation,
+                  icon: const Icon(Icons.navigation, size: 18),
+                  label: const Text('Navigation starten'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1935,7 +1974,6 @@ class _DestinationSheetContent extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Handle-Bar
@@ -2018,44 +2056,45 @@ class _DestinationSheetContent extends StatelessWidget {
                 onChanged: onSearch,
               ),
             ),
-            // Vorschläge
-            if (suggestions.isNotEmpty)
-              Container(
-                constraints: const BoxConstraints(maxHeight: 200),
-                margin: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: suggestions.length,
-                  itemBuilder: (context, index) {
-                    final result = suggestions[index];
-                    return InkWell(
-                      onTap: () => onSelect(result),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        child: Row(
-                          children: [
-                            Icon(Icons.flag, size: 16, color: colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                result.shortName ?? result.displayName,
-                                style: const TextStyle(fontSize: 13),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+            // Vorschläge - füllt den restlichen Platz
+            Expanded(
+              child: suggestions.isNotEmpty
+                  ? Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                      ),
+                      child: ListView.builder(
+                        itemCount: suggestions.length,
+                        itemBuilder: (context, index) {
+                          final result = suggestions[index];
+                          return InkWell(
+                            onTap: () => onSelect(result),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.flag, size: 16, color: colorScheme.primary),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      result.shortName ?? result.displayName,
+                                      style: const TextStyle(fontSize: 13),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
             const SizedBox(height: 8),
             // Hinweis-Text
             Text(
