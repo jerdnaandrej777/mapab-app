@@ -55,6 +55,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   // Marker-Referenzen fuer Updates
   final Map<String, ml.Circle> _poiCircles = {};
+  ml.Circle? _userCircle;
 
   @override
   void initState() {
@@ -88,6 +89,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     // Route-Linien aktualisieren
     _updateRouteSources(navState);
 
+    // User-Position Circle aktualisieren
+    _updateUserCircle(navState);
+
     // POI-Marker Farben aktualisieren
     _updatePOIMarkerColors(navState, colorScheme);
 
@@ -103,12 +107,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         children: [
           // MapLibre 3D-Karte
           _buildMap(navState, colorScheme),
-
-          // User-Position Marker (immer in Bildschirmmitte waehrend Navigation)
-          if (!_isOverviewMode && navState.hasPosition)
-            Center(
-              child: _buildUserPositionMarker(colorScheme),
-            ),
 
           // Manoever-Banner (oben)
           Positioned(
@@ -250,7 +248,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       rotateGesturesEnabled: _isOverviewMode,
       tiltGesturesEnabled: false,
       zoomGesturesEnabled: true,
-      scrollGesturesEnabled: _isOverviewMode,
+      scrollGesturesEnabled: true,
       trackCameraPosition: false,
       myLocationEnabled: false,
       attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
@@ -329,6 +327,20 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     final controller = _mapController!;
 
     try {
+      // User-Position Marker (native, geo-positioniert)
+      final startPos =
+          ref.read(navigationNotifierProvider).currentPosition ??
+              widget.route.start;
+      _userCircle = await controller.addCircle(
+        ml.CircleOptions(
+          geometry: LatLngConverter.toMapLibre(startPos),
+          circleRadius: 14,
+          circleColor: _colorToHex(colorScheme.primary),
+          circleStrokeWidth: 3,
+          circleStrokeColor: '#FFFFFF',
+        ),
+      );
+
       // Ziel-Marker
       await controller.addCircle(
         ml.CircleOptions(
@@ -382,33 +394,23 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // User-Position Widget (zentriert, da Kamera GPS folgt)
+  // User-Position Circle Update (native MapLibre Annotation)
   // ---------------------------------------------------------------------------
 
-  Widget _buildUserPositionMarker(ColorScheme colorScheme) {
-    return IgnorePointer(
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: colorScheme.primary,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.primary.withValues(alpha: 0.4),
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
-          ],
+  void _updateUserCircle(NavigationState navState) {
+    if (_mapController == null || _userCircle == null || !navState.hasPosition) {
+      return;
+    }
+    try {
+      _mapController!.updateCircle(
+        _userCircle!,
+        ml.CircleOptions(
+          geometry: LatLngConverter.toMapLibre(navState.currentPosition!),
         ),
-        child: const Icon(
-          Icons.navigation,
-          color: Colors.white,
-          size: 22,
-        ),
-      ),
-    );
+      );
+    } catch (_) {
+      // Circle noch nicht bereit
+    }
   }
 
   // ---------------------------------------------------------------------------
