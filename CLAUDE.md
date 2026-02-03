@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.1 - 3D Navigation mit MapLibre GL, Pitch/Tilt & Vektor-Tiles | Plattformen: Android, iOS, Desktop
+Version: 1.9.2 - 3D Navigation mit MapLibre GL, Pitch/Tilt & Vektor-Tiles | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -91,7 +91,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) |
-| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl) |
+| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.2: Scroll/Rotate-Gesten im Nav-Modus deaktiviert) |
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden Buttons (v1.9.0) |
 | `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
@@ -305,6 +305,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.2.md` (Standort-Marker Fix: Scroll/Rotate-Gesten im Navigations-Modus deaktiviert, Kamera nur per GPS gesteuert)
 - `Dokumentation/CHANGELOG-v1.9.1.md` (3D Navigation: MapLibre GL mit Pitch/Tilt, OpenFreeMap Vektor-Tiles, GeoJSON Route-Rendering)
 - `Dokumentation/CHANGELOG-v1.9.0.md` (OSRM In-App Navigation: Turn-by-Turn, GPS-Tracking, TTS-Sprachansagen, Rerouting, POI-Waypoints, DayEditor tagesspezifische Navigation)
 - `Dokumentation/CHANGELOG-v1.8.3.md` (Tag-Editor Fix: POI Reroll/Delete aendert nur betroffenen Tag, Folgetage bleiben erhalten, schnellere Tag-Bearbeitung)
