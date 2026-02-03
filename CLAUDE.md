@@ -147,6 +147,8 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/services/voice_service.dart` | TTS (de-DE), Spracherkennung, Navigation-Befehle + speakManeuver, speakRerouting, speakPOIApproaching, speakArrived (v1.9.0) |
 | `lib/features/navigation/utils/latlong_converter.dart` | Konvertierung latlong2 <-> maplibre_gl, GeoJSON Builder, Bounds-Berechnung (v1.9.1) |
 | `lib/features/navigation/services/route_matcher_service.dart` | Snap-to-Road: snapToRoute, isOffRoute, getDistanceAlongRoute, calculateBearing (v1.9.0) |
+| `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
+| `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
 
 ### Daten
 
