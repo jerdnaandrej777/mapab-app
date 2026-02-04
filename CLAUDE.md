@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.24 - POI-Laden Hotfix (Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout, Overpass-Ausfall verliert keine Ergebnisse mehr) | Plattformen: Android, iOS, Desktop
+Version: 1.9.24 - POI-Laden Hotfix (Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout, Overpass-Ausfall verliert keine Ergebnisse mehr) + Supabase PostGIS deployed (527 kuratierte POIs, search_pois_in_radius/bounds RPCs aktiv) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 

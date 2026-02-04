@@ -75,15 +75,23 @@ Gleiches Pattern: Individueller Timeout pro Future statt globaler Future.wait-Ti
 | OSRM | 200 OK | Routing funktioniert |
 | Wikipedia | 200 OK | POI-Quelle funktioniert |
 | Supabase REST | 200 OK | Verbindung steht |
-| Supabase RPC | 404 Not Found | PostGIS-Funktionen fehlen |
+| Supabase RPC | 404 Not Found → 200 OK (deployed) | PostGIS-Funktionen jetzt aktiv |
 | Overpass | 504 Gateway Timeout | POI-Quelle haengt |
 
-## Offener Punkt: Supabase PostGIS Migration
+## Supabase PostGIS Migration (ERLEDIGT)
 
-Die SQL-Migration `backend/supabase/migrations/002_pois_postgis.sql` muss noch auf der Supabase-Instanz ausgefuehrt werden. Dadurch wuerde:
-- POI-Laden ueber PostGIS Spatial Queries deutlich schneller
-- Abhaengigkeit von externen APIs (Overpass, Wikipedia) reduziert
-- Curated POIs direkt aus Supabase geladen
+Die SQL-Migration `002_pois_postgis.sql` wurde via `supabase db push` deployed:
+- PostGIS Extension aktiviert
+- `pois` Tabelle mit GEOGRAPHY-Spalte und Spatial-Index erstellt
+- `search_pois_in_radius()` und `search_pois_in_bounds()` RPC-Funktionen aktiv
+- `upsert_poi()` fuer Enrichment-Upload aktiv
+- 527 kuratierte POIs aus `curated_pois.json` geseeded
+- RLS-Policies: SELECT oeffentlich, INSERT/UPDATE nur authentifiziert
+
+**Verifizierung:**
+- `search_pois_in_radius(48.13, 11.58, 100km)` → 48 POIs (Muenchen-Umkreis)
+- `search_pois_in_bounds(DE)` → 200 POIs (Limit)
+- App nutzt jetzt Supabase-first, Client-APIs als Fallback
 
 ## Test-Plan
 
