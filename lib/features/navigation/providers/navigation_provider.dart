@@ -179,6 +179,9 @@ class NavigationNotifier extends _$NavigationNotifier {
   DateTime? _lastRerouteTime;
   int _lastMatchedIndex = 0;
 
+  // Cache: Step-Index → Route-Koordinaten-Index (einmal berechnet pro Route)
+  List<int>? _stepRouteIndices;
+
   @override
   NavigationState build() {
     ref.onDispose(() {
@@ -245,6 +248,9 @@ class NavigationNotifier extends _$NavigationNotifier {
         nextPOIStop: nextPOI,
       );
 
+      // Step-Index-Cache aufbauen (einmalig, O(steps * coords))
+      _buildStepRouteIndexCache(navRoute);
+
       // GPS-Stream starten
       await _startPositionStream();
 
@@ -267,6 +273,7 @@ class NavigationNotifier extends _$NavigationNotifier {
     _positionStream = null;
     _lastMatchedIndex = 0;
     _lastRerouteTime = null;
+    _stepRouteIndices = null;
     state = const NavigationState();
   }
 
@@ -403,13 +410,13 @@ class NavigationNotifier extends _$NavigationNotifier {
     // 3. Aktuellen Step bestimmen
     final stepInfo = _findCurrentStep(matchResult.nearestIndex);
 
-    // 4. Distanz zum nächsten Manöver berechnen
+    // 4. Distanz zum naechsten Manoever berechnen (gecachter Index statt O(n) Suche)
     final distToNextStep = stepInfo != null
         ? _routeMatcher.getDistanceAlongRoute(
             routeCoords,
             matchResult.nearestIndex,
-            _routeMatcher.findNearestIndex(
-                routeCoords, stepInfo.nextStepLocation),
+            stepInfo.nextStepRouteIndex ??
+                (routeCoords.length - 1),
           )
         : 0.0;
 
@@ -536,6 +543,9 @@ class NavigationNotifier extends _$NavigationNotifier {
           ? navRoute.allSteps.first
           : null;
 
+      // Step-Index-Cache neu aufbauen
+      _buildStepRouteIndexCache(navRoute);
+
       state = state.copyWith(
         status: NavigationStatus.navigating,
         route: navRoute,
@@ -558,25 +568,40 @@ class NavigationNotifier extends _$NavigationNotifier {
     }
   }
 
-  /// Findet den aktuellen Navigation-Step basierend auf Route-Index
+  /// Baut den Step-Route-Index-Cache auf (einmalig pro Route).
+  /// Mappt jeden Navigation-Step auf seinen naechsten Route-Koordinaten-Index.
+  void _buildStepRouteIndexCache(NavigationRoute navRoute) {
+    final allSteps = navRoute.allSteps;
+    final routeCoords = navRoute.baseRoute.coordinates;
+    if (allSteps.isEmpty || routeCoords.isEmpty) {
+      _stepRouteIndices = [];
+      return;
+    }
+
+    _stepRouteIndices = List<int>.generate(allSteps.length, (i) {
+      return _routeMatcher.findNearestIndex(routeCoords, allSteps[i].location);
+    });
+  }
+
+  /// Findet den aktuellen Navigation-Step basierend auf Route-Index.
+  /// Nutzt den gecachten Step-Index statt O(n*m) Neuberechnung.
   _StepInfo? _findCurrentStep(int routeIndex) {
     if (state.route == null) return null;
 
     final allSteps = state.route!.allSteps;
     if (allSteps.isEmpty) return null;
 
-    final routeCoords = state.route!.baseRoute.coordinates;
+    final indices = _stepRouteIndices;
+    if (indices == null || indices.length != allSteps.length) return null;
 
-    // Finde den Step, dessen Start-Location am nächsten zum aktuellen Index ist
+    // Finde den Step, dessen gecachter Route-Index am naechsten VOR/AUF uns liegt
     int bestStepIdx = 0;
-    double bestDist = double.infinity;
+    int bestDist = routeIndex + 1; // max moegliche Differenz
 
     for (int i = 0; i < allSteps.length; i++) {
-      final stepIdx = _routeMatcher.findNearestIndex(
-          routeCoords, allSteps[i].location);
-      // Step muss vor uns oder auf unserem Level sein
-      if (stepIdx <= routeIndex) {
-        final diff = (routeIndex - stepIdx).toDouble();
+      final stepRouteIdx = indices[i];
+      if (stepRouteIdx <= routeIndex) {
+        final diff = routeIndex - stepRouteIdx;
         if (diff < bestDist) {
           bestDist = diff;
           bestStepIdx = i;
@@ -584,7 +609,7 @@ class NavigationNotifier extends _$NavigationNotifier {
       }
     }
 
-    // Der nächste significante Step nach dem aktuellen
+    // Der naechste significante Step nach dem aktuellen
     int nextSignificantIdx = bestStepIdx + 1;
     while (nextSignificantIdx < allSteps.length &&
         !allSteps[nextSignificantIdx].isSignificant) {
@@ -601,6 +626,9 @@ class NavigationNotifier extends _$NavigationNotifier {
       globalIndex: bestStepIdx,
       nextStepLocation:
           nextStep?.location ?? state.route!.baseRoute.end,
+      nextStepRouteIndex: nextStep != null && nextSignificantIdx < indices.length
+          ? indices[nextSignificantIdx]
+          : null,
     );
   }
 }
@@ -610,11 +638,13 @@ class _StepInfo {
   final NavigationStep? nextStep;
   final int globalIndex;
   final LatLng nextStepLocation;
+  final int? nextStepRouteIndex; // Gecachter Route-Index des naechsten Steps
 
   const _StepInfo({
     required this.currentStep,
     this.nextStep,
     required this.globalIndex,
     required this.nextStepLocation,
+    this.nextStepRouteIndex,
   });
 }

@@ -66,6 +66,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   StreamSubscription<InterpolatedPosition>? _interpolationSub;
   NavigationState? _lastNavState;
 
+  // Throttle: Map-Updates nicht bei jedem build()
+  int _lastRouteUpdateIndex = -1;
+  Set<String> _lastVisitedStopIds = {};
+
   // Verhindert mehrfache Anzeige des Ziel-Dialogs
   bool _arrivalDialogShown = false;
 
@@ -123,9 +127,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       } catch (_) {}
     }
 
-    // Kamera fluessig nachfuehren (kurze Animation fuer Uebergaenge)
+    // Kamera fluessig nachfuehren (moveCamera statt animateCamera,
+    // verhindert Animation-Stacking bei 60fps)
     try {
-      controller.animateCamera(
+      controller.moveCamera(
         ml.CameraUpdate.newCameraPosition(
           ml.CameraPosition(
             target: LatLngConverter.toMapLibre(interpolated.position),
@@ -134,7 +139,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
             bearing: interpolated.bearing,
           ),
         ),
-        duration: const Duration(milliseconds: 100),
       );
     } catch (_) {}
   }
@@ -148,11 +152,18 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     // Interpolator mit neuem GPS-Update fuettern
     _feedInterpolator(navState);
 
-    // Route-Linien aktualisieren
-    _updateRouteSources(navState);
+    // Route-Linien nur bei signifikanter Positions-Aenderung aktualisieren
+    // (matchedRouteIndex aendert sich nur bei echtem Fortschritt)
+    if (navState.matchedRouteIndex != _lastRouteUpdateIndex) {
+      _lastRouteUpdateIndex = navState.matchedRouteIndex;
+      _updateRouteSources(navState);
+    }
 
-    // POI-Marker Farben aktualisieren
-    _updatePOIMarkerColors(navState, colorScheme);
+    // POI-Marker Farben nur bei Aenderung der visitedStopIds aktualisieren
+    if (navState.visitedStopIds != _lastVisitedStopIds) {
+      _lastVisitedStopIds = navState.visitedStopIds;
+      _updatePOIMarkerColors(navState, colorScheme);
+    }
 
     // Ziel erreicht Dialog (nur einmal anzeigen)
     if (navState.status == NavigationStatus.arrivedAtDestination &&

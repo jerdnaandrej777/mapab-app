@@ -96,13 +96,19 @@ class NavigationPOIDiscoveryState {
 class NavigationPOIDiscoveryNotifier
     extends _$NavigationPOIDiscoveryNotifier {
   final RouteMatcherService _routeMatcher = RouteMatcherService();
+  DateTime _lastProximityCheck = DateTime(2000);
 
   @override
   NavigationPOIDiscoveryState build() {
-    // NavigationState beobachten fuer Proximity-Updates
+    // NavigationState beobachten fuer Proximity-Updates (Throttle: max alle 500ms)
     ref.listen<NavigationState>(
       navigationNotifierProvider,
-      (previous, next) => _onNavigationUpdate(next),
+      (previous, next) {
+        final now = DateTime.now();
+        if (now.difference(_lastProximityCheck).inMilliseconds < 500) return;
+        _lastProximityCheck = now;
+        _onNavigationUpdate(next);
+      },
     );
     return const NavigationPOIDiscoveryState();
   }
