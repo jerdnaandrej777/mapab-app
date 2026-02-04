@@ -44,6 +44,13 @@ class LatLngConverter {
 
   /// Berechnet LatLngBounds aus einer Liste von latlong2-Koordinaten.
   static ml.LatLngBounds boundsFromCoords(List<ll2.LatLng> coords) {
+    // Leere Liste Guard - verhindert invertierte Bounds und MapLibre Crash
+    if (coords.isEmpty) {
+      return ml.LatLngBounds(
+        southwest: ml.LatLng(47.0, 5.0),
+        northeast: ml.LatLng(55.0, 15.0),
+      );
+    }
     double minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
     for (final c in coords) {
       if (c.latitude < minLat) minLat = c.latitude;

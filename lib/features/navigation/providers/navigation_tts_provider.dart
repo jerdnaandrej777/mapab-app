@@ -41,6 +41,8 @@ class NavigationTts extends _$NavigationTts {
 
   void _onNavigationStateChanged(
       NavigationState? previous, NavigationState next) {
+    // Navigation nicht aktiv - keine Ansagen
+    if (next.status == NavigationStatus.idle) return;
     if (next.isMuted) return;
 
     final voiceService = ref.read(voiceServiceProvider);
@@ -200,6 +202,10 @@ class NavigationTts extends _$NavigationTts {
     _lastAnnouncedPOI = null;
     _hasAnnouncedRerouting = false;
     _hasAnnouncedArrival = false;
+    // Laufende Sprachausgabe stoppen
+    try {
+      ref.read(voiceServiceProvider).stopSpeaking();
+    } catch (_) {}
   }
 }
 

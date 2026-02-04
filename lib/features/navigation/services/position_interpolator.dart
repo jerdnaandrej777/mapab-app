@@ -49,6 +49,7 @@ class PositionInterpolator {
 
   // Stream
   Timer? _timer;
+  bool _isDisposed = false;
   final StreamController<InterpolatedPosition> _controller =
       StreamController<InterpolatedPosition>.broadcast();
 
@@ -63,6 +64,7 @@ class PositionInterpolator {
     List<LatLng> routeCoords,
     int routeIndex,
   ) {
+    if (_isDisposed) return;
     final now = DateTime.now();
 
     // Update-Interval schaetzen (fuer Interpolation-Timing)
@@ -184,6 +186,10 @@ class PositionInterpolator {
   }
 
   void _onFrame(Timer timer) {
+    if (_isDisposed) {
+      timer.cancel();
+      return;
+    }
     if (_previousPosition == null || _targetPosition == null) return;
     if (_controller.isClosed) {
       timer.cancel();
@@ -295,6 +301,7 @@ class PositionInterpolator {
 
   /// Stoppt den Timer und schliesst den Stream
   void dispose() {
+    _isDisposed = true;
     _timer?.cancel();
     _timer = null;
     if (!_controller.isClosed) {

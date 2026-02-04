@@ -1149,16 +1149,21 @@ class _BottomActions extends ConsumerWidget {
       startAddress: originAddress,
       endAddress: destinationAddress,
       coordinates: [origin, destination],
+      waypoints: stopsForDay
+          .map((s) => LatLng(s.latitude, s.longitude))
+          .toList(),
       distanceKm: 0,
       durationMinutes: 0,
     );
 
     // Overlay schliessen und Navigation starten
     Navigator.pop(context);
-    context.push('/navigation', extra: {
-      'route': dayRoute,
-      'stops': stopsForDay,
-    });
+    if (context.mounted) {
+      context.push('/navigation', extra: {
+        'route': dayRoute,
+        'stops': stopsForDay,
+      });
+    }
   }
 
   Future<void> _shareDayRoute(BuildContext context, WidgetRef ref) async {

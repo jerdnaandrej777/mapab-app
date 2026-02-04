@@ -66,6 +66,9 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   StreamSubscription<InterpolatedPosition>? _interpolationSub;
   NavigationState? _lastNavState;
 
+  // Verhindert mehrfache Anzeige des Ziel-Dialogs
+  bool _arrivalDialogShown = false;
+
   @override
   void initState() {
     super.initState();
@@ -93,18 +96,26 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     _interpolationSub?.cancel();
     _interpolator.dispose();
     _mapController?.dispose();
+    // Alle Navigation-Provider sauber stoppen
+    ref.read(navigationNotifierProvider.notifier).stopNavigation();
+    ref.read(navigationTtsProvider.notifier).reset();
+    ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
     super.dispose();
   }
 
   /// Wird ~60x pro Sekunde vom Interpolator aufgerufen
   void _onInterpolatedPosition(InterpolatedPosition interpolated) {
-    if (!mounted || _mapController == null || _isOverviewMode) return;
+    if (!mounted || _isOverviewMode) return;
+    // Controller lokal capturen - verhindert null-zwischen-check-und-nutzung Race
+    final controller = _mapController;
+    if (controller == null) return;
 
     // User-Circle fluessig bewegen
-    if (_userCircle != null) {
+    final circle = _userCircle;
+    if (circle != null) {
       try {
-        _mapController!.updateCircle(
-          _userCircle!,
+        controller.updateCircle(
+          circle,
           ml.CircleOptions(
             geometry: LatLngConverter.toMapLibre(interpolated.position),
           ),
@@ -114,7 +125,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     // Kamera fluessig nachfuehren (kurze Animation fuer Uebergaenge)
     try {
-      _mapController!.animateCamera(
+      controller.animateCamera(
         ml.CameraUpdate.newCameraPosition(
           ml.CameraPosition(
             target: LatLngConverter.toMapLibre(interpolated.position),
@@ -143,10 +154,12 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     // POI-Marker Farben aktualisieren
     _updatePOIMarkerColors(navState, colorScheme);
 
-    // Ziel erreicht Dialog
-    if (navState.status == NavigationStatus.arrivedAtDestination) {
+    // Ziel erreicht Dialog (nur einmal anzeigen)
+    if (navState.status == NavigationStatus.arrivedAtDestination &&
+        !_arrivalDialogShown) {
+      _arrivalDialogShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showArrivalDialog();
+        if (mounted) _showArrivalDialog();
       });
     }
 
@@ -460,7 +473,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   void _updatePOIMarkerColors(
       NavigationState navState, ColorScheme colorScheme) {
-    if (_mapController == null || _poiCircles.isEmpty) return;
+    final controller = _mapController;
+    if (controller == null || _poiCircles.isEmpty) return;
 
     for (final entry in _poiCircles.entries) {
       final isVisited = navState.visitedStopIds.contains(entry.key);
@@ -469,7 +483,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
           : _colorToHex(colorScheme.secondary);
 
       try {
-        _mapController!.updateCircle(
+        controller.updateCircle(
           entry.value,
           ml.CircleOptions(circleColor: targetColor),
         );
@@ -518,12 +532,15 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     if (routeCoords.isEmpty) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _mapController == null) return;
+      if (!mounted) return;
+      // Controller lokal capturen - verhindert Race nach dispose
+      final controller = _mapController;
+      if (controller == null) return;
 
       try {
         // Gefahrener Teil (grau)
         final completedCoords = _getCompletedSegment(routeCoords, navState);
-        _mapController!.setGeoJsonSource(
+        controller.setGeoJsonSource(
           _completedSourceId,
           completedCoords.length >= 2
               ? LatLngConverter.toGeoJsonLine(completedCoords)
@@ -532,7 +549,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
         // Verbleibender Teil (farbig)
         final remainingCoords = _getRemainingSegment(routeCoords, navState);
-        _mapController!.setGeoJsonSource(
+        controller.setGeoJsonSource(
           _remainingSourceId,
           remainingCoords.length >= 2
               ? LatLngConverter.toGeoJsonLine(remainingCoords)
@@ -582,12 +599,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
       _interpolator.resume();
     }
 
-    if (_isOverviewMode && _mapController != null) {
+    // Controller lokal capturen
+    final controller = _mapController;
+    if (_isOverviewMode && controller != null) {
       // Gesamte Route zeigen, flach (2D)
       final coords = widget.route.coordinates;
-      if (coords.isNotEmpty) {
+      if (coords.length >= 2) {
         final bounds = LatLngConverter.boundsFromCoords(coords);
-        _mapController!.animateCamera(
+        controller.animateCamera(
           ml.CameraUpdate.newLatLngBounds(
             bounds,
             left: 60,
@@ -599,12 +618,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
         );
         // Tilt und Bearing zuruecksetzen (2D Draufsicht)
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (!mounted || _mapController == null) return;
-          _mapController!.animateCamera(
+          if (!mounted) return;
+          final ctrl = _mapController;
+          if (ctrl == null) return;
+          ctrl.animateCamera(
             ml.CameraUpdate.bearingTo(0),
             duration: const Duration(milliseconds: 600),
           );
-          _mapController!.animateCamera(
+          ctrl.animateCamera(
             ml.CameraUpdate.tiltTo(0),
             duration: const Duration(milliseconds: 600),
           );
@@ -636,7 +657,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               Navigator.pop(ctx);
               ref.read(navigationNotifierProvider.notifier).stopNavigation();
               ref.read(navigationTtsProvider.notifier).reset();
-              context.pop();
+              ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
+              if (context.mounted) {
+                context.pop();
+              }
             },
             child: const Text('Beenden'),
           ),
@@ -667,7 +691,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               Navigator.pop(ctx);
               ref.read(navigationNotifierProvider.notifier).stopNavigation();
               ref.read(navigationTtsProvider.notifier).reset();
-              context.pop();
+              ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
+              if (context.mounted) {
+                context.pop();
+              }
             },
             child: const Text('Fertig'),
           ),

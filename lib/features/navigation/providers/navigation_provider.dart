@@ -192,6 +192,12 @@ class NavigationNotifier extends _$NavigationNotifier {
     required AppRoute baseRoute,
     List<TripStop>? stops,
   }) async {
+    // Vorherige Navigation sauber stoppen (verhindert doppelte GPS-Streams)
+    if (state.isNavigating || state.isRerouting || state.isLoading) {
+      debugPrint('[Navigation] Vorherige Navigation wird gestoppt');
+      stopNavigation();
+    }
+
     debugPrint('[Navigation] Starte Navigation: '
         '${baseRoute.startAddress} → ${baseRoute.endAddress}');
 
@@ -311,6 +317,30 @@ class NavigationNotifier extends _$NavigationNotifier {
   Future<void> _startPositionStream() async {
     _positionStream?.cancel();
 
+    // GPS-Verfuegbarkeit pruefen
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('[Navigation] GPS-Dienst nicht aktiviert');
+        state = state.copyWith(
+          error: 'GPS-Dienst nicht aktiviert',
+        );
+        return;
+      }
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        debugPrint('[Navigation] GPS-Berechtigung fehlt: $permission');
+        state = state.copyWith(
+          error: 'GPS-Berechtigung fehlt',
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('[Navigation] GPS-Check fehlgeschlagen: $e');
+    }
+
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: _NavThresholds.gpsDistanceFilter,
@@ -331,8 +361,23 @@ class NavigationNotifier extends _$NavigationNotifier {
 
   /// Hauptlogik: Wird bei jedem GPS-Update aufgerufen
   void _onPositionUpdate(Position position) {
-    if (!state.isNavigating && !state.isRerouting) return;
+    // Nur bei aktiver Navigation verarbeiten
+    if (state.status == NavigationStatus.idle ||
+        state.status == NavigationStatus.error ||
+        state.status == NavigationStatus.loading ||
+        state.status == NavigationStatus.arrivedAtDestination) return;
     if (state.route == null) return;
+
+    // Bei arrivedAtWaypoint nur Position updaten, keine Hauptlogik
+    if (state.status == NavigationStatus.arrivedAtWaypoint) {
+      final currentPos = LatLng(position.latitude, position.longitude);
+      state = state.copyWith(
+        currentPosition: currentPos,
+        currentHeading: position.heading,
+        currentSpeedKmh: position.speed * 3.6,
+      );
+      return;
+    }
 
     final currentPos = LatLng(position.latitude, position.longitude);
     final heading = position.heading;
@@ -461,6 +506,10 @@ class NavigationNotifier extends _$NavigationNotifier {
 
   /// Berechnet Route neu ab aktueller Position
   Future<void> _reroute(LatLng fromPosition) async {
+    if (state.route == null) {
+      debugPrint('[Navigation] Reroute abgebrochen: keine Route vorhanden');
+      return;
+    }
     state = state.copyWith(status: NavigationStatus.rerouting);
 
     try {
