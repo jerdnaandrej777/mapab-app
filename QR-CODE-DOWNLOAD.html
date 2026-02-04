@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.9.23 - Navigation Stabilitäts-Release</p>
+        <p class="version">Version 1.9.24 - POI-Laden Hotfix</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.23"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.24"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,19 +183,20 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">🛡️ Navigation Crash-Fix - 10 kritische + 4 hohe Stabilitaetsprobleme in der Navigation behoben (NEU v1.9.23)</li>
-                <li class="new">🔒 GPS-Stream-Leak Fix - Doppelte GPS-Streams bei wiederholtem Navigation-Start verhindert (NEU v1.9.23)</li>
-                <li class="new">⚡ MapController Race-Fix - Lokale Variable statt Feld-Zugriff im 60fps Callback (NEU v1.9.23)</li>
-                <li class="new">🧹 Provider-Cleanup - NavigationProvider/TTS/POI-Discovery werden bei Screen-Exit sauber gestoppt (NEU v1.9.23)</li>
-                <li class="new">🛡️ PositionInterpolator Safety - _isDisposed Flag verhindert Timer-Callbacks nach dispose() (NEU v1.9.23)</li>
-                <li class="new">📍 GPS-Permission-Check - Navigation prueft GPS-Dienst und Berechtigung vor Stream-Start (NEU v1.9.23)</li>
-                <li class="new">🔧 Arrival-Dialog Fix - Ziel-Dialog erscheint genau 1x statt mehrfach (NEU v1.9.23)</li>
-                <li>⏱️ Future.wait Timeouts - 12s Timeout in loadPOIsInRadius + loadAllPOIs verhindert ANR (v1.9.23)</li>
-                <li>🛡️ Null-Safety Guards - startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (v1.9.23)</li>
-                <li>🔧 Navigator-Fix - context.mounted Check bei doppeltem Navigator.pop im DayEditor (v1.9.23)</li>
-                <li>📍 Mounted-Checks - setState-after-dispose Fix nach async GPS-Operationen im MapScreen (v1.9.23)</li>
-                <li>🌤️ Weather-Cancellation - Request-ID Pattern in Weather-Provider verhindert veraltete Updates (v1.9.23)</li>
-                <li>⏱️ Enrichment-Timeouts - 10s/8s Timeouts fuer parallele Wikipedia/Wikidata-Requests (v1.9.23)</li>
+                <li class="new">🔧 POI-Laden Hotfix - Individuelle Timeouts pro API-Quelle, Overpass-Ausfall verliert keine Ergebnisse mehr (NEU v1.9.24)</li>
+                <li>🛡️ Navigation Crash-Fix - 10 kritische + 4 hohe Stabilitaetsprobleme in der Navigation behoben (v1.9.23)</li>
+                <li>🔒 GPS-Stream-Leak Fix - Doppelte GPS-Streams bei wiederholtem Navigation-Start verhindert (v1.9.23)</li>
+                <li>⚡ MapController Race-Fix - Lokale Variable statt Feld-Zugriff im 60fps Callback (v1.9.23)</li>
+                <li>🧹 Provider-Cleanup - NavigationProvider/TTS/POI-Discovery werden bei Screen-Exit sauber gestoppt (v1.9.23)</li>
+                <li>🛡️ PositionInterpolator Safety - _isDisposed Flag verhindert Timer-Callbacks nach dispose() (v1.9.23)</li>
+                <li>📍 GPS-Permission-Check - Navigation prueft GPS-Dienst und Berechtigung vor Stream-Start (v1.9.23)</li>
+                <li>🔧 Arrival-Dialog Fix - Ziel-Dialog erscheint genau 1x statt mehrfach (v1.9.23)</li>
+                <li>⏱️ Future.wait Timeouts - 12s Timeout in loadPOIsInRadius + loadAllPOIs verhindert ANR (v1.9.22)</li>
+                <li>🛡️ Null-Safety Guards - startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (v1.9.24)</li>
+                <li>🔧 Navigator-Fix - context.mounted Check bei doppeltem Navigator.pop im DayEditor (v1.9.24)</li>
+                <li>📍 Mounted-Checks - setState-after-dispose Fix nach async GPS-Operationen im MapScreen (v1.9.24)</li>
+                <li>🌤️ Weather-Cancellation - Request-ID Pattern in Weather-Provider verhindert veraltete Updates (v1.9.24)</li>
+                <li>⏱️ Enrichment-Timeouts - 10s/8s Timeouts fuer parallele Wikipedia/Wikidata-Requests (v1.9.24)</li>
                 <li>🛡️ ANR-Fix - App friert nicht mehr ein bei 150 POIs im Korridor-Browser (v1.9.21)</li>
                 <li>💾 Cache-Erhalt - copyWith() bewahrt filteredPOIs-Cache bei Slider-Drag (v1.9.21)</li>
                 <li>⚡ Sortier-Cache - Wetter-Sortierung nur bei POI/Wetter-Aenderung, nicht pro Frame (v1.9.21)</li>
@@ -396,7 +397,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.9.23.apk" herunterladen (Navigation Stabilitaets-Release)<br>
+                2. "MapAB-v1.9.24.apk" herunterladen (POI-Laden Hotfix)<br>
 
                 3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
                 4. "Aus unbekannten Quellen installieren" erlauben<br>
@@ -418,7 +419,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.23",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.24",
             width: 256,
             height: 256,
             colorDark: "#1a202c",

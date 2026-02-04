@@ -149,16 +149,16 @@ class POIRepository {
       }));
     }
 
-    // Timeout verhindert ANR wenn APIs (Overpass) nicht antworten
-    List<List<POI>> results;
-    try {
-      results = await Future.wait(futures).timeout(
-        const Duration(seconds: 12),
-      );
-    } on TimeoutException {
-      debugPrint('[POI] ⚠️ Timeout bei loadPOIsInRadius nach 12s');
-      results = [];
-    }
+    // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
+    // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
+    final timedFutures = futures.map((f) =>
+      f.timeout(const Duration(seconds: 12), onTimeout: () {
+        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+        return <POI>[];
+      })
+    ).toList();
+
+    final results = await Future.wait(timedFutures);
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -292,16 +292,16 @@ class POIRepository {
       }));
     }
 
-    // Timeout verhindert endloses Haengen wenn APIs (Overpass) nicht antworten
-    List<List<POI>> results;
-    try {
-      results = await Future.wait(futures).timeout(
-        const Duration(seconds: 12),
-      );
-    } on TimeoutException {
-      debugPrint('[POI] ⚠️ Timeout bei loadPOIsInBounds nach 12s');
-      results = [];
-    }
+    // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
+    // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
+    final timedFutures = futures.map((f) =>
+      f.timeout(const Duration(seconds: 12), onTimeout: () {
+        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+        return <POI>[];
+      })
+    ).toList();
+
+    final results = await Future.wait(timedFutures);
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -507,16 +507,16 @@ class POIRepository {
       }));
     }
 
-    // Parallel warten mit Timeout gegen ANR
-    List<List<POI>> results;
-    try {
-      results = await Future.wait(futures).timeout(
-        const Duration(seconds: 12),
-      );
-    } on TimeoutException {
-      debugPrint('[POI] ⚠️ Timeout bei loadAllPOIs nach 12s');
-      results = [];
-    }
+    // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
+    // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
+    final timedFutures = futures.map((f) =>
+      f.timeout(const Duration(seconds: 12), onTimeout: () {
+        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+        return <POI>[];
+      })
+    ).toList();
+
+    final results = await Future.wait(timedFutures);
 
     // Ergebnisse zusammenführen (Duplikate vermeiden)
     for (final poiList in results) {

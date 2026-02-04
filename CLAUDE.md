@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.23 - Navigation Stabilitaets-Release (GPS-Stream-Leak-Fix, MapController-Race-Fix, Provider-Cleanup, PositionInterpolator-Safety, Arrival-Dialog-Fix, GPS-Permission-Check) | Plattformen: Android, iOS, Desktop
+Version: 1.9.24 - POI-Laden Hotfix (Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout, Overpass-Ausfall verliert keine Ergebnisse mehr) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -146,7 +146,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/data/services/ai_service.dart` | AI via Backend-Proxy + TripContext mit Standort (v1.7.2) |
-| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) + Upload-on-Enrich zu Supabase (v1.9.13) + Future.wait-Timeouts: 10s Parallel-Requests, 8s Fallback-Batch, 8s Geo-Batch (v1.9.22) |
+| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) + Upload-on-Enrich zu Supabase (v1.9.13) + Future.wait-Timeouts: 10s Parallel-Requests, 8s Fallback-Batch, 8s Geo-Batch (v1.9.22) + Individuelle Timeouts pro Request statt globaler Future.wait-Timeout (v1.9.24) |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
 | `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7, v1.7.39 erweitert: POIs, Konfiguration) |
@@ -165,7 +165,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/weather.dart` | Weather + DailyForecast Models (Freezed) mit WMO-Code-Interpretation + condition Getter (v1.8.0) |
 | `lib/data/models/navigation_step.dart` | NavigationStep, NavigationLeg, NavigationRoute Models (Freezed) mit ManeuverType/ManeuverModifier Enums (v1.9.0) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
-| `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS → Client-Fallback → Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) |
+| `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS → Client-Fallback → Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
 | `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) |
 | `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte A→B Routen (v1.8.1) |
@@ -316,6 +316,7 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.24.md` (POI-Laden Hotfix: Individuelle Timeouts pro API-Quelle in poi_repo.dart loadPOIsInRadius/loadPOIsInBounds/loadAllPOIs und poi_enrichment_service.dart, verhindert Ergebnisverlust bei einzelnem API-Timeout z.B. Overpass 504)
 - `Dokumentation/CHANGELOG-v1.9.23.md` (Navigation Stabilitaets-Release: GPS-Stream-Leak-Fix mit Stop-before-Start Guard, MapController-Race-Fix via lokale Variable in 60fps Callback, vollstaendiges dispose() mit Provider-Cleanup, PositionInterpolator _isDisposed Safety, arrivedAtWaypoint Re-Entry Guard, Reroute Null-Check, GPS-Verfuegbarkeits-Pruefung, Arrival-Dialog _arrivalDialogShown Flag, context.mounted Guards in Dialogen, TTS Idle-Guard + VoiceService-Stop, Leere-Liste Bounds Guard, DayEditor Waypoints + context.mounted)
 - `Dokumentation/CHANGELOG-v1.9.22.md` (Stabilitaets-Release: Future.wait 12s-Timeout in loadPOIsInRadius + loadAllPOIs, Enrichment-Timeouts 10s/8s, Null-Safety-Guards in rerollPOI/removePOI/addPOIToDay/removePOIFromDay, context.mounted bei doppeltem Navigator.pop im DayEditor, mounted-Checks nach async GPS-Ops im MapScreen, Weather-Provider Request-Cancellation via _loadRequestId, Navigation-Screen mounted-Check im 60fps Interpolation-Callback)
 - `Dokumentation/CHANGELOG-v1.9.21.md` (Korridor-Browser ANR-Fix: copyWith() erhaelt _filteredPOIsCache bei nicht-filter-relevanten Updates, Wetter-Sortier-Cache mit identical()-Check, Weather-Watch Deduplizierung einmal in build(), ValueKey(poi.id) auf CompactPOICard, Future.wait 12s-Timeout in loadPOIsInBounds, AI-Advisor isLoading-Guard entfernt zugunsten requestId-Cancellation, newPOICount lazy cached)
