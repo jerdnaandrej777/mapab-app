@@ -272,8 +272,16 @@ class POIEnrichmentService {
       // 2. Wikimedia Commons (parallel, nicht als Fallback)
       futures.add(_fetchWikimediaEnrichment(poi.latitude, poi.longitude, poi.name));
 
-      // Alle parallelen Requests abwarten
-      final results = await Future.wait(futures);
+      // Alle parallelen Requests abwarten (Timeout gegen ANR)
+      List<POIEnrichmentData?> results;
+      try {
+        results = await Future.wait(futures).timeout(
+          const Duration(seconds: 10),
+        );
+      } on TimeoutException {
+        debugPrint('[Enrichment] ⚠️ Timeout bei parallelen Requests nach 10s fuer ${poi.name}');
+        results = [];
+      }
 
       // Ergebnisse zusammenführen (Wikipedia hat Priorität)
       for (final result in results) {
@@ -1300,7 +1308,13 @@ LIMIT 30
             }
           });
 
-          await Future.wait(fallbackFutures);
+          try {
+            await Future.wait(fallbackFutures).timeout(
+              const Duration(seconds: 8),
+            );
+          } on TimeoutException {
+            debugPrint('[Enrichment] ⚠️ Fallback-Batch Timeout nach 8s');
+          }
 
           // Pause zwischen Sub-Batches (Rate-Limit-Schutz)
           if (i + 5 < poisWithWikiButNoImage.length) {
@@ -1349,7 +1363,15 @@ LIMIT 30
           }
         });
 
-        final geoResults = await Future.wait(futures);
+        List<MapEntry<String, POI>> geoResults;
+        try {
+          geoResults = await Future.wait(futures).timeout(
+            const Duration(seconds: 8),
+          );
+        } on TimeoutException {
+          debugPrint('[Enrichment] ⚠️ Geo-Batch Timeout nach 8s');
+          geoResults = [];
+        }
         for (final entry in geoResults) {
           results[entry.key] = entry.value;
         }

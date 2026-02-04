@@ -98,7 +98,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   /// Wird ~60x pro Sekunde vom Interpolator aufgerufen
   void _onInterpolatedPosition(InterpolatedPosition interpolated) {
-    if (_mapController == null || _isOverviewMode) return;
+    if (!mounted || _mapController == null || _isOverviewMode) return;
 
     // User-Circle fluessig bewegen
     if (_userCircle != null) {

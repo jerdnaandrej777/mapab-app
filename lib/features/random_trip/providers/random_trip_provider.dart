@@ -363,7 +363,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Würfelt einen einzelnen POI neu
   Future<void> rerollPOI(String poiId) async {
-    if (state.generatedTrip == null) return;
+    if (state.generatedTrip == null || state.startLocation == null) return;
 
     state = state.copyWith(
       isLoading: true,
@@ -375,7 +375,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         currentTrip: state.generatedTrip!,
         poiIdToReroll: poiId,
         startLocation: state.startLocation!,
-        startAddress: state.startAddress!,
+        startAddress: state.startAddress ?? '',
         categories: state.selectedCategories,
       );
 
@@ -395,7 +395,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Entfernt einen einzelnen POI aus dem Trip
   Future<void> removePOI(String poiId) async {
-    if (state.generatedTrip == null) return;
+    if (state.generatedTrip == null || state.startLocation == null) return;
 
     // Prüfen ob genug POIs übrig bleiben
     if (state.generatedTrip!.selectedPOIs.length <= 2) {
@@ -415,7 +415,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         currentTrip: state.generatedTrip!,
         poiIdToRemove: poiId,
         startLocation: state.startLocation!,
-        startAddress: state.startAddress!,
+        startAddress: state.startAddress ?? '',
       );
 
       state = state.copyWith(
@@ -449,7 +449,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Fuegt einen POI zu einem bestimmten Tag des AI Trips hinzu.
   /// Wird vom Korridor-Browser im DayEditor aufgerufen.
   Future<bool> addPOIToDay(POI poi, int dayNumber) async {
-    if (state.generatedTrip == null) return false;
+    if (state.generatedTrip == null || state.startLocation == null) return false;
 
     state = state.copyWith(isLoading: true);
 
@@ -504,7 +504,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Entfernt einen POI von einem bestimmten Tag.
   /// Wird vom Korridor-Browser im DayEditor aufgerufen.
   Future<bool> removePOIFromDay(String poiId, int dayNumber) async {
-    if (state.generatedTrip == null) return false;
+    if (state.generatedTrip == null || state.startLocation == null) return false;
 
     // Pruefen: Tag muss nach Entfernung mindestens 1 Stop haben
     final dayStops = state.generatedTrip!.trip.getStopsForDay(dayNumber);

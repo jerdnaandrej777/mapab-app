@@ -359,6 +359,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         timeLimit: const Duration(seconds: 10),
       );
 
+      if (!mounted) return;
+
       // Karte zur Position bewegen
       final mapController = ref.read(mapControllerProvider);
       if (mapController != null) {
@@ -374,9 +376,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     } catch (e) {
       debugPrint('[GPS] Fehler: $e');
-      _showSnackBar('GPS-Position konnte nicht ermittelt werden.');
+      if (mounted) _showSnackBar('GPS-Position konnte nicht ermittelt werden.');
     } finally {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
 
@@ -415,6 +417,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         timeLimit: const Duration(seconds: 5),
       );
 
+      if (!mounted) return;
+
       // Karte zur Position bewegen
       final mapController = ref.read(mapControllerProvider);
       final location = LatLng(position.latitude, position.longitude);
@@ -428,6 +432,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       try {
         final geocodingRepo = ref.read(geocodingRepositoryProvider);
         final result = await geocodingRepo.reverseGeocode(location);
+        if (!mounted) return;
         if (result != null) {
           locationName = result.shortName ?? result.displayName;
           debugPrint('[GPS] Reverse Geocoding für Wetter: $locationName');
@@ -435,6 +440,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       } catch (e) {
         debugPrint('[GPS] Reverse Geocoding fehlgeschlagen: $e');
       }
+
+      if (!mounted) return;
 
       // Standort-Wetter laden mit Stadtnamen (v1.7.6)
       ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(

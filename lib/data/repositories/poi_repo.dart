@@ -149,7 +149,16 @@ class POIRepository {
       }));
     }
 
-    final results = await Future.wait(futures);
+    // Timeout verhindert ANR wenn APIs (Overpass) nicht antworten
+    List<List<POI>> results;
+    try {
+      results = await Future.wait(futures).timeout(
+        const Duration(seconds: 12),
+      );
+    } on TimeoutException {
+      debugPrint('[POI] ⚠️ Timeout bei loadPOIsInRadius nach 12s');
+      results = [];
+    }
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -498,8 +507,16 @@ class POIRepository {
       }));
     }
 
-    // Parallel warten
-    final results = await Future.wait(futures);
+    // Parallel warten mit Timeout gegen ANR
+    List<List<POI>> results;
+    try {
+      results = await Future.wait(futures).timeout(
+        const Duration(seconds: 12),
+      );
+    } on TimeoutException {
+      debugPrint('[POI] ⚠️ Timeout bei loadAllPOIs nach 12s');
+      results = [];
+    }
 
     // Ergebnisse zusammenführen (Duplikate vermeiden)
     for (final poiList in results) {

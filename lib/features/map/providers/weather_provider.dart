@@ -218,6 +218,8 @@ class RouteWeatherState {
 /// Provider für Routen-Wetter
 @Riverpod(keepAlive: true)
 class RouteWeatherNotifier extends _$RouteWeatherNotifier {
+  int _loadRequestId = 0;
+
   @override
   RouteWeatherState build() {
     return const RouteWeatherState();
@@ -230,6 +232,7 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       return;
     }
 
+    final requestId = ++_loadRequestId;
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -240,6 +243,12 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       final step = (routeCoords.length / 5).floor().clamp(1, routeCoords.length);
 
       for (int i = 0; i < 5 && i * step < routeCoords.length; i++) {
+        // Cancellation-Check: Neuer Request hat diesen ersetzt
+        if (requestId != _loadRequestId) {
+          debugPrint('[Weather] Request $requestId abgebrochen (neuer aktiv)');
+          return;
+        }
+
         final index = i * step;
         final location = routeCoords[index];
         final routePosition = index / (routeCoords.length - 1);
@@ -262,6 +271,9 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
         }
       }
 
+      // Cancellation-Check vor State-Update
+      if (requestId != _loadRequestId) return;
+
       // Gesamtzustand berechnen
       final overallCondition = _calculateOverallCondition(points);
 
@@ -275,10 +287,12 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       debugPrint('[Weather] ${points.length} Punkte geladen, Zustand: $overallCondition');
     } catch (e) {
       debugPrint('[Weather] Fehler: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Wetter konnte nicht geladen werden',
-      );
+      if (requestId == _loadRequestId) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Wetter konnte nicht geladen werden',
+        );
+      }
     }
   }
 
@@ -293,6 +307,7 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       return;
     }
 
+    final requestId = ++_loadRequestId;
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -303,6 +318,12 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
       final step = (routeCoords.length / 5).floor().clamp(1, routeCoords.length);
 
       for (int i = 0; i < 5 && i * step < routeCoords.length; i++) {
+        // Cancellation-Check
+        if (requestId != _loadRequestId) {
+          debugPrint('[Weather] Forecast Request $requestId abgebrochen');
+          return;
+        }
+
         final index = i * step;
         final location = routeCoords[index];
         final routePosition = index / (routeCoords.length - 1);
@@ -330,6 +351,9 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
         }
       }
 
+      // Cancellation-Check vor State-Update
+      if (requestId != _loadRequestId) return;
+
       final overallCondition = _calculateOverallCondition(points);
 
       state = RouteWeatherState(
@@ -343,10 +367,12 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
           '[Weather] ${points.length} Punkte mit Forecast geladen, Zustand: $overallCondition');
     } catch (e) {
       debugPrint('[Weather] Forecast Fehler: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Wetter-Vorhersage konnte nicht geladen werden',
-      );
+      if (requestId == _loadRequestId) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Wetter-Vorhersage konnte nicht geladen werden',
+        );
+      }
     }
   }
 

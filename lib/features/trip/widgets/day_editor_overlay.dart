@@ -1086,8 +1086,11 @@ class _BottomActions extends ConsumerWidget {
         actions: [
           FilledButton(
             onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context); // DayEditor schliessen
+              Navigator.pop(ctx); // Dialog schliessen
+              // DayEditor sicher schliessen (context kann nach Dialog-Pop ungueltig sein)
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: const Text('Fertig'),
           ),

@@ -163,7 +163,7 @@
     <div class="container">
         <div class="logo">🗺️</div>
         <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.9.21 - Korridor-Browser ANR-Fix</p>
+        <p class="version">Version 1.9.22 - Stabilitäts-Release</p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
@@ -174,7 +174,7 @@
             oder klicke auf den Button unten
         </p>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.21"
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.22"
            class="download-link"
            target="_blank">
             📥 Zum Download auf GitHub
@@ -183,13 +183,20 @@
         <div class="info">
             <h3>📱 Enthaltene Features</h3>
             <ul>
-                <li class="new">🛡️ ANR-Fix - App friert nicht mehr ein bei 150 POIs im Korridor-Browser (NEU v1.9.21)</li>
-                <li class="new">💾 Cache-Erhalt - copyWith() bewahrt filteredPOIs-Cache bei Slider-Drag (NEU v1.9.21)</li>
-                <li class="new">⚡ Sortier-Cache - Wetter-Sortierung nur bei POI/Wetter-Aenderung, nicht pro Frame (NEU v1.9.21)</li>
-                <li class="new">🔧 Weather-Watch Fix - Provider nur 1x in build() statt 4x in Sub-Methoden (NEU v1.9.21)</li>
-                <li class="new">🔑 ValueKey Recycling - ListView recycelt CompactPOICards statt 150x neu aufzubauen (NEU v1.9.21)</li>
-                <li class="new">⏱️ API-Timeout 12s - Future.wait bricht ab statt endlos auf Overpass zu warten (NEU v1.9.21)</li>
-                <li class="new">🤖 AI-Advisor Fix - Manuelle Anfragen ersetzen Auto-Trigger sauber via requestId (NEU v1.9.21)</li>
+                <li class="new">⏱️ Future.wait Timeouts - 12s Timeout in loadPOIsInRadius + loadAllPOIs verhindert ANR (NEU v1.9.22)</li>
+                <li class="new">🛡️ Null-Safety Guards - startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (NEU v1.9.22)</li>
+                <li class="new">🔧 Navigator-Fix - context.mounted Check bei doppeltem Navigator.pop im DayEditor (NEU v1.9.22)</li>
+                <li class="new">📍 Mounted-Checks - setState-after-dispose Fix nach async GPS-Operationen im MapScreen (NEU v1.9.22)</li>
+                <li class="new">🌤️ Weather-Cancellation - Request-ID Pattern in Weather-Provider verhindert veraltete Updates (NEU v1.9.22)</li>
+                <li class="new">🧭 Navigation-Guard - mounted-Check im 60fps Interpolation-Callback (NEU v1.9.22)</li>
+                <li class="new">⏱️ Enrichment-Timeouts - 10s/8s Timeouts fuer parallele Wikipedia/Wikidata-Requests (NEU v1.9.22)</li>
+                <li>🛡️ ANR-Fix - App friert nicht mehr ein bei 150 POIs im Korridor-Browser (v1.9.21)</li>
+                <li>💾 Cache-Erhalt - copyWith() bewahrt filteredPOIs-Cache bei Slider-Drag (v1.9.21)</li>
+                <li>⚡ Sortier-Cache - Wetter-Sortierung nur bei POI/Wetter-Aenderung, nicht pro Frame (v1.9.21)</li>
+                <li>🔧 Weather-Watch Fix - Provider nur 1x in build() statt 4x in Sub-Methoden (v1.9.21)</li>
+                <li>🔑 ValueKey Recycling - ListView recycelt CompactPOICards statt 150x neu aufzubauen (v1.9.21)</li>
+                <li>⏱️ API-Timeout 12s - Future.wait bricht ab statt endlos auf Overpass zu warten (v1.9.21)</li>
+                <li>🤖 AI-Advisor Fix - Manuelle Anfragen ersetzen Auto-Trigger sauber via requestId (v1.9.21)</li>
                 <li>⚡ Slider-Debounce - Korridor-Slider friert App nicht mehr ein, Load nur bei Loslassen (v1.9.20)</li>
                 <li>🏠 Indoor-Toggle Fix - Ein State-Write statt 8-15, kein Ruckeln mehr (v1.9.20)</li>
                 <li>🧹 Dispose-Cleanup - Laufende Requests werden bei Sheet-Schliessen abgebrochen (v1.9.20)</li>
@@ -383,7 +390,7 @@
             <h4>🔧 Installation</h4>
             <p>
                 1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.9.21.apk" herunterladen<br>
+                2. "MapAB-v1.9.22.apk" herunterladen<br>
 
                 3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
                 4. "Aus unbekannten Quellen installieren" erlauben<br>
@@ -405,7 +412,7 @@
     <script>
         // QR-Code generieren
         new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.21",
+            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.22",
             width: 256,
             height: 256,
             colorDark: "#1a202c",
