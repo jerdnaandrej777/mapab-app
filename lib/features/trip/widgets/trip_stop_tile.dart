@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/categories.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../map/widgets/weather_badge_unified.dart';
 
 /// Trip-Stop Kachel für ReorderableListView
 class TripStopTile extends StatelessWidget {
@@ -12,6 +14,8 @@ class TripStopTile extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onEdit;
   final VoidCallback? onTap;
+  final WeatherCondition? weatherCondition;
+  final bool isWeatherResilient;
 
   const TripStopTile({
     super.key,
@@ -23,6 +27,8 @@ class TripStopTile extends StatelessWidget {
     required this.onRemove,
     required this.onEdit,
     this.onTap,
+    this.weatherCondition,
+    this.isWeatherResilient = false,
   });
 
   @override
@@ -116,6 +122,16 @@ class TripStopTile extends StatelessWidget {
                           fontSize: 12,
                         ),
                       ),
+                      if (weatherCondition != null &&
+                          weatherCondition != WeatherCondition.unknown &&
+                          weatherCondition != WeatherCondition.mixed) ...[
+                        const SizedBox(width: 8),
+                        WeatherBadgeUnified(
+                          condition: weatherCondition!,
+                          isWeatherResilient: isWeatherResilient,
+                          size: WeatherBadgeSize.compact,
+                        ),
+                      ],
                     ],
                   ),
                 ],

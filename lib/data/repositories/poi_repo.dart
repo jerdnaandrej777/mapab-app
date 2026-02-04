@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show cos, sqrt, min, max, pi;
 import 'package:dio/dio.dart';
@@ -7,10 +8,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/supabase/supabase_client.dart';
 import '../../core/utils/geo_utils.dart';
 import '../models/poi.dart';
 import '../models/route.dart';
 import '../services/poi_cache_service.dart';
+import 'supabase_poi_repo.dart';
 
 part 'poi_repo.g.dart';
 
@@ -24,18 +27,23 @@ const int minimumPOIScore = 35;
 /// Repository für POI-Laden mit 3-Schichten-System
 /// Übernommen von MapAB js/services/poi-loader.js
 /// OPTIMIERT: Mit Region-Cache für schnelleres Laden
+/// Mindest-Anzahl POIs aus Supabase, ab der kein Client-Fallback mehr noetig ist
+const int _supabaseMinPOIsThreshold = 5;
+
 class POIRepository {
   final Dio _dio;
   final POICacheService? _cacheService;
+  final SupabasePOIRepository? _supabaseRepo;
 
-  POIRepository({Dio? dio, POICacheService? cacheService})
+  POIRepository({Dio? dio, POICacheService? cacheService, SupabasePOIRepository? supabaseRepo})
       : _dio = dio ??
             Dio(BaseOptions(
               headers: {'User-Agent': ApiConfig.userAgent},
               connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
               receiveTimeout: const Duration(milliseconds: ApiConfig.overpassTimeout),
             )),
-        _cacheService = cacheService;
+        _cacheService = cacheService,
+        _supabaseRepo = supabaseRepo;
 
   /// Lädt POIs in einem Radius um einen Punkt (für Zufalls-Trips)
   /// Verwendet das 3-Schichten-System ohne Routen-Berechnungen
@@ -49,7 +57,7 @@ class POIRepository {
     bool includeOverpass = true,
     bool useCache = true,
   }) async {
-    // OPTIMIERUNG: Zuerst im Cache schauen
+    // 1. Hive Region Cache (7 Tage) → schnellster Zugriff
     if (useCache && _cacheService != null) {
       final regionKey = _cacheService!.createRegionKey(
         center.latitude,
@@ -59,7 +67,6 @@ class POIRepository {
       final cachedPOIs = await _cacheService!.getCachedPOIs(regionKey);
       if (cachedPOIs != null && cachedPOIs.isNotEmpty) {
         debugPrint('[POI] Cache-Treffer: ${cachedPOIs.length} POIs für Region $regionKey');
-        // Nach Kategorien filtern (falls angegeben)
         if (categoryFilter != null && categoryFilter.isNotEmpty) {
           return cachedPOIs
               .where((poi) => categoryFilter.contains(poi.categoryId))
@@ -69,17 +76,48 @@ class POIRepository {
       }
     }
 
+    // 2. Supabase PostGIS Query (schnell, ~100ms)
+    if (_supabaseRepo != null) {
+      try {
+        final supabasePOIs = await _supabaseRepo!.loadPOIsInRadius(
+          latitude: center.latitude,
+          longitude: center.longitude,
+          radiusKm: radiusKm,
+          categoryFilter: categoryFilter,
+          minScore: minimumPOIScore,
+        );
+
+        if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
+          debugPrint('[POI-Supabase] Genuegend POIs (${supabasePOIs.length}), ueberspringe Client-APIs');
+
+          // Im Hive-Cache speichern (vor Kategorie-Filter: Supabase liefert bereits gefiltert)
+          if (useCache && _cacheService != null) {
+            final regionKey = _cacheService!.createRegionKey(
+              center.latitude,
+              center.longitude,
+              radiusKm,
+            );
+            _cacheService!.cachePOIs(supabasePOIs, regionKey);
+          }
+
+          return supabasePOIs;
+        }
+
+        debugPrint('[POI-Fallback] Supabase: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
+      } catch (e) {
+        debugPrint('[POI-Fallback] Supabase-Fehler: $e, starte Client-Fallback');
+      }
+    }
+
+    // 3. Client-seitiges 3-Layer-Laden (Fallback)
     final allPOIs = <POI>[];
     final seenIds = <String>{};
 
-    // Bounding Box aus Zentrum + Radius erstellen
     final bounds = _createBoundsFromRadius(center, radiusKm);
 
     debugPrint('[POI] Starte paralleles Laden für Radius ${radiusKm}km...');
     final stopwatch = Stopwatch()..start();
 
-    // OPTIMIERUNG: Alle 3 Schichten parallel laden
-    // FIX v1.3.8: Besseres Error Tracking
     final futures = <Future<List<POI>>>[];
     final sourceErrors = <String>[];
     int sourceCount = 0;
@@ -111,10 +149,8 @@ class POIRepository {
       }));
     }
 
-    // Parallel warten
     final results = await Future.wait(futures);
 
-    // Ergebnisse zusammenführen (Duplikate vermeiden)
     for (final poiList in results) {
       for (final poi in poiList) {
         if (!seenIds.contains(poi.id)) {
@@ -126,7 +162,6 @@ class POIRepository {
 
     stopwatch.stop();
 
-    // FIX v1.3.8: Warnung bei teilweisen/vollständigen Fehlern
     if (sourceErrors.isNotEmpty) {
       if (sourceErrors.length == sourceCount) {
         debugPrint('[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
@@ -143,19 +178,24 @@ class POIRepository {
       return distance <= radiusKm;
     }).toList();
 
-    // v1.3.9: Qualitätsfilter - nur POIs mit >= 3.5 Sternen (Score >= 70)
     final qualityFiltered = distanceFiltered.where((poi) => poi.score >= minimumPOIScore).toList();
     debugPrint('[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
 
-    // OPTIMIERUNG: Im Cache speichern (vor Kategorie-Filter)
+    // Im Cache speichern (vor Kategorie-Filter)
     if (useCache && _cacheService != null && qualityFiltered.isNotEmpty) {
       final regionKey = _cacheService!.createRegionKey(
         center.latitude,
         center.longitude,
         radiusKm,
       );
-      // Asynchron cachen ohne zu warten
       _cacheService!.cachePOIs(qualityFiltered, regionKey);
+    }
+
+    // 4. Fire-and-forget Upload zu Supabase (Crowdsourced)
+    if (_supabaseRepo != null && qualityFiltered.isNotEmpty) {
+      unawaited(_supabaseRepo!.uploadEnrichedPOIsBatch(qualityFiltered).catchError((e) {
+        debugPrint('[POI-Upload] Fire-and-forget Fehler: $e');
+      }));
     }
 
     // Nach Kategorien filtern (falls angegeben)
@@ -178,7 +218,32 @@ class POIRepository {
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
+    int maxResults = 200,
   }) async {
+    // 1. Supabase PostGIS Query (schnell)
+    if (_supabaseRepo != null) {
+      try {
+        final supabasePOIs = await _supabaseRepo!.loadPOIsInBounds(
+          swLat: bounds.southwest.latitude,
+          swLng: bounds.southwest.longitude,
+          neLat: bounds.northeast.latitude,
+          neLng: bounds.northeast.longitude,
+          categoryFilter: categoryFilter,
+          minScore: minimumPOIScore,
+        );
+
+        if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
+          debugPrint('[POI-Supabase] Bounds: ${supabasePOIs.length} POIs, ueberspringe Client-APIs');
+          return supabasePOIs;
+        }
+
+        debugPrint('[POI-Fallback] Supabase Bounds: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
+      } catch (e) {
+        debugPrint('[POI-Fallback] Supabase Bounds-Fehler: $e, starte Client-Fallback');
+      }
+    }
+
+    // 2. Client-seitiges 3-Layer-Laden (Fallback)
     final allPOIs = <POI>[];
     final seenIds = <String>{};
 
@@ -199,7 +264,6 @@ class POIRepository {
 
     if (includeWikipedia) {
       sourceCount++;
-      // Zentrum und Radius aus Bounds berechnen für Wikipedia Grid
       final center = LatLng(
         (bounds.southwest.latitude + bounds.northeast.latitude) / 2,
         (bounds.southwest.longitude + bounds.northeast.longitude) / 2,
@@ -219,7 +283,16 @@ class POIRepository {
       }));
     }
 
-    final results = await Future.wait(futures);
+    // Timeout verhindert endloses Haengen wenn APIs (Overpass) nicht antworten
+    List<List<POI>> results;
+    try {
+      results = await Future.wait(futures).timeout(
+        const Duration(seconds: 12),
+      );
+    } on TimeoutException {
+      debugPrint('[POI] ⚠️ Timeout bei loadPOIsInBounds nach 12s');
+      results = [];
+    }
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -238,10 +311,22 @@ class POIRepository {
 
     debugPrint('[POI] Korridor geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs');
 
-    // Qualitätsfilter
     final qualityFiltered = allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
 
-    // Kategorie-Filter
+    // Result-Limit: Verhindert POI-Explosion bei grossen Bounding-Boxes
+    if (qualityFiltered.length > maxResults) {
+      qualityFiltered.sort((a, b) => b.score.compareTo(a.score));
+      qualityFiltered.removeRange(maxResults, qualityFiltered.length);
+      debugPrint('[POI] Result-Limit: ${allPOIs.length} → $maxResults POIs (max)');
+    }
+
+    // Fire-and-forget Upload zu Supabase
+    if (_supabaseRepo != null && qualityFiltered.isNotEmpty) {
+      unawaited(_supabaseRepo!.uploadEnrichedPOIsBatch(qualityFiltered).catchError((e) {
+        debugPrint('[POI-Upload] Fire-and-forget Bounds-Fehler: $e');
+      }));
+    }
+
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
       return qualityFiltered
           .where((poi) => categoryFilter.contains(poi.categoryId))
@@ -533,9 +618,12 @@ class POIRepository {
   node["heritage:operator"="whc"]["name"]($bbox);
   way["heritage:operator"="whc"]["name"]($bbox);
   node["place"="city"]["name"]["population"]($bbox);
-  node["place"="town"]["name"]["population"]($bbox);
+  node["place"="town"]["name"]($bbox);
   node["natural"="water"]["water"="lake"]["name"]($bbox);
   way["natural"="water"]["water"="lake"]["name"]($bbox);
+  relation["natural"="water"]["water"="lake"]["name"]($bbox);
+  node["natural"="water"]["water"="reservoir"]["name"]($bbox);
+  way["natural"="water"]["water"="reservoir"]["name"]($bbox);
   node["natural"="beach"]["name"]($bbox);
   way["natural"="beach"]["name"]($bbox);
   node["leisure"="beach_resort"]["name"]($bbox);
@@ -552,6 +640,10 @@ class POIRepository {
   way["tourism"="zoo"]["name"]($bbox);
   node["place"="island"]["name"]($bbox);
   way["place"="island"]["name"]($bbox);
+  node["natural"="bay"]["name"]($bbox);
+  way["natural"="bay"]["name"]($bbox);
+  node["leisure"="marina"]["name"]($bbox);
+  way["leisure"="marina"]["name"]($bbox);
 );
 out center;
 ''';
@@ -674,18 +766,19 @@ out center;
     // Kategorie-Patterns mit Priorität (Tuple: keywords, priority)
     // Höhere Priorität = spezifischere Kategorie
     // v1.7.9: activity, hotel, restaurant Keywords hinzugefuegt
+    // v1.9.13: city/coast Keywords erweitert, "see" → Suffix-Check (false-positive Fix)
     const patterns = <String, (List<String>, int)>{
       'museum': (['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'], 100),
       'castle': (['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'], 90),
       'activity': (['zoo', 'tierpark', 'aquarium', 'freizeitpark', 'theme park', 'therme', 'thermalbad', 'schwimmbad', 'stadion', 'arena', 'erlebnispark', 'kletterpark'], 85),
       'church': (['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'], 85),
       'nature': (['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve', 'wasserfall', 'waterfall'], 80),
-      'lake': (['see', 'lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre'], 75),
+      'lake': (['lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre', 'weiher'], 75),
       'viewpoint': (['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'gipfel', 'peak'], 70),
       'park': (['park', 'garten', 'garden', 'botanical'], 65),
       'monument': (['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue', 'ruine', 'ruins'], 60),
-      'city': (['altstadt', 'old town', 'marktplatz', 'market square', 'rathaus', 'town hall'], 55),
-      'coast': (['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port'], 50),
+      'city': (['altstadt', 'old town', 'marktplatz', 'market square', 'rathaus', 'town hall', 'stadt', 'city', 'zentrum', 'innenstadt', 'downtown'], 55),
+      'coast': (['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port', 'bucht', 'bay', 'fjord', 'marina', 'ufer', 'pier'], 50),
       'hotel': (['hotel', 'gasthof', 'pension', 'herberge', 'jugendherberge'], 40),
       'restaurant': (['restaurant', 'brauhaus', 'wirtshaus', 'biergarten'], 40),
     };
@@ -709,6 +802,27 @@ out center;
             bestCategory = entry.key;
             bestPosition = position;
           }
+        }
+      }
+    }
+
+    // v1.9.13: See-Suffix erkennen (Bodensee, Chiemsee, Starnberger See)
+    // Nicht im Haupt-Loop, da "see" dort auch "Seefeld" matchen wuerde
+    if (bestCategory == null || bestScore < 70) {
+      if (RegExp(r'\w{2,}see\b', caseSensitive: false).hasMatch(lowerTitle) ||
+          lowerTitle.endsWith(' see')) {
+        bestCategory = 'lake';
+        bestScore = 70;
+      }
+    }
+
+    // v1.9.13: Deutsche Stadt-Suffixe erkennen (nur wenn nichts Besseres gefunden)
+    if (bestCategory == null) {
+      const citySuffixes = ['stadt', 'furt', 'heim', 'hausen', 'haven', 'hafen'];
+      for (final suffix in citySuffixes) {
+        if (lowerTitle.endsWith(suffix)) {
+          bestCategory = 'city';
+          break;
         }
       }
     }
@@ -772,7 +886,10 @@ out center;
     }
 
     // Spezifischere Kategorien ueberschreiben UNESCO-Default
-    if (tags['historic'] == 'castle') {
+    // v1.9.13: city/town Check hoeher priorisiert, lake/coast Parsing erweitert
+    if (tags['place'] == 'city' || tags['place'] == 'town') {
+      category = 'city';
+    } else if (tags['historic'] == 'castle') {
       category = 'castle';
     } else if (tags['tourism'] == 'viewpoint' || tags['natural'] == 'peak') {
       category = 'viewpoint';
@@ -788,9 +905,12 @@ out center;
       category = 'nature';
     } else if (tags['leisure'] == 'park' || tags['leisure'] == 'garden') {
       category = 'park';
-    } else if (tags['natural'] == 'water' && tags['water'] == 'lake') {
+    } else if (tags['natural'] == 'water' &&
+               (tags['water'] == 'lake' || tags['water'] == 'reservoir')) {
       category = 'lake';
-    } else if (tags['natural'] == 'beach' || tags['leisure'] == 'beach_resort' || tags['place'] == 'island') {
+    } else if (tags['natural'] == 'beach' || tags['leisure'] == 'beach_resort' ||
+               tags['place'] == 'island' || tags['natural'] == 'bay' ||
+               tags['leisure'] == 'marina') {
       category = 'coast';
     } else if (tags['tourism'] == 'hotel') {
       category = 'hotel';
@@ -799,8 +919,6 @@ out center;
     } else if (tags['tourism'] == 'theme_park' || tags['tourism'] == 'zoo' ||
                tags['leisure'] == 'water_park' || tags['leisure'] == 'swimming_area') {
       category = 'activity';
-    } else if (tags['place'] == 'city' || tags['place'] == 'town') {
-      category = 'city';
     }
 
     // OSM Bild-Tags extrahieren
@@ -835,12 +953,15 @@ out center;
     }
 
     // Score anpassen: Cities nach Einwohnerzahl, UNESCO hoeher
+    // v1.9.13: Seen und Kuesten Score erhoeht (von 40 auf 50)
     int score = 40;
     if (category == 'city') {
       final population = int.tryParse(tags['population']?.toString() ?? '');
       score = (population != null && population > 100000) ? 65 : 45;
     } else if (poiTags.contains('unesco')) {
       score = 70; // UNESCO-Welterbe hoeher bewerten
+    } else if (category == 'lake' || category == 'coast') {
+      score = 50;
     }
 
     return POI(
@@ -864,9 +985,14 @@ out center;
 }
 
 /// Riverpod Provider für POIRepository
-/// OPTIMIERT: Mit Cache-Service für Region-Caching
+/// OPTIMIERT: Mit Cache-Service + Supabase PostGIS Backend
 @riverpod
 POIRepository poiRepository(PoiRepositoryRef ref) {
   final cacheService = ref.watch(poiCacheServiceProvider);
-  return POIRepository(cacheService: cacheService);
+  final supabaseClient = ref.watch(supabaseProvider);
+  SupabasePOIRepository? supabaseRepo;
+  if (supabaseClient != null) {
+    supabaseRepo = SupabasePOIRepository(supabaseClient);
+  }
+  return POIRepository(cacheService: cacheService, supabaseRepo: supabaseRepo);
 }

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/categories.dart';
 
-/// Filter-Sheet für POIs
+/// Filter-Sheet fuer POIs
 class POIFiltersSheet extends StatefulWidget {
   final Set<POICategory> selectedCategories;
   final bool mustSeeOnly;
+  final bool indoorOnly;
   final double maxDetour;
-  final void Function(Set<POICategory>, bool, double) onApply;
+  final void Function(Set<POICategory>, bool, bool, double) onApply;
 
   const POIFiltersSheet({
     super.key,
     required this.selectedCategories,
     required this.mustSeeOnly,
+    this.indoorOnly = false,
     required this.maxDetour,
     required this.onApply,
   });
@@ -24,6 +25,7 @@ class POIFiltersSheet extends StatefulWidget {
 class _POIFiltersSheetState extends State<POIFiltersSheet> {
   late Set<POICategory> _categories;
   late bool _mustSeeOnly;
+  late bool _indoorOnly;
   late double _maxDetour;
 
   @override
@@ -31,18 +33,20 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
     super.initState();
     _categories = Set.from(widget.selectedCategories);
     _mustSeeOnly = widget.mustSeeOnly;
+    _indoorOnly = widget.indoorOnly;
     _maxDetour = widget.maxDetour;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.5,
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
-        final colorScheme = Theme.of(context).colorScheme;
         return Container(
           decoration: BoxDecoration(
             color: colorScheme.surface,
@@ -56,7 +60,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -67,16 +71,17 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Filter',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     TextButton(
                       onPressed: _resetFilters,
-                      child: const Text('Zurücksetzen'),
+                      child: const Text('Zuruecksetzen'),
                     ),
                   ],
                 ),
@@ -92,6 +97,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                   children: [
                     // Must-See Toggle
                     _buildSwitchTile(
+                      colorScheme: colorScheme,
                       title: 'Nur Must-See',
                       subtitle: 'Zeige nur Highlights',
                       icon: Icons.star,
@@ -100,15 +106,28 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                           setState(() => _mustSeeOnly = value),
                     ),
 
+                    const SizedBox(height: 12),
+
+                    // Indoor-Only Toggle (v1.9.9)
+                    _buildSwitchTile(
+                      colorScheme: colorScheme,
+                      title: 'Nur Indoor-POIs',
+                      subtitle: 'Museen, Kirchen, Restaurants & mehr',
+                      icon: Icons.roofing,
+                      value: _indoorOnly,
+                      onChanged: (value) =>
+                          setState(() => _indoorOnly = value),
+                    ),
+
                     const SizedBox(height: 24),
 
                     // Umweg-Slider
-                    _buildSliderSection(),
+                    _buildSliderSection(colorScheme),
 
                     const SizedBox(height: 24),
 
                     // Kategorien
-                    _buildCategoriesSection(),
+                    _buildCategoriesSection(colorScheme),
                   ],
                 ),
               ),
@@ -121,7 +140,12 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onApply(_categories, _mustSeeOnly, _maxDetour);
+                        widget.onApply(
+                          _categories,
+                          _mustSeeOnly,
+                          _indoorOnly,
+                          _maxDetour,
+                        );
                       },
                       child: const Text('Filter anwenden'),
                     ),
@@ -136,6 +160,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
   }
 
   Widget _buildSwitchTile({
+    required ColorScheme colorScheme,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -145,7 +170,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -154,13 +179,13 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: value
-                  ? AppTheme.primaryColor.withOpacity(0.1)
-                  : Colors.white,
+                  ? colorScheme.primary.withOpacity(0.1)
+                  : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: value ? AppTheme.primaryColor : AppTheme.textSecondary,
+              color: value ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 16),
@@ -170,15 +195,16 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -188,37 +214,38 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.primaryColor,
+            activeColor: colorScheme.primary,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSliderSection() {
+  Widget _buildSliderSection(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Maximaler Umweg',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
+                color: colorScheme.onSurface,
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 '+${_maxDetour.round()} km',
                 style: TextStyle(
-                  color: AppTheme.primaryColor,
+                  color: colorScheme.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -227,19 +254,19 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          'POIs mit größerem Umweg werden ausgeblendet',
+          'POIs mit groesserem Umweg werden ausgeblendet',
           style: TextStyle(
-            color: AppTheme.textSecondary,
+            color: colorScheme.onSurfaceVariant,
             fontSize: 13,
           ),
         ),
         const SizedBox(height: 16),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppTheme.primaryColor,
-            inactiveTrackColor: AppTheme.primaryColor.withOpacity(0.2),
-            thumbColor: AppTheme.primaryColor,
-            overlayColor: AppTheme.primaryColor.withOpacity(0.1),
+            activeTrackColor: colorScheme.primary,
+            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            thumbColor: colorScheme.primary,
+            overlayColor: colorScheme.primary.withOpacity(0.1),
           ),
           child: Slider(
             value: _maxDetour,
@@ -253,32 +280,33 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('+15 km', style: TextStyle(color: AppTheme.textHint)),
-            Text('+80 km', style: TextStyle(color: AppTheme.textHint)),
+            Text('+15 km', style: TextStyle(color: colorScheme.outline)),
+            Text('+80 km', style: TextStyle(color: colorScheme.outline)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildCategoriesSection() {
+  Widget _buildCategoriesSection(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Kategorien',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           _categories.isEmpty
               ? 'Alle Kategorien anzeigen'
-              : '${_categories.length} ausgewählt',
+              : '${_categories.length} ausgewaehlt',
           style: TextStyle(
-            color: AppTheme.textSecondary,
+            color: colorScheme.onSurfaceVariant,
             fontSize: 13,
           ),
         ),
@@ -307,8 +335,8 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                   }
                 });
               },
-              selectedColor: AppTheme.primaryColor.withOpacity(0.15),
-              checkmarkColor: AppTheme.primaryColor,
+              selectedColor: colorScheme.primary.withOpacity(0.15),
+              checkmarkColor: colorScheme.primary,
             );
           }).toList(),
         ),
@@ -320,6 +348,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
     setState(() {
       _categories = {};
       _mustSeeOnly = false;
+      _indoorOnly = false;
       _maxDetour = 45;
     });
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/constants/categories.dart';
+import 'weather_badge_unified.dart';
 
 /// Kompakte POI-Card fuer Inline-Panel-Anzeige (~64px Hoehe)
 /// Verwendet in Schnell-Modus Phase 2 und AI Trip Phase 2
@@ -14,6 +15,7 @@ class CompactPOICard extends StatelessWidget {
   final VoidCallback? onAdd;
   final VoidCallback? onRemove;
   final bool isAdded;
+  final WeatherCondition? weatherCondition;
 
   const CompactPOICard({
     super.key,
@@ -25,6 +27,7 @@ class CompactPOICard extends StatelessWidget {
     this.onAdd,
     this.onRemove,
     this.isAdded = false,
+    this.weatherCondition,
   });
 
   static const double _cardHeight = 64.0;
@@ -93,6 +96,16 @@ class CompactPOICard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (weatherCondition != null &&
+                            weatherCondition != WeatherCondition.unknown &&
+                            weatherCondition != WeatherCondition.mixed) ...[
+                          const SizedBox(width: 5),
+                          WeatherBadgeUnified.fromCategory(
+                            condition: weatherCondition!,
+                            category: category,
+                            size: WeatherBadgeSize.compact,
+                          ),
+                        ],
                         if (detourKm != null) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 5),

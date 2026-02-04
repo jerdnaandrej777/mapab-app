@@ -296,6 +296,12 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     try {
       GeneratedTrip result;
 
+      // Aktuelles Wetter fuer Score-Gewichtung
+      final locationWeather = ref.read(locationWeatherNotifierProvider);
+      final currentWeather = locationWeather.hasWeather
+          ? locationWeather.condition
+          : null;
+
       if (state.mode == RandomTripMode.daytrip) {
         result = await _tripGenerator.generateDayTrip(
           startLocation: state.startLocation!,
@@ -305,6 +311,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           poiCount: (state.radiusKm / 20).clamp(3, 8).round(),
           destinationLocation: state.destinationLocation,
           destinationAddress: state.destinationAddress,
+          weatherCondition: currentWeather,
         );
       } else {
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
@@ -318,6 +325,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           includeHotels: state.includeHotels,
           destinationLocation: state.destinationLocation,
           destinationAddress: state.destinationAddress,
+          weatherCondition: currentWeather,
         );
         debugPrint('[RandomTrip] Euro Trip generiert! ${state.days} Tage, POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }

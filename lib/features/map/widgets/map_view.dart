@@ -15,6 +15,7 @@ import '../../random_trip/providers/random_trip_state.dart';
 import '../../../core/constants/categories.dart';
 import '../../../data/models/poi.dart';
 import 'route_weather_marker.dart';
+import 'weather_badge_unified.dart';
 
 /// Karten-Widget mit MapLibre/flutter_map
 class MapView extends ConsumerStatefulWidget {
@@ -299,14 +300,24 @@ class _MapViewState extends ConsumerState<MapView> {
             markers: aiTripPOIs.asMap().entries.map((entry) {
               final index = entry.key;
               final poi = entry.value;
+              // Tages-Wetter fuer Multi-Day-Trips
+              WeatherCondition? markerWeather;
+              if (isMultiDay && routeWeather.hasForecast) {
+                final forecastPerDay = routeWeather.getForecastPerDay(aiTrip!.actualDays);
+                markerWeather = forecastPerDay[selectedDay];
+              } else {
+                markerWeather = weatherCondition;
+              }
               return Marker(
                 point: poi.location,
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 child: _AITripStopMarker(
                   number: index + 1,
                   icon: poi.categoryIcon,
                   onTap: () => _onPOITap(poi),
+                  weatherCondition: markerWeather,
+                  isWeatherResilient: poi.category?.isWeatherResilient ?? false,
                 ),
               );
             }).toList(),
@@ -960,11 +971,15 @@ class _AITripStopMarker extends StatelessWidget {
   final int number;
   final String icon;
   final VoidCallback? onTap;
+  final WeatherCondition? weatherCondition;
+  final bool isWeatherResilient;
 
   const _AITripStopMarker({
     required this.number,
     required this.icon,
     this.onTap,
+    this.weatherCondition,
+    this.isWeatherResilient = false,
   });
 
   @override
@@ -973,56 +988,78 @@ class _AITripStopMarker extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        children: [
-          // Haupt-Marker
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              shape: BoxShape.circle,
-              border: Border.all(color: colorScheme.surface, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Haupt-Marker
+            Positioned(
+              left: 4,
+              top: 4,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colorScheme.surface, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                icon,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
-          ),
-          // Nummer-Badge
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: colorScheme.tertiary,
-                shape: BoxShape.circle,
-                border: Border.all(color: colorScheme.surface, width: 1.5),
-              ),
-              child: Center(
-                child: Text(
-                  '$number',
-                  style: TextStyle(
-                    color: colorScheme.onTertiary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 9,
+                child: Center(
+                  child: Text(
+                    icon,
+                    style: const TextStyle(fontSize: 18),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+            // Nummer-Badge (rechts oben)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: colorScheme.tertiary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colorScheme.surface, width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    '$number',
+                    style: TextStyle(
+                      color: colorScheme.onTertiary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Wetter-Badge (links unten)
+            if (weatherCondition != null &&
+                weatherCondition != WeatherCondition.unknown &&
+                weatherCondition != WeatherCondition.mixed)
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: WeatherBadgeUnified(
+                  condition: weatherCondition!,
+                  isWeatherResilient: isWeatherResilient,
+                  size: WeatherBadgeSize.mini,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

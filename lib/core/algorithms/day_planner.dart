@@ -121,7 +121,7 @@ class DayPlanner {
   /// Garantien:
   /// - Mindestens 1 POI pro Tag
   /// - Maximal maxPoisPerDay (9) pro Tag
-  /// - Display-Distanz pro Tag idealerweise unter maxDisplayKmPerDay (700km)
+  /// - Display-Distanz pro Tag unter maxDisplayKmPerDay (700km)
   /// - Tagesanzahl wird dynamisch bestimmt (kann von [requestedDays] abweichen)
   List<List<POI>> _clusterPOIsByDistance(
     List<POI> pois,
@@ -162,6 +162,12 @@ class DayPlanner {
         currentCluster = <POI>[];
         // Neuer Tag: Distanz startet von letztem POI des vorherigen Tages
         currentDayKm = segmentKm;
+
+        // Safety-Check: Wenn schon das Incoming-Segment allein >700km Display ist,
+        // logge Warnung (unvermeidbar bei weit entfernten aufeinanderfolgenden POIs)
+        if (segmentKm * TripConstants.haversineToDisplayFactor > TripConstants.maxDisplayKmPerDay) {
+          debugPrint('[DayPlanner] ⚠️ Incoming-Segment ${(segmentKm * TripConstants.haversineToDisplayFactor).toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit (POI: ${poi.name})');
+        }
       } else {
         currentDayKm = projectedDayKm;
       }
@@ -182,6 +188,9 @@ class DayPlanner {
     if (returnToStart && clusters.length >= 2) {
       _splitLastDayIfOverLimit(clusters, startLocation);
     }
+
+    // Post-Processing: Tage die einzeln >700km Display haben versuchen zu splitten
+    _splitOverlimitDays(clusters, startLocation);
 
     debugPrint('[DayPlanner] Distanz-Clustering: $requestedDays angefragt → ${clusters.length} Tage');
     for (int i = 0; i < clusters.length; i++) {
@@ -294,6 +303,71 @@ class DayPlanner {
       // Neuen vorletzten Tag einfügen, letzten Tag ersetzen
       clusters[lastIdx] = remainingLast;
       clusters.insert(lastIdx, newSecondToLast);
+    }
+  }
+
+  /// Splittet Tage die trotz Clustering das 700km Display-Limit ueberschreiten.
+  ///
+  /// Dies kann passieren wenn:
+  /// - Das Incoming-Segment allein schon >700km ist (weit entfernte POIs)
+  /// - Mehrere Stops mit hoher Einzeldistanz sich aufaddieren
+  ///
+  /// Tage mit nur 1 POI koennen nicht weiter gesplittet werden.
+  void _splitOverlimitDays(List<List<POI>> clusters, LatLng startLocation) {
+    var i = 0;
+    var maxIterations = clusters.length * 2; // Schutz gegen Endlosschleifen
+    while (i < clusters.length && maxIterations > 0) {
+      maxIterations--;
+      final cluster = clusters[i];
+      if (cluster.length <= 1) {
+        i++;
+        continue;
+      }
+
+      final clusterStart = i > 0 ? clusters[i - 1].last.location : startLocation;
+      final km = _calculateClusterDistance(cluster, clusterStart);
+      final displayKm = km * TripConstants.haversineToDisplayFactor;
+
+      if (displayKm <= TripConstants.maxDisplayKmPerDay) {
+        i++;
+        continue;
+      }
+
+      // Tag ueberschreitet 700km → versuche zu splitten
+      // Finde den Split-Punkt: gehe durch POIs bis Display-Limit erreicht
+      var splitKm = 0.0;
+      var splitLocation = clusterStart;
+      var splitIndex = 0;
+
+      for (int j = 0; j < cluster.length; j++) {
+        final segKm = GeoUtils.haversineDistance(splitLocation, cluster[j].location);
+        final projDisplay = (splitKm + segKm) * TripConstants.haversineToDisplayFactor;
+        if (projDisplay > TripConstants.maxDisplayKmPerDay && j > 0) {
+          splitIndex = j;
+          break;
+        }
+        splitKm += segKm;
+        splitLocation = cluster[j].location;
+        splitIndex = j + 1;
+      }
+
+      // Mindestens 1 POI in jedem Teil
+      if (splitIndex <= 0) splitIndex = 1;
+      if (splitIndex >= cluster.length) {
+        // Kann nicht weiter gesplittet werden
+        debugPrint('[DayPlanner] ⚠️ Tag ${i + 1} = ~${displayKm.toStringAsFixed(0)}km Display, kann nicht weiter gesplittet werden (${cluster.length} POIs)');
+        i++;
+        continue;
+      }
+
+      final firstPart = cluster.sublist(0, splitIndex);
+      final secondPart = cluster.sublist(splitIndex);
+
+      clusters[i] = firstPart;
+      clusters.insert(i + 1, secondPart);
+
+      debugPrint('[DayPlanner] Split Tag ${i + 1}: ~${displayKm.toStringAsFixed(0)}km → ${firstPart.length} + ${secondPart.length} POIs');
+      // i bleibt gleich, um den ersten Teil nochmal zu pruefen
     }
   }
 

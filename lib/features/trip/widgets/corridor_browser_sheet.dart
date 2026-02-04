@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/categories.dart';
+import '../../../core/utils/weather_poi_utils.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
+import '../../map/providers/weather_provider.dart';
 import '../../map/utils/poi_trip_helper.dart';
 import '../../map/widgets/compact_poi_card.dart';
 import '../../poi/providers/poi_state_provider.dart';
@@ -142,12 +144,24 @@ class _CorridorBrowserContentState
     extends ConsumerState<CorridorBrowserContent> {
   bool _initialLoadDone = false;
 
+  // Wetter-Sortier-Cache: Vermeidet Sortierung bei jedem Render
+  List<POI>? _sortedPOIsCache;
+  List<POI>? _sortedPOIsInput;
+  WeatherCondition? _sortedPOIsCacheCondition;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPOIs();
     });
+  }
+
+  @override
+  void dispose() {
+    // Laufende Requests abbrechen + State aufraumen
+    ref.read(corridorBrowserNotifierProvider.notifier).reset();
+    super.dispose();
   }
 
   void _loadPOIs() {
@@ -164,10 +178,17 @@ class _CorridorBrowserContentState
     final colorScheme = Theme.of(context).colorScheme;
     final state = ref.watch(corridorBrowserNotifierProvider);
 
+    // Weather einmal lesen und an Sub-Methoden durchreichen (Fix 3)
+    final routeWeather = ref.watch(routeWeatherNotifierProvider);
+    final locationWeather = ref.watch(locationWeatherNotifierProvider);
+    final weatherCondition = routeWeather.overallCondition != WeatherCondition.unknown
+        ? routeWeather.overallCondition
+        : locationWeather.condition;
+
     return Column(
       children: [
         // Header
-        _buildHeader(colorScheme, state),
+        _buildHeader(colorScheme, state, weatherCondition),
 
         Divider(
           height: 1,
@@ -187,15 +208,28 @@ class _CorridorBrowserContentState
 
         // POI-Liste
         Expanded(
-          child: _buildPOIList(colorScheme, state),
+          child: _buildPOIList(colorScheme, state, weatherCondition),
         ),
       ],
     );
   }
 
-  Widget _buildHeader(ColorScheme colorScheme, CorridorBrowserState state) {
+  Widget _buildHeader(
+    ColorScheme colorScheme,
+    CorridorBrowserState state,
+    WeatherCondition weatherCondition,
+  ) {
     final totalCount = state.filteredPOIs.length;
     final newCount = state.newPOICount;
+
+    String? weatherHint;
+    if (weatherCondition == WeatherCondition.danger) {
+      weatherHint = 'Unwetter erwartet';
+    } else if (weatherCondition == WeatherCondition.bad) {
+      weatherHint = 'Regen erwartet';
+    } else if (weatherCondition == WeatherCondition.good) {
+      weatherHint = 'Ideales Outdoor-Wetter';
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
@@ -221,10 +255,13 @@ class _CorridorBrowserContentState
                 ),
                 if (!state.isLoading && totalCount > 0)
                   Text(
-                    '$totalCount gefunden${newCount < totalCount ? ' ($newCount neu)' : ''}',
+                    '$totalCount gefunden${newCount < totalCount ? ' ($newCount neu)' : ''}'
+                    '${weatherHint != null ? ' \u00B7 $weatherHint' : ''}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
+                      color: weatherCondition == WeatherCondition.danger
+                          ? colorScheme.error
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
               ],
@@ -302,6 +339,13 @@ class _CorridorBrowserContentState
               max: 100,
               divisions: 18,
               onChanged: (value) {
+                // Nur visuelles Feedback (Label), kein API-Call
+                ref
+                    .read(corridorBrowserNotifierProvider.notifier)
+                    .setBufferKmLocal(value);
+              },
+              onChangeEnd: (value) {
+                // Tatsaechlichen Load ausloesen wenn Slider losgelassen
                 ref
                     .read(corridorBrowserNotifierProvider.notifier)
                     .setBufferKm(value, route: widget.route);
@@ -317,15 +361,88 @@ class _CorridorBrowserContentState
     ColorScheme colorScheme,
     CorridorBrowserState state,
   ) {
+    // Pruefe ob Indoor-Chip aktiv (alle weatherResilient-Kategorien ausgewaehlt)
+    final weatherResilient = POICategory.weatherResilientCategories.toSet();
+    final isIndoorActive = weatherResilient.isNotEmpty &&
+        weatherResilient.every((c) => state.selectedCategories.contains(c)) &&
+        state.selectedCategories.length == weatherResilient.length;
+
     return SizedBox(
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        itemCount: POICategory.values.length,
+        itemCount: POICategory.values.length + 1, // +1 fuer Indoor-Chip
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
-          final category = POICategory.values[index];
+          // Index 0: Spezieller Indoor-Chip
+          if (index == 0) {
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  final notifier =
+                      ref.read(corridorBrowserNotifierProvider.notifier);
+                  if (isIndoorActive) {
+                    // Deaktivieren: alle Kategorien abwaehlen (1 State-Write)
+                    notifier.setCategoriesBatch({});
+                  } else {
+                    // Aktivieren: nur Indoor-Kategorien setzen (1 State-Write)
+                    notifier.setCategoriesBatch(weatherResilient);
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 100),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isIndoorActive
+                        ? colorScheme.tertiary
+                        : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: isIndoorActive
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.tertiary.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.roofing_rounded,
+                        size: 14,
+                        color: isIndoorActive
+                            ? colorScheme.onTertiary
+                            : colorScheme.onSurface,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Indoor',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isIndoorActive
+                              ? colorScheme.onTertiary
+                              : colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          // Regulaere Kategorie-Chips (index - 1)
+          final category = POICategory.values[index - 1];
           final isSelected = state.selectedCategories.contains(category);
 
           return Material(
@@ -389,6 +506,7 @@ class _CorridorBrowserContentState
   Widget _buildPOIList(
     ColorScheme colorScheme,
     CorridorBrowserState state,
+    WeatherCondition weatherCondition,
   ) {
     // Loading State
     if (state.isLoading) {
@@ -499,16 +617,38 @@ class _CorridorBrowserContentState
       );
     }
 
+    // Wetter-basierte Sekundaer-Sortierung - gecacht (Fix 2)
+    // Nur neu sortieren wenn sich Input-Liste oder Wetter-Condition aendert
+    List<POI> sortedPOIs;
+    if (weatherCondition != WeatherCondition.unknown &&
+        weatherCondition != WeatherCondition.mixed) {
+      if (_sortedPOIsCache != null &&
+          identical(_sortedPOIsInput, filteredPOIs) &&
+          _sortedPOIsCacheCondition == weatherCondition) {
+        sortedPOIs = _sortedPOIsCache!;
+      } else {
+        sortedPOIs = WeatherPOIUtils.sortByWeatherRelevance(filteredPOIs, weatherCondition);
+        _sortedPOIsCache = sortedPOIs;
+        _sortedPOIsInput = filteredPOIs;
+        _sortedPOIsCacheCondition = weatherCondition;
+      }
+    } else {
+      sortedPOIs = filteredPOIs;
+      _sortedPOIsCache = null;
+      _sortedPOIsInput = null;
+    }
+
     // POI-Liste
     return ListView.builder(
       controller: widget.scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      itemCount: filteredPOIs.length,
+      itemCount: sortedPOIs.length,
       itemBuilder: (context, index) {
-        final poi = filteredPOIs[index];
+        final poi = sortedPOIs[index];
         final isAdded = state.addedPOIIds.contains(poi.id);
 
         return CompactPOICard(
+          key: ValueKey(poi.id), // Fix 4: Stabiles Recycling bei Sortier-Aenderungen
           name: poi.name,
           category: poi.category,
           detourKm: poi.detourKm != null
@@ -516,6 +656,7 @@ class _CorridorBrowserContentState
               : null,
           imageUrl: poi.imageUrl,
           isAdded: isAdded,
+          weatherCondition: weatherCondition,
           onTap: () => _navigateToPOI(poi),
           onAdd: isAdded ? null : () => _addPOI(poi),
           onRemove: isAdded && widget.onRemovePOI != null

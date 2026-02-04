@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +7,12 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import '../../data/models/route.dart' hide LatLngConverter;
 import '../../data/models/trip.dart';
 import 'providers/navigation_provider.dart';
+import 'providers/navigation_poi_discovery_provider.dart';
 import 'providers/navigation_tts_provider.dart';
+import 'services/position_interpolator.dart';
 import 'utils/latlong_converter.dart';
 import 'widgets/maneuver_banner.dart';
+import 'widgets/must_see_poi_card.dart';
 import 'widgets/navigation_bottom_bar.dart';
 import 'widgets/poi_approach_card.dart';
 
@@ -57,9 +61,17 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   final Map<String, ml.Circle> _poiCircles = {};
   ml.Circle? _userCircle;
 
+  // Fluessige Positions-Interpolation
+  final PositionInterpolator _interpolator = PositionInterpolator();
+  StreamSubscription<InterpolatedPosition>? _interpolationSub;
+  NavigationState? _lastNavState;
+
   @override
   void initState() {
     super.initState();
+
+    // Interpolation-Stream abonnieren fuer fluessige Updates
+    _interpolationSub = _interpolator.positionStream.listen(_onInterpolatedPosition);
 
     // Navigation starten
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -69,28 +81,64 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
           );
       // TTS Provider initialisieren (lauscht automatisch)
       ref.read(navigationTtsProvider);
+
+      // Must-See POI Discovery starten
+      ref.read(navigationPOIDiscoveryNotifierProvider.notifier)
+          .startDiscovery(widget.route, widget.stops ?? []);
     });
   }
 
   @override
   void dispose() {
+    _interpolationSub?.cancel();
+    _interpolator.dispose();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  /// Wird ~60x pro Sekunde vom Interpolator aufgerufen
+  void _onInterpolatedPosition(InterpolatedPosition interpolated) {
+    if (_mapController == null || _isOverviewMode) return;
+
+    // User-Circle fluessig bewegen
+    if (_userCircle != null) {
+      try {
+        _mapController!.updateCircle(
+          _userCircle!,
+          ml.CircleOptions(
+            geometry: LatLngConverter.toMapLibre(interpolated.position),
+          ),
+        );
+      } catch (_) {}
+    }
+
+    // Kamera fluessig nachfuehren (kurze Animation fuer Uebergaenge)
+    try {
+      _mapController!.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: LatLngConverter.toMapLibre(interpolated.position),
+            zoom: 16,
+            tilt: 50,
+            bearing: interpolated.bearing,
+          ),
+        ),
+        duration: const Duration(milliseconds: 100),
+      );
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final navState = ref.watch(navigationNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final discoveryState = ref.watch(navigationPOIDiscoveryNotifierProvider);
 
-    // Karte auf Position zentrieren (3D)
-    _updateMapPosition(navState);
+    // Interpolator mit neuem GPS-Update fuettern
+    _feedInterpolator(navState);
 
     // Route-Linien aktualisieren
     _updateRouteSources(navState);
-
-    // User-Position Circle aktualisieren
-    _updateUserCircle(navState);
 
     // POI-Marker Farben aktualisieren
     _updatePOIMarkerColors(navState, colorScheme);
@@ -157,7 +205,45 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               ),
             ),
 
-          // POI-Annaeherungs-Card
+          // Must-See POI Discovery Card (ueber POI-Approach-Card)
+          if (discoveryState.currentApproachingPOI != null &&
+              discoveryState.distanceToApproachingPOI != null)
+            Positioned(
+              bottom: navState.status == NavigationStatus.arrivedAtWaypoint
+                  ? 240 // ueber der POI-Approach-Card
+                  : 160,
+              left: 0,
+              right: 0,
+              child: MustSeePOICard(
+                poi: discoveryState.currentApproachingPOI!,
+                distanceMeters: discoveryState.distanceToApproachingPOI!,
+                onAddStop: () {
+                  final poi = discoveryState.currentApproachingPOI!;
+                  final stop = TripStop(
+                    poiId: poi.id,
+                    name: poi.name,
+                    latitude: poi.latitude,
+                    longitude: poi.longitude,
+                    categoryId: poi.categoryId,
+                    order: 0,
+                  );
+                  ref
+                      .read(navigationNotifierProvider.notifier)
+                      .addWaypointDuringNavigation(stop);
+                  ref
+                      .read(navigationPOIDiscoveryNotifierProvider.notifier)
+                      .dismissPOI(poi.id);
+                },
+                onDismiss: () {
+                  ref
+                      .read(navigationPOIDiscoveryNotifierProvider.notifier)
+                      .dismissPOI(
+                          discoveryState.currentApproachingPOI!.id);
+                },
+              ),
+            ),
+
+          // POI-Annaeherungs-Card (Trip-Stops)
           if (navState.nextPOIStop != null &&
               navState.distanceToNextPOIMeters < 500 &&
               navState.status == NavigationStatus.arrivedAtWaypoint)
@@ -394,52 +480,29 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // User-Position Circle Update (native MapLibre Annotation)
+  // Interpolator fuettern (ersetzt _updateUserCircle + _updateMapPosition)
   // ---------------------------------------------------------------------------
 
-  void _updateUserCircle(NavigationState navState) {
-    if (_mapController == null || _userCircle == null || !navState.hasPosition) {
+  void _feedInterpolator(NavigationState navState) {
+    if (!navState.hasPosition || navState.route == null) return;
+
+    // Nur bei echten Positions-Aenderungen den Interpolator fuettern
+    if (_lastNavState?.currentPosition == navState.currentPosition &&
+        _lastNavState?.currentHeading == navState.currentHeading) {
       return;
     }
-    try {
-      _mapController!.updateCircle(
-        _userCircle!,
-        ml.CircleOptions(
-          geometry: LatLngConverter.toMapLibre(navState.currentPosition!),
-        ),
-      );
-    } catch (_) {
-      // Circle noch nicht bereit
-    }
-  }
+    _lastNavState = navState;
 
-  // ---------------------------------------------------------------------------
-  // Kamera-Updates (3D-Perspektive)
-  // ---------------------------------------------------------------------------
+    // Verwende snappedPosition (auf Route gesnappt) falls vorhanden
+    final position = navState.snappedPosition ?? navState.currentPosition!;
 
-  void _updateMapPosition(NavigationState navState) {
-    if (_isOverviewMode || !navState.hasPosition || _mapController == null) {
-      return;
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _mapController == null) return;
-      try {
-        _mapController!.animateCamera(
-          ml.CameraUpdate.newCameraPosition(
-            ml.CameraPosition(
-              target: LatLngConverter.toMapLibre(navState.currentPosition!),
-              zoom: 16,
-              tilt: 50,
-              bearing: navState.currentHeading ?? 0,
-            ),
-          ),
-          duration: const Duration(milliseconds: 500),
-        );
-      } catch (_) {
-        // Controller nicht bereit
-      }
-    });
+    _interpolator.onGPSUpdate(
+      position,
+      navState.currentHeading ?? 0,
+      navState.currentSpeedKmh ?? 0,
+      navState.route!.baseRoute.coordinates,
+      navState.matchedRouteIndex,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -512,6 +575,12 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     setState(() {
       _isOverviewMode = !_isOverviewMode;
     });
+
+    if (_isOverviewMode) {
+      _interpolator.pause();
+    } else {
+      _interpolator.resume();
+    }
 
     if (_isOverviewMode && _mapController != null) {
       // Gesamte Route zeigen, flach (2D)

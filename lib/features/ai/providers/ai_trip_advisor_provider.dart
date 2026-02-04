@@ -1,18 +1,34 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/utils/geo_utils.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/models/route.dart';
+import '../../../data/repositories/poi_repo.dart';
 import '../../../data/services/ai_service.dart';
 import '../../map/providers/weather_provider.dart';
-import '../../trip/providers/corridor_browser_provider.dart';
 
 part 'ai_trip_advisor_provider.g.dart';
 
 /// Vorschlags-Typ
 enum SuggestionType { weather, optimization, alternative, general }
+
+/// Kandidat-POI mit Zuordnung zum naechsten Stop
+class _StopCandidate {
+  final POI poi;
+  final String nearestStop;
+  final double distanceKm;
+
+  const _StopCandidate({
+    required this.poi,
+    required this.nearestStop,
+    required this.distanceKm,
+  });
+}
 
 /// AI-Vorschlag fuer einen Trip
 class AISuggestion {
@@ -92,6 +108,9 @@ class AITripAdvisorState {
 /// AI Trip Advisor - generiert Vorschlaege basierend auf Wetter + Route
 @Riverpod(keepAlive: true)
 class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
+  /// Request-ID fuer Cancellation: Nur die neueste Anfrage darf State setzen
+  int _loadRequestId = 0;
+
   @override
   AITripAdvisorState build() => const AITripAdvisorState();
 
@@ -115,7 +134,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           dayWeather == WeatherCondition.danger) {
         // Outdoor-POIs zaehlen
         final outdoorStops = stopsForDay
-            .where((s) => s.category != null && !_isIndoor(s.category!))
+            .where((s) => s.category != null && !s.category!.isIndoor)
             .toList();
 
         if (outdoorStops.isNotEmpty) {
@@ -178,15 +197,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     return closest;
   }
 
-  bool _isIndoor(POICategory category) {
-    const indoor = {
-      POICategory.museum,
-      POICategory.church,
-      POICategory.restaurant,
-      POICategory.hotel,
-    };
-    return indoor.contains(category);
-  }
+  // _isIndoor entfernt - nutzt jetzt POICategory.isIndoor aus categories.dart
 
   /// AI-basierte Alternativen fuer einen bestimmten Tag vorschlagen
   /// Nutzt AIService.optimizeTrip() via GPT-4o Backend
@@ -262,7 +273,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       if (dayWeather == WeatherCondition.bad ||
           dayWeather == WeatherCondition.danger) {
         final outdoorStops = stopsForDay
-            .where((s) => s.category != null && !_isIndoor(s.category!))
+            .where((s) => s.category != null && !s.category!.isIndoor)
             .toList();
 
         for (final stop in outdoorStops) {
@@ -290,12 +301,14 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     }
   }
 
-  /// Laedt POI-Empfehlungen entlang des Korridors und rankt sie via GPT-4o.
-  /// Beruecksichtigt Wetter (Indoor bei Regen), Must-See-Attraktionen und Umgebung.
-  /// 1. CorridorBrowserProvider: POIs im Korridor laden (alle Kategorien)
-  /// 2. Smart-Filter: Wetter-Gewichtung + Must-See-Bonus + Score
-  /// 3. GPT-4o Ranking mit Kontext (Wetter, aktuelle Stops, Umgebung)
-  /// 4. Fallback: Regelbasiertes Ranking bei GPT-Fehler
+  /// Laedt Must-See POI-Empfehlungen im 15km Umkreis (max 3 Suchpunkte) via GPT-4o.
+  /// Nur Supabase + kuratierte POIs (kein Wikipedia/Overpass → kein Crash).
+  /// Nur beruemhte POIs (Score >= 50, Must-See/UNESCO bevorzugt).
+  /// 1. Radius-Suche: Max 3 Punkte (Start, Mitte, Ende), nur Supabase+kuratiert
+  /// 2. Merge + Filter: Nur Score >= 50, keine Hotels/Restaurants
+  /// 3. Smart-Scoring: Must-See+40, UNESCO+20, kuratiert+15, Wetter, Naehe
+  /// 4. GPT-4o: Top 8 Kandidaten → 3 Must-See Empfehlungen
+  /// 5. Fallback: Regelbasiertes Ranking bei GPT-Fehler
   Future<void> loadSmartRecommendations({
     required int day,
     required Trip trip,
@@ -303,6 +316,10 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     required RouteWeatherState routeWeather,
     required Set<String> existingStopIds,
   }) async {
+    // Request-ID fuer Cancellation: Alte laufende Requests werden ignoriert.
+    // Kein isLoading-Guard: Neue Anfrage cancelled automatisch alte via requestId.
+    // So kann ein manueller Klick einen Auto-Trigger sauber ersetzen.
+    final requestId = ++_loadRequestId;
     state = state.copyWith(isLoading: true, error: null);
     final dayWeather = _getDayWeather(day, trip.actualDays, routeWeather);
     final isBadWeather = dayWeather == WeatherCondition.bad ||
@@ -310,45 +327,83 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     debugPrint('[AIAdvisor] Lade Empfehlungen fuer Tag $day (Wetter: ${dayWeather.label})...');
 
     try {
-      // 1. Corridor-POIs laden (alle Kategorien, 50km Buffer)
-      final corridorNotifier =
-          ref.read(corridorBrowserNotifierProvider.notifier);
-      await corridorNotifier.loadCorridorPOIs(
-        route: route,
-        bufferKm: 50.0,
-        existingStopIds: existingStopIds,
-      );
-
-      final corridorState = ref.read(corridorBrowserNotifierProvider);
-
-      // 2. Smart-Filter: Alle POIs mit Mindest-Qualitaet, nicht im Trip
-      final allCandidates = corridorState.corridorPOIs
-          .where((poi) => !existingStopIds.contains(poi.id))
-          .where((poi) => poi.score > 30)
-          .toList();
-
-      if (allCandidates.isEmpty) {
-        debugPrint('[AIAdvisor] Keine Kandidaten im Korridor gefunden');
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Keine Empfehlungen entlang der Route gefunden',
-        );
+      // 1. Suchpunkte aufbauen: Tagesstart + alle Stops des Tages
+      final stopsForDay = trip.getStopsForDay(day);
+      if (stopsForDay.isEmpty) {
+        debugPrint('[AIAdvisor] Keine Stops fuer Tag $day');
+        if (requestId == _loadRequestId) {
+          state = state.copyWith(
+            isLoading: false,
+            error: 'Keine Stops fuer Tag $day',
+          );
+        }
         return;
       }
 
-      // 3. Wetter-gewichtete Sortierung: Must-See + Indoor-Bonus bei Regen
+      final searchLocations = _buildSearchLocations(day, trip, route, stopsForDay);
+      debugPrint('[AIAdvisor] Suche Must-See POIs im 15km Umkreis von ${searchLocations.length} Punkten...');
+
+      // 2. Parallele Radius-Suche (15km, max 3 Punkte, nur Supabase+kuratiert)
+      final poiRepo = ref.read(poiRepositoryProvider);
+      final searchResults = await _searchPOIsAroundStops(poiRepo, searchLocations);
+
+      // Cancellation-Check
+      if (requestId != _loadRequestId) {
+        debugPrint('[AIAdvisor] Request $requestId abgebrochen (neuer Request aktiv)');
+        return;
+      }
+
+      // 3. Merge, Deduplizieren, Filtern
+      var allCandidates = _mergeAndDeduplicate(searchResults, existingStopIds);
+      debugPrint('[AIAdvisor] ${allCandidates.length} einzigartige Kandidaten nach Deduplizierung');
+
+      // 4. Route-Metriken berechnen (detourKm, routePosition)
+      final dayRoute = _extractDayRoute(day, trip, route);
+      if (dayRoute.coordinates.length >= 2) {
+        allCandidates = _enrichWithRouteMetrics(allCandidates, dayRoute);
+      }
+
+      // Kandidaten-Limit: Max 25 vor Smart-Scoring (nur die besten)
+      if (allCandidates.length > 25) {
+        allCandidates.sort((a, b) {
+          final aScore = _calculateSmartScore(a.poi, isBadWeather, distanceKm: a.distanceKm);
+          final bScore = _calculateSmartScore(b.poi, isBadWeather, distanceKm: b.distanceKm);
+          return bScore.compareTo(aScore);
+        });
+        allCandidates = allCandidates.take(25).toList();
+        debugPrint('[AIAdvisor] Kandidaten limitiert: -> 25 fuer Smart-Scoring');
+      }
+
+      if (allCandidates.isEmpty) {
+        debugPrint('[AIAdvisor] Keine Kandidaten in der Naehe der Stops gefunden');
+        if (requestId == _loadRequestId) {
+          state = state.copyWith(
+            isLoading: false,
+            error: 'Keine Empfehlungen in der Naehe der Stops gefunden',
+          );
+        }
+        return;
+      }
+
+      // 5. Wetter-gewichtete Sortierung: Must-See + Indoor-Bonus + Naehe-Bonus
       allCandidates.sort((a, b) {
-        final aScore = _calculateSmartScore(a, isBadWeather);
-        final bScore = _calculateSmartScore(b, isBadWeather);
+        final aScore = _calculateSmartScore(a.poi, isBadWeather, distanceKm: a.distanceKm);
+        final bScore = _calculateSmartScore(b.poi, isBadWeather, distanceKm: b.distanceKm);
         return bScore.compareTo(aScore);
       });
 
-      final topCandidates = allCandidates.take(15).toList();
+      final topCandidates = allCandidates.take(8).toList();
 
       debugPrint(
-          '[AIAdvisor] ${topCandidates.length} Kandidaten ausgewaehlt (${allCandidates.length} gesamt, isBadWeather: $isBadWeather)');
+          '[AIAdvisor] ${topCandidates.length} Must-See Kandidaten ausgewaehlt (${allCandidates.length} gesamt, isBadWeather: $isBadWeather)');
 
-      // 4. GPT-4o Ranking versuchen
+      // Cancellation-Check vor GPT-Call
+      if (requestId != _loadRequestId) {
+        debugPrint('[AIAdvisor] Request $requestId abgebrochen (neuer Request aktiv)');
+        return;
+      }
+
+      // 6. GPT-4o Ranking versuchen (mit Stop-Zuordnung)
       List<AISuggestion> rankedSuggestions;
       try {
         rankedSuggestions = await _rankWithGPT(
@@ -356,11 +411,11 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           trip: trip,
           candidates: topCandidates,
           routeWeather: routeWeather,
-        );
+        ).timeout(const Duration(seconds: 15));
         debugPrint(
             '[AIAdvisor] GPT-Ranking: ${rankedSuggestions.length} Empfehlungen');
       } catch (e) {
-        // 5. Fallback: Regelbasiertes Ranking
+        // 7. Fallback: Regelbasiertes Ranking (bei Timeout oder GPT-Fehler)
         debugPrint('[AIAdvisor] GPT-Ranking fehlgeschlagen: $e');
         rankedSuggestions = _rankRuleBased(
           day: day,
@@ -368,9 +423,17 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           candidates: topCandidates,
           routeWeather: routeWeather,
         );
-        state = state.copyWith(
-          error: 'AI nicht erreichbar - zeige lokale Empfehlungen',
-        );
+        if (requestId == _loadRequestId) {
+          state = state.copyWith(
+            error: 'AI nicht erreichbar - zeige lokale Empfehlungen',
+          );
+        }
+      }
+
+      // Cancellation-Check vor State-Update
+      if (requestId != _loadRequestId) {
+        debugPrint('[AIAdvisor] Request $requestId abgebrochen (neuer Request aktiv)');
+        return;
       }
 
       // State aktualisieren
@@ -393,19 +456,274 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       );
     } catch (e) {
       debugPrint('[AIAdvisor] Fehler beim Laden der Empfehlungen: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Fehler beim Laden der Empfehlungen',
-      );
+      if (requestId == _loadRequestId) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Fehler beim Laden der Empfehlungen',
+        );
+      }
+    } finally {
+      // Sicherheitsnetz: isLoading IMMER zuruecksetzen wenn dieser Request
+      // der aktuelle ist (verhindert permanent haengenden Loading-State)
+      if (requestId == _loadRequestId && state.isLoading) {
+        state = state.copyWith(isLoading: false);
+      }
     }
   }
 
-  /// Berechnet einen gewichteten Score fuer POI-Kandidaten
-  double _calculateSmartScore(POI poi, bool isBadWeather) {
+  // ─── Helper-Methoden fuer Stop-Radius-Suche ───
+
+  /// Bestimmt den Startpunkt eines Tages
+  /// Tag 1: Route-Start, ab Tag 2: letzter Stop vom Vortag
+  LatLng _getDayStartLocation(int day, Trip trip, AppRoute route) {
+    if (day == 1) return route.start;
+    final prevStops = trip.getStopsForDay(day - 1);
+    if (prevStops.isNotEmpty) return prevStops.last.location;
+    return route.start;
+  }
+
+  /// Baut die Liste der Suchpunkte: Tagesstart + alle Stops des Tages
+  List<({LatLng location, String label})> _buildSearchLocations(
+    int day,
+    Trip trip,
+    AppRoute route,
+    List<TripStop> stopsForDay,
+  ) {
+    final locations = <({LatLng location, String label})>[];
+
+    // Tagesstart hinzufuegen
+    final dayStart = _getDayStartLocation(day, trip, route);
+    locations.add((location: dayStart, label: 'Tagesstart'));
+
+    // Alle Stops des Tages
+    for (final stop in stopsForDay) {
+      locations.add((location: stop.location, label: stop.name));
+    }
+
+    return locations;
+  }
+
+  /// Fuehrt parallele Radius-Suchen (15km) um max 3 Suchpunkte durch.
+  /// Verwendet NUR Supabase + kuratierte POIs (kein Wikipedia/Overpass-Fallback)
+  /// um Crashes durch zu viele API-Calls zu vermeiden.
+  Future<List<({({LatLng location, String label}) searchLocation, List<POI> pois})>>
+      _searchPOIsAroundStops(
+    POIRepository poiRepo,
+    List<({LatLng location, String label})> searchLocations,
+  ) async {
+    const searchRadiusKm = 15.0;
+
+    // Max 3 Suchpunkte: Start, Mitte, Ende (statt jeden einzelnen Stop)
+    final limitedLocations = _limitSearchLocations(searchLocations, 3);
+    debugPrint('[AIAdvisor] ${limitedLocations.length} von ${searchLocations.length} Suchpunkten verwendet');
+
+    final searchFutures = limitedLocations.map((loc) async {
+      try {
+        final pois = await poiRepo
+            .loadPOIsInRadius(
+              center: loc.location,
+              radiusKm: searchRadiusKm,
+              useCache: true,
+              // NUR Supabase + kuratierte POIs - kein Wikipedia-Grid/Overpass
+              // verhindert 100+ parallele API-Calls die zum Crash fuehren
+              includeWikipedia: false,
+              includeOverpass: false,
+            )
+            .timeout(const Duration(seconds: 8));
+        debugPrint('[AIAdvisor] ${pois.length} POIs gefunden bei ${loc.label}');
+        return (searchLocation: loc, pois: pois);
+      } catch (e) {
+        debugPrint('[AIAdvisor] Radius-Suche fehlgeschlagen fuer ${loc.label}: $e');
+        return (searchLocation: loc, pois: <POI>[]);
+      }
+    });
+
+    return Future.wait(searchFutures);
+  }
+
+  /// Begrenzt Suchpunkte auf maxCount, gleichmaessig verteilt (Start, Mitte, Ende)
+  List<({LatLng location, String label})> _limitSearchLocations(
+    List<({LatLng location, String label})> locations,
+    int maxCount,
+  ) {
+    if (locations.length <= maxCount) return locations;
+
+    final result = <({LatLng location, String label})>[];
+    result.add(locations.first); // Tagesstart
+
+    if (maxCount >= 3 && locations.length >= 3) {
+      result.add(locations[locations.length ~/ 2]); // Mitte
+    }
+
+    result.add(locations.last); // Letzter Stop
+
+    return result;
+  }
+
+  /// Zusammenfuehren, Deduplizieren und Filtern der Radius-Ergebnisse
+  /// NUR beruemhte/Must-See POIs behalten:
+  /// - Hotels und Restaurants werden ausgeschlossen
+  /// - Bereits vorhandene Stops werden ausgeschlossen
+  /// - Nur POIs mit Score >= 50 (bekannte Sehenswuerdigkeiten)
+  /// - Bevorzugt Must-See, UNESCO, kuratierte POIs
+  /// - Bei Duplikaten: kuerzeste Distanz und zugehoeriger Stop bleiben
+  List<_StopCandidate> _mergeAndDeduplicate(
+    List<({({LatLng location, String label}) searchLocation, List<POI> pois})> searchResults,
+    Set<String> existingStopIds,
+  ) {
+    final candidateMap = <String, _StopCandidate>{};
+
+    for (final result in searchResults) {
+      for (final poi in result.pois) {
+        // Filter: Hotels, Restaurants, existierende Stops
+        if (existingStopIds.contains(poi.id)) continue;
+        if (poi.categoryId == 'hotel') continue;
+        if (poi.categoryId == 'restaurant') continue;
+
+        // NUR beruemhte POIs: Score >= 50 (bekannte Sehenswuerdigkeiten)
+        if (poi.score < 50) continue;
+
+        final distToSearchPoint = GeoUtils.haversineDistance(
+          poi.location,
+          result.searchLocation.location,
+        );
+
+        // Deduplizierung: Kuerzeste Distanz gewinnt
+        if (!candidateMap.containsKey(poi.id) ||
+            distToSearchPoint < candidateMap[poi.id]!.distanceKm) {
+          candidateMap[poi.id] = _StopCandidate(
+            poi: poi,
+            nearestStop: result.searchLocation.label,
+            distanceKm: distToSearchPoint,
+          );
+        }
+      }
+    }
+
+    return candidateMap.values.toList();
+  }
+
+  /// Berechnet Route-Metriken (detourKm, routePosition) fuer Kandidaten
+  List<_StopCandidate> _enrichWithRouteMetrics(
+    List<_StopCandidate> candidates,
+    AppRoute dayRoute,
+  ) {
+    return candidates.map((entry) {
+      final routePos = GeoUtils.calculateRoutePosition(
+        entry.poi.location,
+        dayRoute.coordinates,
+      );
+      final detour = GeoUtils.calculateDetour(
+        entry.poi.location,
+        dayRoute.coordinates,
+      );
+      return _StopCandidate(
+        poi: entry.poi.copyWith(
+          routePosition: routePos,
+          detourKm: detour,
+        ),
+        nearestStop: entry.nearestStop,
+        distanceKm: entry.distanceKm,
+      );
+    }).toList();
+  }
+
+  // ─── Bestehende Helper-Methoden ───
+
+  /// Extrahiert das Route-Segment fuer einen bestimmten Tag.
+  /// Verhindert dass bei Multi-Day Trips die gesamte Route (tausende km)
+  /// fuer Route-Metriken verwendet wird → kleinere Bounding-Box.
+  AppRoute _extractDayRoute(int day, Trip trip, AppRoute fullRoute) {
+    if (trip.actualDays <= 1) return fullRoute;
+
+    final stopsForDay = trip.getStopsForDay(day);
+    if (stopsForDay.isEmpty) return fullRoute;
+
+    // Tages-Start bestimmen
+    LatLng dayStart;
+    if (day == 1) {
+      dayStart = fullRoute.start;
+    } else {
+      final prevStops = trip.getStopsForDay(day - 1);
+      dayStart = prevStops.isNotEmpty
+          ? prevStops.last.location
+          : fullRoute.start;
+    }
+
+    // Tages-Ende bestimmen
+    LatLng dayEnd;
+    if (day == trip.actualDays) {
+      dayEnd = fullRoute.end;
+    } else {
+      dayEnd = stopsForDay.last.location;
+    }
+
+    // Naechste Punkte auf der Route finden
+    final coords = fullRoute.coordinates;
+    if (coords.length < 2) return fullRoute;
+
+    int startIdx = 0;
+    int endIdx = coords.length - 1;
+    double minStartDist = double.infinity;
+    double minEndDist = double.infinity;
+
+    for (int i = 0; i < coords.length; i++) {
+      final dStart = _sqDist(coords[i], dayStart);
+      final dEnd = _sqDist(coords[i], dayEnd);
+      if (dStart < minStartDist) {
+        minStartDist = dStart;
+        startIdx = i;
+      }
+      if (dEnd < minEndDist) {
+        minEndDist = dEnd;
+        endIdx = i;
+      }
+    }
+
+    // Sicherstellen dass Start vor Ende liegt
+    if (startIdx > endIdx) {
+      final tmp = startIdx;
+      startIdx = endIdx;
+      endIdx = tmp;
+    }
+
+    final segCoords = coords.sublist(startIdx, endIdx + 1);
+    if (segCoords.length < 2) return fullRoute;
+
+    debugPrint('[AIAdvisor] Tag $day Route-Segment: '
+        'Index $startIdx-$endIdx von ${coords.length}');
+
+    return AppRoute(
+      start: segCoords.first,
+      end: segCoords.last,
+      startAddress: '',
+      endAddress: '',
+      coordinates: segCoords,
+      distanceKm: 0,
+      durationMinutes: 0,
+    );
+  }
+
+  /// Schnelle Quadrat-Distanz fuer Punkt-Vergleich (ohne sqrt)
+  double _sqDist(LatLng a, LatLng b) {
+    final dLat = a.latitude - b.latitude;
+    final dLng = a.longitude - b.longitude;
+    return dLat * dLat + dLng * dLng;
+  }
+
+  /// Berechnet einen gewichteten Score fuer POI-Kandidaten.
+  /// Stark gewichtet auf Bekanntheit: Must-See und kuratierte POIs bevorzugt.
+  double _calculateSmartScore(POI poi, bool isBadWeather, {double? distanceKm}) {
     double score = poi.score.toDouble();
 
-    // Must-See Bonus (+30)
-    if (poi.isMustSee) score += 30;
+    // Must-See Bonus (+40) - staerker gewichtet fuer beruemhte POIs
+    if (poi.isMustSee) score += 40;
+
+    // Kuratierte POIs Bonus (+15) - handverlesene Highlights
+    if (poi.isCurated) score += 15;
+
+    // UNESCO Bonus (+20)
+    if (poi.isUnesco) score += 20;
 
     // Wetter-Bonus: Bei schlechtem Wetter Indoor bevorzugen (+20)
     if (isBadWeather && poi.category?.isWeatherResilient == true) {
@@ -417,14 +735,23 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       score -= poi.detourKm! * 0.5;
     }
 
+    // Naehe-Bonus: POIs nahe an Stops bevorzugen
+    if (distanceKm != null) {
+      if (distanceKm < 5) {
+        score += 10;
+      } else if (distanceKm < 10) {
+        score += 5;
+      }
+    }
+
     return score;
   }
 
-  /// GPT-4o Ranking der Kandidaten-POIs
+  /// GPT-4o Ranking der Kandidaten-POIs mit ortsspezifischem Kontext
   Future<List<AISuggestion>> _rankWithGPT({
     required int day,
     required Trip trip,
-    required List<POI> candidates,
+    required List<_StopCandidate> candidates,
     required RouteWeatherState routeWeather,
   }) async {
     final aiService = ref.read(aiServiceProvider);
@@ -441,21 +768,24 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     // Aktuelle Stops als Text
     final currentStopsText = stopsForDay
         .map((s) =>
-            '${s.name} (${s.categoryId}, ${_isIndoor(s.category!) ? "indoor" : "outdoor"})')
+            '${s.name} (${s.categoryId}, ${(s.category?.isIndoor ?? false) ? "indoor" : "outdoor"})')
         .join(', ');
 
-    // Kandidaten als Text (mit Must-See Markierung)
+    // Kandidaten als Text mit Stop-Zuordnung
     final candidatesText = candidates
-        .map((p) {
+        .map((entry) {
+          final p = entry.poi;
           final mustSee = p.isMustSee ? ', MUST-SEE' : '';
           final indoor = p.category?.isWeatherResilient == true ? ', indoor' : ', outdoor';
-          return '${p.name} (${p.categoryId}$indoor$mustSee, ${p.detourKm?.toStringAsFixed(1) ?? "?"}km Umweg, Score: ${p.score})';
+          return '${p.name} (${p.categoryId}$indoor$mustSee, '
+              '${entry.distanceKm.toStringAsFixed(1)}km von ${entry.nearestStop}, '
+              '${p.detourKm?.toStringAsFixed(1) ?? "?"}km Umweg, Score: ${p.score})';
         })
-        .join(', ');
+        .join('\n');
 
     // Outdoor-Stops identifizieren (fuer Swap-Vorschlaege bei schlechtem Wetter)
     final outdoorStops = stopsForDay
-        .where((s) => s.category != null && !_isIndoor(s.category!))
+        .where((s) => s.category != null && !s.category!.isIndoor)
         .toList();
 
     final isBadWeather = dayWeather == WeatherCondition.bad ||
@@ -464,16 +794,20 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     final prompt = 'Wetter Tag $day: $weatherInfo\n'
         'Aktuelle Stops: $currentStopsText\n'
         '${isBadWeather ? 'Outdoor-Stops die ersetzt werden koennten: ${outdoorStops.map((s) => '${s.name} (${s.poiId})').join(', ')}\n' : ''}'
-        'Kandidaten-POIs entlang der Route: $candidatesText\n\n'
-        'Aufgabe: Waehle die besten 5 POIs als Empfehlungen fuer diesen Reisetag.\n'
-        'Beruecksichtige: Wetter (Indoor bei Regen bevorzugen), Must-See-Attraktionen, Kategorie-Vielfalt, Umweg.\n'
-        '${isBadWeather ? 'Bei schlechtem Wetter: Schlage Indoor-Alternativen vor und nutze "swap" um Outdoor-Stops zu ersetzen.\n' : 'Bei gutem Wetter: Empfehle die besten POIs zum Hinzufuegen.\n'}'
+        'Must-See POIs in der Naehe:\n$candidatesText\n\n'
+        'Aufgabe: Waehle die besten 3 Must-See Highlights als Empfehlungen.\n'
+        'Nur die bekanntesten und lohnenswertesten Sehenswuerdigkeiten empfehlen.\n'
+        'Beruecksichtige: Bekanntheit, Wetter (Indoor bei Regen), Ortsbezug.\n'
+        '${isBadWeather ? 'Bei schlechtem Wetter: Schlage Indoor-Alternativen vor und nutze "swap".\n' : 'Empfehle die bekanntesten Highlights zum Hinzufuegen.\n'}'
         'Antworte als JSON Array:\n'
         '[{"name": "...", "action": "add|swap", "targetPOIId": "...", "reasoning": "1 Satz", "score": 0.0-1.0}]';
 
     final response = await aiService.chat(
       message: prompt,
-      context: TripContext(route: trip.route, stops: candidates),
+      context: TripContext(
+        route: trip.route,
+        stops: candidates.map((c) => c.poi).toList(),
+      ),
     );
 
     // JSON aus der Response extrahieren
@@ -487,7 +821,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
   /// Parsed die GPT-Response und erstellt AISuggestion-Objekte
   List<AISuggestion> _parseGPTResponse({
     required String response,
-    required List<POI> candidates,
+    required List<_StopCandidate> candidates,
     required WeatherCondition dayWeather,
   }) {
     try {
@@ -503,7 +837,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           List<dynamic>.from(jsonDecode(jsonStr) as List);
 
       final suggestions = <AISuggestion>[];
-      for (final item in parsed.take(5)) {
+      for (final item in parsed.take(3)) {
         final map = item as Map<String, dynamic>;
         final name = map['name'] as String? ?? '';
         final action = map['action'] as String? ?? 'add';
@@ -512,16 +846,17 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         final targetPOIId = map['targetPOIId'] as String?;
 
         // Kandidaten-POI anhand des Namens finden
-        final matchedPOI = candidates.firstWhere(
-          (p) => p.name.toLowerCase().contains(name.toLowerCase()) ||
-              name.toLowerCase().contains(p.name.toLowerCase()),
+        final matchedEntry = candidates.firstWhere(
+          (entry) =>
+              entry.poi.name.toLowerCase().contains(name.toLowerCase()) ||
+              name.toLowerCase().contains(entry.poi.name.toLowerCase()),
           orElse: () => candidates.first,
         );
 
         suggestions.add(AISuggestion(
-          message: '${matchedPOI.name} - ${matchedPOI.category?.label ?? matchedPOI.categoryId}',
+          message: '${matchedEntry.poi.name} - ${matchedEntry.poi.category?.label ?? matchedEntry.poi.categoryId}',
           type: SuggestionType.alternative,
-          alternativePOI: matchedPOI,
+          alternativePOI: matchedEntry.poi,
           weather: dayWeather,
           actionType: action,
           targetPOIId: action == 'swap' ? targetPOIId : null,
@@ -542,26 +877,27 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
   }
 
   /// Regelbasiertes Fallback-Ranking (ohne GPT)
-  /// Beruecksichtigt Must-See, Wetter-Resilience und Umweg
+  /// Beruecksichtigt Must-See, Wetter-Resilience, Umweg und Stop-Naehe
   List<AISuggestion> _rankRuleBased({
     required int day,
     required int totalDays,
-    required List<POI> candidates,
+    required List<_StopCandidate> candidates,
     required RouteWeatherState routeWeather,
   }) {
     final dayWeather = _getDayWeather(day, totalDays, routeWeather);
     final isBadWeather = dayWeather == WeatherCondition.bad ||
         dayWeather == WeatherCondition.danger;
 
-    // Sortiere nach gewichtetem Smart-Score
-    final sorted = List<POI>.from(candidates)
+    // Sortiere nach gewichtetem Smart-Score (mit Naehe-Bonus)
+    final sorted = List<_StopCandidate>.from(candidates)
       ..sort((a, b) {
-        final aScore = _calculateSmartScore(a, isBadWeather);
-        final bScore = _calculateSmartScore(b, isBadWeather);
+        final aScore = _calculateSmartScore(a.poi, isBadWeather, distanceKm: a.distanceKm);
+        final bScore = _calculateSmartScore(b.poi, isBadWeather, distanceKm: b.distanceKm);
         return bScore.compareTo(aScore);
       });
 
-    return sorted.take(5).map((poi) {
+    return sorted.take(3).map((entry) {
+      final poi = entry.poi;
       final detourText = poi.detourKm != null
           ? ' (${poi.detourKm!.toStringAsFixed(1)} km Umweg)'
           : '';
@@ -569,6 +905,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       final weatherText = isBadWeather && poi.category?.isWeatherResilient == true
           ? 'Indoor-Empfehlung'
           : 'Empfehlung';
+      final locationText = '${entry.distanceKm.toStringAsFixed(1)}km von ${entry.nearestStop}';
       return AISuggestion(
         message:
             '${poi.name} - ${poi.category?.label ?? poi.categoryId}',
@@ -576,8 +913,8 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         alternativePOI: poi,
         weather: dayWeather,
         actionType: 'add',
-        aiReasoning: '$mustSeeText$weatherText entlang der Route$detourText',
-        relevanceScore: _calculateSmartScore(poi, isBadWeather) / 130.0,
+        aiReasoning: '$mustSeeText$weatherText - $locationText$detourText',
+        relevanceScore: _calculateSmartScore(poi, isBadWeather, distanceKm: entry.distanceKm) / 140.0,
       );
     }).toList();
   }

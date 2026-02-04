@@ -125,7 +125,11 @@ class Trip with _$Trip {
   }
 
   /// Berechnet die geschaetzte Fahrdistanz fuer einen bestimmten Tag
-  /// Haversine-Summe inkl. Segment zum Tagesziel × Faktor 1.35 (≈ echte Fahrstrecke)
+  /// Haversine-Summe × Faktor 1.35 (≈ echte Fahrstrecke)
+  ///
+  /// Tagesdistanz = Anreise vom Vortags-letzten-Stop + Strecke zwischen Stops
+  /// Nur letzter Tag: + Rueckkehr zum Ziel (route.end)
+  /// Kein "Outgoing-Segment" zum Folgetag — das ist Incoming des naechsten Tages
   double getDistanceForDay(int dayNumber) {
     final dayStops = getStopsForDay(dayNumber);
     if (dayStops.isEmpty) return 0;
@@ -153,16 +157,9 @@ class Trip with _$Trip {
       prevLocation = stop.location;
     }
 
-    // Segment zum Tagesziel (wie im Google Maps Export)
+    // Nur letzter Tag: Rueckkehr-Segment zum Trip-Ziel einrechnen
     if (dayNumber == actualDays) {
-      // Letzter Tag: zurueck zum Start
-      total += _haversineDistance(prevLocation!, route.start);
-    } else {
-      // Naechster Tag: erster Stop des Folgetages
-      final nextDayStops = getStopsForDay(dayNumber + 1);
-      if (nextDayStops.isNotEmpty) {
-        total += _haversineDistance(prevLocation!, nextDayStops.first.location);
-      }
+      total += _haversineDistance(prevLocation!, route.end);
     }
 
     // Haversine → geschaetzte Fahrstrecke (Faktor ~1.35)

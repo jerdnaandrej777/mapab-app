@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
+import '../../core/utils/weather_poi_utils.dart';
 import '../../data/models/poi.dart';
 import '../../data/services/ai_service.dart';
 import '../../data/services/poi_enrichment_service.dart';
@@ -13,6 +14,8 @@ import '../../data/repositories/geocoding_repo.dart';
 import '../../data/repositories/poi_repo.dart';
 import '../../data/repositories/trip_generator_repo.dart';
 import '../../features/map/providers/route_session_provider.dart';
+import '../../features/map/providers/weather_provider.dart';
+import '../../features/map/widgets/weather_badge_unified.dart';
 import '../../features/poi/providers/poi_state_provider.dart';
 import '../../features/trip/providers/trip_state_provider.dart';
 import 'widgets/chat_message.dart';
@@ -43,6 +46,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   // Such-Radius (10-100km)
   double _searchRadius = 30.0;
 
+  // Wetter-Condition fuer Badge-Anzeige (cached)
+  WeatherCondition? get _chatWeatherCondition {
+    final state = ref.read(locationWeatherNotifierProvider);
+    return state.hasWeather ? state.condition : null;
+  }
+
   // Chat-Nachrichten mit History für Backend
   // Erweitert um POI-Liste Support
   final List<Map<String, dynamic>> _messages = [
@@ -54,12 +63,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     },
   ];
 
-  final List<String> _suggestions = [
-    '📍 POIs in meiner Nähe',
-    '🏰 Sehenswürdigkeiten',
-    '🌲 Natur & Parks',
-    '🍽️ Restaurants',
-  ];
+  List<String> get _suggestions {
+    final weatherState = ref.read(locationWeatherNotifierProvider);
+    final condition = weatherState.condition;
+    if (condition == WeatherCondition.bad ||
+        condition == WeatherCondition.danger) {
+      return [
+        '🏛️ Indoor-Tipps bei Regen',
+        '📍 POIs in meiner Nähe',
+        '🏰 Sehenswürdigkeiten',
+        '🍽️ Restaurants',
+      ];
+    }
+    if (condition == WeatherCondition.good) {
+      return [
+        '☀️ Outdoor-Highlights',
+        '📍 POIs in meiner Nähe',
+        '🌲 Natur & Parks',
+        '🏰 Sehenswürdigkeiten',
+      ];
+    }
+    return [
+      '📍 POIs in meiner Nähe',
+      '🏰 Sehenswürdigkeiten',
+      '🌲 Natur & Parks',
+      '🍽️ Restaurants',
+    ];
+  }
 
   @override
   void initState() {
@@ -768,14 +798,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      poi.shortDescription ?? poi.categoryLabel,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            poi.shortDescription ?? poi.categoryLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_chatWeatherCondition != null &&
+                            _chatWeatherCondition != WeatherCondition.unknown &&
+                            _chatWeatherCondition != WeatherCondition.mixed) ...[
+                          const SizedBox(width: 6),
+                          WeatherBadgeUnified.fromCategory(
+                            condition: _chatWeatherCondition!,
+                            category: poi.category,
+                            size: WeatherBadgeSize.compact,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -874,6 +920,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'was kann ich',
       'zeig mir',
       'empfehle',
+      'indoor-tipps',
+      'outdoor-highlight',
+      'bei regen',
     ];
 
     return locationKeywords.any((k) => lowerQuery.contains(k));
@@ -912,6 +961,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'freizeitpark': ['activity'],
       'therme': ['activity'],
       'stadt': ['city'],
+      'indoor': ['museum', 'church', 'restaurant', 'hotel', 'castle', 'activity'],
+      'outdoor': ['nature', 'park', 'lake', 'coast', 'viewpoint'],
+      'regen': ['museum', 'church', 'restaurant', 'hotel', 'castle', 'activity'],
     };
 
     for (final entry in categoryMapping.entries) {
@@ -992,7 +1044,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       // POIs nach Distanz sortieren
       final Distance distanceCalculator = const Distance();
-      final sortedPOIs = List<POI>.from(pois);
+      var sortedPOIs = List<POI>.from(pois);
       sortedPOIs.sort((a, b) {
         final distA = distanceCalculator.as(
           LengthUnit.Kilometer,
@@ -1006,6 +1058,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
         return distA.compareTo(distB);
       });
+
+      // Wetter-basierte Sekundaer-Sortierung
+      final weatherState = ref.read(locationWeatherNotifierProvider);
+      final chatWeatherCondition = weatherState.condition;
+      if (chatWeatherCondition != WeatherCondition.unknown &&
+          chatWeatherCondition != WeatherCondition.mixed) {
+        sortedPOIs = WeatherPOIUtils.sortByWeatherRelevance(
+          sortedPOIs,
+          chatWeatherCondition,
+        );
+      }
 
       // Header-Text basierend auf Kategorien
       String headerText;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
+import 'weather_badge_unified.dart';
 
-/// Kompakte Wetter-Anzeige für POI-Karten
+/// Kompakte Wetter-Anzeige fuer POI-Karten.
+/// Delegiert an WeatherBadgeUnified (Dark-Mode-kompatibel).
 class WeatherBadge extends StatelessWidget {
   final WeatherCondition overallCondition;
   final bool isIndoorPOI;
@@ -14,53 +16,10 @@ class WeatherBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final badge = _getBadge(colorScheme);
-    if (badge == null) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: badge.color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(badge.icon, style: const TextStyle(fontSize: 10)),
-          const SizedBox(width: 2),
-          Text(
-            badge.text,
-            style: TextStyle(
-              fontSize: 9,
-              color: colorScheme.onPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+    return WeatherBadgeUnified(
+      condition: overallCondition,
+      isWeatherResilient: isIndoorPOI,
+      size: WeatherBadgeSize.inline,
     );
-  }
-
-  ({String icon, String text, Color color})? _getBadge(ColorScheme colorScheme) {
-    // Bei schlechtem Wetter
-    if (overallCondition == WeatherCondition.danger ||
-        overallCondition == WeatherCondition.bad) {
-      if (isIndoorPOI) {
-        return (icon: '👍', text: 'Empfohlen', color: Colors.green);
-      } else {
-        if (overallCondition == WeatherCondition.danger) {
-          return (icon: '⚠️', text: 'Unwetter', color: Colors.red);
-        }
-        return (icon: '🌧️', text: 'Regen', color: colorScheme.tertiary);
-      }
-    }
-
-    // Bei gutem Wetter
-    if (overallCondition == WeatherCondition.good && !isIndoorPOI) {
-      return (icon: '🌞', text: 'Ideal', color: Colors.green);
-    }
-
-    return null;
   }
 }

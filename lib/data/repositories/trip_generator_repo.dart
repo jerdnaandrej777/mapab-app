@@ -9,6 +9,7 @@ import '../../core/algorithms/route_optimizer.dart';
 import '../../core/constants/categories.dart';
 import '../../core/constants/trip_constants.dart';
 import '../../core/utils/geo_utils.dart';
+import '../../core/utils/scoring_utils.dart';
 import '../models/poi.dart';
 import '../models/trip.dart';
 import '../services/hotel_service.dart';
@@ -60,6 +61,7 @@ class TripGeneratorRepository {
     int poiCount = 5,
     LatLng? destinationLocation,
     String? destinationAddress,
+    WeatherCondition? weatherCondition,
   }) async {
     final hasDestination = destinationLocation != null;
     final endLocation = destinationLocation ?? startLocation;
@@ -87,12 +89,29 @@ class TripGeneratorRepository {
       );
     }
 
+    // v1.9.13: Hotels sind fuer Tagesausfluege nicht relevant
+    availablePOIs = availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
         hasDestination
             ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
             : 'Keine POIs im Umkreis von ${radiusKm}km gefunden',
       );
+    }
+
+    // 1b. Wetter-adjustierte Scores setzen (v1.9.9)
+    if (weatherCondition != null &&
+        weatherCondition != WeatherCondition.unknown &&
+        weatherCondition != WeatherCondition.mixed) {
+      availablePOIs = availablePOIs.map((poi) {
+        final adjusted = ScoringUtils.adjustScoreForWeather(
+          score: poi.effectiveScore ?? poi.score.toDouble(),
+          isIndoorPOI: poi.category?.isWeatherResilient ?? false,
+          weatherCondition: weatherCondition,
+        );
+        return poi.copyWith(effectiveScore: adjusted);
+      }).toList();
     }
 
     // 2. Zufällige POIs auswählen
@@ -173,6 +192,7 @@ class TripGeneratorRepository {
     bool includeHotels = true,
     LatLng? destinationLocation,
     String? destinationAddress,
+    WeatherCondition? weatherCondition,
   }) async {
     final hasDestination = destinationLocation != null;
     final endLocation = destinationLocation ?? startLocation;
@@ -226,6 +246,9 @@ class TripGeneratorRepository {
 
     debugPrint('[TripGenerator] ${availablePOIs.length} POIs gefunden');
 
+    // v1.9.13: Hotels werden separat als Uebernachtungsstops behandelt, nicht als Sightseeing-POIs
+    availablePOIs = availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
         hasDestination
@@ -233,6 +256,20 @@ class TripGeneratorRepository {
             : 'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
               'Versuche einen anderen Startpunkt oder kleineren Radius.',
       );
+    }
+
+    // 1b. Wetter-adjustierte Scores setzen (v1.9.9)
+    if (weatherCondition != null &&
+        weatherCondition != WeatherCondition.unknown &&
+        weatherCondition != WeatherCondition.mixed) {
+      availablePOIs = availablePOIs.map((poi) {
+        final adjusted = ScoringUtils.adjustScoreForWeather(
+          score: poi.effectiveScore ?? poi.score.toDouble(),
+          isIndoorPOI: poi.category?.isWeatherResilient ?? false,
+          weatherCondition: weatherCondition,
+        );
+        return poi.copyWith(effectiveScore: adjusted);
+      }).toList();
     }
 
     // 2. Zufällige POIs auswählen
@@ -281,19 +318,21 @@ class TripGeneratorRepository {
     debugPrint('[TripGenerator] TripDays: $actualDays, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
     // Post-Validierung: Kein Tag darf 700km Display-Distanz ueberschreiten
-    // Falls doch, nochmals mit einem zusaetzlichen Tag splitten
-    bool needsResplit = false;
-    for (final day in tripDays) {
-      if (day.distanceKm != null) {
-        final displayKm = day.distanceKm! * TripConstants.haversineToDisplayFactor;
-        if (displayKm > TripConstants.maxDisplayKmPerDay) {
-          debugPrint('[TripGenerator] Tag ${day.dayNumber} = ~${displayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km → Re-Split');
-          needsResplit = true;
-          break;
+    // Wiederhole planDays mit mehr Tagen bis alle unter dem Limit sind (max 3 Versuche)
+    for (int resplitAttempt = 0; resplitAttempt < 3; resplitAttempt++) {
+      bool anyOverLimit = false;
+      for (final day in tripDays) {
+        if (day.distanceKm != null) {
+          final displayKm = day.distanceKm! * TripConstants.haversineToDisplayFactor;
+          if (displayKm > TripConstants.maxDisplayKmPerDay) {
+            debugPrint('[TripGenerator] Post-Validierung Versuch $resplitAttempt: Tag ${day.dayNumber} = ~${displayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km → Re-Split');
+            anyOverLimit = true;
+            break;
+          }
         }
       }
-    }
-    if (needsResplit) {
+      if (!anyOverLimit) break;
+
       tripDays = _dayPlanner.planDays(
         pois: optimizedPOIs,
         startLocation: startLocation,
@@ -301,7 +340,7 @@ class TripGeneratorRepository {
         returnToStart: !hasDestination,
       );
       actualDays = tripDays.length;
-      debugPrint('[TripGenerator] Re-Split: $actualDays Tage nach erneutem planDays()');
+      debugPrint('[TripGenerator] Re-Split Versuch $resplitAttempt: $actualDays Tage nach erneutem planDays()');
     }
 
     // 5. Hotels hinzufügen (optional)

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/categories.dart';
+import '../../core/utils/weather_poi_utils.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/route.dart';
 import '../map/providers/weather_provider.dart';
@@ -27,6 +28,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
   bool _isInitialized = false;
   late ScrollController _scrollController;
   Timer? _scrollDebounceTimer;
+  bool _weatherSortActive = false;
+  bool _weatherBannerDismissed = false;
 
   @override
   void initState() {
@@ -322,6 +325,16 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                   },
                 ),
                 const SizedBox(width: 8),
+                // Wetter-Tipp Chip (v1.9.9): Sortiert POIs nach Wetter-Relevanz
+                _FilterChip(
+                  label: 'Wetter-Tipp',
+                  icon: '\u{1F326}\u{FE0F}',
+                  isSelected: _weatherSortActive,
+                  onTap: () {
+                    setState(() => _weatherSortActive = !_weatherSortActive);
+                  },
+                ),
+                const SizedBox(width: 8),
                 ...POICategory.values.map((cat) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: _FilterChip(
@@ -391,9 +404,16 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
   Widget _buildPOIList(POIState poiState) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // Wetter-State für Badges (v1.7.6)
-    final weatherState = ref.watch(routeWeatherNotifierProvider);
-    final hasWeatherData = weatherState.weatherPoints.isNotEmpty;
+    // Wetter-State fuer Badges und Sortierung (v1.7.6, erweitert v1.9.9)
+    final routeWeather = ref.watch(routeWeatherNotifierProvider);
+    final locationWeather = ref.watch(locationWeatherNotifierProvider);
+    final hasRouteWeather = routeWeather.weatherPoints.isNotEmpty;
+    final hasLocationWeather = locationWeather.hasWeather;
+    final hasWeatherData = hasRouteWeather || hasLocationWeather;
+    // Effektive Wetter-Condition: Route-Wetter hat Prioritaet, dann Location-Wetter
+    final weatherCondition = hasRouteWeather
+        ? routeWeather.overallCondition
+        : (hasLocationWeather ? locationWeather.weather!.condition : null);
 
     // Loading
     if (poiState.isLoading) {
@@ -437,7 +457,13 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     }
 
     // Keine POIs
-    final pois = poiState.filteredPOIs;
+    var pois = poiState.filteredPOIs;
+
+    // Wetter-Sortierung anwenden wenn aktiv (v1.9.9)
+    if (_weatherSortActive && weatherCondition != null) {
+      pois = WeatherPOIUtils.sortByWeatherRelevance(pois, weatherCondition);
+    }
+
     if (pois.isEmpty) {
       return Center(
         child: Column(
@@ -465,8 +491,63 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
       );
     }
 
+    // Wetter-Kontext-Banner (v1.9.9): Dezenter Hinweis bei schlechtem Wetter
+    final showWeatherBanner = hasWeatherData &&
+        !_weatherBannerDismissed &&
+        (weatherCondition == WeatherCondition.bad ||
+         weatherCondition == WeatherCondition.danger);
+
     // POI-Liste OPTIMIERT: Mit cacheExtent und addAutomaticKeepAlives
-    return RefreshIndicator(
+    return Column(
+      children: [
+        if (showWeatherBanner)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: weatherCondition == WeatherCondition.danger
+                    ? colorScheme.errorContainer.withOpacity(0.5)
+                    : colorScheme.tertiaryContainer.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    weatherCondition == WeatherCondition.danger ? '\u{26A0}\u{FE0F}' : '\u{1F327}\u{FE0F}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      weatherCondition == WeatherCondition.danger
+                          ? 'Unwetter erwartet \u{2013} Indoor-POIs empfohlen'
+                          : 'Regen erwartet \u{2013} aktiviere "Wetter-Tipp" fuer bessere Sortierung',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: weatherCondition == WeatherCondition.danger
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() => _weatherBannerDismissed = true),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Expanded(child: RefreshIndicator(
       onRefresh: () async {
         _isInitialized = false;
         await _loadPOIs();
@@ -510,8 +591,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               isMustSee: poi.isMustSee,
               imageUrl: poi.imageUrl,
               highlights: poi.highlights,
-              // Wetter-Badge anzeigen wenn Wetterdaten vorhanden (v1.7.6)
-              weatherCondition: hasWeatherData ? weatherState.overallCondition : null,
+              // Wetter-Badge anzeigen wenn Wetterdaten vorhanden (v1.7.6, v1.9.9: Location-Wetter Fallback)
+              weatherCondition: hasWeatherData ? weatherCondition : null,
               onTap: () {
                 // FIX v1.6.7: selectPOI hier entfernt - wird in POIDetailScreen via selectPOIById aufgerufen
                 // Vorher: Doppel-Select mit veraltetem POI führte zu fehlenden Fotos/Highlights
@@ -524,6 +605,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
           );
         },
       ),
+    )),
+      ],
     );
   }
 
@@ -596,13 +679,15 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
       builder: (context) => POIFiltersSheet(
         selectedCategories: poiState.selectedCategories,
         mustSeeOnly: poiState.mustSeeOnly,
+        indoorOnly: poiState.indoorOnlyFilter,
         maxDetour: poiState.maxDetourKm,
-        onApply: (categories, mustSee, detour) {
+        onApply: (categories, mustSee, indoorOnly, detour) {
           final notifier = ref.read(pOIStateNotifierProvider.notifier);
           notifier.setSelectedCategories(categories);
           if (mustSee != poiState.mustSeeOnly) {
             notifier.toggleMustSeeOnly();
           }
+          notifier.setIndoorOnly(indoorOnly);
           notifier.setMaxDetour(detour);
           Navigator.pop(context);
         },

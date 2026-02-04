@@ -73,7 +73,7 @@ class RandomPOISelector {
     required LatLng startLocation,
     required List<POICategory> preferredCategories,
   }) {
-    double weight = poi.score.toDouble();
+    double weight = poi.effectiveScore ?? poi.score.toDouble();
 
     // Kategorie-Bonus (1.5x wenn in Präferenzen)
     final preferredIds = preferredCategories.map((c) => c.id).toSet();

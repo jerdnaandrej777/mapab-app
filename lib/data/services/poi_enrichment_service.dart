@@ -5,7 +5,9 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/supabase/supabase_client.dart';
 import '../models/poi.dart';
+import '../repositories/supabase_poi_repo.dart';
 import 'poi_cache_service.dart';
 
 part 'poi_enrichment_service.g.dart';
@@ -92,8 +94,11 @@ class POIEnrichmentService {
     return DateTime.now().difference(lastAttempt).inMinutes < 10;
   }
 
-  POIEnrichmentService({Dio? dio, POICacheService? cacheService})
-      : _dio = dio ??
+  final SupabasePOIRepository? _supabaseRepo;
+
+  POIEnrichmentService({Dio? dio, POICacheService? cacheService, SupabasePOIRepository? supabaseRepo})
+      : _supabaseRepo = supabaseRepo,
+        _dio = dio ??
             Dio(BaseOptions(
               headers: {'User-Agent': ApiConfig.userAgent},
               connectTimeout: const Duration(milliseconds: _enrichmentTimeout),
@@ -423,6 +428,13 @@ class POIEnrichmentService {
       // v1.7.9: Image Pre-Caching fuer sofortige Anzeige
       if (enrichedPOI.imageUrl != null) {
         unawaited(_prefetchImage(enrichedPOI.imageUrl!));
+      }
+
+      // Upload zu Supabase (fire-and-forget, nur bei erfolgreichem Enrichment mit Bild)
+      if (_supabaseRepo != null && enrichment.hasImage) {
+        unawaited(_supabaseRepo!.uploadEnrichedPOI(enrichedPOI).catchError((e) {
+          debugPrint('[POI-Upload] Enrichment-Upload Fehler: $e');
+        }));
       }
 
       // Wartende Requests benachrichtigen (Race Condition Fix)
@@ -1575,6 +1587,19 @@ LIMIT 30
     }
 
     debugPrint('[Enrichment] Batch abgeschlossen: ${results.length} POIs verarbeitet');
+
+    // Batch-Upload aller angereicherten POIs zu Supabase (fire-and-forget)
+    if (_supabaseRepo != null) {
+      final enrichedForUpload = results.values
+          .where((poi) => poi.isEnriched && poi.imageUrl != null)
+          .toList();
+      if (enrichedForUpload.isNotEmpty) {
+        unawaited(_supabaseRepo!.uploadEnrichedPOIsBatch(enrichedForUpload).catchError((e) {
+          debugPrint('[POI-Upload] Batch-Upload Fehler: $e');
+        }));
+      }
+    }
+
     return results;
   }
 
@@ -1636,6 +1661,7 @@ LIMIT 30
 }
 
 /// Riverpod Provider für POIEnrichmentService
+/// Mit optionalem Supabase-Upload fuer Crowdsourced Enrichment
 @riverpod
 POIEnrichmentService poiEnrichmentService(Ref ref) {
   // FIX v1.5.3: Static State bei Service-Erstellung zurücksetzen
@@ -1643,5 +1669,10 @@ POIEnrichmentService poiEnrichmentService(Ref ref) {
   POIEnrichmentService.resetStaticState();
 
   final cacheService = ref.watch(poiCacheServiceProvider);
-  return POIEnrichmentService(cacheService: cacheService);
+  final supabaseClient = ref.watch(supabaseProvider);
+  SupabasePOIRepository? supabaseRepo;
+  if (supabaseClient != null) {
+    supabaseRepo = SupabasePOIRepository(supabaseClient);
+  }
+  return POIEnrichmentService(cacheService: cacheService, supabaseRepo: supabaseRepo);
 }

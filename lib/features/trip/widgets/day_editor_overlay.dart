@@ -32,6 +32,7 @@ class DayEditorOverlay extends ConsumerStatefulWidget {
 class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   bool _weatherBannerDismissed = false;
   bool _isCorridorBrowserActive = false;
+  int _lastAutoTriggeredDay = -1;
 
   @override
   Widget build(BuildContext context) {
@@ -102,8 +103,25 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     // Outdoor-POIs zaehlen
     final outdoorCount = stopsForDay.where((s) {
       final cat = s.category;
-      return cat != null && !_isIndoorCategory(cat);
+      return cat != null && !cat.isIndoor;
     }).length;
+
+    // Auto-Trigger AI-Empfehlungen bei schlechtem Wetter (einmalig pro Tag)
+    if ((dayWeather == WeatherCondition.bad ||
+            dayWeather == WeatherCondition.danger) &&
+        outdoorCount > 0 &&
+        _lastAutoTriggeredDay != selectedDay) {
+      _lastAutoTriggeredDay = selectedDay;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(aITripAdvisorNotifierProvider.notifier).loadSmartRecommendations(
+              day: selectedDay,
+              trip: trip,
+              route: trip.route,
+              routeWeather: routeWeather,
+              existingStopIds: trip.stops.map((s) => s.poiId).toSet(),
+            );
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -351,15 +369,6 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     return closest;
   }
 
-  bool _isIndoorCategory(POICategory category) {
-    const indoorCategories = {
-      POICategory.museum,
-      POICategory.church,
-      POICategory.restaurant,
-      POICategory.hotel,
-    };
-    return indoorCategories.contains(category);
-  }
 }
 
 class _DayStats extends StatelessWidget {

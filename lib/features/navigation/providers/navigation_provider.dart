@@ -62,6 +62,11 @@ class NavigationState {
   final double distanceToNextPOIMeters;
   final Set<String> visitedStopIds;
 
+  // Route-Snapping (fuer Interpolation)
+  final LatLng? snappedPosition;
+  final double? routeSegmentBearing;
+  final int matchedRouteIndex;
+
   // Sprachausgabe
   final bool isMuted;
 
@@ -87,6 +92,9 @@ class NavigationState {
     this.nextPOIStop,
     this.distanceToNextPOIMeters = 0,
     this.visitedStopIds = const {},
+    this.snappedPosition,
+    this.routeSegmentBearing,
+    this.matchedRouteIndex = 0,
     this.isMuted = false,
     this.error,
   });
@@ -110,6 +118,9 @@ class NavigationState {
     TripStop? nextPOIStop,
     double? distanceToNextPOIMeters,
     Set<String>? visitedStopIds,
+    LatLng? snappedPosition,
+    double? routeSegmentBearing,
+    int? matchedRouteIndex,
     bool? isMuted,
     String? error,
   }) {
@@ -135,6 +146,9 @@ class NavigationState {
       distanceToNextPOIMeters:
           distanceToNextPOIMeters ?? this.distanceToNextPOIMeters,
       visitedStopIds: visitedStopIds ?? this.visitedStopIds,
+      snappedPosition: snappedPosition ?? this.snappedPosition,
+      routeSegmentBearing: routeSegmentBearing ?? this.routeSegmentBearing,
+      matchedRouteIndex: matchedRouteIndex ?? this.matchedRouteIndex,
       isMuted: isMuted ?? this.isMuted,
       error: error,
     );
@@ -154,7 +168,7 @@ class _NavThresholds {
   static const double poiApproachMeters = 500;
   static const double poiReachedMeters = 80;
   static const int rerouteDebounceMs = 5000;
-  static const int gpsDistanceFilter = 10; // Meter
+  static const int gpsDistanceFilter = 5; // Meter (reduziert fuer fluessigere Interpolation)
 }
 
 /// Navigation Provider - Kernlogik für Turn-by-Turn Navigation
@@ -274,6 +288,25 @@ class NavigationNotifier extends _$NavigationNotifier {
         '${remaining.length} verbleibend');
   }
 
+  /// Fuegt einen POI als naechsten Waypoint waehrend der Navigation hinzu.
+  /// Triggert Rerouting ueber aktuelle Position mit dem neuen Waypoint.
+  Future<void> addWaypointDuringNavigation(TripStop stop) async {
+    if (!state.isNavigating || state.currentPosition == null) return;
+
+    debugPrint('[Navigation] Neuer Waypoint hinzugefuegt: ${stop.name}');
+
+    // Stop als naechsten in die verbleibenden Stops einfuegen
+    final updatedStops = [stop, ...state.remainingStops];
+
+    state = state.copyWith(
+      remainingStops: updatedStops,
+      nextPOIStop: stop,
+    );
+
+    // Rerouting mit dem neuen Waypoint
+    await _reroute(state.currentPosition!);
+  }
+
   /// Startet den GPS-Position-Stream
   Future<void> _startPositionStream() async {
     _positionStream?.cancel();
@@ -379,7 +412,16 @@ class NavigationNotifier extends _$NavigationNotifier {
       return;
     }
 
-    // 8. State aktualisieren
+    // 8. Route-Segment-Bearing berechnen (fuer Interpolation bei niedrigem Speed)
+    double? segmentBearing;
+    if (matchResult.nearestIndex < routeCoords.length - 1) {
+      segmentBearing = _routeMatcher.calculateBearing(
+        routeCoords[matchResult.nearestIndex],
+        routeCoords[matchResult.nearestIndex + 1],
+      );
+    }
+
+    // 9. State aktualisieren
     state = state.copyWith(
       currentPosition: currentPos,
       currentHeading: heading,
@@ -393,6 +435,9 @@ class NavigationNotifier extends _$NavigationNotifier {
       completedDistanceKm: completedKm,
       progress: matchResult.progress,
       distanceToNextPOIMeters: distToNextPOI,
+      snappedPosition: matchResult.snappedPosition,
+      routeSegmentBearing: segmentBearing,
+      matchedRouteIndex: matchResult.nearestIndex,
       status: NavigationStatus.navigating,
       error: null,
     );

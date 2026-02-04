@@ -11,6 +11,7 @@ import '../../data/models/trip.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../map/providers/map_controller_provider.dart';
 import '../map/providers/route_planner_provider.dart';
+import '../map/providers/weather_provider.dart';
 import '../poi/providers/poi_state_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
@@ -544,6 +545,13 @@ $mapsUrl
     final route = tripState.route;
     final stops = tripState.stops;
 
+    // Wetter fuer Stop-Badges
+    final routeWeather = ref.watch(routeWeatherNotifierProvider);
+    final locationWeather = ref.watch(locationWeatherNotifierProvider);
+    final tripWeatherCondition = routeWeather.overallCondition != WeatherCondition.unknown
+        ? routeWeather.overallCondition
+        : locationWeather.condition;
+
     return Column(
       children: [
         // Trip-Zusammenfassung
@@ -553,6 +561,39 @@ $mapsUrl
           stopCount: stops.length,
           isRecalculating: tripState.isRecalculating,
         ),
+
+        // Wetter-Hinweis (dezent unter Summary)
+        if (tripWeatherCondition == WeatherCondition.bad ||
+            tripWeatherCondition == WeatherCondition.danger)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  tripWeatherCondition == WeatherCondition.danger
+                      ? Icons.warning_amber_rounded
+                      : Icons.water_drop_rounded,
+                  size: 14,
+                  color: tripWeatherCondition == WeatherCondition.danger
+                      ? colorScheme.error
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  tripWeatherCondition == WeatherCondition.danger
+                      ? 'Unwetter erwartet \u2013 Indoor-Stops bevorzugen'
+                      : 'Regen erwartet \u2013 Indoor-Stops hervorgehoben',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: tripWeatherCondition == WeatherCondition.danger
+                        ? colorScheme.error
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 8),
 
@@ -608,6 +649,8 @@ $mapsUrl
                 detourKm: (stop.detourKm ?? 0).toInt(),
                 durationMinutes: (stop.detourMinutes ?? 0).toInt(),
                 index: index,
+                weatherCondition: tripWeatherCondition,
+                isWeatherResilient: stop.category?.isWeatherResilient ?? false,
                 onTap: () {
                   // v1.6.8: POI zum State hinzufügen bevor Navigation
                   // Ermöglicht POI-Details mit Foto für Trip-Stops

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/utils/navigation_instruction_generator.dart';
 import '../../../data/services/voice_service.dart';
+import 'navigation_poi_discovery_provider.dart';
 import 'navigation_provider.dart';
 
 part 'navigation_tts_provider.g.dart';
@@ -29,6 +30,12 @@ class NavigationTts extends _$NavigationTts {
     ref.listen<NavigationState>(
       navigationNotifierProvider,
       (previous, next) => _onNavigationStateChanged(previous, next),
+    );
+
+    // Must-See POI Discovery beobachten
+    ref.listen<NavigationPOIDiscoveryState>(
+      navigationPOIDiscoveryNotifierProvider,
+      (previous, next) => _onDiscoveryStateChanged(previous, next),
     );
   }
 
@@ -145,6 +152,44 @@ class NavigationTts extends _$NavigationTts {
     );
 
     debugPrint('[NavigationTTS] Ansage (${level.name}): $instruction '
+        'in ${distance.round()}m');
+  }
+
+  /// Must-See POI Ankuendigung
+  void _onDiscoveryStateChanged(
+    NavigationPOIDiscoveryState? previous,
+    NavigationPOIDiscoveryState next,
+  ) {
+    // Pruefen ob Navigation aktiv und nicht stummgeschaltet
+    final navState = ref.read(navigationNotifierProvider);
+    if (navState.isMuted || !navState.isNavigating) return;
+
+    final poi = next.currentApproachingPOI;
+    if (poi == null) return;
+
+    final distance = next.distanceToApproachingPOI ?? double.infinity;
+
+    // Nur ankuendigen wenn unter TTS-Schwelle und noch nicht angekuendigt
+    if (distance > NavigationPOIDiscoveryNotifier.ttsThresholdMeters) return;
+    if (!next.shouldAnnouncePOI(poi.id)) return;
+
+    // Nicht waehrend aktiver Manoever-Ansage (check: sind wir < 200m vor einem Manoever?)
+    if (navState.distanceToNextStepMeters < _TtsThresholds.nearAnnounce) return;
+
+    final voiceService = ref.read(voiceServiceProvider);
+
+    // Must-See Ankuendigung
+    final rounded = (distance / 50).round() * 50;
+    final text = 'In $rounded Metern befindet sich ${poi.name}, '
+        'ein Must-See Highlight';
+    voiceService.speak(text);
+
+    // Als angekuendigt markieren
+    ref
+        .read(navigationPOIDiscoveryNotifierProvider.notifier)
+        .markAsAnnounced(poi.id);
+
+    debugPrint('[NavigationTTS] Must-See POI: ${poi.name} '
         'in ${distance.round()}m');
   }
 
