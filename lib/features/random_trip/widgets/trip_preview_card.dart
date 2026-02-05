@@ -367,27 +367,27 @@ class _StopList extends ConsumerWidget {
     String endLabel;
     if (isMultiDay && selectedDay != null) {
       if (selectedDay == 1) {
-        startLabel = 'Start (Tag 1)';
+        startLabel = context.l10n.tripPreviewStartDay1;
       } else {
         // Vorheriger Tag: letzter Stop
         final prevDayStops = trip.getStopsForDay(selectedDay! - 1);
         startLabel = prevDayStops.isNotEmpty
             ? 'Von: ${prevDayStops.last.name}'
-            : 'Tag $selectedDay Start';
+            : context.l10n.tripPreviewDayStart('$selectedDay');
       }
 
       if (selectedDay == trip.actualDays) {
-        endLabel = 'Zurück zum Start';
+        endLabel = context.l10n.tripPreviewBackToStart;
       } else {
         // Nächster Tag: erster Stop als Ziel
         final nextDayStops = trip.getStopsForDay(selectedDay! + 1);
         endLabel = nextDayStops.isNotEmpty
             ? 'Weiter nach: ${nextDayStops.first.name}'
-            : 'Ende Tag $selectedDay';
+            : context.l10n.tripPreviewEndDay('$selectedDay');
       }
     } else {
-      startLabel = 'Start';
-      endLabel = 'Zurück zum Start';
+      startLabel = context.l10n.weatherPointStart;
+      endLabel = context.l10n.tripPreviewBackToStart;
     }
 
     return Column(
@@ -419,7 +419,7 @@ class _StopList extends ConsumerWidget {
             iconColor: colorScheme.primary,
             title: stop.name,
             subtitle: stop.detourKm != null
-                ? '+${stop.detourKm!.toStringAsFixed(1)} km Umweg'
+                ? context.l10n.tripPreviewDetour(stop.detourKm!.toStringAsFixed(1))
                 : null,
             isOvernightStop: stop.isOvernightStop,
             imageUrl: imageUrl,
@@ -575,9 +575,9 @@ class _StopItem extends StatelessWidget {
                               color: Colors.purple.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text(
-                              '🏨 Übernachtung',
-                              style: TextStyle(fontSize: 10),
+                            child: Text(
+                              '🏨 ${context.l10n.tripPreviewOvernight}',
+                              style: const TextStyle(fontSize: 10),
                             ),
                           ),
                         if (trailing != null) trailing!,

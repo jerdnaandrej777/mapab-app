@@ -1163,7 +1163,7 @@ abstract class AppLocalizations {
   /// No description provided for @weatherRecMixed.
   ///
   /// In de, this message translates to:
-  /// **'Wechselhaftes Wetter. Sowohl Indoor- als auch Outdoor-POIs möglich.'**
+  /// **'Wechselhaft - flexibel planen'**
   String get weatherRecMixed;
 
   /// No description provided for @weatherRecBad.
@@ -1374,7 +1374,7 @@ abstract class AppLocalizations {
   ///
   /// In de, this message translates to:
   /// **'Routenpunkt {index} von {total}'**
-  String weatherRoutePoint(int index, int total);
+  String weatherRoutePoint(String index, String total);
 
   /// No description provided for @weatherExpectedOnDay.
   ///
@@ -3968,6 +3968,72 @@ abstract class AppLocalizations {
   /// **'Zielort eingeben...'**
   String get enterDestination;
 
+  /// No description provided for @mapCityOrAddress.
+  ///
+  /// In de, this message translates to:
+  /// **'Stadt oder Adresse...'**
+  String get mapCityOrAddress;
+
+  /// No description provided for @mapAddDestination.
+  ///
+  /// In de, this message translates to:
+  /// **'Ziel hinzufügen (optional)'**
+  String get mapAddDestination;
+
+  /// No description provided for @mapSurpriseMe.
+  ///
+  /// In de, this message translates to:
+  /// **'Überrasch mich!'**
+  String get mapSurpriseMe;
+
+  /// No description provided for @mapDeleteRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Route löschen'**
+  String get mapDeleteRoute;
+
+  /// No description provided for @mapDaysLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'{days} Tage'**
+  String mapDaysLabel(String days);
+
+  /// No description provided for @mapPoiCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'POI-Kategorien'**
+  String get mapPoiCategories;
+
+  /// No description provided for @mapResetAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle zurücksetzen'**
+  String get mapResetAll;
+
+  /// No description provided for @mapAllCategoriesSelected.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Kategorien ausgewählt'**
+  String get mapAllCategoriesSelected;
+
+  /// No description provided for @mapCategoriesSelected.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} von {total} ausgewählt'**
+  String mapCategoriesSelected(String count, String total);
+
+  /// No description provided for @mapPoisAlongRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'POIs entlang der Route'**
+  String get mapPoisAlongRoute;
+
+  /// No description provided for @mapWithoutDestination.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Ziel: Rundreise ab Start'**
+  String get mapWithoutDestination;
+
   /// No description provided for @tripTypeDayTrip.
   ///
   /// In de, this message translates to:
@@ -5311,6 +5377,306 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{name} - {category}'**
   String advisorPoiCategory(String name, String category);
+
+  /// No description provided for @weatherConditionGood.
+  ///
+  /// In de, this message translates to:
+  /// **'Gutes Wetter'**
+  String get weatherConditionGood;
+
+  /// No description provided for @weatherConditionMixed.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechselhaft'**
+  String get weatherConditionMixed;
+
+  /// No description provided for @weatherConditionBad.
+  ///
+  /// In de, this message translates to:
+  /// **'Schlechtes Wetter'**
+  String get weatherConditionBad;
+
+  /// No description provided for @weatherConditionDanger.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetterwarnung'**
+  String get weatherConditionDanger;
+
+  /// No description provided for @weatherConditionUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter unbekannt'**
+  String get weatherConditionUnknown;
+
+  /// No description provided for @weatherBadgeSnow.
+  ///
+  /// In de, this message translates to:
+  /// **'Schnee'**
+  String get weatherBadgeSnow;
+
+  /// No description provided for @weatherBadgeRain.
+  ///
+  /// In de, this message translates to:
+  /// **'Regen'**
+  String get weatherBadgeRain;
+
+  /// No description provided for @weatherBadgePerfect.
+  ///
+  /// In de, this message translates to:
+  /// **'Perfekt'**
+  String get weatherBadgePerfect;
+
+  /// No description provided for @weatherBadgeBad.
+  ///
+  /// In de, this message translates to:
+  /// **'Schlecht'**
+  String get weatherBadgeBad;
+
+  /// No description provided for @weatherBadgeDanger.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetter'**
+  String get weatherBadgeDanger;
+
+  /// No description provided for @weatherRecOutdoorIdeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute ideal für Outdoor-POIs'**
+  String get weatherRecOutdoorIdeal;
+
+  /// No description provided for @weatherRecRainIndoor.
+  ///
+  /// In de, this message translates to:
+  /// **'Regen - Indoor-POIs empfohlen'**
+  String get weatherRecRainIndoor;
+
+  /// No description provided for @weatherRecDangerIndoor.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetter - nur Indoor-POIs!'**
+  String get weatherRecDangerIndoor;
+
+  /// No description provided for @weatherToggleActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get weatherToggleActive;
+
+  /// No description provided for @weatherToggleApply.
+  ///
+  /// In de, this message translates to:
+  /// **'Anwenden'**
+  String get weatherToggleApply;
+
+  /// No description provided for @weatherPointStart.
+  ///
+  /// In de, this message translates to:
+  /// **'Start'**
+  String get weatherPointStart;
+
+  /// No description provided for @weatherPointEnd.
+  ///
+  /// In de, this message translates to:
+  /// **'Ziel'**
+  String get weatherPointEnd;
+
+  /// No description provided for @weatherIndoorOnly.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur Indoor-POIs'**
+  String get weatherIndoorOnly;
+
+  /// No description provided for @weatherAlertStorm.
+  ///
+  /// In de, this message translates to:
+  /// **'Sturmwarnung! Starke Winde ({windSpeed} km/h) entlang der Route.'**
+  String weatherAlertStorm(String windSpeed);
+
+  /// No description provided for @weatherAlertDanger.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetterwarnung! Fahrt verschieben empfohlen.'**
+  String get weatherAlertDanger;
+
+  /// No description provided for @weatherAlertWinter.
+  ///
+  /// In de, this message translates to:
+  /// **'Winterwetter! Schnee/Glätte möglich.'**
+  String get weatherAlertWinter;
+
+  /// No description provided for @weatherAlertRain.
+  ///
+  /// In de, this message translates to:
+  /// **'Regen erwartet. Indoor-Aktivitäten empfohlen.'**
+  String get weatherAlertRain;
+
+  /// No description provided for @weatherAlertBad.
+  ///
+  /// In de, this message translates to:
+  /// **'Schlechtes Wetter auf der Route.'**
+  String get weatherAlertBad;
+
+  /// No description provided for @weatherRecToday.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfehlung für heute'**
+  String get weatherRecToday;
+
+  /// No description provided for @weatherRecGoodDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Perfektes Wetter für Outdoor-Aktivitäten! Viewpoints, Natur und Seen empfohlen.'**
+  String get weatherRecGoodDetail;
+
+  /// No description provided for @weatherRecMixedDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechselhaftes Wetter. Sowohl Indoor- als auch Outdoor-POIs möglich.'**
+  String get weatherRecMixedDetail;
+
+  /// No description provided for @weatherRecBadDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Regen erwartet. Indoor-Aktivitäten wie Museen und Kirchen empfohlen.'**
+  String get weatherRecBadDetail;
+
+  /// No description provided for @weatherRecDangerDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetterwarnung! Bitte Outdoor-Aktivitäten vermeiden und drinnen bleiben.'**
+  String get weatherRecDangerDetail;
+
+  /// No description provided for @weatherRecNoData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Wetterdaten verfügbar.'**
+  String get weatherRecNoData;
+
+  /// No description provided for @weatherRecOutdoorPerfect.
+  ///
+  /// In de, this message translates to:
+  /// **'Perfektes Wetter für Outdoor-Aktivitäten'**
+  String get weatherRecOutdoorPerfect;
+
+  /// No description provided for @weatherRecMixedPrepare.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechselhaft - auf alles vorbereitet sein'**
+  String get weatherRecMixedPrepare;
+
+  /// No description provided for @weatherRecSnowCaution.
+  ///
+  /// In de, this message translates to:
+  /// **'Schneefall - Vorsicht auf glatten Straßen'**
+  String get weatherRecSnowCaution;
+
+  /// No description provided for @weatherRecBadIndoor.
+  ///
+  /// In de, this message translates to:
+  /// **'Schlechtes Wetter - Indoor-Aktivitäten empfohlen'**
+  String get weatherRecBadIndoor;
+
+  /// No description provided for @weatherRecStormWarning.
+  ///
+  /// In de, this message translates to:
+  /// **'Sturmwarnung! Starke Winde ({windSpeed} km/h)'**
+  String weatherRecStormWarning(String windSpeed);
+
+  /// No description provided for @weatherRecDangerCaution.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetterwarnung! Vorsicht auf diesem Streckenabschnitt'**
+  String get weatherRecDangerCaution;
+
+  /// No description provided for @weatherRecNoDataAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Wetterdaten verfügbar'**
+  String get weatherRecNoDataAvailable;
+
+  /// No description provided for @mapMyLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Mein Standort'**
+  String get mapMyLocation;
+
+  /// No description provided for @mapDetails.
+  ///
+  /// In de, this message translates to:
+  /// **'Details'**
+  String get mapDetails;
+
+  /// No description provided for @mapAddToRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Zur Route'**
+  String get mapAddToRoute;
+
+  /// No description provided for @mapSelectedPoint.
+  ///
+  /// In de, this message translates to:
+  /// **'Gewählter Punkt'**
+  String get mapSelectedPoint;
+
+  /// No description provided for @mapWaypoint.
+  ///
+  /// In de, this message translates to:
+  /// **'Zwischenstopp'**
+  String get mapWaypoint;
+
+  /// No description provided for @mapRouteCreated.
+  ///
+  /// In de, this message translates to:
+  /// **'Route zu \"{name}\" erstellt'**
+  String mapRouteCreated(String name);
+
+  /// No description provided for @mapPoiAdded.
+  ///
+  /// In de, this message translates to:
+  /// **'\"{name}\" hinzugefügt'**
+  String mapPoiAdded(String name);
+
+  /// No description provided for @mapErrorAdding.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen'**
+  String get mapErrorAdding;
+
+  /// No description provided for @tripPreviewStartDay1.
+  ///
+  /// In de, this message translates to:
+  /// **'Start (Tag 1)'**
+  String get tripPreviewStartDay1;
+
+  /// No description provided for @tripPreviewDayStart.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag {day} Start'**
+  String tripPreviewDayStart(String day);
+
+  /// No description provided for @tripPreviewBackToStart.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurück zum Start'**
+  String get tripPreviewBackToStart;
+
+  /// No description provided for @tripPreviewEndDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Ende Tag {day}'**
+  String tripPreviewEndDay(String day);
+
+  /// No description provided for @tripPreviewDetour.
+  ///
+  /// In de, this message translates to:
+  /// **'+{km} km Umweg'**
+  String tripPreviewDetour(String km);
+
+  /// No description provided for @tripPreviewOvernight.
+  ///
+  /// In de, this message translates to:
+  /// **'Übernachtung'**
+  String get tripPreviewOvernight;
 }
 
 class _AppLocalizationsDelegate

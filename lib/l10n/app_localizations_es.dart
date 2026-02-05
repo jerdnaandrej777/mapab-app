@@ -527,14 +527,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weatherThunderstormHail => 'Tormenta con granizo';
 
   @override
-  String get weatherForecast7Day => 'Pronóstico de 7 días';
+  String get weatherForecast7Day => 'Pronóstico 7 días';
 
   @override
   String get weatherToday => 'Hoy';
 
   @override
   String weatherFeelsLike(String temp) {
-    return 'Sensación $temp°';
+    return 'Sensación de $temp°';
   }
 
   @override
@@ -563,8 +563,7 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Clima perfecto para actividades al aire libre! Miradores, naturaleza y lagos recomendados.';
 
   @override
-  String get weatherRecMixed =>
-      'Clima variable. Posibles tanto actividades interiores como exteriores.';
+  String get weatherRecMixed => 'Variable - planifica con flexibilidad';
 
   @override
   String get weatherRecBad =>
@@ -689,8 +688,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weatherNoData => 'No hay datos meteorológicos disponibles';
 
   @override
-  String weatherRoutePoint(int index, int total) {
-    return 'Punto de ruta $index de $total';
+  String weatherRoutePoint(String index, String total) {
+    return 'Punto $index de $total';
   }
 
   @override
@@ -2205,6 +2204,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get enterDestination => 'Introducir destino...';
 
   @override
+  String get mapCityOrAddress => 'Ciudad o dirección...';
+
+  @override
+  String get mapAddDestination => 'Añadir destino (opcional)';
+
+  @override
+  String get mapSurpriseMe => '¡Sorpréndeme!';
+
+  @override
+  String get mapDeleteRoute => 'Eliminar ruta';
+
+  @override
+  String mapDaysLabel(String days) {
+    return '$days días';
+  }
+
+  @override
+  String get mapPoiCategories => 'Categorías de POI';
+
+  @override
+  String get mapResetAll => 'Restablecer todo';
+
+  @override
+  String get mapAllCategoriesSelected => 'Todas las categorías seleccionadas';
+
+  @override
+  String mapCategoriesSelected(String count, String total) {
+    return '$count de $total seleccionadas';
+  }
+
+  @override
+  String get mapPoisAlongRoute => 'POIs a lo largo de la ruta';
+
+  @override
+  String get mapWithoutDestination =>
+      'Sin destino: viaje circular desde el inicio';
+
+  @override
   String get tripTypeDayTrip => 'Excursión de un día';
 
   @override
@@ -3096,4 +3133,179 @@ class AppLocalizationsEs extends AppLocalizations {
   String advisorPoiCategory(String name, String category) {
     return '$name - $category';
   }
+
+  @override
+  String get weatherConditionGood => 'Buen tiempo';
+
+  @override
+  String get weatherConditionMixed => 'Variable';
+
+  @override
+  String get weatherConditionBad => 'Mal tiempo';
+
+  @override
+  String get weatherConditionDanger => 'Alerta meteorológica';
+
+  @override
+  String get weatherConditionUnknown => 'Clima desconocido';
+
+  @override
+  String get weatherBadgeSnow => 'Nieve';
+
+  @override
+  String get weatherBadgeRain => 'Lluvia';
+
+  @override
+  String get weatherBadgePerfect => 'Perfecto';
+
+  @override
+  String get weatherBadgeBad => 'Malo';
+
+  @override
+  String get weatherBadgeDanger => 'Alerta';
+
+  @override
+  String get weatherRecOutdoorIdeal => 'Ideal para POIs al aire libre';
+
+  @override
+  String get weatherRecRainIndoor => 'Lluvia - POIs interiores recomendados';
+
+  @override
+  String get weatherRecDangerIndoor => 'Tormenta - ¡solo POIs interiores!';
+
+  @override
+  String get weatherToggleActive => 'Activo';
+
+  @override
+  String get weatherToggleApply => 'Aplicar';
+
+  @override
+  String get weatherPointStart => 'Inicio';
+
+  @override
+  String get weatherPointEnd => 'Destino';
+
+  @override
+  String get weatherIndoorOnly => 'Solo POIs interiores';
+
+  @override
+  String weatherAlertStorm(String windSpeed) {
+    return '¡Alerta de tormenta! Vientos fuertes ($windSpeed km/h) a lo largo de la ruta.';
+  }
+
+  @override
+  String get weatherAlertDanger =>
+      '¡Alerta meteorológica! Se recomienda posponer.';
+
+  @override
+  String get weatherAlertWinter => '¡Clima invernal! Posible nieve/hielo.';
+
+  @override
+  String get weatherAlertRain =>
+      'Se espera lluvia. Se recomiendan actividades interiores.';
+
+  @override
+  String get weatherAlertBad => 'Mal tiempo en la ruta.';
+
+  @override
+  String get weatherRecToday => 'Recomendación de hoy';
+
+  @override
+  String get weatherRecGoodDetail =>
+      '¡Tiempo perfecto para actividades al aire libre! Miradores, naturaleza y lagos recomendados.';
+
+  @override
+  String get weatherRecMixedDetail =>
+      'Tiempo variable. Tanto POIs interiores como exteriores posibles.';
+
+  @override
+  String get weatherRecBadDetail =>
+      'Se espera lluvia. Se recomiendan actividades interiores como museos e iglesias.';
+
+  @override
+  String get weatherRecDangerDetail =>
+      '¡Alerta meteorológica! Evite actividades al aire libre y permanezca en interiores.';
+
+  @override
+  String get weatherRecNoData => 'No hay datos meteorológicos disponibles.';
+
+  @override
+  String get weatherRecOutdoorPerfect =>
+      'Tiempo perfecto para actividades al aire libre';
+
+  @override
+  String get weatherRecMixedPrepare => 'Variable - prepárate para todo';
+
+  @override
+  String get weatherRecSnowCaution =>
+      'Nevadas - precaución en carreteras resbaladizas';
+
+  @override
+  String get weatherRecBadIndoor =>
+      'Mal tiempo - actividades interiores recomendadas';
+
+  @override
+  String weatherRecStormWarning(String windSpeed) {
+    return '¡Alerta de tormenta! Vientos fuertes ($windSpeed km/h)';
+  }
+
+  @override
+  String get weatherRecDangerCaution =>
+      '¡Alerta meteorológica! Precaución en este tramo';
+
+  @override
+  String get weatherRecNoDataAvailable =>
+      'No hay datos meteorológicos disponibles';
+
+  @override
+  String get mapMyLocation => 'Mi ubicación';
+
+  @override
+  String get mapDetails => 'Detalles';
+
+  @override
+  String get mapAddToRoute => 'Añadir a la ruta';
+
+  @override
+  String get mapSelectedPoint => 'Punto seleccionado';
+
+  @override
+  String get mapWaypoint => 'Parada intermedia';
+
+  @override
+  String mapRouteCreated(String name) {
+    return 'Ruta a \"$name\" creada';
+  }
+
+  @override
+  String mapPoiAdded(String name) {
+    return '\"$name\" añadido';
+  }
+
+  @override
+  String get mapErrorAdding => 'Error al añadir';
+
+  @override
+  String get tripPreviewStartDay1 => 'Inicio (Día 1)';
+
+  @override
+  String tripPreviewDayStart(String day) {
+    return 'Día $day inicio';
+  }
+
+  @override
+  String get tripPreviewBackToStart => 'Volver al inicio';
+
+  @override
+  String tripPreviewEndDay(String day) {
+    return 'Fin día $day';
+  }
+
+  @override
+  String tripPreviewDetour(String km) {
+    return '+$km km desvío';
+  }
+
+  @override
+  String get tripPreviewOvernight => 'Alojamiento';
 }

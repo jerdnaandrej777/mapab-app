@@ -185,7 +185,7 @@ class _LocationWeatherHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${weather.formattedTemperature} · ${weatherState.locationName ?? "Mein Standort"}',
+                  '${weather.formattedTemperature} · ${weatherState.locationName ?? context.l10n.mapMyLocation}',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -231,7 +231,7 @@ class _LocationWeatherHeader extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            tooltip: '7-Tage-Vorhersage',
+            tooltip: context.l10n.weatherForecast7Day,
           ),
           // Expand/Collapse Icon
           _ExpandIcon(isCollapsed: isCollapsed, colorScheme: colorScheme),
@@ -291,7 +291,7 @@ class _RouteWeatherHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _getConditionTitle(condition, weatherState),
+                  _getConditionTitle(context, condition, weatherState),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -316,7 +316,7 @@ class _RouteWeatherHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              _getBadgeText(condition, weatherState),
+              _getBadgeText(context, condition, weatherState),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
@@ -349,38 +349,38 @@ class _RouteWeatherHeader extends StatelessWidget {
   }
 
   String _getConditionTitle(
-      WeatherCondition condition, RouteWeatherState state) {
-    if (state.hasSnow) return 'Winterwetter';
-    if (state.hasDanger) return 'Unwetter auf der Route';
-    if (state.hasRain) return 'Regen möglich';
+      BuildContext context, WeatherCondition condition, RouteWeatherState state) {
+    if (state.hasSnow) return context.l10n.weatherWinterWeather;
+    if (state.hasDanger) return context.l10n.weatherStormOnRoute;
+    if (state.hasRain) return context.l10n.weatherRainPossible;
 
     switch (condition) {
       case WeatherCondition.good:
-        return 'Gutes Wetter';
+        return context.l10n.weatherConditionGood;
       case WeatherCondition.mixed:
-        return 'Wechselhaft';
+        return context.l10n.weatherConditionMixed;
       case WeatherCondition.bad:
-        return 'Schlechtes Wetter';
+        return context.l10n.weatherConditionBad;
       case WeatherCondition.danger:
-        return 'Unwetterwarnung';
+        return context.l10n.weatherConditionDanger;
       case WeatherCondition.unknown:
-        return 'Wetter unbekannt';
+        return context.l10n.weatherConditionUnknown;
     }
   }
 
-  String _getBadgeText(WeatherCondition condition, RouteWeatherState state) {
-    if (state.hasSnow) return 'Schnee';
-    if (state.hasRain) return 'Regen';
+  String _getBadgeText(BuildContext context, WeatherCondition condition, RouteWeatherState state) {
+    if (state.hasSnow) return context.l10n.weatherBadgeSnow;
+    if (state.hasRain) return context.l10n.weatherBadgeRain;
 
     switch (condition) {
       case WeatherCondition.good:
-        return 'Perfekt';
+        return context.l10n.weatherBadgePerfect;
       case WeatherCondition.mixed:
-        return 'Wechselhaft';
+        return context.l10n.weatherConditionMixed;
       case WeatherCondition.bad:
-        return 'Schlecht';
+        return context.l10n.weatherBadgeBad;
       case WeatherCondition.danger:
-        return 'Unwetter';
+        return context.l10n.weatherBadgeDanger;
       case WeatherCondition.unknown:
         return '';
     }
@@ -434,7 +434,7 @@ class _LocationWeatherContent extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _getRecommendationText(condition),
+                  _getRecommendationText(context, condition),
                   style: TextStyle(
                     fontSize: 13,
                     color: colorScheme.onSurface,
@@ -451,18 +451,18 @@ class _LocationWeatherContent extends ConsumerWidget {
     );
   }
 
-  String _getRecommendationText(WeatherCondition condition) {
+  String _getRecommendationText(BuildContext context, WeatherCondition condition) {
     switch (condition) {
       case WeatherCondition.good:
-        return 'Heute ideal für Outdoor-POIs';
+        return context.l10n.weatherRecOutdoorIdeal;
       case WeatherCondition.mixed:
-        return 'Wechselhaft - flexibel planen';
+        return context.l10n.weatherRecMixed;
       case WeatherCondition.bad:
-        return 'Regen - Indoor-POIs empfohlen';
+        return context.l10n.weatherRecRainIndoor;
       case WeatherCondition.danger:
-        return 'Unwetter - nur Indoor-POIs!';
+        return context.l10n.weatherRecDangerIndoor;
       case WeatherCondition.unknown:
-        return 'Wetter unbekannt';
+        return context.l10n.weatherConditionUnknown;
     }
   }
 }
@@ -501,7 +501,7 @@ class _WeatherCategoryToggle extends ConsumerWidget {
     final randomTripState = ref.watch(randomTripNotifierProvider);
     final isApplied = randomTripState.weatherCategoriesApplied;
     final colorScheme = Theme.of(context).colorScheme;
-    final (icon, text, color) = _getRecommendation();
+    final (icon, text, color) = _getRecommendation(context);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -549,7 +549,7 @@ class _WeatherCategoryToggle extends ConsumerWidget {
                       const SizedBox(width: 4),
                     ],
                     Text(
-                      isApplied ? 'Aktiv' : 'Anwenden',
+                      isApplied ? context.l10n.weatherToggleActive : context.l10n.weatherToggleApply,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -566,18 +566,18 @@ class _WeatherCategoryToggle extends ConsumerWidget {
     );
   }
 
-  (String, String, Color) _getRecommendation() {
+  (String, String, Color) _getRecommendation(BuildContext context) {
     switch (condition) {
       case WeatherCondition.good:
-        return ('☀️', 'Heute ideal für Outdoor-POIs', Colors.green);
+        return ('☀️', context.l10n.weatherRecOutdoorIdeal, Colors.green);
       case WeatherCondition.mixed:
-        return ('⛅', 'Wechselhaft - flexibel planen', Colors.amber);
+        return ('⛅', context.l10n.weatherRecMixed, Colors.amber);
       case WeatherCondition.bad:
-        return ('🌧️', 'Regen - Indoor-POIs empfohlen', Colors.orange);
+        return ('🌧️', context.l10n.weatherRecRainIndoor, Colors.orange);
       case WeatherCondition.danger:
-        return ('⚠️', 'Unwetter - nur Indoor-POIs!', Colors.red);
+        return ('⚠️', context.l10n.weatherRecDangerIndoor, Colors.red);
       case WeatherCondition.unknown:
-        return ('❓', 'Wetter unbekannt', Colors.grey);
+        return ('❓', context.l10n.weatherConditionUnknown, Colors.grey);
     }
   }
 }
@@ -599,9 +599,9 @@ class _WeatherPoints extends StatelessWidget {
             _WeatherPointItem(
               point: points[i],
               label: i == 0
-                  ? 'Start'
+                  ? context.l10n.weatherPointStart
                   : i == points.length - 1
-                      ? 'Ziel'
+                      ? context.l10n.weatherPointEnd
                       : null,
             ),
             if (i < points.length - 1)
@@ -720,7 +720,7 @@ class _RouteWeatherAlert extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _getAlertText(),
+                  _getAlertText(context),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark
@@ -763,7 +763,7 @@ class _RouteWeatherAlert extends ConsumerWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Nur Indoor-POIs',
+                    context.l10n.weatherOnlyIndoor,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -781,21 +781,21 @@ class _RouteWeatherAlert extends ConsumerWidget {
     );
   }
 
-  String _getAlertText() {
+  String _getAlertText(BuildContext context) {
     if (weatherState.hasDanger) {
       final maxWind = weatherState.maxWindSpeed.round();
       if (maxWind > 60) {
-        return 'Sturmwarnung! Starke Winde ($maxWind km/h) entlang der Route.';
+        return context.l10n.weatherAlertStorm('$maxWind');
       }
-      return 'Unwetterwarnung! Fahrt verschieben empfohlen.';
+      return context.l10n.weatherAlertDanger;
     }
     if (weatherState.hasSnow) {
-      return 'Winterwetter! Schnee/Glätte möglich.';
+      return context.l10n.weatherAlertWinter;
     }
     if (weatherState.hasRain) {
-      return 'Regen erwartet. Indoor-Aktivitäten empfohlen.';
+      return context.l10n.weatherAlertRain;
     }
-    return 'Schlechtes Wetter auf der Route.';
+    return context.l10n.weatherAlertBad;
   }
 }
 

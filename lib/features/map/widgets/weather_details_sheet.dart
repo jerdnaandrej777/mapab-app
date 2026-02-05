@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/weather.dart';
 
 /// Zeigt das Wetter-Details Bottom Sheet an (v1.7.6, v1.9.10: Vollbild)
@@ -79,7 +80,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                           ),
                         ),
                       Text(
-                        _formatDateTime(weather.timestamp),
+                        _formatDateTime(context, weather.timestamp),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -177,7 +178,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                       ),
                       const SizedBox(width: 2),
                       Text(
-                        'Gefühlt ${weather.apparentTemperature!.round()}°',
+                        context.l10n.weatherFeelsLike('${weather.apparentTemperature!.round()}'),
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.onSurfaceVariant,
@@ -215,7 +216,7 @@ class WeatherDetailsSheet extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            '7-Tage-Vorhersage',
+            context.l10n.weatherForecast7Day,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -248,7 +249,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      isToday ? 'Heute' : day.weekday,
+                      isToday ? context.l10n.weatherToday : day.weekday,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
@@ -301,7 +302,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                 Expanded(
                   child: _buildInfoTile(
                     icon: '🌅',
-                    label: 'Sonnenaufgang',
+                    label: context.l10n.weatherSunrise,
                     value: _formatTime(today!.sunrise!),
                     colorScheme: colorScheme,
                   ),
@@ -310,7 +311,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                 Expanded(
                   child: _buildInfoTile(
                     icon: '🌇',
-                    label: 'Sonnenuntergang',
+                    label: context.l10n.weatherSunset,
                     value: _formatTime(today.sunset!),
                     colorScheme: colorScheme,
                   ),
@@ -325,8 +326,8 @@ class WeatherDetailsSheet extends StatelessWidget {
                 Expanded(
                   child: _buildInfoTile(
                     icon: '☀️',
-                    label: 'UV-Index',
-                    value: _formatUVIndex(weather.uvIndex ?? today?.uvIndexMax ?? 0),
+                    label: context.l10n.weatherUvIndex,
+                    value: _formatUVIndex(context, weather.uvIndex ?? today?.uvIndexMax ?? 0),
                     colorScheme: colorScheme,
                   ),
                 ),
@@ -335,7 +336,7 @@ class WeatherDetailsSheet extends StatelessWidget {
               Expanded(
                 child: _buildInfoTile(
                   icon: '💧',
-                  label: 'Niederschlag',
+                  label: context.l10n.weatherPrecipitation,
                   value: '${weather.precipitationProbability}%',
                   colorScheme: colorScheme,
                 ),
@@ -391,7 +392,7 @@ class WeatherDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildRecommendation(BuildContext context, ColorScheme colorScheme) {
-    final (icon, text, color) = _getRecommendation();
+    final (icon, text, color) = _getRecommendation(context);
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -410,7 +411,7 @@ class WeatherDetailsSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Empfehlung für heute',
+                  context.l10n.weatherRecommendationToday,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -432,36 +433,36 @@ class WeatherDetailsSheet extends StatelessWidget {
     );
   }
 
-  (String, String, Color) _getRecommendation() {
+  (String, String, Color) _getRecommendation(BuildContext context) {
     switch (weather.condition) {
       case WeatherCondition.good:
         return (
           '☀️',
-          'Perfektes Wetter für Outdoor-Aktivitäten! Viewpoints, Natur und Seen empfohlen.',
+          context.l10n.weatherRecGood,
           Colors.green,
         );
       case WeatherCondition.mixed:
         return (
           '⛅',
-          'Wechselhaftes Wetter. Sowohl Indoor- als auch Outdoor-POIs möglich.',
+          context.l10n.weatherRecMixed,
           Colors.amber,
         );
       case WeatherCondition.bad:
         return (
           '🏛️',
-          'Regen erwartet. Indoor-Aktivitäten wie Museen und Kirchen empfohlen.',
+          context.l10n.weatherRecBad,
           Colors.orange,
         );
       case WeatherCondition.danger:
         return (
           '⚠️',
-          'Unwetterwarnung! Bitte Outdoor-Aktivitäten vermeiden und drinnen bleiben.',
+          context.l10n.weatherRecDanger,
           Colors.red,
         );
       case WeatherCondition.unknown:
         return (
           '❓',
-          'Keine Wetterdaten verfügbar.',
+          context.l10n.weatherRecUnknown,
           Colors.grey,
         );
     }
@@ -482,12 +483,12 @@ class WeatherDetailsSheet extends StatelessWidget {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
+  String _formatDateTime(BuildContext context, DateTime dateTime) {
     final now = DateTime.now();
     if (dateTime.day == now.day &&
         dateTime.month == now.month &&
         dateTime.year == now.year) {
-      return 'Heute, ${_formatTime(dateTime)}';
+      return '${context.l10n.weatherToday}, ${_formatTime(dateTime)}';
     }
     return '${dateTime.day}.${dateTime.month}.${dateTime.year}, ${_formatTime(dateTime)}';
   }
@@ -496,12 +497,12 @@ class WeatherDetailsSheet extends StatelessWidget {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatUVIndex(double uvIndex) {
+  String _formatUVIndex(BuildContext context, double uvIndex) {
     final rounded = uvIndex.round();
-    if (rounded <= 2) return '$rounded (Niedrig)';
-    if (rounded <= 5) return '$rounded (Mittel)';
-    if (rounded <= 7) return '$rounded (Hoch)';
-    if (rounded <= 10) return '$rounded (Sehr hoch)';
-    return '$rounded (Extrem)';
+    if (rounded <= 2) return context.l10n.weatherUvLow('$rounded');
+    if (rounded <= 5) return context.l10n.weatherUvMedium('$rounded');
+    if (rounded <= 7) return context.l10n.weatherUvHigh('$rounded');
+    if (rounded <= 10) return context.l10n.weatherUvVeryHigh('$rounded');
+    return context.l10n.weatherUvExtreme('$rounded');
   }
 }

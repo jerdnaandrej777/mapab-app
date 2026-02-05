@@ -14,6 +14,7 @@ import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/poi.dart';
 import 'route_weather_marker.dart';
 import 'weather_badge_unified.dart';
@@ -645,7 +646,7 @@ class _MapViewState extends ConsumerState<MapView> {
                       context.push('/poi/${poi.id}');
                     },
                     icon: const Icon(Icons.info_outline),
-                    label: const Text('Details'),
+                    label: Text(context.l10n.mapDetails),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -657,7 +658,7 @@ class _MapViewState extends ConsumerState<MapView> {
                       _addPOIToTripFromMap(poi);
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Zur Route'),
+                    label: Text(context.l10n.mapAddToRoute),
                   ),
                 ),
               ],
@@ -682,23 +683,23 @@ class _MapViewState extends ConsumerState<MapView> {
           children: [
             ListTile(
               leading: const Icon(Icons.trip_origin, color: Colors.green),
-              title: const Text('Als Start setzen'),
+              title: Text(context.l10n.mapSetAsStart),
               onTap: () {
                 Navigator.pop(context);
-                routePlanner.setStart(point, 'Gewählter Punkt');
+                routePlanner.setStart(point, context.l10n.mapSelectedPoint);
               },
             ),
             ListTile(
               leading: const Icon(Icons.place, color: Colors.red),
-              title: const Text('Als Ziel setzen'),
+              title: Text(context.l10n.mapSetAsDestination),
               onTap: () {
                 Navigator.pop(context);
-                routePlanner.setEnd(point, 'Gewählter Punkt');
+                routePlanner.setEnd(point, context.l10n.mapSelectedPoint);
               },
             ),
             ListTile(
               leading: const Icon(Icons.add_location),
-              title: const Text('Als Stopp hinzufügen'),
+              title: Text(context.l10n.mapAddAsStop),
               onTap: () {
                 Navigator.pop(context);
                 final tripNotifier = ref.read(tripStateProvider.notifier);
@@ -709,7 +710,7 @@ class _MapViewState extends ConsumerState<MapView> {
                 }
                 final tempPOI = POI(
                   id: 'waypoint-${DateTime.now().millisecondsSinceEpoch}',
-                  name: 'Zwischenstopp',
+                  name: context.l10n.mapWaypoint,
                   latitude: point.latitude,
                   longitude: point.longitude,
                   categoryId: 'attraction',
@@ -736,7 +737,7 @@ class _MapViewState extends ConsumerState<MapView> {
         // Route wurde erstellt - zum Trip-Tab navigieren
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Route zu "${poi.name}" erstellt'),
+            content: Text(context.l10n.mapRouteCreated(poi.name)),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -746,7 +747,7 @@ class _MapViewState extends ConsumerState<MapView> {
         // Stop zur bestehenden Route hinzugefügt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${poi.name} zur Route hinzugefügt'),
+            content: Text(context.l10n.mapPoiAdded(poi.name)),
           ),
         );
       }
@@ -760,7 +761,7 @@ class _MapViewState extends ConsumerState<MapView> {
       // Anderer Fehler
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          content: Text(result.message ?? context.l10n.mapErrorAdding),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),

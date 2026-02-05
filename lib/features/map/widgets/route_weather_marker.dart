@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/weather.dart';
 import '../providers/weather_provider.dart';
 
@@ -189,11 +190,11 @@ void showRouteWeatherDetail(
   // Label: Start, Ziel, oder Routenpunkt X
   final String label;
   if (index == 0) {
-    label = 'Start';
+    label = context.l10n.weatherPointStart;
   } else if (index == totalPoints - 1) {
-    label = 'Ziel';
+    label = context.l10n.weatherPointEnd;
   } else {
-    label = 'Routenpunkt ${index + 1} von $totalPoints';
+    label = context.l10n.weatherRoutePoint('${index + 1}', '$totalPoints');
   }
 
   showModalBottomSheet(
@@ -261,7 +262,7 @@ void showRouteWeatherDetail(
                     ),
                     if (weather.apparentTemperature != null)
                       Text(
-                        'Gefuehlt ${weather.apparentTemperature!.round()}°C',
+                        context.l10n.weatherFeelsLike('${weather.apparentTemperature!.round()}'),
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -287,19 +288,19 @@ void showRouteWeatherDetail(
                 _buildDetailItem(
                   icon: Icons.air,
                   value: '${weather.windSpeed.round()} km/h',
-                  label: 'Wind',
+                  label: context.l10n.weatherWind,
                   colorScheme: colorScheme,
                 ),
                 _buildDetailItem(
                   icon: Icons.water_drop_outlined,
                   value: '${weather.precipitation} mm',
-                  label: 'Niederschlag',
+                  label: context.l10n.weatherPrecipitation,
                   colorScheme: colorScheme,
                 ),
                 _buildDetailItem(
                   icon: Icons.umbrella,
                   value: '${weather.precipitationProbability}%',
-                  label: 'Regenrisiko',
+                  label: context.l10n.weatherRainRisk,
                   colorScheme: colorScheme,
                 ),
               ],
@@ -325,7 +326,7 @@ void showRouteWeatherDetail(
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _getRecommendationText(condition, weather),
+                    _getRecommendationText(context, condition, weather),
                     style: TextStyle(
                       fontSize: 13,
                       color: _getRecommendationTextColor(condition),
@@ -390,26 +391,26 @@ IconData _getRecommendationIcon(WeatherCondition condition) {
   }
 }
 
-String _getRecommendationText(WeatherCondition condition, Weather weather) {
+String _getRecommendationText(BuildContext context, WeatherCondition condition, Weather weather) {
   switch (condition) {
     case WeatherCondition.good:
-      return 'Perfektes Wetter fuer Outdoor-Aktivitaeten';
+      return context.l10n.weatherRecOutdoorPerfect;
     case WeatherCondition.mixed:
-      return 'Wechselhaft - auf alles vorbereitet sein';
+      return context.l10n.weatherRecMixedPrepare;
     case WeatherCondition.bad:
       if (weather.weatherCode >= 71 && weather.weatherCode <= 77 ||
           weather.weatherCode == 85 ||
           weather.weatherCode == 86) {
-        return 'Schneefall - Vorsicht auf glatten Strassen';
+        return context.l10n.weatherRecSnowCaution;
       }
-      return 'Schlechtes Wetter - Indoor-Aktivitaeten empfohlen';
+      return context.l10n.weatherRecBadIndoor;
     case WeatherCondition.danger:
       if (weather.windSpeed > 60) {
-        return 'Sturmwarnung! Starke Winde (${weather.windSpeed.round()} km/h)';
+        return context.l10n.weatherRecStormWarning('${weather.windSpeed.round()}');
       }
-      return 'Unwetterwarnung! Vorsicht auf diesem Streckenabschnitt';
+      return context.l10n.weatherRecDangerCaution;
     case WeatherCondition.unknown:
-      return 'Keine Wetterdaten verfuegbar';
+      return context.l10n.weatherRecNoDataAvailable;
   }
 }
 

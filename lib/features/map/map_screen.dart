@@ -356,7 +356,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     // Reverse Geocoding für Wetter-Widget
-    String locationName = 'Mein Standort';
+    String locationName = context.l10n.mapMyLocation;
     try {
       final geocodingRepo = ref.read(geocodingRepositoryProvider);
       final geocodeResult = await geocodingRepo.reverseGeocode(location);

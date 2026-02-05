@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/category_l10n.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/utils/location_helper.dart';
 import '../../../core/constants/categories.dart';
@@ -430,7 +431,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                         focusNode: _focusNode,
                         style: const TextStyle(fontSize: 13),
                         decoration: InputDecoration(
-                          hintText: 'Stadt oder Adresse...',
+                          hintText: context.l10n.mapCityOrAddress,
                           hintStyle: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
                           prefixIcon: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
                           suffixIcon: _isSearching
@@ -534,7 +535,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                       child: Text(
                         state.hasDestination
                             ? state.destinationAddress!
-                            : 'Ziel hinzufuegen (optional)',
+                            : context.l10n.mapAddDestination,
                         style: TextStyle(
                           fontSize: 13,
                           color: state.hasDestination
@@ -596,14 +597,14 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('🎲', style: TextStyle(fontSize: 16)),
-                    SizedBox(width: 8),
+                    const Text('🎲', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
                     Text(
-                      'Überrasch mich!',
-                      style: TextStyle(
+                      context.l10n.mapSurpriseMe,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -674,7 +675,7 @@ class RouteClearButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Route löschen',
+      label: context.l10n.mapDeleteRoute,
       child: SizedBox(
         width: double.infinity,
         child: Material(
@@ -702,7 +703,7 @@ class RouteClearButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Route löschen',
+                    context.l10n.mapDeleteRoute,
                     style: TextStyle(
                       color: Colors.red.shade400,
                       fontWeight: FontWeight.w600,
@@ -831,7 +832,7 @@ class _CompactRadiusSlider extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  '$days Tage',
+                  context.l10n.mapDaysLabel('$days'),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -1010,7 +1011,7 @@ class _CompactCategorySelector extends StatelessWidget {
                         Icon(Icons.category, color: colorScheme.primary, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'POI-Kategorien',
+                          context.l10n.mapPoiCategories,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -1024,15 +1025,15 @@ class _CompactCategorySelector extends StatelessWidget {
                         onPressed: () {
                           liveNotifier.setCategories([]);
                         },
-                        child: const Text('Alle zurücksetzen'),
+                        child: Text(context.l10n.mapResetAll),
                       ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   liveState.selectedCategories.isEmpty
-                      ? 'Alle Kategorien ausgewählt'
-                      : '${liveState.selectedCategoryCount} von ${tripCategories.length} ausgewählt',
+                      ? context.l10n.mapAllCategoriesSelected
+                      : context.l10n.mapCategoriesSelected('${liveState.selectedCategoryCount}', '${tripCategories.length}'),
                   style: TextStyle(
                     fontSize: 13,
                     color: colorScheme.onSurfaceVariant,
@@ -1089,7 +1090,7 @@ class _CompactCategorySelector extends StatelessWidget {
                                 const SizedBox(width: 2),
                               ],
                               Text(
-                                category.label,
+                                category.localizedLabel(context),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -1341,8 +1342,8 @@ class _DestinationSheetContent extends StatelessWidget {
             // Hinweis-Text
             Text(
               hasDestination
-                  ? 'POIs entlang der Route'
-                  : 'Ohne Ziel: Rundreise ab Start',
+                  ? context.l10n.mapPoisAlongRoute
+                  : context.l10n.mapWithoutDestination,
               style: TextStyle(
                 fontSize: 11,
                 color: colorScheme.onSurfaceVariant,

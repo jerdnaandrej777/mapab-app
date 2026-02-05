@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/utils/location_helper.dart';
 
 import '../../../data/models/poi.dart';
@@ -90,7 +91,7 @@ class POITripHelper {
       if (result.routeCreated && navigateOnRouteCreated) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Route zu "${poi.name}" erstellt'),
+            content: Text(context.l10n.mapRouteCreated(poi.name)),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -98,7 +99,7 @@ class POITripHelper {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('"${poi.name}" hinzugefügt'),
+            content: Text(context.l10n.mapPoiAdded(poi.name)),
             duration: const Duration(seconds: 1),
             behavior: SnackBarBehavior.floating,
           ),
@@ -112,7 +113,7 @@ class POITripHelper {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.errorMessage ?? 'Fehler beim Hinzufügen'),
+          content: Text(result.errorMessage ?? context.l10n.mapErrorAdding),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
