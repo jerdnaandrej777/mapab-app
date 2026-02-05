@@ -90,54 +90,49 @@ class NavigationBottomBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Button-Zeile - alle Buttons gleichmäßig verteilt
+              // Button-Zeile - Icon-Buttons links, Beenden-Button rechts
               Row(
                 children: [
-                  // Mute/Unmute
-                  Expanded(
-                    child: _ActionButton(
-                      icon: isMuted
-                          ? Icons.volume_off
-                          : Icons.volume_up,
-                      label: isMuted ? context.l10n.navMuteOn : context.l10n.navMuteOff,
-                      onTap: onToggleMute,
-                      colorScheme: colorScheme,
-                    ),
+                  // Mute/Unmute - nur Icon
+                  _IconActionButton(
+                    icon: isMuted ? Icons.volume_off : Icons.volume_up,
+                    tooltip: isMuted
+                        ? context.l10n.navMuteOn
+                        : context.l10n.navMuteOff,
+                    onTap: onToggleMute,
+                    colorScheme: colorScheme,
                   ),
-                  const SizedBox(width: 6),
-                  // Sprachbefehl
+                  const SizedBox(width: 8),
+                  // Sprachbefehl - nur Icon
                   if (onVoiceCommand != null) ...[
-                    Expanded(
-                      child: _ActionButton(
-                        icon: isListening ? Icons.mic : Icons.mic_none,
-                        label: isListening ? context.l10n.navVoiceListening : context.l10n.navVoice,
-                        onTap: onVoiceCommand!,
-                        colorScheme: colorScheme,
-                        isActive: isListening,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  // Übersicht
-                  Expanded(
-                    child: _ActionButton(
-                      icon: Icons.map_outlined,
-                      label: context.l10n.navOverview,
-                      onTap: onOverview,
+                    _IconActionButton(
+                      icon: isListening ? Icons.mic : Icons.mic_none,
+                      tooltip: context.l10n.navVoice,
+                      onTap: onVoiceCommand!,
                       colorScheme: colorScheme,
+                      isActive: isListening,
                     ),
+                    const SizedBox(width: 8),
+                  ],
+                  // Übersicht - nur Icon
+                  _IconActionButton(
+                    icon: Icons.map_outlined,
+                    tooltip: context.l10n.navOverview,
+                    onTap: onOverview,
+                    colorScheme: colorScheme,
                   ),
-                  const SizedBox(width: 6),
-                  // Navigation beenden
+                  const SizedBox(width: 16),
+                  // Navigation beenden - prominent mit Text
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: onStop,
-                      icon: const Icon(Icons.close, size: 18),
+                      icon: const Icon(Icons.close, size: 20),
                       label: Text(context.l10n.navEnd),
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.error,
                         foregroundColor: colorScheme.onError,
-                        minimumSize: const Size(0, 44),
+                        minimumSize: const Size(0, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
                     ),
                   ),
@@ -209,16 +204,17 @@ class _InfoItem extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+/// Kompakter Icon-Button für Navigations-Aktionen
+class _IconActionButton extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String tooltip;
   final VoidCallback onTap;
   final ColorScheme colorScheme;
   final bool isActive;
 
-  const _ActionButton({
+  const _IconActionButton({
     required this.icon,
-    required this.label,
+    required this.tooltip,
     required this.onTap,
     required this.colorScheme,
     this.isActive = false,
@@ -226,38 +222,25 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isActive) {
-      return FilledButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 18),
-        label: Flexible(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 11),
-            overflow: TextOverflow.ellipsis,
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: isActive ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 24,
+              color: isActive ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
-        style: FilledButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-        ),
-      );
-    }
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 18),
-      label: Flexible(
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 11),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
   }
