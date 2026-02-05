@@ -12,6 +12,7 @@ class NavigationBottomBar extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onOverview;
   final VoidCallback? onVoiceCommand;
+  final VoidCallback? onSave;
 
   const NavigationBottomBar({
     super.key,
@@ -24,6 +25,7 @@ class NavigationBottomBar extends StatelessWidget {
     required this.onStop,
     required this.onOverview,
     this.onVoiceCommand,
+    this.onSave,
   });
 
   @override
@@ -111,6 +113,16 @@ class NavigationBottomBar extends StatelessWidget {
                       onTap: onVoiceCommand!,
                       colorScheme: colorScheme,
                       isActive: isListening,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  // Route speichern - nur Icon
+                  if (onSave != null) ...[
+                    _IconActionButton(
+                      icon: Icons.bookmark_add_outlined,
+                      tooltip: context.l10n.tripSaveRoute,
+                      onTap: onSave!,
+                      colorScheme: colorScheme,
                     ),
                     const SizedBox(width: 8),
                   ],

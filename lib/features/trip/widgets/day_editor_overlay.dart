@@ -18,6 +18,7 @@ import '../../ai/providers/ai_trip_advisor_provider.dart';
 import '../../ai/widgets/ai_suggestion_banner.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/l10n/category_l10n.dart';
+import '../utils/trip_save_helper.dart';
 import 'corridor_browser_sheet.dart';
 import 'day_mini_map.dart';
 import 'editable_poi_card.dart';
@@ -142,6 +143,14 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          // Route speichern
+          IconButton(
+            onPressed: state.isLoading
+                ? null
+                : () => TripSaveHelper.saveAITrip(context, ref, state),
+            icon: const Icon(Icons.bookmark_add_outlined),
+            tooltip: context.l10n.tripSaveRoute,
+          ),
           // Neu generieren
           IconButton(
             onPressed: state.isLoading

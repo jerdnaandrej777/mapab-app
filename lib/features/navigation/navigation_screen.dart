@@ -9,6 +9,7 @@ import '../../data/models/navigation_step.dart';
 import '../../data/models/route.dart' hide LatLngConverter;
 import '../../data/models/trip.dart';
 import '../../data/services/voice_service.dart';
+import '../trip/utils/trip_save_helper.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/navigation_poi_discovery_provider.dart';
 import 'providers/navigation_tts_provider.dart';
@@ -413,6 +414,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               onStop: _stopNavigation,
               onOverview: _toggleOverview,
               onVoiceCommand: _handleVoiceCommand,
+              onSave: () => _saveRoute(),
             ),
           ),
         ],
@@ -883,6 +885,16 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   // ---------------------------------------------------------------------------
   // Dialoge
   // ---------------------------------------------------------------------------
+
+  /// Route in Favoriten speichern
+  Future<void> _saveRoute() async {
+    await TripSaveHelper.saveRouteDirectly(
+      context,
+      ref,
+      route: widget.route,
+      stops: widget.stops ?? [],
+    );
+  }
 
   void _stopNavigation() {
     showDialog(
