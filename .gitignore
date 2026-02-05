@@ -66,6 +66,8 @@ android/key.properties
 
 # APK files
 *.apk
+# Ausnahme: Release-APKs fuer Download-Seite
+!docs/*.apk
 
 # Node modules
 node_modules/

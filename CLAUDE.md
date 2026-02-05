@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.32 - Vollstaendige Lokalisierung (5 Sprachen, ~700 ARB-Keys, GPS-Dialog zentralisiert) | Plattformen: Android, iOS, Desktop
+Version: 1.10.1 - Galerie-Bugfix (Tabellen-Fix, Chip-Textfarben) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
