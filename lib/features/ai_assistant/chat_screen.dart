@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/utils/location_helper.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
@@ -55,40 +56,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   // Chat-Nachrichten mit History für Backend
   // Erweitert um POI-Liste Support
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'content':
-          'Hallo! Ich bin dein AI-Reiseassistent. Wie kann ich dir bei der Planung helfen?',
-      'isUser': false,
-      'type': ChatMessageType.text,
-    },
-  ];
+  final List<Map<String, dynamic>> _messages = [];
+  bool _welcomeMessageAdded = false;
 
-  List<String> get _suggestions {
+  List<String> _getSuggestions(BuildContext context) {
     final weatherState = ref.read(locationWeatherNotifierProvider);
     final condition = weatherState.condition;
     if (condition == WeatherCondition.bad ||
         condition == WeatherCondition.danger) {
       return [
-        '🏛️ Indoor-Tipps bei Regen',
-        '📍 POIs in meiner Nähe',
-        '🏰 Sehenswürdigkeiten',
-        '🍽️ Restaurants',
+        '🏛️ ${context.l10n.chatIndoorTips}',
+        '📍 ${context.l10n.chatPoisNearMe}',
+        '🏰 ${context.l10n.chatAttractions}',
+        '🍽️ ${context.l10n.chatRestaurants}',
       ];
     }
     if (condition == WeatherCondition.good) {
       return [
-        '☀️ Outdoor-Highlights',
-        '📍 POIs in meiner Nähe',
-        '🌲 Natur & Parks',
-        '🏰 Sehenswürdigkeiten',
+        '☀️ ${context.l10n.chatOutdoorHighlights}',
+        '📍 ${context.l10n.chatPoisNearMe}',
+        '🌲 ${context.l10n.chatNatureParks}',
+        '🏰 ${context.l10n.chatAttractions}',
       ];
     }
     return [
-      '📍 POIs in meiner Nähe',
-      '🏰 Sehenswürdigkeiten',
-      '🌲 Natur & Parks',
-      '🍽️ Restaurants',
+      '📍 ${context.l10n.chatPoisNearMe}',
+      '🏰 ${context.l10n.chatAttractions}',
+      '🌲 ${context.l10n.chatNatureParks}',
+      '🍽️ ${context.l10n.chatRestaurants}',
     ];
   }
 
@@ -137,7 +132,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted) {
         setState(() {
           _currentLocation = location;
-          _currentLocationName = locationName ?? 'Mein Standort';
+          _currentLocationName = locationName;
           _isLoadingLocation = false;
         });
         debugPrint(
@@ -189,20 +184,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Add welcome message on first build (needs context for l10n)
+    if (!_welcomeMessageAdded) {
+      _welcomeMessageAdded = true;
+      _messages.add({
+        'content': context.l10n.chatWelcome,
+        'isUser': false,
+        'type': ChatMessageType.text,
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.smart_toy, size: 24),
-            SizedBox(width: 8),
-            Text('AI-Assistent'),
+            const Icon(Icons.smart_toy, size: 24),
+            const SizedBox(width: 8),
+            Text(context.l10n.chatTitle),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _clearChat,
-            tooltip: 'Chat leeren',
+            tooltip: context.l10n.chatClear,
           ),
         ],
       ),
@@ -258,7 +263,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Vorschläge
           if (_messages.length <= 2)
             SuggestionChips(
-              suggestions: _suggestions,
+              suggestions: _getSuggestions(context),
               onSelected: _handleSuggestionTap,
             ),
 
@@ -275,8 +280,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Prüfe ob Backend überhaupt konfiguriert ist
     final isConfigured = ApiConfig.isConfigured;
     final message = isConfigured
-        ? 'Demo-Modus: Backend nicht erreichbar'
-        : 'Demo-Modus: Backend-URL nicht konfiguriert';
+        ? context.l10n.chatDemoBackendNotReachable
+        : context.l10n.chatDemoBackendNotConfigured;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -297,7 +302,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (isConfigured)
             TextButton(
               onPressed: _checkBackendHealth,
-              child: const Text('Erneut prüfen'),
+              child: Text(context.l10n.chatCheckAgain),
             ),
         ],
       ),
@@ -335,7 +340,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Standort wird geladen...',
+                      context.l10n.chatLocationLoading,
                       style: TextStyle(
                         fontSize: 13,
                         color: colorScheme.onSurfaceVariant,
@@ -355,7 +360,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          _currentLocationName ?? 'Standort aktiv',
+                          _currentLocationName ?? context.l10n.chatLocationActive,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -387,7 +392,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     color: colorScheme.onSurfaceVariant,
                   ),
                   label: Text(
-                    'Standort aktivieren',
+                    context.l10n.chatLocationEnable,
                     style: TextStyle(
                       fontSize: 13,
                       color: colorScheme.onSurfaceVariant,
@@ -422,7 +427,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     color: colorScheme.onSurfaceVariant,
                   ),
                   onPressed: _showRadiusSliderDialog,
-                  tooltip: 'Such-Radius anpassen',
+                  tooltip: context.l10n.chatRadiusAdjust,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -441,13 +446,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Dialog zum Anpassen des Such-Radius
   void _showRadiusSliderDialog() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     double tempRadius = _searchRadius;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Such-Radius'),
+          title: Text(l10n.chatSearchRadius),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -494,7 +500,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () {
@@ -503,7 +509,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 });
                 Navigator.pop(context);
               },
-              child: const Text('Übernehmen'),
+              child: Text(l10n.chatAccept),
             ),
           ],
         ),
@@ -530,7 +536,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'AI-Reiseassistent',
+            context.l10n.chatTitle,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -539,7 +545,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Frag mich alles über deine Reise!',
+            context.l10n.chatWelcomeSubtitle,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
               fontSize: 16,
@@ -570,7 +576,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: TextField(
                 controller: _messageController,
                 decoration: InputDecoration(
-                  hintText: 'Nachricht eingeben...',
+                  hintText: context.l10n.chatInputHint,
                   filled: true,
                   fillColor: colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
@@ -643,7 +649,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Keine POIs in diesem Bereich gefunden.',
+                  context.l10n.chatNoPoisFound,
                   style: TextStyle(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -664,7 +670,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 context.push('/pois');
               },
               icon: const Icon(Icons.list, size: 18),
-              label: Text('Alle ${pois.length} POIs anzeigen'),
+              label: Text(context.l10n.chatShowAllPois(pois.length)),
             ),
           ),
 
@@ -961,9 +967,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             _isLoading = false;
             _messages.add({
               'content':
-                  '📍 **Standort nicht verfügbar**\n\n'
-                  'Um POIs in deiner Nähe zu finden, benötige ich Zugriff auf deinen Standort.\n\n'
-                  'Bitte aktiviere die Ortungsdienste und versuche es erneut.',
+                  '📍 **${context.l10n.chatLocationNotAvailable}**\n\n'
+                  '${context.l10n.chatLocationNotAvailableMessage}',
               'isUser': false,
               'type': ChatMessageType.text,
             });
@@ -1022,13 +1027,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       // Header-Text basierend auf Kategorien
+      final radiusStr = _searchRadius.toInt().toString();
       String headerText;
       if (categories != null && categories.isNotEmpty) {
         headerText =
-            '📍 **${sortedPOIs.length} POIs** (${categories.join(", ")}) im Umkreis von ${_searchRadius.toInt()} km:';
+            '📍 **${context.l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}** (${categories.join(", ")}):';
       } else {
         headerText =
-            '📍 **${sortedPOIs.length} POIs** im Umkreis von ${_searchRadius.toInt()} km:';
+            '📍 **${context.l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}**:';
       }
 
       // POIs sofort anzeigen (mit Kategorie-Icons als Placeholder)
@@ -1079,9 +1085,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _isLoading = false;
           _messages.add({
             'content':
-                '❌ **Fehler bei der POI-Suche**\n\n'
-                'Entschuldigung, es gab ein Problem beim Laden der POIs.\n\n'
-                'Bitte versuche es erneut.',
+                '❌ **${context.l10n.chatPoisSearchError}**\n\n'
+                '${context.l10n.chatPoisSearchErrorMessage}',
             'isUser': false,
             'type': ChatMessageType.text,
           });
@@ -1147,7 +1152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       // Trip-Kontext abrufen (mit Standort für standortbasierte Empfehlungen)
       final tripState = ref.read(tripStateProvider);
-      final context = TripContext(
+      final tripContext = TripContext(
         route: tripState.route,
         stops: tripState.stops,
         userLatitude: _currentLocation?.latitude,
@@ -1157,7 +1162,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       final response = await aiService.chat(
         message: userMessage,
-        context: context,
+        context: tripContext,
         history: history.take(10).toList(), // Letzte 10 Nachrichten
       );
 
@@ -1168,7 +1173,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _messages.add({
           'content': response.isNotEmpty
               ? response
-              : 'Entschuldigung, ich konnte keine Antwort generieren.',
+              : context.l10n.chatNoResponseGenerated,
           'isUser': false,
         });
       });
@@ -1336,17 +1341,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _clearChat() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Chat leeren?'),
-        content: const Text('Die gesamte Konversation wird gelöscht.'),
+        title: Text(l10n.chatClearConfirm),
+        content: Text(l10n.chatClearMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -1354,13 +1359,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               setState(() {
                 _messages.clear();
                 _messages.add({
-                  'content':
-                      'Hallo! Ich bin dein AI-Reiseassistent. Wie kann ich dir bei der Planung helfen?',
+                  'content': l10n.chatWelcome,
                   'isUser': false,
                 });
               });
             },
-            child: const Text('Leeren'),
+            child: Text(l10n.clear),
           ),
         ],
       ),
@@ -1368,21 +1372,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _handleSuggestionTap(String suggestion) {
-    switch (suggestion) {
-      case '📍 POIs in meiner Nähe':
-        _handleLocationBasedQuery('Zeig mir POIs in meiner Nähe');
-        break;
-      case '🏰 Sehenswürdigkeiten':
-        _handleLocationBasedQuery('Zeig mir Sehenswürdigkeiten in meiner Nähe');
-        break;
-      case '🌲 Natur & Parks':
-        _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner Nähe');
-        break;
-      case '🍽️ Restaurants':
-        _handleLocationBasedQuery('Zeig mir Restaurants in meiner Nähe');
-        break;
-      default:
-        _sendMessage(suggestion);
+    final l10n = context.l10n;
+    if (suggestion.contains(l10n.chatPoisNearMe)) {
+      _handleLocationBasedQuery('Zeig mir POIs in meiner Nähe');
+    } else if (suggestion.contains(l10n.chatAttractions)) {
+      _handleLocationBasedQuery('Zeig mir Sehenswürdigkeiten in meiner Nähe');
+    } else if (suggestion.contains(l10n.chatNatureParks)) {
+      _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner Nähe');
+    } else if (suggestion.contains(l10n.chatRestaurants)) {
+      _handleLocationBasedQuery('Zeig mir Restaurants in meiner Nähe');
+    } else if (suggestion.contains(l10n.chatIndoorTips)) {
+      _handleLocationBasedQuery('Zeig mir Indoor-Tipps bei Regen in meiner Nähe');
+    } else if (suggestion.contains(l10n.chatOutdoorHighlights)) {
+      _handleLocationBasedQuery('Zeig mir Outdoor-Highlights in meiner Nähe');
+    } else {
+      _sendMessage(suggestion);
     }
   }
 
@@ -1490,6 +1494,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _showTripGeneratorDialog() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final destinationController = TextEditingController();
     final startController = TextEditingController();
     double days = 3;
@@ -1509,7 +1514,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('🤖 AI-Trip generieren'),
+          title: Text('🤖 ${l10n.chatGenerateAiTrip}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1518,10 +1523,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 // Ziel (optional für Random Route)
                 TextField(
                   controller: destinationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ziel (optional)',
-                    hintText: 'Leer = Zufällige Route um Startpunkt',
-                    prefixIcon: Icon(Icons.location_on),
+                  decoration: InputDecoration(
+                    labelText: l10n.chatDestinationOptional,
+                    hintText: l10n.chatEmptyRandomRoute,
+                    prefixIcon: const Icon(Icons.location_on),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1529,17 +1534,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 // Startpunkt (optional - GPS-Fallback)
                 TextField(
                   controller: startController,
-                  decoration: const InputDecoration(
-                    labelText: 'Startpunkt (optional)',
-                    hintText: 'Leer = GPS-Standort verwenden',
-                    prefixIcon: Icon(Icons.home),
+                  decoration: InputDecoration(
+                    labelText: l10n.chatStartOptional,
+                    hintText: l10n.chatEmptyUseGps,
+                    prefixIcon: const Icon(Icons.home),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Tage
                 Text(
-                  'Anzahl Tage',
+                  l10n.chatNumberOfDays,
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
@@ -1548,7 +1553,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${days.round()} ${days.round() == 1 ? "Tag" : "Tage"}',
+                  '${days.round()} ${days.round() == 1 ? l10n.tripConfigDay : l10n.tripConfigDays}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1560,7 +1565,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   min: 1,
                   max: 7,
                   divisions: 6,
-                  label: '${days.round()} Tage',
+                  label: '${days.round()} ${l10n.tripConfigDays}',
                   onChanged: (value) {
                     setDialogState(() {
                       days = value;
@@ -1571,7 +1576,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                 // Interessen
                 Text(
-                  'Interessen:',
+                  l10n.chatInterests,
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
@@ -1605,7 +1610,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -1659,7 +1664,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 }
               },
-              child: const Text('Generieren'),
+              child: Text(l10n.generate),
             ),
           ],
         ),
@@ -1803,7 +1808,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final position = gpsResult.position!;
 
     // Reverse Geocoding für Adresse
-    String address = 'Mein Standort';
+    String address = context.l10n.chatMyLocation;
     try {
       final geocodingRepo = ref.read(geocodingRepositoryProvider);
       final result = await geocodingRepo.reverseGeocode(position);

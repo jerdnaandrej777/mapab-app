@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format_utils.dart';
 
@@ -51,7 +52,7 @@ class TripSummary extends StatelessWidget {
               _buildStat(
                 icon: Icons.straighten,
                 value: FormatUtils.formatDistance(totalDistance),
-                label: 'Gesamt',
+                label: context.l10n.tripSummaryTotal,
                 isLoading: isRecalculating,
                 onPrimary: onPrimary,
               ),
@@ -63,7 +64,7 @@ class TripSummary extends StatelessWidget {
               _buildStat(
                 icon: Icons.timer,
                 value: FormatUtils.formatDuration(totalDuration),
-                label: 'Fahrzeit',
+                label: context.l10n.tripSummaryDriveTime,
                 isLoading: isRecalculating,
                 onPrimary: onPrimary,
               ),
@@ -75,7 +76,7 @@ class TripSummary extends StatelessWidget {
               _buildStat(
                 icon: Icons.place,
                 value: '$stopCount',
-                label: 'Stops',
+                label: context.l10n.tripSummaryStops,
                 isLoading: false,
                 onPrimary: onPrimary,
               ),

@@ -2606,6 +2606,174 @@ abstract class AppLocalizations {
   /// **'fünfte'**
   String get navOrdinalFifth;
 
+  /// No description provided for @navOrdinalSixth.
+  ///
+  /// In de, this message translates to:
+  /// **'sechste'**
+  String get navOrdinalSixth;
+
+  /// No description provided for @navOrdinalSeventh.
+  ///
+  /// In de, this message translates to:
+  /// **'siebte'**
+  String get navOrdinalSeventh;
+
+  /// No description provided for @navOrdinalEighth.
+  ///
+  /// In de, this message translates to:
+  /// **'achte'**
+  String get navOrdinalEighth;
+
+  /// No description provided for @navSharpRightOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Scharf rechts abbiegen auf {street}'**
+  String navSharpRightOn(String street);
+
+  /// No description provided for @navSharpLeftOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Scharf links abbiegen auf {street}'**
+  String navSharpLeftOn(String street);
+
+  /// No description provided for @navUturnOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenden auf {street}'**
+  String navUturnOn(String street);
+
+  /// No description provided for @navTurn.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbiegen'**
+  String get navTurn;
+
+  /// No description provided for @navTurnOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbiegen auf {street}'**
+  String navTurnOn(String street);
+
+  /// No description provided for @navForkStraight.
+  ///
+  /// In de, this message translates to:
+  /// **'An der Gabelung weiterfahren'**
+  String get navForkStraight;
+
+  /// No description provided for @navForkStraightOn.
+  ///
+  /// In de, this message translates to:
+  /// **'An der Gabelung weiterfahren auf {street}'**
+  String navForkStraightOn(String street);
+
+  /// No description provided for @navEndOfRoadStraight.
+  ///
+  /// In de, this message translates to:
+  /// **'Am Straßenende weiterfahren'**
+  String get navEndOfRoadStraight;
+
+  /// No description provided for @navEndOfRoadStraightOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Am Straßenende weiterfahren auf {street}'**
+  String navEndOfRoadStraightOn(String street);
+
+  /// No description provided for @navRoundaboutLeaveOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Kreisverkehr verlassen auf {street}'**
+  String navRoundaboutLeaveOn(String street);
+
+  /// No description provided for @navRoundaboutEnterOn.
+  ///
+  /// In de, this message translates to:
+  /// **'In den Kreisverkehr einfahren auf {street}'**
+  String navRoundaboutEnterOn(String street);
+
+  /// No description provided for @navStraightContinue.
+  ///
+  /// In de, this message translates to:
+  /// **'Geradeaus weiterfahren'**
+  String get navStraightContinue;
+
+  /// No description provided for @navDirectionLeft.
+  ///
+  /// In de, this message translates to:
+  /// **'Links '**
+  String get navDirectionLeft;
+
+  /// No description provided for @navDirectionRight.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechts '**
+  String get navDirectionRight;
+
+  /// No description provided for @navSharpRightShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Scharf rechts'**
+  String get navSharpRightShort;
+
+  /// No description provided for @navRightShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechts'**
+  String get navRightShort;
+
+  /// No description provided for @navSlightRightShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Leicht rechts'**
+  String get navSlightRightShort;
+
+  /// No description provided for @navStraightShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Geradeaus'**
+  String get navStraightShort;
+
+  /// No description provided for @navSlightLeftShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Leicht links'**
+  String get navSlightLeftShort;
+
+  /// No description provided for @navLeftShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Links'**
+  String get navLeftShort;
+
+  /// No description provided for @navSharpLeftShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Scharf links'**
+  String get navSharpLeftShort;
+
+  /// No description provided for @navKeepLeft.
+  ///
+  /// In de, this message translates to:
+  /// **'Links halten'**
+  String get navKeepLeft;
+
+  /// No description provided for @navKeepRight.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechts halten'**
+  String get navKeepRight;
+
+  /// No description provided for @navRoundabout.
+  ///
+  /// In de, this message translates to:
+  /// **'Kreisverkehr'**
+  String get navRoundabout;
+
+  /// No description provided for @navExitShort.
+  ///
+  /// In de, this message translates to:
+  /// **'{ordinal} Ausfahrt'**
+  String navExitShort(String ordinal);
+
   /// No description provided for @navMustSeeStop.
   ///
   /// In de, this message translates to:
@@ -3581,7 +3749,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatShowAllPois.
   ///
   /// In de, this message translates to:
-  /// **'Alle {count} POIs anzeigen'**
+  /// **'Alle POIs anzeigen'**
   String chatShowAllPois(int count);
 
   /// No description provided for @chatDestinationOptional.
@@ -4543,6 +4711,606 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Tagesausflug'**
   String get publishDaytrip;
+
+  /// No description provided for @dayEditorDriveTime.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrzeit'**
+  String get dayEditorDriveTime;
+
+  /// No description provided for @dayEditorWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter'**
+  String get dayEditorWeather;
+
+  /// No description provided for @dayEditorDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag'**
+  String get dayEditorDay;
+
+  /// No description provided for @dayEditorNoStopsForDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Stops für Tag {day}'**
+  String dayEditorNoStopsForDay(int day);
+
+  /// No description provided for @dayEditorDayInGoogleMaps.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag {day} in Google Maps'**
+  String dayEditorDayInGoogleMaps(int day);
+
+  /// No description provided for @dayEditorOpenAgain.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag {day} erneut öffnen'**
+  String dayEditorOpenAgain(int day);
+
+  /// No description provided for @dayEditorTripCompleted.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip abgeschlossen!'**
+  String get dayEditorTripCompleted;
+
+  /// No description provided for @dayEditorRouteShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Route Teilen'**
+  String get dayEditorRouteShare;
+
+  /// No description provided for @dayEditorRouteShareError.
+  ///
+  /// In de, this message translates to:
+  /// **'Route konnte nicht geteilt werden'**
+  String get dayEditorRouteShareError;
+
+  /// No description provided for @dayEditorShareStops.
+  ///
+  /// In de, this message translates to:
+  /// **'Stops'**
+  String get dayEditorShareStops;
+
+  /// No description provided for @dayEditorShareOpenGoogleMaps.
+  ///
+  /// In de, this message translates to:
+  /// **'In Google Maps öffnen'**
+  String get dayEditorShareOpenGoogleMaps;
+
+  /// No description provided for @tripSummaryTotal.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt'**
+  String get tripSummaryTotal;
+
+  /// No description provided for @tripSummaryDriveTime.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrzeit'**
+  String get tripSummaryDriveTime;
+
+  /// No description provided for @tripSummaryStops.
+  ///
+  /// In de, this message translates to:
+  /// **'Stops'**
+  String get tripSummaryStops;
+
+  /// No description provided for @filterTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter'**
+  String get filterTitle;
+
+  /// No description provided for @filterMaxDetour.
+  ///
+  /// In de, this message translates to:
+  /// **'Maximaler Umweg'**
+  String get filterMaxDetour;
+
+  /// No description provided for @filterMaxDetourHint.
+  ///
+  /// In de, this message translates to:
+  /// **'POIs mit größerem Umweg werden ausgeblendet'**
+  String get filterMaxDetourHint;
+
+  /// No description provided for @filterAllCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Kategorien anzeigen'**
+  String get filterAllCategories;
+
+  /// No description provided for @filterSelectedCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} ausgewählt'**
+  String filterSelectedCount(int count);
+
+  /// No description provided for @filterCategoriesLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorien'**
+  String get filterCategoriesLabel;
+
+  /// No description provided for @categorySelectorDeselectAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle abwählen'**
+  String get categorySelectorDeselectAll;
+
+  /// No description provided for @categorySelectorNoneHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Auswahl = alle Kategorien'**
+  String get categorySelectorNoneHint;
+
+  /// No description provided for @categorySelectorSelectedCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} ausgewählt'**
+  String categorySelectorSelectedCount(int count);
+
+  /// No description provided for @categorySelectorTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorien'**
+  String get categorySelectorTitle;
+
+  /// No description provided for @startLocationLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Startpunkt'**
+  String get startLocationLabel;
+
+  /// No description provided for @startLocationHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Stadt oder Adresse eingeben...'**
+  String get startLocationHint;
+
+  /// No description provided for @startLocationGps.
+  ///
+  /// In de, this message translates to:
+  /// **'GPS-Standort verwenden'**
+  String get startLocationGps;
+
+  /// No description provided for @tripPreviewNoTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Trip generiert'**
+  String get tripPreviewNoTrip;
+
+  /// No description provided for @tripPreviewYourTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Trip'**
+  String get tripPreviewYourTrip;
+
+  /// No description provided for @tripPreviewConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip bestätigen'**
+  String get tripPreviewConfirm;
+
+  /// No description provided for @tripPreviewMaxStopsWarning.
+  ///
+  /// In de, this message translates to:
+  /// **'Max {max} Stops pro Tag (Google Maps Limit)'**
+  String tripPreviewMaxStopsWarning(int max);
+
+  /// No description provided for @tripPreviewStopsDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Stops (Tag {day})'**
+  String tripPreviewStopsDay(int day);
+
+  /// No description provided for @tripPreviewDayCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Tag} other{Tage}}'**
+  String tripPreviewDayCount(int count);
+
+  /// No description provided for @navSkip.
+  ///
+  /// In de, this message translates to:
+  /// **'Überspringen'**
+  String get navSkip;
+
+  /// No description provided for @navVisitedButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Besucht'**
+  String get navVisitedButton;
+
+  /// No description provided for @navDistanceAway.
+  ///
+  /// In de, this message translates to:
+  /// **'{distance} entfernt'**
+  String navDistanceAway(String distance);
+
+  /// No description provided for @chatDemoMode.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Modus: Antworten sind simuliert'**
+  String get chatDemoMode;
+
+  /// No description provided for @chatLocationLoading.
+  ///
+  /// In de, this message translates to:
+  /// **'Standort wird geladen...'**
+  String get chatLocationLoading;
+
+  /// No description provided for @chatLocationActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Standort aktiv'**
+  String get chatLocationActive;
+
+  /// No description provided for @chatLocationEnable.
+  ///
+  /// In de, this message translates to:
+  /// **'Standort aktivieren'**
+  String get chatLocationEnable;
+
+  /// No description provided for @chatMyLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Mein Standort'**
+  String get chatMyLocation;
+
+  /// No description provided for @chatRadiusTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchradius'**
+  String get chatRadiusTooltip;
+
+  /// No description provided for @chatNoPoisFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine POIs in der Nähe gefunden'**
+  String get chatNoPoisFound;
+
+  /// No description provided for @chatPoisInRadius.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} POIs im Umkreis von {radius} km'**
+  String chatPoisInRadius(int count, String radius);
+
+  /// No description provided for @chatRadiusLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'{radius} km'**
+  String chatRadiusLabel(String radius);
+
+  /// No description provided for @chatWelcomeSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Frag mich alles über deine Reise!'**
+  String get chatWelcomeSubtitle;
+
+  /// No description provided for @chatDemoBackendNotReachable.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Modus: Backend nicht erreichbar'**
+  String get chatDemoBackendNotReachable;
+
+  /// No description provided for @chatDemoBackendNotConfigured.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Modus: Backend-URL nicht konfiguriert'**
+  String get chatDemoBackendNotConfigured;
+
+  /// No description provided for @chatNumberOfDays.
+  ///
+  /// In de, this message translates to:
+  /// **'Anzahl Tage'**
+  String get chatNumberOfDays;
+
+  /// No description provided for @chatInterests.
+  ///
+  /// In de, this message translates to:
+  /// **'Interessen:'**
+  String get chatInterests;
+
+  /// No description provided for @chatLocationNotAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Standort nicht verfügbar'**
+  String get chatLocationNotAvailable;
+
+  /// No description provided for @chatLocationNotAvailableMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Um POIs in deiner Nähe zu finden, benötige ich Zugriff auf deinen Standort.\n\nBitte aktiviere die Ortungsdienste und versuche es erneut.'**
+  String get chatLocationNotAvailableMessage;
+
+  /// No description provided for @chatPoisSearchError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler bei der POI-Suche'**
+  String get chatPoisSearchError;
+
+  /// No description provided for @chatPoisSearchErrorMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Entschuldigung, es gab ein Problem beim Laden der POIs.\n\nBitte versuche es erneut.'**
+  String get chatPoisSearchErrorMessage;
+
+  /// No description provided for @chatNoResponseGenerated.
+  ///
+  /// In de, this message translates to:
+  /// **'Entschuldigung, ich konnte keine Antwort generieren.'**
+  String get chatNoResponseGenerated;
+
+  /// No description provided for @chatRadiusAdjust.
+  ///
+  /// In de, this message translates to:
+  /// **'Such-Radius anpassen'**
+  String get chatRadiusAdjust;
+
+  /// No description provided for @voiceRerouting.
+  ///
+  /// In de, this message translates to:
+  /// **'Route wird neu berechnet'**
+  String get voiceRerouting;
+
+  /// No description provided for @voicePOIApproaching.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} in {distance}'**
+  String voicePOIApproaching(String name, String distance);
+
+  /// No description provided for @voiceArrivedAt.
+  ///
+  /// In de, this message translates to:
+  /// **'Sie haben Ihr Ziel erreicht: {name}'**
+  String voiceArrivedAt(String name);
+
+  /// No description provided for @voiceRouteInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch {distance} und {duration} bis zum Ziel'**
+  String voiceRouteInfo(String distance, String duration);
+
+  /// No description provided for @voiceNextStop.
+  ///
+  /// In de, this message translates to:
+  /// **'Nächster Stopp: {name} in {distance}'**
+  String voiceNextStop(String name, String distance);
+
+  /// No description provided for @voiceCurrentLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktueller Standort: {location}'**
+  String voiceCurrentLocation(String location);
+
+  /// No description provided for @voiceInMeters.
+  ///
+  /// In de, this message translates to:
+  /// **'{meters} Meter'**
+  String voiceInMeters(int meters);
+
+  /// No description provided for @voiceInKilometers.
+  ///
+  /// In de, this message translates to:
+  /// **'{km} Kilometer'**
+  String voiceInKilometers(String km);
+
+  /// No description provided for @voiceHours.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Stunde} other{{count} Stunden}}'**
+  String voiceHours(int count);
+
+  /// No description provided for @voiceMinutes.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Minute} other{{count} Minuten}}'**
+  String voiceMinutes(int count);
+
+  /// No description provided for @voiceStops.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Stopp} other{{count} Stopps}}'**
+  String voiceStops(int count);
+
+  /// No description provided for @voiceCmdNextStop.
+  ///
+  /// In de, this message translates to:
+  /// **'Nächster Stopp'**
+  String get voiceCmdNextStop;
+
+  /// No description provided for @voiceCmdLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Wo bin ich'**
+  String get voiceCmdLocation;
+
+  /// No description provided for @voiceCmdDuration.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie lange noch'**
+  String get voiceCmdDuration;
+
+  /// No description provided for @voiceCmdEndNavigation.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigation beenden'**
+  String get voiceCmdEndNavigation;
+
+  /// No description provided for @voiceNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt'**
+  String get voiceNow;
+
+  /// No description provided for @voiceArrived.
+  ///
+  /// In de, this message translates to:
+  /// **'Sie haben Ihr Ziel erreicht'**
+  String get voiceArrived;
+
+  /// No description provided for @voicePOIReached.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} erreicht'**
+  String voicePOIReached(String name);
+
+  /// No description provided for @voiceCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorie: {category}'**
+  String voiceCategory(String category);
+
+  /// No description provided for @voiceDistanceMeters.
+  ///
+  /// In de, this message translates to:
+  /// **'{meters} Meter entfernt'**
+  String voiceDistanceMeters(int meters);
+
+  /// No description provided for @voiceDistanceKm.
+  ///
+  /// In de, this message translates to:
+  /// **'{km} Kilometer entfernt'**
+  String voiceDistanceKm(String km);
+
+  /// No description provided for @voiceRouteLength.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Route ist {distance} Kilometer lang, dauert etwa {duration} und hat {stops}.'**
+  String voiceRouteLength(String distance, String duration, String stops);
+
+  /// No description provided for @voiceAndMinutes.
+  ///
+  /// In de, this message translates to:
+  /// **'und {count, plural, =1{1 Minute} other{{count} Minuten}}'**
+  String voiceAndMinutes(int count);
+
+  /// No description provided for @voiceCmdPreviousStop.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorheriger Stopp'**
+  String get voiceCmdPreviousStop;
+
+  /// No description provided for @voiceCmdNearby.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist in der Nähe'**
+  String get voiceCmdNearby;
+
+  /// No description provided for @voiceCmdAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Zur Route hinzufügen'**
+  String get voiceCmdAdd;
+
+  /// No description provided for @voiceCmdStartNav.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigation starten'**
+  String get voiceCmdStartNav;
+
+  /// No description provided for @voiceCmdStopNav.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigation beenden'**
+  String get voiceCmdStopNav;
+
+  /// No description provided for @voiceCmdDescribe.
+  ///
+  /// In de, this message translates to:
+  /// **'Beschreibung vorlesen'**
+  String get voiceCmdDescribe;
+
+  /// No description provided for @voiceCmdUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get voiceCmdUnknown;
+
+  /// No description provided for @voiceManeuverNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt {instruction}'**
+  String voiceManeuverNow(String instruction);
+
+  /// No description provided for @voiceManeuverInMeters.
+  ///
+  /// In de, this message translates to:
+  /// **'In {meters} Metern {instruction}'**
+  String voiceManeuverInMeters(int meters, String instruction);
+
+  /// No description provided for @voiceManeuverInKm.
+  ///
+  /// In de, this message translates to:
+  /// **'In {km} Kilometern {instruction}'**
+  String voiceManeuverInKm(String km, String instruction);
+
+  /// No description provided for @navMustSeeAnnouncement.
+  ///
+  /// In de, this message translates to:
+  /// **'In {distance} Metern befindet sich {name}, ein Must-See Highlight'**
+  String navMustSeeAnnouncement(String distance, String name);
+
+  /// No description provided for @advisorDangerWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Unwetter auf Tag {day} erwartet! {outdoorCount} Outdoor-Stops sollten durch Indoor-Alternativen ersetzt werden.'**
+  String advisorDangerWeather(int day, int outdoorCount);
+
+  /// No description provided for @advisorBadWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Regen auf Tag {day} erwartet. {outdoorCount} von {totalCount} Stops sind Outdoor-Aktivitaeten.'**
+  String advisorBadWeather(int day, int outdoorCount, int totalCount);
+
+  /// No description provided for @advisorOutdoorAlternative.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} ist eine Outdoor-Aktivitaet - Alternative empfohlen'**
+  String advisorOutdoorAlternative(String name);
+
+  /// No description provided for @advisorOutdoorReplace.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} ist eine Outdoor-Aktivitaet. Ersetze diesen Stop fuer eine Indoor-Alternative.'**
+  String advisorOutdoorReplace(String name);
+
+  /// No description provided for @advisorAiUnavailableSuggestions.
+  ///
+  /// In de, this message translates to:
+  /// **'AI nicht erreichbar - zeige lokale Vorschlaege'**
+  String get advisorAiUnavailableSuggestions;
+
+  /// No description provided for @advisorNoStopsForDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Stops fuer Tag {day}'**
+  String advisorNoStopsForDay(int day);
+
+  /// No description provided for @advisorNoRecommendationsFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Empfehlungen in der Naehe der Stops gefunden'**
+  String get advisorNoRecommendationsFound;
+
+  /// No description provided for @advisorAiUnavailableRecommendations.
+  ///
+  /// In de, this message translates to:
+  /// **'AI nicht erreichbar - zeige lokale Empfehlungen'**
+  String get advisorAiUnavailableRecommendations;
+
+  /// No description provided for @advisorErrorLoadingRecommendations.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Laden der Empfehlungen'**
+  String get advisorErrorLoadingRecommendations;
+
+  /// No description provided for @advisorPoiCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} - {category}'**
+  String advisorPoiCategory(String name, String category);
 }
 
 class _AppLocalizationsDelegate

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/navigation_instruction_generator.dart';
 import '../models/navigation_step.dart';
@@ -83,6 +84,7 @@ class RoutingRepository {
     List<LatLng>? waypoints,
     required String startAddress,
     required String endAddress,
+    required AppLocalizations l10n,
   }) async {
     // Koordinaten für OSRM vorbereiten (lng,lat Format)
     final coords = <String>[];
@@ -142,11 +144,12 @@ class RoutingRepository {
           final streetName = stepData['name']?.toString() ?? '';
           final roundaboutExit = maneuver['exit'] as int?;
 
-          // Deutsche Instruktion generieren
+          // Lokalisierte Instruktion generieren
           final instruction = NavigationInstructionGenerator.generate(
             type: type,
             modifier: modifier,
             streetName: streetName,
+            l10n: l10n,
             roundaboutExit: roundaboutExit,
           );
 

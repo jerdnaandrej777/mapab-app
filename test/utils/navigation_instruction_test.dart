@@ -1,16 +1,27 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:travel_planner/core/utils/navigation_instruction_generator.dart';
 import 'package:travel_planner/data/models/navigation_step.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
 
 void main() {
+  // Deutsche Lokalisierung fuer Tests
+  late AppLocalizations l10n;
+
+  setUpAll(() {
+    l10n = lookupAppLocalizations(const Locale('de'));
+  });
+
   group('NavigationInstructionGenerator.generate', () {
     test('depart mit Strasse', () {
       final result = NavigationInstructionGenerator.generate(
         type: ManeuverType.depart,
         modifier: ManeuverModifier.none,
         streetName: 'Hauptstrasse',
+        l10n: l10n,
       );
-      expect(result, 'Fahre los auf Hauptstrasse');
+      expect(result, l10n.navDepartOn('Hauptstrasse'));
     });
 
     test('depart ohne Strasse', () {
@@ -18,8 +29,9 @@ void main() {
         type: ManeuverType.depart,
         modifier: ManeuverModifier.none,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Fahre los');
+      expect(result, l10n.navDepart);
     });
 
     test('arrive mit Strasse', () {
@@ -27,8 +39,9 @@ void main() {
         type: ManeuverType.arrive,
         modifier: ManeuverModifier.none,
         streetName: 'Zielweg',
+        l10n: l10n,
       );
-      expect(result, 'Ziel erreicht: Zielweg');
+      expect(result, l10n.navArriveAt('Zielweg'));
     });
 
     test('arrive ohne Strasse', () {
@@ -36,8 +49,9 @@ void main() {
         type: ManeuverType.arrive,
         modifier: ManeuverModifier.none,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Sie haben Ihr Ziel erreicht');
+      expect(result, l10n.navArrive);
     });
 
     test('turn links', () {
@@ -45,8 +59,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.left,
         streetName: 'Bergweg',
+        l10n: l10n,
       );
-      expect(result, 'Links abbiegen auf Bergweg');
+      expect(result, l10n.navTurnLeftOn('Bergweg'));
     });
 
     test('turn rechts ohne Strasse', () {
@@ -54,8 +69,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.right,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Rechts abbiegen');
+      expect(result, l10n.navTurnRight);
     });
 
     test('turn scharf links', () {
@@ -63,8 +79,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.sharpLeft,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Scharf links abbiegen');
+      expect(result, l10n.navSharpLeft);
     });
 
     test('turn leicht rechts', () {
@@ -72,8 +89,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.slightRight,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Leicht rechts abbiegen');
+      expect(result, l10n.navSlightRight);
     });
 
     test('turn geradeaus', () {
@@ -81,8 +99,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.straight,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Geradeaus weiter');
+      expect(result, l10n.navStraight);
     });
 
     test('turn wenden', () {
@@ -90,8 +109,9 @@ void main() {
         type: ManeuverType.turn,
         modifier: ManeuverModifier.uturn,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Wenden');
+      expect(result, l10n.navUturn);
     });
 
     test('roundabout mit Exit', () {
@@ -99,9 +119,10 @@ void main() {
         type: ManeuverType.roundabout,
         modifier: ManeuverModifier.none,
         streetName: 'B2',
+        l10n: l10n,
         roundaboutExit: 3,
       );
-      expect(result, 'Im Kreisverkehr die dritte Ausfahrt nehmen auf B2');
+      expect(result, l10n.navRoundaboutExitOn(l10n.navOrdinalThird, 'B2'));
     });
 
     test('roundabout ohne Exit', () {
@@ -109,8 +130,9 @@ void main() {
         type: ManeuverType.roundabout,
         modifier: ManeuverModifier.none,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'In den Kreisverkehr einfahren');
+      expect(result, l10n.navRoundaboutEnter);
     });
 
     test('fork links', () {
@@ -118,8 +140,9 @@ void main() {
         type: ManeuverType.fork,
         modifier: ManeuverModifier.left,
         streetName: 'A8',
+        l10n: l10n,
       );
-      expect(result, 'An der Gabelung links halten auf A8');
+      expect(result, l10n.navForkLeftOn('A8'));
     });
 
     test('fork rechts ohne Strasse', () {
@@ -127,8 +150,9 @@ void main() {
         type: ManeuverType.fork,
         modifier: ManeuverModifier.right,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'An der Gabelung rechts halten');
+      expect(result, l10n.navForkRight);
     });
 
     test('endOfRoad links', () {
@@ -136,8 +160,9 @@ void main() {
         type: ManeuverType.endOfRoad,
         modifier: ManeuverModifier.left,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Am Straßenende links abbiegen');
+      expect(result, l10n.navEndOfRoadLeft);
     });
 
     test('merge mit Richtung', () {
@@ -145,8 +170,9 @@ void main() {
         type: ManeuverType.merge,
         modifier: ManeuverModifier.slightRight,
         streetName: 'A9',
+        l10n: l10n,
       );
-      expect(result, 'Rechts Einfädeln auf A9');
+      expect(result, '${l10n.navDirectionRight}${l10n.navMergeOn('A9')}');
     });
 
     test('onRamp', () {
@@ -154,8 +180,9 @@ void main() {
         type: ManeuverType.onRamp,
         modifier: ManeuverModifier.right,
         streetName: 'A99',
+        l10n: l10n,
       );
-      expect(result, 'Rechts Auffahrt nehmen auf A99');
+      expect(result, '${l10n.navDirectionRight}${l10n.navOnRampOn('A99')}');
     });
 
     test('offRamp', () {
@@ -163,8 +190,9 @@ void main() {
         type: ManeuverType.offRamp,
         modifier: ManeuverModifier.left,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Links Abfahrt nehmen');
+      expect(result, '${l10n.navDirectionLeft}${l10n.navOffRamp}');
     });
 
     test('continue straight', () {
@@ -172,8 +200,9 @@ void main() {
         type: ManeuverType.continueInstruction,
         modifier: ManeuverModifier.straight,
         streetName: 'B12',
+        l10n: l10n,
       );
-      expect(result, 'Geradeaus weiter auf B12');
+      expect(result, l10n.navStraightOn('B12'));
     });
 
     test('continue nicht straight delegiert an turn', () {
@@ -181,8 +210,9 @@ void main() {
         type: ManeuverType.continueInstruction,
         modifier: ManeuverModifier.left,
         streetName: '',
+        l10n: l10n,
       );
-      expect(result, 'Links abbiegen');
+      expect(result, l10n.navTurnLeft);
     });
 
     test('exitRoundabout', () {
@@ -190,8 +220,9 @@ void main() {
         type: ManeuverType.exitRoundabout,
         modifier: ManeuverModifier.none,
         streetName: 'B1',
+        l10n: l10n,
       );
-      expect(result, 'Kreisverkehr verlassen auf B1');
+      expect(result, l10n.navRoundaboutLeaveOn('B1'));
     });
 
     test('newName', () {
@@ -199,8 +230,9 @@ void main() {
         type: ManeuverType.newName,
         modifier: ManeuverModifier.none,
         streetName: 'Marktplatz',
+        l10n: l10n,
       );
-      expect(result, 'Weiter auf Marktplatz');
+      expect(result, l10n.navContinueOn('Marktplatz'));
     });
   });
 
@@ -210,29 +242,33 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.turn,
           modifier: ManeuverModifier.left,
+          l10n: l10n,
         ),
-        'Links',
+        l10n.navLeftShort,
       );
       expect(
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.turn,
           modifier: ManeuverModifier.right,
+          l10n: l10n,
         ),
-        'Rechts',
+        l10n.navRightShort,
       );
       expect(
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.turn,
           modifier: ManeuverModifier.uturn,
+          l10n: l10n,
         ),
-        'Wenden',
+        l10n.navUturn,
       );
       expect(
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.turn,
           modifier: ManeuverModifier.straight,
+          l10n: l10n,
         ),
-        'Geradeaus',
+        l10n.navStraightShort,
       );
     });
 
@@ -241,9 +277,10 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.roundabout,
           modifier: ManeuverModifier.none,
+          l10n: l10n,
           roundaboutExit: 2,
         ),
-        'zweite Ausfahrt',
+        l10n.navExitShort(l10n.navOrdinalSecond),
       );
     });
 
@@ -252,8 +289,9 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.roundabout,
           modifier: ManeuverModifier.none,
+          l10n: l10n,
         ),
-        'Kreisverkehr',
+        l10n.navRoundabout,
       );
     });
 
@@ -262,8 +300,9 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.arrive,
           modifier: ManeuverModifier.none,
+          l10n: l10n,
         ),
-        'Ziel erreicht',
+        l10n.navArrive,
       );
     });
 
@@ -272,8 +311,9 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.fork,
           modifier: ManeuverModifier.left,
+          l10n: l10n,
         ),
-        'Links halten',
+        l10n.navKeepLeft,
       );
     });
 
@@ -282,8 +322,9 @@ void main() {
         NavigationInstructionGenerator.generateShort(
           type: ManeuverType.fork,
           modifier: ManeuverModifier.right,
+          l10n: l10n,
         ),
-        'Rechts halten',
+        l10n.navKeepRight,
       );
     });
   });
@@ -295,8 +336,15 @@ void main() {
         modifier: ManeuverModifier.left,
         streetName: '',
         distanceMeters: 30,
+        l10n: l10n,
       );
-      expect(result, 'Jetzt Links abbiegen');
+      final instruction = NavigationInstructionGenerator.generate(
+        type: ManeuverType.turn,
+        modifier: ManeuverModifier.left,
+        streetName: '',
+        l10n: l10n,
+      );
+      expect(result, l10n.navNow(instruction));
     });
 
     test('> 50m sagt In X', () {
@@ -305,8 +353,9 @@ void main() {
         modifier: ManeuverModifier.right,
         streetName: 'B1',
         distanceMeters: 200,
+        l10n: l10n,
       );
-      expect(result, startsWith('In 200 Metern'));
+      expect(result, contains(l10n.navMeters('200')));
     });
 
     test('Kilometer-Formatierung bei > 1000m', () {
@@ -315,8 +364,9 @@ void main() {
         modifier: ManeuverModifier.left,
         streetName: '',
         distanceMeters: 2500,
+        l10n: l10n,
       );
-      expect(result, contains('Kilometern'));
+      expect(result, contains(l10n.navKilometers('2.5')));
     });
 
     test('kleine Distanz < 100m wird direkt gerundet', () {
@@ -325,8 +375,15 @@ void main() {
         modifier: ManeuverModifier.right,
         streetName: '',
         distanceMeters: 75,
+        l10n: l10n,
       );
-      expect(result, 'In 75 Metern Rechts abbiegen');
+      final instruction = NavigationInstructionGenerator.generate(
+        type: ManeuverType.turn,
+        modifier: ManeuverModifier.right,
+        streetName: '',
+        l10n: l10n,
+      );
+      expect(result, l10n.navInDistance(l10n.navMeters('75'), instruction));
     });
 
     test('mittlere Distanz wird auf 50m gerundet', () {
@@ -335,9 +392,16 @@ void main() {
         modifier: ManeuverModifier.right,
         streetName: '',
         distanceMeters: 320,
+        l10n: l10n,
+      );
+      final instruction = NavigationInstructionGenerator.generate(
+        type: ManeuverType.turn,
+        modifier: ManeuverModifier.right,
+        streetName: '',
+        l10n: l10n,
       );
       // 320 / 50 = 6.4 → round = 6 → 6*50 = 300
-      expect(result, 'In 300 Metern Rechts abbiegen');
+      expect(result, l10n.navInDistance(l10n.navMeters('300'), instruction));
     });
   });
 
@@ -379,23 +443,24 @@ void main() {
   });
 
   group('Ordinal-Zahlen in Kreisverkehr', () {
-    test('Exits 1-8 geben deutsche Ordinalzahlen', () {
-      final expected = {
-        1: 'erste',
-        2: 'zweite',
-        3: 'dritte',
-        4: 'vierte',
-        5: 'fünfte',
-        6: 'sechste',
-        7: 'siebte',
-        8: 'achte',
+    test('Exits 1-8 geben lokalisierte Ordinalzahlen', () {
+      final expectedOrdinals = {
+        1: l10n.navOrdinalFirst,
+        2: l10n.navOrdinalSecond,
+        3: l10n.navOrdinalThird,
+        4: l10n.navOrdinalFourth,
+        5: l10n.navOrdinalFifth,
+        6: l10n.navOrdinalSixth,
+        7: l10n.navOrdinalSeventh,
+        8: l10n.navOrdinalEighth,
       };
 
-      for (final entry in expected.entries) {
+      for (final entry in expectedOrdinals.entries) {
         final result = NavigationInstructionGenerator.generate(
           type: ManeuverType.roundabout,
           modifier: ManeuverModifier.none,
           streetName: '',
+          l10n: l10n,
           roundaboutExit: entry.key,
         );
         expect(result, contains(entry.value),
@@ -408,6 +473,7 @@ void main() {
         type: ManeuverType.roundabout,
         modifier: ManeuverModifier.none,
         streetName: '',
+        l10n: l10n,
         roundaboutExit: 9,
       );
       expect(result, contains('9.'));

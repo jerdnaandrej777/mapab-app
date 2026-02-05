@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
 import '../../../core/utils/location_helper.dart';
 import '../../../data/models/navigation_step.dart';
 import '../../../data/models/route.dart';
@@ -180,6 +181,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   final RouteMatcherService _routeMatcher = RouteMatcherService();
   DateTime? _lastRerouteTime;
   int _lastMatchedIndex = 0;
+  AppLocalizations? _l10n;
 
   // Cache: Step-Index → Route-Koordinaten-Index (einmal berechnet pro Route)
   List<int>? _stepRouteIndices;
@@ -195,8 +197,10 @@ class NavigationNotifier extends _$NavigationNotifier {
   /// Startet die Navigation auf einer Route mit optionalen POI-Stops
   Future<void> startNavigation({
     required AppRoute baseRoute,
+    required AppLocalizations l10n,
     List<TripStop>? stops,
   }) async {
+    _l10n = l10n;
     // Vorherige Navigation sauber stoppen (verhindert doppelte GPS-Streams)
     if (state.isNavigating || state.isRerouting || state.isLoading) {
       debugPrint('[Navigation] Vorherige Navigation wird gestoppt');
@@ -225,6 +229,7 @@ class NavigationNotifier extends _$NavigationNotifier {
                 .toList(),
         startAddress: baseRoute.startAddress,
         endAddress: baseRoute.endAddress,
+        l10n: l10n,
       );
 
       // Ersten Step setzen
@@ -550,6 +555,7 @@ class NavigationNotifier extends _$NavigationNotifier {
             remainingWaypoints.isNotEmpty ? remainingWaypoints : null,
         startAddress: 'Aktuelle Position',
         endAddress: state.route!.baseRoute.endAddress,
+        l10n: _l10n!,
       );
 
       _lastMatchedIndex = 0;

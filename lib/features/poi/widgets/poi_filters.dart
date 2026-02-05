@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/category_l10n.dart';
 
 /// Filter-Sheet fuer POIs
 class POIFiltersSheet extends StatefulWidget {
@@ -73,7 +74,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Filter',
+                      context.l10n.filterTitle,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -230,7 +231,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Maximaler Umweg',
+              context.l10n.filterMaxDetour,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
@@ -255,7 +256,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          'POIs mit groesserem Umweg werden ausgeblendet',
+          context.l10n.filterMaxDetourHint,
           style: TextStyle(
             color: colorScheme.onSurfaceVariant,
             fontSize: 13,
@@ -294,7 +295,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Kategorien',
+          context.l10n.filterCategoriesLabel,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
@@ -304,8 +305,8 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
         const SizedBox(height: 4),
         Text(
           _categories.isEmpty
-              ? 'Alle Kategorien anzeigen'
-              : '${_categories.length} ausgewaehlt',
+              ? context.l10n.filterAllCategories
+              : context.l10n.filterSelectedCount(_categories.length),
           style: TextStyle(
             color: colorScheme.onSurfaceVariant,
             fontSize: 13,
@@ -323,7 +324,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                 children: [
                   Text(category.icon),
                   const SizedBox(width: 6),
-                  Text(category.label),
+                  Text(category.localizedLabel(context)),
                 ],
               ),
               selected: isSelected,

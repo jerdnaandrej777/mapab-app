@@ -3,11 +3,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/service_l10n.dart';
 import '../../../core/utils/geo_utils.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/models/route.dart';
+import '../../../data/providers/settings_provider.dart';
 import '../../../data/repositories/poi_repo.dart';
 import '../../../data/services/ai_service.dart';
 import '../../map/providers/weather_provider.dart';
@@ -113,6 +116,12 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
   /// Request-ID fuer Cancellation: Nur die neueste Anfrage darf State setzen
   int _loadRequestId = 0;
 
+  /// Gibt die aktuelle AppLocalizations basierend auf der eingestellten Sprache zurueck
+  AppLocalizations get _l10n {
+    final settings = ref.read(settingsNotifierProvider);
+    return ServiceL10n.fromLanguageCode(settings.language);
+  }
+
   @override
   AITripAdvisorState build() => const AITripAdvisorState();
 
@@ -121,6 +130,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
   void analyzeTrip(Trip trip, RouteWeatherState routeWeather) {
     if (routeWeather.weatherPoints.isEmpty) return;
 
+    final l10n = _l10n;
     final suggestions = <int, List<AISuggestion>>{};
     final totalDays = trip.actualDays;
 
@@ -143,8 +153,8 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           final isDanger = dayWeather == WeatherCondition.danger;
           daySuggestions.add(AISuggestion(
             message: isDanger
-                ? 'Unwetter auf Tag $day erwartet! ${outdoorStops.length} Outdoor-Stops sollten durch Indoor-Alternativen ersetzt werden.'
-                : 'Regen auf Tag $day erwartet. ${outdoorStops.length} von ${stopsForDay.length} Stops sind Outdoor-Aktivitaeten.',
+                ? l10n.advisorDangerWeather(day, outdoorStops.length)
+                : l10n.advisorBadWeather(day, outdoorStops.length, stopsForDay.length),
             type: SuggestionType.weather,
             weather: dayWeather,
           ));
@@ -152,8 +162,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           // Einzelne Outdoor-POIs markieren
           for (final stop in outdoorStops) {
             daySuggestions.add(AISuggestion(
-              message:
-                  '${stop.name} ist eine Outdoor-Aktivitaet - Alternative empfohlen',
+              message: l10n.advisorOutdoorAlternative(stop.name),
               type: SuggestionType.alternative,
               targetPOIId: stop.poiId,
               weather: dayWeather,
@@ -268,6 +277,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       debugPrint('[AIAdvisor] AI-Vorschlaege fehlgeschlagen: $e');
 
       // Fallback auf regelbasierte Vorschlaege
+      final l10n = _l10n;
       final fallbackSuggestions = <AISuggestion>[];
       final dayWeather = _getDayWeather(day, trip.actualDays, routeWeather);
       final stopsForDay = trip.getStopsForDay(day);
@@ -280,8 +290,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
 
         for (final stop in outdoorStops) {
           fallbackSuggestions.add(AISuggestion(
-            message:
-                '${stop.name} ist eine Outdoor-Aktivitaet. Ersetze diesen Stop fuer eine Indoor-Alternative.',
+            message: l10n.advisorOutdoorReplace(stop.name),
             type: SuggestionType.alternative,
             targetPOIId: stop.poiId,
             weather: dayWeather,
@@ -297,7 +306,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       state = state.copyWith(
         suggestionsPerDay: updatedSuggestions,
         isLoading: false,
-        error: 'AI nicht erreichbar - zeige lokale Vorschlaege',
+        error: l10n.advisorAiUnavailableSuggestions,
         lastUpdated: DateTime.now(),
       );
     }
@@ -328,6 +337,8 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         dayWeather == WeatherCondition.danger;
     debugPrint('[AIAdvisor] Lade Empfehlungen fuer Tag $day (Wetter: ${dayWeather.label})...');
 
+    final l10n = _l10n;
+
     try {
       // 1. Suchpunkte aufbauen: Tagesstart + alle Stops des Tages
       final stopsForDay = trip.getStopsForDay(day);
@@ -336,7 +347,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         if (requestId == _loadRequestId) {
           state = state.copyWith(
             isLoading: false,
-            error: 'Keine Stops fuer Tag $day',
+            error: l10n.advisorNoStopsForDay(day),
           );
         }
         return;
@@ -381,7 +392,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         if (requestId == _loadRequestId) {
           state = state.copyWith(
             isLoading: false,
-            error: 'Keine Empfehlungen in der Naehe der Stops gefunden',
+            error: l10n.advisorNoRecommendationsFound,
           );
         }
         return;
@@ -427,7 +438,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         );
         if (requestId == _loadRequestId) {
           state = state.copyWith(
-            error: 'AI nicht erreichbar - zeige lokale Empfehlungen',
+            error: l10n.advisorAiUnavailableRecommendations,
           );
         }
       }
@@ -461,7 +472,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
       if (requestId == _loadRequestId) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Fehler beim Laden der Empfehlungen',
+          error: l10n.advisorErrorLoadingRecommendations,
         );
       }
     } finally {
@@ -826,6 +837,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     required List<_StopCandidate> candidates,
     required WeatherCondition dayWeather,
   }) {
+    final l10n = _l10n;
     try {
       // JSON-Array aus Response extrahieren
       final jsonStart = response.indexOf('[');
@@ -855,8 +867,11 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           orElse: () => candidates.first,
         );
 
+        final categoryLabel = matchedEntry.poi.category != null
+            ? ServiceL10n.localizedCategoryLabel(l10n, matchedEntry.poi.category!)
+            : matchedEntry.poi.categoryId;
         suggestions.add(AISuggestion(
-          message: '${matchedEntry.poi.name} - ${matchedEntry.poi.category?.label ?? matchedEntry.poi.categoryId}',
+          message: l10n.advisorPoiCategory(matchedEntry.poi.name, categoryLabel),
           type: SuggestionType.alternative,
           alternativePOI: matchedEntry.poi,
           weather: dayWeather,
@@ -886,6 +901,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     required List<_StopCandidate> candidates,
     required RouteWeatherState routeWeather,
   }) {
+    final l10n = _l10n;
     final dayWeather = _getDayWeather(day, totalDays, routeWeather);
     final isBadWeather = dayWeather == WeatherCondition.bad ||
         dayWeather == WeatherCondition.danger;
@@ -908,9 +924,11 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
           ? 'Indoor-Empfehlung'
           : 'Empfehlung';
       final locationText = '${entry.distanceKm.toStringAsFixed(1)}km von ${entry.nearestStop}';
+      final categoryLabel = poi.category != null
+          ? ServiceL10n.localizedCategoryLabel(l10n, poi.category!)
+          : poi.categoryId;
       return AISuggestion(
-        message:
-            '${poi.name} - ${poi.category?.label ?? poi.categoryId}',
+        message: l10n.advisorPoiCategory(poi.name, categoryLabel),
         type: SuggestionType.alternative,
         alternativePOI: poi,
         weather: dayWeather,

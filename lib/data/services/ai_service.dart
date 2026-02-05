@@ -33,6 +33,7 @@ class AIService {
     required String message,
     required TripContext context,
     List<ChatMessage>? history,
+    String? language,
   }) async {
     debugPrint('[AI] Sende Chat-Anfrage an Backend...');
 
@@ -62,6 +63,10 @@ class AIService {
                   'category': s.categoryId,
                 })
             .toList();
+      }
+
+      if (language != null) {
+        contextData['responseLanguage'] = language;
       }
 
       // History für Backend aufbereiten
@@ -109,6 +114,7 @@ class AIService {
     required int days,
     required List<String> interests,
     String? startLocation,
+    String? language,
   }) async {
     debugPrint('[AI] Sende Trip-Plan-Anfrage an Backend...');
     debugPrint('[AI] Ziel: $destination, Tage: $days');
@@ -121,6 +127,7 @@ class AIService {
           'startLocation': startLocation,
           'days': days,
           'interests': interests,
+          if (language != null) 'language': language,
         },
       );
 
@@ -151,6 +158,7 @@ class AIService {
     required int days,
     required List<String> interests,
     String? startLocation,
+    String? language,
   }) async {
     // Hole Text-Plan vom Backend
     final planText = await generateTripPlanText(
@@ -158,6 +166,7 @@ class AIService {
       days: days,
       interests: interests,
       startLocation: startLocation,
+      language: language,
     );
 
     // Parse in strukturiertes Format (vereinfacht)
@@ -182,6 +191,7 @@ class AIService {
     required AppRoute route,
     required List<POI> availablePOIs,
     required UserPreferences preferences,
+    String? language,
   }) async {
     // POI-Zusammenfassung erstellen
     final poiSummary = availablePOIs
@@ -203,6 +213,7 @@ Verfügbare POIs: $poiSummary
 Antworte als JSON-Array: [{"name": "POI-Name", "reason": "Begründung"}]
 ''',
       context: TripContext(route: route),
+      language: language,
     );
 
     // JSON extrahieren und parsen
@@ -231,6 +242,7 @@ Antworte als JSON-Array: [{"name": "POI-Name", "reason": "Begründung"}]
     required Trip trip,
     required Map<int, String> dayWeather,
     required List<POI> availablePOIs,
+    String? language,
   }) async {
     debugPrint('[AI] Sende Trip-Optimierung an Backend...');
 
@@ -269,6 +281,7 @@ Antworte als JSON:
           dayWeather: dayWeather,
           totalDays: trip.actualDays,
         ),
+        language: language,
       );
 
       // JSON aus Antwort extrahieren

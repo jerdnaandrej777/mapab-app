@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/trip.dart';
 import '../../../core/constants/categories.dart';
 
@@ -71,7 +72,7 @@ class POIApproachCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formatDistance(distanceMeters),
+                    context.l10n.navDistanceAway(_formatDistanceValue(distanceMeters)),
                     style: TextStyle(
                       fontSize: 13,
                       color: colorScheme.onSurfaceVariant,
@@ -89,11 +90,11 @@ class POIApproachCard extends StatelessWidget {
                   Icons.skip_next,
                   color: colorScheme.onSurfaceVariant,
                 ),
-                tooltip: 'Überspringen',
+                tooltip: context.l10n.navSkip,
               ),
             FilledButton.tonal(
               onPressed: onVisited,
-              child: const Text('Besucht'),
+              child: Text(context.l10n.navVisitedButton),
             ),
           ],
         ),
@@ -101,13 +102,13 @@ class POIApproachCard extends StatelessWidget {
     );
   }
 
-  String _formatDistance(double meters) {
+  String _formatDistanceValue(double meters) {
     if (meters < 100) {
-      return '${meters.round()} m entfernt';
+      return '${meters.round()} m';
     } else if (meters < 1000) {
-      return '${(meters / 50).round() * 50} m entfernt';
+      return '${(meters / 50).round() * 50} m';
     } else {
-      return '${(meters / 1000).toStringAsFixed(1)} km entfernt';
+      return '${(meters / 1000).toStringAsFixed(1)} km';
     }
   }
 

@@ -97,6 +97,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(navigationNotifierProvider.notifier).startNavigation(
             baseRoute: widget.route,
+            l10n: context.l10n,
             stops: widget.stops,
           );
       // TTS Provider initialisieren (lauscht automatisch)

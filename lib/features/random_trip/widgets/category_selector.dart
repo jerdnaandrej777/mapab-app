@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/category_l10n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/random_trip_provider.dart';
 
@@ -24,7 +26,7 @@ class CategorySelector extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Kategorien',
+              context.l10n.categorySelectorTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -33,7 +35,7 @@ class CategorySelector extends ConsumerWidget {
               TextButton(
                 onPressed: () => notifier.setCategories([]),
                 child: Text(
-                  'Alle abwahlen',
+                  context.l10n.categorySelectorDeselectAll,
                   style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,
@@ -45,8 +47,8 @@ class CategorySelector extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           state.selectedCategories.isEmpty
-              ? 'Keine Auswahl = alle Kategorien'
-              : '${state.selectedCategoryCount} ausgewahlt',
+              ? context.l10n.categorySelectorNoneHint
+              : context.l10n.categorySelectorSelectedCount(state.selectedCategoryCount),
           style: TextStyle(
             fontSize: 12,
             color: AppTheme.textSecondary,
@@ -111,7 +113,7 @@ class _CategoryChip extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                category.label,
+                category.localizedLabel(context),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,

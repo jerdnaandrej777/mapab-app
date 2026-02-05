@@ -16,6 +16,8 @@ import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/widgets/day_tab_selector.dart';
 import '../../ai/providers/ai_trip_advisor_provider.dart';
 import '../../ai/widgets/ai_suggestion_banner.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/l10n/category_l10n.dart';
 import 'corridor_browser_sheet.dart';
 import 'day_mini_map.dart';
 import 'editable_poi_card.dart';
@@ -54,8 +56,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
 
     if (trip == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Trip bearbeiten')),
-        body: const Center(child: Text('Kein Trip vorhanden')),
+        appBar: AppBar(title: Text(context.l10n.dayEditorTitle)),
+        body: Center(child: Text(context.l10n.dayEditorNoTrip)),
       );
     }
 
@@ -65,8 +67,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final startLocation = state.startLocation;
     if (startLocation == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Trip bearbeiten')),
-        body: const Center(child: Text('Startpunkt nicht verfuegbar')),
+        appBar: AppBar(title: Text(context.l10n.dayEditorTitle)),
+        body: Center(child: Text(context.l10n.dayEditorStartNotAvailable)),
       );
     }
 
@@ -133,8 +135,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isMultiDay
-            ? 'Tag $selectedDay bearbeiten'
-            : 'Trip bearbeiten'),
+            ? context.l10n.dayEditorEditDay(selectedDay)
+            : context.l10n.dayEditorTitle),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
@@ -152,7 +154,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh),
-            tooltip: 'Neu generieren',
+            tooltip: context.l10n.dayEditorRegenerate,
           ),
         ],
       ),
@@ -208,7 +210,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                            '"${poi.name}" zu Tag $selectedDay hinzugefuegt'),
+                            '"${poi.name}" ${context.l10n.dayEditorAddedToDay(selectedDay)}'),
                         duration: const Duration(seconds: 1),
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -313,7 +315,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Max ${TripConstants.maxPoisPerDay} Stops pro Tag in Google Maps moeglich',
+                              context.l10n.dayEditorMaxStops(TripConstants.maxPoisPerDay),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.orange.shade800,
@@ -429,19 +431,19 @@ class _DayStats extends StatelessWidget {
           _StatChip(
             icon: Icons.place,
             value: '$stopCount',
-            label: 'Stops',
+            label: context.l10n.tripInfoStops,
             isWarning: isStopOverLimit,
           ),
           _StatChip(
             icon: Icons.straighten,
             value: '~${dayDistance.toStringAsFixed(0)} km',
-            label: 'Distanz',
+            label: context.l10n.tripInfoDistance,
             isWarning: isDistanceOverLimit,
           ),
           _StatChip(
             icon: Icons.access_time,
             value: formattedTime,
-            label: 'Fahrzeit',
+            label: context.l10n.dayEditorDriveTime,
           ),
           // Wetter fuer den Tag (Vorhersage oder aktuell)
           if (dayForecast != null)
@@ -456,13 +458,13 @@ class _DayStats extends StatelessWidget {
               icon: null,
               emojiIcon: dayWeather.icon,
               value: dayWeather.label,
-              label: 'Wetter',
+              label: context.l10n.dayEditorWeather,
             ),
           if (isMultiDay)
             _StatChip(
               icon: Icons.calendar_today,
               value: '$selectedDay/${trip.actualDays}',
-              label: 'Tag',
+              label: context.l10n.dayEditorDay,
             ),
         ],
       ),
@@ -559,7 +561,7 @@ class _AISuggestionsSection extends ConsumerWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              'Suche POI-Empfehlungen...',
+              context.l10n.dayEditorSearchRecommendations,
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
@@ -578,7 +580,7 @@ class _AISuggestionsSection extends ConsumerWidget {
         child: OutlinedButton.icon(
           onPressed: onLoadRecommendations,
           icon: Icon(Icons.auto_awesome, size: 18, color: colorScheme.primary),
-          label: const Text('POI-Empfehlungen laden'),
+          label: Text(context.l10n.dayEditorLoadRecommendations),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 40),
             side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
@@ -598,7 +600,7 @@ class _AISuggestionsSection extends ConsumerWidget {
               Icon(Icons.auto_awesome, size: 16, color: colorScheme.primary),
               const SizedBox(width: 6),
               Text(
-                'AI-Empfehlungen',
+                context.l10n.dayEditorAiRecommendations,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -757,7 +759,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
                     Row(
                       children: [
                         Text(
-                          poi.category?.label ?? '',
+                          poi.category?.localizedLabel(context) ?? '',
                           style: TextStyle(
                             fontSize: 11,
                             color: colorScheme.onSurfaceVariant,
@@ -781,7 +783,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Empfohlen',
+                            context.l10n.dayEditorRecommended,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -855,7 +857,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('"${poi.name}" zu Tag $dayNumber hinzugefuegt'),
+          content: Text('"${poi.name}" ${context.l10n.dayEditorAddedToDay(dayNumber)}'),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
         ),
@@ -874,7 +876,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('"${poi.name}" eingetauscht'),
+          content: Text(context.l10n.dayEditorSwapped(poi.name)),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
         ),
@@ -930,7 +932,7 @@ class _BottomActions extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       onPressed: onOpenCorridorBrowser,
                       icon: const Icon(Icons.add_location_alt_rounded, size: 18),
-                      label: const Text('POIs hinzufuegen'),
+                      label: Text(context.l10n.dayEditorAddPois),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
@@ -944,7 +946,7 @@ class _BottomActions extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _shareDayRoute(context, ref),
                       icon: const Icon(Icons.share, size: 18),
-                      label: const Text('Route Teilen'),
+                      label: Text(context.l10n.dayEditorRouteShare),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
@@ -962,7 +964,7 @@ class _BottomActions extends ConsumerWidget {
                 child: FilledButton.icon(
                   onPressed: () => _startDayNavigation(context, ref),
                   icon: const Icon(Icons.navigation_rounded),
-                  label: const Text('Navigation starten'),
+                  label: Text(context.l10n.tripInfoStartNavigation),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -983,8 +985,8 @@ class _BottomActions extends ConsumerWidget {
                   ),
                   label: Text(
                     isCompleted
-                        ? 'Tag $selectedDay erneut oeffnen'
-                        : 'Tag $selectedDay in Google Maps',
+                        ? context.l10n.dayEditorOpenAgain(selectedDay)
+                        : context.l10n.dayEditorDayInGoogleMaps(selectedDay),
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1010,7 +1012,7 @@ class _BottomActions extends ConsumerWidget {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Keine Stops fuer Tag $selectedDay')),
+        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
@@ -1070,8 +1072,8 @@ class _BottomActions extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Maps konnte nicht geoeffnet werden'),
+          SnackBar(
+            content: Text(context.l10n.errorGoogleMapsNotOpened),
           ),
         );
       }
@@ -1082,11 +1084,8 @@ class _BottomActions extends ConsumerWidget {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Trip abgeschlossen!'),
-        content: const Text(
-          'Alle Tage wurden erfolgreich in Google Maps exportiert. '
-          'Gute Reise!',
-        ),
+        title: Text(context.l10n.dayEditorTripCompleted),
+        content: Text(context.l10n.dayEditorAllDaysExported),
         actions: [
           FilledButton(
             onPressed: () {
@@ -1096,7 +1095,7 @@ class _BottomActions extends ConsumerWidget {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Fertig'),
+            child: Text(context.l10n.done),
           ),
         ],
       ),
@@ -1107,7 +1106,7 @@ class _BottomActions extends ConsumerWidget {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Keine Stops fuer Tag $selectedDay')),
+        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
@@ -1174,7 +1173,7 @@ class _BottomActions extends ConsumerWidget {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Keine Stops fuer Tag $selectedDay')),
+        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
@@ -1223,19 +1222,19 @@ class _BottomActions extends ConsumerWidget {
         .entries
         .map((e) => '${e.key + 1}. ${e.value.name}')
         .join('\n');
-    final shareText = 'Meine Route - Tag $selectedDay mit MapAB\n\n'
-        'Stops:\n$stopNames\n\n'
-        'In Google Maps oeffnen:\n$mapsUrl';
+    final shareText = '${context.l10n.dayEditorMyRouteDay(selectedDay)}\n\n'
+        '${context.l10n.dayEditorShareStops}:\n$stopNames\n\n'
+        '${context.l10n.dayEditorShareOpenGoogleMaps}:\n$mapsUrl';
 
     try {
-      await Share.share(shareText, subject: 'MapAB Route - Tag $selectedDay');
+      await Share.share(shareText, subject: context.l10n.dayEditorMapabRouteDay(selectedDay));
       debugPrint('[Share] Tag $selectedDay Route geteilt');
     } catch (e) {
       debugPrint('[Share] Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Route konnte nicht geteilt werden'),
+          SnackBar(
+            content: Text(context.l10n.dayEditorRouteShareError),
             duration: Duration(seconds: 2),
           ),
         );

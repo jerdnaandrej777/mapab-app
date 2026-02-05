@@ -1,14 +1,17 @@
+import 'package:travel_planner/l10n/app_localizations.dart';
+
 import '../../data/models/navigation_step.dart';
 
-/// Generiert deutsche Navigations-Instruktionen aus OSRM-Manöverdaten
+/// Generiert lokalisierte Navigations-Instruktionen aus OSRM-Manöverdaten
 class NavigationInstructionGenerator {
   const NavigationInstructionGenerator._();
 
-  /// Generiert eine deutsche Instruktion für einen OSRM-Schritt
+  /// Generiert eine lokalisierte Instruktion für einen OSRM-Schritt
   static String generate({
     required ManeuverType type,
     required ManeuverModifier modifier,
     required String streetName,
+    required AppLocalizations l10n,
     int? roundaboutExit,
   }) {
     final hasStreet = streetName.isNotEmpty;
@@ -16,82 +19,82 @@ class NavigationInstructionGenerator {
     switch (type) {
       case ManeuverType.depart:
         if (hasStreet) {
-          return 'Fahre los auf $streetName';
+          return l10n.navDepartOn(streetName);
         }
-        return 'Fahre los';
+        return l10n.navDepart;
 
       case ManeuverType.arrive:
         if (hasStreet) {
-          return 'Ziel erreicht: $streetName';
+          return l10n.navArriveAt(streetName);
         }
-        return 'Sie haben Ihr Ziel erreicht';
+        return l10n.navArrive;
 
       case ManeuverType.turn:
-        return _turnInstruction(modifier, streetName);
+        return _turnInstruction(modifier, streetName, l10n);
 
       case ManeuverType.newName:
         if (hasStreet) {
-          return 'Weiter auf $streetName';
+          return l10n.navContinueOn(streetName);
         }
-        return 'Weiterfahren';
+        return l10n.navContinue;
 
       case ManeuverType.merge:
-        final dir = _directionWord(modifier);
+        final dir = _directionWord(modifier, l10n);
         if (hasStreet) {
-          return '${dir}Einfädeln auf $streetName';
+          return '$dir${l10n.navMergeOn(streetName)}';
         }
-        return '${dir}Einfädeln';
+        return '$dir${l10n.navMerge}';
 
       case ManeuverType.onRamp:
-        final dir = _directionWord(modifier);
+        final dir = _directionWord(modifier, l10n);
         if (hasStreet) {
-          return '${dir}Auffahrt nehmen auf $streetName';
+          return '$dir${l10n.navOnRampOn(streetName)}';
         }
-        return '${dir}Auffahrt nehmen';
+        return '$dir${l10n.navOnRamp}';
 
       case ManeuverType.offRamp:
-        final dir = _directionWord(modifier);
+        final dir = _directionWord(modifier, l10n);
         if (hasStreet) {
-          return '${dir}Abfahrt nehmen auf $streetName';
+          return '$dir${l10n.navOffRampOn(streetName)}';
         }
-        return '${dir}Abfahrt nehmen';
+        return '$dir${l10n.navOffRamp}';
 
       case ManeuverType.fork:
-        return _forkInstruction(modifier, streetName);
+        return _forkInstruction(modifier, streetName, l10n);
 
       case ManeuverType.endOfRoad:
-        return _endOfRoadInstruction(modifier, streetName);
+        return _endOfRoadInstruction(modifier, streetName, l10n);
 
       case ManeuverType.roundabout:
       case ManeuverType.rotary:
-        return _roundaboutInstruction(roundaboutExit, streetName);
+        return _roundaboutInstruction(roundaboutExit, streetName, l10n);
 
       case ManeuverType.roundaboutTurn:
-        return _turnInstruction(modifier, streetName);
+        return _turnInstruction(modifier, streetName, l10n);
 
       case ManeuverType.exitRoundabout:
         if (hasStreet) {
-          return 'Kreisverkehr verlassen auf $streetName';
+          return l10n.navRoundaboutLeaveOn(streetName);
         }
-        return 'Kreisverkehr verlassen';
+        return l10n.navRoundaboutLeave;
 
       case ManeuverType.continueInstruction:
         if (modifier == ManeuverModifier.straight) {
           if (hasStreet) {
-            return 'Geradeaus weiter auf $streetName';
+            return l10n.navStraightOn(streetName);
           }
-          return 'Geradeaus weiterfahren';
+          return l10n.navStraightContinue;
         }
-        return _turnInstruction(modifier, streetName);
+        return _turnInstruction(modifier, streetName, l10n);
 
       case ManeuverType.notification:
-        return streetName.isNotEmpty ? streetName : 'Weiterfahren';
+        return streetName.isNotEmpty ? streetName : l10n.navContinue;
 
       case ManeuverType.unknown:
         if (hasStreet) {
-          return 'Weiter auf $streetName';
+          return l10n.navContinueOn(streetName);
         }
-        return 'Weiterfahren';
+        return l10n.navContinue;
     }
   }
 
@@ -99,42 +102,43 @@ class NavigationInstructionGenerator {
   static String generateShort({
     required ManeuverType type,
     required ManeuverModifier modifier,
+    required AppLocalizations l10n,
     int? roundaboutExit,
   }) {
     switch (type) {
       case ManeuverType.turn:
       case ManeuverType.roundaboutTurn:
       case ManeuverType.continueInstruction:
-        return _shortTurnWord(modifier);
+        return _shortTurnWord(modifier, l10n);
 
       case ManeuverType.roundabout:
       case ManeuverType.rotary:
         if (roundaboutExit != null) {
-          return '${_ordinal(roundaboutExit)} Ausfahrt';
+          return l10n.navExitShort(_ordinal(roundaboutExit, l10n));
         }
-        return 'Kreisverkehr';
+        return l10n.navRoundabout;
 
       case ManeuverType.arrive:
-        return 'Ziel erreicht';
+        return l10n.navArrive;
 
       case ManeuverType.fork:
         return modifier == ManeuverModifier.left ||
                 modifier == ManeuverModifier.slightLeft ||
                 modifier == ManeuverModifier.sharpLeft
-            ? 'Links halten'
-            : 'Rechts halten';
+            ? l10n.navKeepLeft
+            : l10n.navKeepRight;
 
       case ManeuverType.merge:
-        return 'Einfädeln';
+        return l10n.navMerge;
 
       case ManeuverType.onRamp:
-        return 'Auffahrt';
+        return l10n.navOnRamp;
 
       case ManeuverType.offRamp:
-        return 'Abfahrt';
+        return l10n.navOffRamp;
 
       default:
-        return 'Weiter';
+        return l10n.navContinue;
     }
   }
 
@@ -144,171 +148,200 @@ class NavigationInstructionGenerator {
     required ManeuverModifier modifier,
     required String streetName,
     required double distanceMeters,
+    required AppLocalizations l10n,
     int? roundaboutExit,
   }) {
     final instruction = generate(
       type: type,
       modifier: modifier,
       streetName: streetName,
+      l10n: l10n,
       roundaboutExit: roundaboutExit,
     );
 
     if (distanceMeters <= 50) {
-      return 'Jetzt $instruction';
+      return l10n.navNow(instruction);
     }
 
-    final distText = _formatDistance(distanceMeters);
-    return 'In $distText $instruction';
+    final distText = _formatDistance(distanceMeters, l10n);
+    return l10n.navInDistance(distText, instruction);
   }
 
   // --- Private Helpers ---
 
-  static String _turnInstruction(ManeuverModifier modifier, String streetName) {
+  static String _turnInstruction(
+      ManeuverModifier modifier, String streetName, AppLocalizations l10n) {
     final hasStreet = streetName.isNotEmpty;
-    final suffix = hasStreet ? ' auf $streetName' : '';
 
     switch (modifier) {
       case ManeuverModifier.uturn:
-        return 'Wenden$suffix';
+        return hasStreet ? l10n.navUturnOn(streetName) : l10n.navUturn;
       case ManeuverModifier.sharpRight:
-        return 'Scharf rechts abbiegen$suffix';
+        return hasStreet
+            ? l10n.navSharpRightOn(streetName)
+            : l10n.navSharpRight;
       case ManeuverModifier.right:
-        return 'Rechts abbiegen$suffix';
+        return hasStreet ? l10n.navTurnRightOn(streetName) : l10n.navTurnRight;
       case ManeuverModifier.slightRight:
-        return 'Leicht rechts abbiegen$suffix';
+        return hasStreet
+            ? l10n.navSlightRightOn(streetName)
+            : l10n.navSlightRight;
       case ManeuverModifier.straight:
-        return 'Geradeaus weiter$suffix';
+        return hasStreet ? l10n.navStraightOn(streetName) : l10n.navStraight;
       case ManeuverModifier.slightLeft:
-        return 'Leicht links abbiegen$suffix';
+        return hasStreet
+            ? l10n.navSlightLeftOn(streetName)
+            : l10n.navSlightLeft;
       case ManeuverModifier.left:
-        return 'Links abbiegen$suffix';
+        return hasStreet ? l10n.navTurnLeftOn(streetName) : l10n.navTurnLeft;
       case ManeuverModifier.sharpLeft:
-        return 'Scharf links abbiegen$suffix';
+        return hasStreet
+            ? l10n.navSharpLeftOn(streetName)
+            : l10n.navSharpLeft;
       case ManeuverModifier.none:
-        return 'Abbiegen$suffix';
+        return hasStreet ? l10n.navTurnOn(streetName) : l10n.navTurn;
     }
   }
 
   static String _forkInstruction(
-      ManeuverModifier modifier, String streetName) {
+      ManeuverModifier modifier, String streetName, AppLocalizations l10n) {
     final hasStreet = streetName.isNotEmpty;
-    final suffix = hasStreet ? ' auf $streetName' : '';
 
     switch (modifier) {
       case ManeuverModifier.left:
       case ManeuverModifier.slightLeft:
       case ManeuverModifier.sharpLeft:
-        return 'An der Gabelung links halten$suffix';
+        return hasStreet
+            ? l10n.navForkLeftOn(streetName)
+            : l10n.navForkLeft;
       case ManeuverModifier.right:
       case ManeuverModifier.slightRight:
       case ManeuverModifier.sharpRight:
-        return 'An der Gabelung rechts halten$suffix';
+        return hasStreet
+            ? l10n.navForkRightOn(streetName)
+            : l10n.navForkRight;
       default:
-        return 'An der Gabelung weiterfahren$suffix';
+        return hasStreet
+            ? l10n.navForkStraightOn(streetName)
+            : l10n.navForkStraight;
     }
   }
 
   static String _endOfRoadInstruction(
-      ManeuverModifier modifier, String streetName) {
+      ManeuverModifier modifier, String streetName, AppLocalizations l10n) {
     final hasStreet = streetName.isNotEmpty;
-    final suffix = hasStreet ? ' auf $streetName' : '';
 
     switch (modifier) {
       case ManeuverModifier.left:
       case ManeuverModifier.slightLeft:
       case ManeuverModifier.sharpLeft:
-        return 'Am Straßenende links abbiegen$suffix';
+        return hasStreet
+            ? l10n.navEndOfRoadLeftOn(streetName)
+            : l10n.navEndOfRoadLeft;
       case ManeuverModifier.right:
       case ManeuverModifier.slightRight:
       case ManeuverModifier.sharpRight:
-        return 'Am Straßenende rechts abbiegen$suffix';
+        return hasStreet
+            ? l10n.navEndOfRoadRightOn(streetName)
+            : l10n.navEndOfRoadRight;
       default:
-        return 'Am Straßenende weiterfahren$suffix';
+        return hasStreet
+            ? l10n.navEndOfRoadStraightOn(streetName)
+            : l10n.navEndOfRoadStraight;
     }
   }
 
-  static String _roundaboutInstruction(int? exit, String streetName) {
+  static String _roundaboutInstruction(
+      int? exit, String streetName, AppLocalizations l10n) {
     final hasStreet = streetName.isNotEmpty;
-    final suffix = hasStreet ? ' auf $streetName' : '';
 
     if (exit != null && exit > 0) {
-      return 'Im Kreisverkehr die ${_ordinal(exit)} Ausfahrt nehmen$suffix';
+      final ordinal = _ordinal(exit, l10n);
+      if (hasStreet) {
+        return l10n.navRoundaboutExitOn(ordinal, streetName);
+      }
+      return l10n.navRoundaboutExit(ordinal);
     }
-    return 'In den Kreisverkehr einfahren$suffix';
+    if (hasStreet) {
+      return l10n.navRoundaboutEnterOn(streetName);
+    }
+    return l10n.navRoundaboutEnter;
   }
 
-  static String _shortTurnWord(ManeuverModifier modifier) {
+  static String _shortTurnWord(
+      ManeuverModifier modifier, AppLocalizations l10n) {
     switch (modifier) {
       case ManeuverModifier.uturn:
-        return 'Wenden';
+        return l10n.navUturn;
       case ManeuverModifier.sharpRight:
-        return 'Scharf rechts';
+        return l10n.navSharpRightShort;
       case ManeuverModifier.right:
-        return 'Rechts';
+        return l10n.navRightShort;
       case ManeuverModifier.slightRight:
-        return 'Leicht rechts';
+        return l10n.navSlightRightShort;
       case ManeuverModifier.straight:
-        return 'Geradeaus';
+        return l10n.navStraightShort;
       case ManeuverModifier.slightLeft:
-        return 'Leicht links';
+        return l10n.navSlightLeftShort;
       case ManeuverModifier.left:
-        return 'Links';
+        return l10n.navLeftShort;
       case ManeuverModifier.sharpLeft:
-        return 'Scharf links';
+        return l10n.navSharpLeftShort;
       case ManeuverModifier.none:
-        return 'Weiter';
+        return l10n.navContinue;
     }
   }
 
-  static String _directionWord(ManeuverModifier modifier) {
+  static String _directionWord(
+      ManeuverModifier modifier, AppLocalizations l10n) {
     switch (modifier) {
       case ManeuverModifier.left:
       case ManeuverModifier.slightLeft:
       case ManeuverModifier.sharpLeft:
-        return 'Links ';
+        return l10n.navDirectionLeft;
       case ManeuverModifier.right:
       case ManeuverModifier.slightRight:
       case ManeuverModifier.sharpRight:
-        return 'Rechts ';
+        return l10n.navDirectionRight;
       default:
         return '';
     }
   }
 
-  static String _ordinal(int number) {
+  static String _ordinal(int number, AppLocalizations l10n) {
     switch (number) {
       case 1:
-        return 'erste';
+        return l10n.navOrdinalFirst;
       case 2:
-        return 'zweite';
+        return l10n.navOrdinalSecond;
       case 3:
-        return 'dritte';
+        return l10n.navOrdinalThird;
       case 4:
-        return 'vierte';
+        return l10n.navOrdinalFourth;
       case 5:
-        return 'fünfte';
+        return l10n.navOrdinalFifth;
       case 6:
-        return 'sechste';
+        return l10n.navOrdinalSixth;
       case 7:
-        return 'siebte';
+        return l10n.navOrdinalSeventh;
       case 8:
-        return 'achte';
+        return l10n.navOrdinalEighth;
       default:
-        return '${number}.';
+        return '$number.';
     }
   }
 
-  static String _formatDistance(double meters) {
+  static String _formatDistance(double meters, AppLocalizations l10n) {
     if (meters < 100) {
-      return '${meters.round()} Metern';
+      return l10n.navMeters('${meters.round()}');
     } else if (meters < 1000) {
-      return '${(meters / 50).round() * 50} Metern';
+      return l10n.navMeters('${(meters / 50).round() * 50}');
     } else {
       final km = meters / 1000;
       if (km < 10) {
-        return '${km.toStringAsFixed(1)} Kilometern';
+        return l10n.navKilometers(km.toStringAsFixed(1));
       }
-      return '${km.round()} Kilometern';
+      return l10n.navKilometers('${km.round()}');
     }
   }
 }

@@ -1,6 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
 import '../../../core/utils/navigation_instruction_generator.dart';
+import '../../../data/providers/settings_provider.dart';
 import '../../../data/services/voice_service.dart';
 import 'navigation_poi_discovery_provider.dart';
 import 'navigation_provider.dart';
@@ -26,6 +29,10 @@ class NavigationTts extends _$NavigationTts {
 
   @override
   void build() {
+    // VoiceService Sprache synchronisieren
+    final settings = ref.watch(settingsNotifierProvider);
+    ref.read(voiceServiceProvider).setLocale(settings.language);
+
     // NavigationState beobachten und TTS-Ansagen triggern
     ref.listen<NavigationState>(
       navigationNotifierProvider,
@@ -105,6 +112,12 @@ class NavigationTts extends _$NavigationTts {
     _announceManeuver(next, voiceService);
   }
 
+  /// Gibt die aktuelle AppLocalizations basierend auf der eingestellten Sprache zurueck
+  AppLocalizations get _l10n {
+    final settings = ref.read(settingsNotifierProvider);
+    return lookupAppLocalizations(Locale(settings.language));
+  }
+
   /// Steuert Manöver-Ansagen basierend auf Distanz-Schwellen
   void _announceManeuver(NavigationState navState, VoiceService voiceService) {
     final step = navState.nextStep ?? navState.currentStep;
@@ -140,10 +153,12 @@ class NavigationTts extends _$NavigationTts {
     _lastAnnouncementLevel = level;
 
     // Instruktion generieren
+    final l10n = _l10n;
     final instruction = level == _AnnouncementLevel.immediate
         ? NavigationInstructionGenerator.generateShort(
             type: step.type,
             modifier: step.modifier,
+            l10n: l10n,
             roundaboutExit: step.roundaboutExit,
           )
         : step.instruction;
@@ -181,9 +196,9 @@ class NavigationTts extends _$NavigationTts {
     final voiceService = ref.read(voiceServiceProvider);
 
     // Must-See Ankuendigung
+    final l10n = _l10n;
     final rounded = (distance / 50).round() * 50;
-    final text = 'In $rounded Metern befindet sich ${poi.name}, '
-        'ein Must-See Highlight';
+    final text = l10n.navMustSeeAnnouncement('$rounded', poi.name);
     voiceService.speak(text);
 
     // Als angekuendigt markieren

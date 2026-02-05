@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/trip.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../providers/random_trip_provider.dart';
@@ -24,7 +25,7 @@ class TripPreviewCard extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (trip == null) {
-      return const Center(child: Text('Kein Trip generiert'));
+      return Center(child: Text(context.l10n.tripPreviewNoTrip));
     }
 
     return Column(
@@ -35,7 +36,7 @@ class TripPreviewCard extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Dein Trip',
+              context.l10n.tripPreviewYourTrip,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -57,14 +58,14 @@ class TripPreviewCard extends ConsumerWidget {
                           ),
                         )
                       : const Icon(Icons.refresh),
-                  tooltip: 'Neu generieren',
+                  tooltip: context.l10n.dayEditorRegenerate,
                 ),
                 // Bestätigen
                 IconButton(
                   onPressed: () => notifier.confirmTrip(),
                   icon: const Icon(Icons.check_circle_outline),
                   color: colorScheme.primary,
-                  tooltip: 'Trip bestätigen',
+                  tooltip: context.l10n.tripPreviewConfirm,
                 ),
               ],
             ),
@@ -155,7 +156,7 @@ class _TripStatistics extends StatelessWidget {
                   const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    'Max ${TripConstants.maxPoisPerDay} Stops pro Tag (Google Maps Limit)',
+                    context.l10n.tripPreviewMaxStopsWarning(TripConstants.maxPoisPerDay),
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.orange.shade800,
@@ -171,7 +172,7 @@ class _TripStatistics extends StatelessWidget {
               _StatItem(
                 icon: Icons.place,
                 value: '$stopCount',
-                label: isMultiDay ? 'Stops (Tag $selectedDay)' : 'Stops',
+                label: isMultiDay ? context.l10n.tripPreviewStopsDay(selectedDay) : context.l10n.tripSummaryStops,
                 isWarning: isOverLimit,
               ),
               _StatItem(
@@ -179,12 +180,12 @@ class _TripStatistics extends StatelessWidget {
                 value: isMultiDay
                     ? '~${trip.getDistanceForDay(selectedDay).toStringAsFixed(0)} km'
                     : trip.route.formattedDistance,
-                label: 'Distanz',
+                label: context.l10n.tripInfoDistance,
               ),
               _StatItem(
                 icon: Icons.calendar_today,
                 value: '${trip.actualDays}',
-                label: trip.actualDays == 1 ? 'Tag' : 'Tage',
+                label: context.l10n.tripPreviewDayCount(trip.actualDays),
               ),
             ],
           ),

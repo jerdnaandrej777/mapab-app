@@ -1433,6 +1433,108 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navOrdinalFifth => 'cinquième';
 
   @override
+  String get navOrdinalSixth => 'sixième';
+
+  @override
+  String get navOrdinalSeventh => 'septième';
+
+  @override
+  String get navOrdinalEighth => 'huitième';
+
+  @override
+  String navSharpRightOn(String street) {
+    return 'Tournez fortement à droite sur $street';
+  }
+
+  @override
+  String navSharpLeftOn(String street) {
+    return 'Tournez fortement à gauche sur $street';
+  }
+
+  @override
+  String navUturnOn(String street) {
+    return 'Faites demi-tour sur $street';
+  }
+
+  @override
+  String get navTurn => 'Tournez';
+
+  @override
+  String navTurnOn(String street) {
+    return 'Tournez sur $street';
+  }
+
+  @override
+  String get navForkStraight => 'Continuez à l\'embranchement';
+
+  @override
+  String navForkStraightOn(String street) {
+    return 'Continuez à l\'embranchement sur $street';
+  }
+
+  @override
+  String get navEndOfRoadStraight => 'Continuez au bout de la route';
+
+  @override
+  String navEndOfRoadStraightOn(String street) {
+    return 'Continuez au bout de la route sur $street';
+  }
+
+  @override
+  String navRoundaboutLeaveOn(String street) {
+    return 'Quittez le rond-point sur $street';
+  }
+
+  @override
+  String navRoundaboutEnterOn(String street) {
+    return 'Entrez dans le rond-point sur $street';
+  }
+
+  @override
+  String get navStraightContinue => 'Continuez tout droit';
+
+  @override
+  String get navDirectionLeft => 'À gauche ';
+
+  @override
+  String get navDirectionRight => 'À droite ';
+
+  @override
+  String get navSharpRightShort => 'Fortement à droite';
+
+  @override
+  String get navRightShort => 'À droite';
+
+  @override
+  String get navSlightRightShort => 'Légèrement à droite';
+
+  @override
+  String get navStraightShort => 'Tout droit';
+
+  @override
+  String get navSlightLeftShort => 'Légèrement à gauche';
+
+  @override
+  String get navLeftShort => 'À gauche';
+
+  @override
+  String get navSharpLeftShort => 'Fortement à gauche';
+
+  @override
+  String get navKeepLeft => 'Gardez la gauche';
+
+  @override
+  String get navKeepRight => 'Gardez la droite';
+
+  @override
+  String get navRoundabout => 'Rond-point';
+
+  @override
+  String navExitShort(String ordinal) {
+    return '$ordinal sortie';
+  }
+
+  @override
   String get navMustSeeStop => 'Arrêt';
 
   @override
@@ -1983,7 +2085,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String chatShowAllPois(int count) {
-    return 'Afficher tous les $count POIs';
+    return 'Afficher tous les POIs';
   }
 
   @override
@@ -2588,4 +2690,419 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get publishDaytrip => 'Excursion';
+
+  @override
+  String get dayEditorDriveTime => 'Temps de trajet';
+
+  @override
+  String get dayEditorWeather => 'Météo';
+
+  @override
+  String get dayEditorDay => 'Jour';
+
+  @override
+  String dayEditorNoStopsForDay(int day) {
+    return 'Pas d\'arrêts pour le jour $day';
+  }
+
+  @override
+  String dayEditorDayInGoogleMaps(int day) {
+    return 'Jour $day dans Google Maps';
+  }
+
+  @override
+  String dayEditorOpenAgain(int day) {
+    return 'Rouvrir le jour $day';
+  }
+
+  @override
+  String get dayEditorTripCompleted => 'Trip terminé !';
+
+  @override
+  String get dayEditorRouteShare => 'Partager l\'itinéraire';
+
+  @override
+  String get dayEditorRouteShareError => 'Impossible de partager l\'itinéraire';
+
+  @override
+  String get dayEditorShareStops => 'Arrêts';
+
+  @override
+  String get dayEditorShareOpenGoogleMaps => 'Ouvrir dans Google Maps';
+
+  @override
+  String get tripSummaryTotal => 'Total';
+
+  @override
+  String get tripSummaryDriveTime => 'Temps de trajet';
+
+  @override
+  String get tripSummaryStops => 'Arrêts';
+
+  @override
+  String get filterTitle => 'Filtres';
+
+  @override
+  String get filterMaxDetour => 'Détour maximum';
+
+  @override
+  String get filterMaxDetourHint =>
+      'Les POIs avec un détour plus long seront masqués';
+
+  @override
+  String get filterAllCategories => 'Afficher toutes les catégories';
+
+  @override
+  String filterSelectedCount(int count) {
+    return '$count sélectionnées';
+  }
+
+  @override
+  String get filterCategoriesLabel => 'Catégories';
+
+  @override
+  String get categorySelectorDeselectAll => 'Tout désélectionner';
+
+  @override
+  String get categorySelectorNoneHint =>
+      'Aucune sélection = toutes les catégories';
+
+  @override
+  String categorySelectorSelectedCount(int count) {
+    return '$count sélectionnées';
+  }
+
+  @override
+  String get categorySelectorTitle => 'Catégories';
+
+  @override
+  String get startLocationLabel => 'Point de départ';
+
+  @override
+  String get startLocationHint => 'Entrez une ville ou une adresse...';
+
+  @override
+  String get startLocationGps => 'Utiliser la position GPS';
+
+  @override
+  String get tripPreviewNoTrip => 'Aucun trip généré';
+
+  @override
+  String get tripPreviewYourTrip => 'Votre Trip';
+
+  @override
+  String get tripPreviewConfirm => 'Confirmer le trip';
+
+  @override
+  String tripPreviewMaxStopsWarning(int max) {
+    return 'Max $max arrêts par jour (limite Google Maps)';
+  }
+
+  @override
+  String tripPreviewStopsDay(int day) {
+    return 'Arrêts (Jour $day)';
+  }
+
+  @override
+  String tripPreviewDayCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Jours',
+      one: 'Jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get navSkip => 'Passer';
+
+  @override
+  String get navVisitedButton => 'Visité';
+
+  @override
+  String navDistanceAway(String distance) {
+    return 'à $distance';
+  }
+
+  @override
+  String get chatDemoMode => 'Mode démo : les réponses sont simulées';
+
+  @override
+  String get chatLocationLoading => 'Chargement de la position...';
+
+  @override
+  String get chatLocationActive => 'Position active';
+
+  @override
+  String get chatLocationEnable => 'Activer la position';
+
+  @override
+  String get chatMyLocation => 'Ma position';
+
+  @override
+  String get chatRadiusTooltip => 'Rayon de recherche';
+
+  @override
+  String get chatNoPoisFound => 'Aucun POI trouvé à proximité';
+
+  @override
+  String chatPoisInRadius(int count, String radius) {
+    return '$count POIs dans un rayon de $radius km';
+  }
+
+  @override
+  String chatRadiusLabel(String radius) {
+    return '$radius km';
+  }
+
+  @override
+  String get chatWelcomeSubtitle =>
+      'Posez-moi toutes vos questions sur votre voyage !';
+
+  @override
+  String get chatDemoBackendNotReachable => 'Mode démo : Backend non joignable';
+
+  @override
+  String get chatDemoBackendNotConfigured =>
+      'Mode démo : URL du backend non configurée';
+
+  @override
+  String get chatNumberOfDays => 'Nombre de jours';
+
+  @override
+  String get chatInterests => 'Centres d\'intérêt :';
+
+  @override
+  String get chatLocationNotAvailable => 'Position non disponible';
+
+  @override
+  String get chatLocationNotAvailableMessage =>
+      'Pour trouver des POIs près de vous, j\'ai besoin d\'accéder à votre position.\n\nVeuillez activer les services de localisation et réessayer.';
+
+  @override
+  String get chatPoisSearchError => 'Erreur lors de la recherche de POIs';
+
+  @override
+  String get chatPoisSearchErrorMessage =>
+      'Désolé, un problème est survenu lors du chargement des POIs.\n\nVeuillez réessayer.';
+
+  @override
+  String get chatNoResponseGenerated =>
+      'Désolé, je n\'ai pas pu générer de réponse.';
+
+  @override
+  String get chatRadiusAdjust => 'Ajuster le rayon de recherche';
+
+  @override
+  String get voiceRerouting => 'Recalcul de l\'itinéraire';
+
+  @override
+  String voicePOIApproaching(String name, String distance) {
+    return '$name dans $distance';
+  }
+
+  @override
+  String voiceArrivedAt(String name) {
+    return 'Vous êtes arrivé à : $name';
+  }
+
+  @override
+  String voiceRouteInfo(String distance, String duration) {
+    return 'Encore $distance et $duration jusqu\'à la destination';
+  }
+
+  @override
+  String voiceNextStop(String name, String distance) {
+    return 'Prochain arrêt : $name dans $distance';
+  }
+
+  @override
+  String voiceCurrentLocation(String location) {
+    return 'Position actuelle : $location';
+  }
+
+  @override
+  String voiceInMeters(int meters) {
+    return '$meters mètres';
+  }
+
+  @override
+  String voiceInKilometers(String km) {
+    return '$km kilomètres';
+  }
+
+  @override
+  String voiceHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count heures',
+      one: '1 heure',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String voiceMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String voiceStops(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arrêts',
+      one: '1 arrêt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get voiceCmdNextStop => 'Prochain arrêt';
+
+  @override
+  String get voiceCmdLocation => 'Où suis-je';
+
+  @override
+  String get voiceCmdDuration => 'Combien de temps encore';
+
+  @override
+  String get voiceCmdEndNavigation => 'Terminer la navigation';
+
+  @override
+  String get voiceNow => 'Maintenant';
+
+  @override
+  String get voiceArrived => 'Vous êtes arrivé à destination';
+
+  @override
+  String voicePOIReached(String name) {
+    return '$name atteint';
+  }
+
+  @override
+  String voiceCategory(String category) {
+    return 'Catégorie : $category';
+  }
+
+  @override
+  String voiceDistanceMeters(int meters) {
+    return 'à $meters mètres';
+  }
+
+  @override
+  String voiceDistanceKm(String km) {
+    return 'à $km kilomètres';
+  }
+
+  @override
+  String voiceRouteLength(String distance, String duration, String stops) {
+    return 'Votre itinéraire fait $distance kilomètres, dure environ $duration et comporte $stops.';
+  }
+
+  @override
+  String voiceAndMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return 'et $_temp0';
+  }
+
+  @override
+  String get voiceCmdPreviousStop => 'Arrêt précédent';
+
+  @override
+  String get voiceCmdNearby => 'Qu\'y a-t-il à proximité';
+
+  @override
+  String get voiceCmdAdd => 'Ajouter à l\'itinéraire';
+
+  @override
+  String get voiceCmdStartNav => 'Démarrer la navigation';
+
+  @override
+  String get voiceCmdStopNav => 'Terminer la navigation';
+
+  @override
+  String get voiceCmdDescribe => 'Lire la description';
+
+  @override
+  String get voiceCmdUnknown => 'Inconnu';
+
+  @override
+  String voiceManeuverNow(String instruction) {
+    return 'Maintenant $instruction';
+  }
+
+  @override
+  String voiceManeuverInMeters(int meters, String instruction) {
+    return 'Dans $meters mètres $instruction';
+  }
+
+  @override
+  String voiceManeuverInKm(String km, String instruction) {
+    return 'Dans $km kilomètres $instruction';
+  }
+
+  @override
+  String navMustSeeAnnouncement(String distance, String name) {
+    return 'Dans $distance mètres se trouve $name, un incontournable';
+  }
+
+  @override
+  String advisorDangerWeather(int day, int outdoorCount) {
+    return 'Alerte météo prévue pour le jour $day ! $outdoorCount arrêts extérieurs devraient être remplacés par des alternatives intérieures.';
+  }
+
+  @override
+  String advisorBadWeather(int day, int outdoorCount, int totalCount) {
+    return 'Pluie prévue pour le jour $day. $outdoorCount sur $totalCount arrêts sont des activités extérieures.';
+  }
+
+  @override
+  String advisorOutdoorAlternative(String name) {
+    return '$name est une activité extérieure - alternative recommandée';
+  }
+
+  @override
+  String advisorOutdoorReplace(String name) {
+    return '$name est une activité extérieure. Remplacez cet arrêt par une alternative intérieure.';
+  }
+
+  @override
+  String get advisorAiUnavailableSuggestions =>
+      'IA indisponible - affichage des suggestions locales';
+
+  @override
+  String advisorNoStopsForDay(int day) {
+    return 'Aucun arrêt pour le jour $day';
+  }
+
+  @override
+  String get advisorNoRecommendationsFound =>
+      'Aucune recommandation trouvée à proximité des arrêts';
+
+  @override
+  String get advisorAiUnavailableRecommendations =>
+      'IA indisponible - affichage des recommandations locales';
+
+  @override
+  String get advisorErrorLoadingRecommendations =>
+      'Erreur lors du chargement des recommandations';
+
+  @override
+  String advisorPoiCategory(String name, String category) {
+    return '$name - $category';
+  }
 }

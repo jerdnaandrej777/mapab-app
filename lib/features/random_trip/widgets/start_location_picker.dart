@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/route.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../providers/random_trip_provider.dart';
@@ -85,7 +86,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Startpunkt',
+          context.l10n.startLocationLabel,
           style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -110,7 +111,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                 controller: _controller,
                 focusNode: _focusNode,
                 decoration: InputDecoration(
-                  hintText: 'Stadt oder Adresse eingeben...',
+                  hintText: context.l10n.startLocationHint,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _isSearching
                       ? const Padding(
@@ -284,7 +285,7 @@ class _GpsButton extends StatelessWidget {
               ),
             const SizedBox(width: 8),
             Text(
-              address ?? 'GPS-Standort verwenden',
+              address ?? context.l10n.startLocationGps,
               style: TextStyle(
                 fontSize: 13,
                 color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
