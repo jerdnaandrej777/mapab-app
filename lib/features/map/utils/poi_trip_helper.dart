@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
+import '../../../core/utils/location_helper.dart';
 
 import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
@@ -70,28 +70,9 @@ class POITripHelper {
   }
 
   /// GPS-Dialog anzeigen wenn GPS deaktiviert ist
+  /// Delegiert an LocationHelper.showGpsDialog fuer zentralisierte l10n.
   static Future<bool> showGpsDialog(BuildContext context) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('GPS deaktiviert'),
-            content: const Text(
-              'Die Ortungsdienste sind deaktiviert. '
-              'Möchtest du die GPS-Einstellungen öffnen?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen öffnen'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return LocationHelper.showGpsDialog(context);
   }
 
   /// Vollstaendiger Add-Flow mit UI-Feedback (SnackBar, GPS-Dialog, Navigation)
@@ -126,7 +107,7 @@ class POITripHelper {
     } else if (result.gpsDisabled) {
       final shouldOpen = await showGpsDialog(context);
       if (shouldOpen) {
-        await Geolocator.openLocationSettings();
+        await LocationHelper.openSettings();
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

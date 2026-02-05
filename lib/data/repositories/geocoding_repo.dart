@@ -12,12 +12,19 @@ class GeocodingRepository {
   final Dio _dio;
 
   GeocodingRepository({Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-              receiveTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-            ));
+      : _dio = dio ?? ApiConfig.createDio();
+
+  /// Max. erlaubte Abfragelänge (verhindert API-Missbrauch)
+  static const int _maxQueryLength = 200;
+
+  /// Bereinigt Suchabfragen: trimmt, normalisiert Whitespace, kürzt
+  String _sanitizeQuery(String query) {
+    final trimmed = query.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (trimmed.length > _maxQueryLength) {
+      return trimmed.substring(0, _maxQueryLength);
+    }
+    return trimmed;
+  }
 
   /// Geocoding: Adresse → Koordinaten
   /// Gibt Liste von Ergebnissen zurück
@@ -26,13 +33,14 @@ class GeocodingRepository {
     int limit = 5,
     String? countryCode,
   }) async {
-    if (query.trim().isEmpty) return [];
+    final sanitized = _sanitizeQuery(query);
+    if (sanitized.isEmpty) return [];
 
     try {
       final response = await _dio.get(
         ApiEndpoints.nominatimSearch,
         queryParameters: {
-          'q': query,
+          'q': sanitized,
           'format': 'json',
           'addressdetails': 1,
           'limit': limit,
@@ -81,13 +89,14 @@ class GeocodingRepository {
     String query, {
     int limit = 5,
   }) async {
-    if (query.trim().length < 2) return [];
+    final sanitized = _sanitizeQuery(query);
+    if (sanitized.length < 2) return [];
 
     try {
       final response = await _dio.get(
         ApiEndpoints.nominatimSearch,
         queryParameters: {
-          'q': query,
+          'q': sanitized,
           'format': 'json',
           'addressdetails': 1,
           'limit': limit,

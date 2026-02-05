@@ -136,8 +136,9 @@ class CorridorBrowserState {
       addedPOIIds: addedPOIIds ?? this.addedPOIIds,
     );
     // Cache nur erhalten wenn Filter-relevante Felder sich NICHT aendern
-    // (z.B. bei reinem bufferKm/isLoading/error Update)
-    if (corridorPOIs == null && selectedCategories == null && addedPOIIds == null) {
+    // (z.B. bei reinem isLoading/error Update)
+    // bufferKm-Aenderung invalidiert Cache, da corridorPOIs logisch stale werden
+    if (corridorPOIs == null && selectedCategories == null && addedPOIIds == null && bufferKm == null) {
       newState._filteredPOIsCache = _filteredPOIsCache;
       newState._newPOICountCache = _newPOICountCache;
     }
@@ -169,8 +170,10 @@ class CorridorBrowserState {
   }
 }
 
-/// Provider fuer den Korridor-POI-Browser
-@riverpod
+/// Provider fuer den Korridor-POI-Browser.
+/// keepAlive: POI-Filter-State und geladene Daten bleiben bei Screen-Wechsel erhalten.
+/// reset() wird bei Bedarf explizit aufgerufen (z.B. Tageswechsel im DayEditor).
+@Riverpod(keepAlive: true)
 class CorridorBrowserNotifier extends _$CorridorBrowserNotifier {
   /// Request-ID: Nur die neueste Anfrage darf State aktualisieren.
   /// Verhindert dass alte, langsame Requests stale Daten schreiben.

@@ -120,11 +120,15 @@ class AppSettings {
   }
 }
 
-/// Secure Storage Instanz für Passwort-Speicherung
+/// Secure Storage Instanz für Credential-Speicherung
 const _secureStorage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  iOptions: IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  ),
 );
 const _secureKeyPassword = 'mapab_saved_password';
+const _secureKeyEmail = 'mapab_saved_email';
 
 /// Settings Provider mit Hive Persistenz
 @Riverpod(keepAlive: true)
@@ -219,9 +223,10 @@ class SettingsNotifier extends _$SettingsNotifier {
     await _saveSettings();
   }
 
-  /// Speichert Login-Credentials (Passwort in Secure Storage, Email in Hive)
+  /// Speichert Login-Credentials (beides in Secure Storage)
   Future<void> saveCredentials(String email, String password) async {
     await _secureStorage.write(key: _secureKeyPassword, value: password);
+    await _secureStorage.write(key: _secureKeyEmail, value: email);
     state = state.copyWith(
       rememberMe: true,
       savedEmail: email,
@@ -233,6 +238,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   /// Löscht gespeicherte Credentials
   Future<void> clearCredentials() async {
     await _secureStorage.delete(key: _secureKeyPassword);
+    await _secureStorage.delete(key: _secureKeyEmail);
     state = state.copyWith(rememberMe: false, clearCredentials: true);
     await _saveSettings();
     debugPrint('[Settings] Gespeicherte Anmeldedaten gelöscht');
@@ -240,12 +246,27 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   /// Liest das gespeicherte Passwort aus Secure Storage
   Future<String?> getSavedPassword() async {
-    if (!state.hasStoredCredentials) return null;
+    if (!state.rememberMe) return null;
     try {
       return await _secureStorage.read(key: _secureKeyPassword);
     } catch (e) {
       debugPrint('[Settings] Fehler beim Lesen des Passworts: $e');
       return null;
+    }
+  }
+
+  /// Liest die gespeicherte Email aus Secure Storage
+  Future<String?> getSavedEmail() async {
+    if (!state.rememberMe) return null;
+    try {
+      // Zuerst aus SecureStorage versuchen, dann Fallback auf Hive (Migration)
+      final secureEmail = await _secureStorage.read(key: _secureKeyEmail);
+      if (secureEmail != null) return secureEmail;
+      // Fallback: Email aus Hive-State (alte Version)
+      return state.savedEmail;
+    } catch (e) {
+      debugPrint('[Settings] Fehler beim Lesen der Email: $e');
+      return state.savedEmail;
     }
   }
 

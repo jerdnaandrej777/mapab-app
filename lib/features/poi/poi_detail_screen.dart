@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/utils/location_helper.dart';
+import '../../core/l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/categories.dart';
+import '../../core/utils/url_utils.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/route.dart';
 import '../../data/providers/favorites_provider.dart';
@@ -74,11 +76,11 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   children: [
                     Icon(Icons.error_outline, size: 48, color: colorScheme.error),
                     const SizedBox(height: 16),
-                    const Text('POI nicht gefunden'),
+                    Text(context.l10n.poiNotFound),
                     const SizedBox(height: 16),
                     FilledButton(
                       onPressed: () => context.pop(),
-                      child: const Text('Zurück'),
+                      child: Text(context.l10n.back),
                     ),
                   ],
                 ),
@@ -133,7 +135,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addToTrip(poi),
         icon: const Icon(Icons.add),
-        label: const Text('Zur Route'),
+        label: Text(context.l10n.poiAddToRoute),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -201,7 +203,12 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
             child: Icon(Icons.share, color: colorScheme.onSurface),
           ),
           onPressed: () {
-            // TODO: Teilen
+            final mapsUrl =
+                'https://www.google.com/maps/search/?api=1&query=${poi.latitude},${poi.longitude}';
+            Share.share(
+              '${poi.name}\n$mapsUrl',
+              subject: poi.name,
+            );
           },
         ),
       ],
@@ -227,7 +234,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.5),
+                    Colors.black.withValues(alpha: 0.5),
                   ],
                 ),
               ),
@@ -241,19 +248,19 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.surface.withOpacity(0.8),
+                    color: colorScheme.surface.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      SizedBox(width: 8),
-                      Text('Lade Details...', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Text(context.l10n.poiLoadingDetails, style: const TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -267,7 +274,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
   Widget _buildImagePlaceholder(POI poi) {
     final category = poi.category ?? POICategory.attraction;
     return Container(
-      color: Color(category.colorValue).withOpacity(0.3),
+      color: Color(category.colorValue).withValues(alpha: 0.3),
       child: Center(
         child: Text(
           category.icon,
@@ -341,7 +348,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   children: [
                     if (poi.foundedYear != null)
                       Chip(
-                        label: Text('Gegründet ${poi.foundedYear}'),
+                        label: Text(context.l10n.poiFoundedYear(poi.foundedYear!)),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: EdgeInsets.zero,
                         labelStyle: const TextStyle(fontSize: 12),
@@ -391,7 +398,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${poi.starRating.toStringAsFixed(1)} von 5 (${poi.reviewCount} Bewertungen)',
+                context.l10n.poiRating(poi.starRating.toStringAsFixed(1), poi.reviewCount),
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -405,7 +412,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -414,7 +421,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   const Icon(Icons.verified, size: 16, color: Colors.green),
                   const SizedBox(width: 4),
                   Text(
-                    poi.isCurated ? 'Kuratiert' : 'Verifiziert',
+                    poi.isCurated ? context.l10n.poiCurated : context.l10n.poiVerified,
                     style: const TextStyle(
                       color: Colors.green,
                       fontSize: 12,
@@ -433,37 +440,37 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.3),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           _buildInfoItem(
             icon: Icons.route,
-            label: 'Umweg',
+            label: context.l10n.poiDetour,
             value: '+${poi.detourKm!.toStringAsFixed(1)} km',
             colorScheme: colorScheme,
           ),
           Container(
             width: 1,
             height: 40,
-            color: colorScheme.primary.withOpacity(0.2),
+            color: colorScheme.primary.withValues(alpha: 0.2),
           ),
           _buildInfoItem(
             icon: Icons.timer,
-            label: 'Zeit',
+            label: context.l10n.poiTime,
             value: '+${poi.detourMinutes ?? 0} Min.',
             colorScheme: colorScheme,
           ),
           Container(
             width: 1,
             height: 40,
-            color: colorScheme.primary.withOpacity(0.2),
+            color: colorScheme.primary.withValues(alpha: 0.2),
           ),
           _buildInfoItem(
             icon: Icons.place,
-            label: 'Position',
+            label: context.l10n.poiPosition,
             value: '${((poi.routePosition ?? 0) * 100).round()}%',
             colorScheme: colorScheme,
           ),
@@ -510,7 +517,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Über diesen Ort',
+          context.l10n.poiAboutPlace,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -534,7 +541,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Beschreibung wird geladen...',
+                context.l10n.poiDescriptionLoading,
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
@@ -544,7 +551,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
           )
         else
           Text(
-            'Keine Beschreibung verfügbar.',
+            context.l10n.poiNoDescription,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -557,7 +564,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
           OutlinedButton.icon(
             onPressed: () => _openWikipedia(poi.wikipediaTitle!),
             icon: const Icon(Icons.open_in_new, size: 18),
-            label: const Text('Mehr auf Wikipedia'),
+            label: Text(context.l10n.poiMoreOnWikipedia),
           ),
         ],
       ],
@@ -576,7 +583,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Kontakt & Info',
+          context.l10n.poiContactInfo,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -585,33 +592,33 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         if (poi.openingHours != null)
           _buildContactTile(
             icon: Icons.access_time,
-            title: 'Öffnungszeiten',
+            title: context.l10n.poiOpeningHours,
             subtitle: poi.openingHours!,
             colorScheme: colorScheme,
           ),
         if (poi.phone != null)
           _buildContactTile(
             icon: Icons.phone,
-            title: 'Telefon',
+            title: context.l10n.poiPhone,
             subtitle: poi.phone!,
             colorScheme: colorScheme,
-            onTap: () => launchUrl(Uri.parse('tel:${poi.phone}')),
+            onTap: () => launchUrlSafe(Uri.parse('tel:${poi.phone}')),
           ),
         if (poi.website != null)
           _buildContactTile(
             icon: Icons.language,
-            title: 'Website',
+            title: context.l10n.poiWebsite,
             subtitle: _formatWebsite(poi.website!),
             colorScheme: colorScheme,
-            onTap: () => launchUrl(Uri.parse(poi.website!)),
+            onTap: () => launchUrlSafe(Uri.parse(poi.website!)),
           ),
         if (poi.email != null)
           _buildContactTile(
             icon: Icons.email,
-            title: 'E-Mail',
+            title: context.l10n.poiEmailLabel,
             subtitle: poi.email!,
             colorScheme: colorScheme,
-            onTap: () => launchUrl(Uri.parse('mailto:${poi.email}')),
+            onTap: () => launchUrlSafe(Uri.parse('mailto:${poi.email}')),
           ),
       ],
     );
@@ -664,7 +671,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
 
   void _openWikipedia(String title) {
     final url = 'https://de.wikipedia.org/wiki/${Uri.encodeComponent(title)}';
-    launchUrl(Uri.parse(url));
+    launchUrlSafe(Uri.parse(url));
   }
 
   Future<void> _addToTrip(POI poi) async {
@@ -702,7 +709,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         // Route wurde erstellt - zum Trip-Tab navigieren
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Route zu "${poi.name}" erstellt'),
+            content: Text(context.l10n.poiRouteCreated(poi.name)),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -712,7 +719,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         // Stop zur bestehenden Route hinzugefügt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${poi.name} zur Route hinzugefügt'),
+            content: Text(context.l10n.poiAddedToRoute(poi.name)),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -723,13 +730,13 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       // GPS deaktiviert - Dialog anzeigen
       final shouldOpen = await _showGpsDialog();
       if (shouldOpen) {
-        await Geolocator.openLocationSettings();
+        await LocationHelper.openSettings();
       }
     } else {
       // Anderer Fehler
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          content: Text(result.message ?? context.l10n.errorAddingToRoute),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -737,26 +744,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     }
   }
 
+  /// GPS-Dialog anzeigen - nutzt zentralisierten LocationHelper (v1.9.29)
   Future<bool> _showGpsDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('GPS deaktiviert'),
-            content: const Text(
-              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen öffnen'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return LocationHelper.showGpsDialog(context);
   }
 }

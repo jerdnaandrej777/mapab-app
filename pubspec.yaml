@@ -1,13 +1,15 @@
 name: travel_planner
 description: Eine europäische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.9.25+172
+version: 1.9.32+179
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # State Management
@@ -52,32 +54,35 @@ dependencies:
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
 
+  # Charts (Hoehenprofil)
+  fl_chart: ^0.69.0
+
   # Utils
-  intl: ^0.18.1
+  intl: ^0.20.2
   uuid: ^4.3.3
   url_launcher: ^6.2.2
   share_plus: ^7.2.1
-
-  # Push Notifications
-  flutter_local_notifications: ^17.0.0
-  timezone: ^0.9.2
-
-  # Charts (für Höhenprofil)
-  fl_chart: ^0.66.0
 
   # Voice & TTS
   speech_to_text: ^7.0.0
   flutter_tts: ^4.0.2
 
-  # Image Picker (für Reisetagebuch)
-  image_picker: ^1.0.7
+  # Photo Viewer
   photo_view: ^0.14.0
 
-  # QR Code (für Sharing)
+  # Image Picker (Reisetagebuch)
+  image_picker: ^1.0.7
+  path_provider: ^2.1.1
+
+  # QR Code (für Sharing + Scannen)
   qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.1
 
   # Crash Reporting
   sentry_flutter: ^8.12.0
+
+  # Background Navigation (Foreground Service)
+  flutter_foreground_task: ^8.13.0
 
   cupertino_icons: ^1.0.6
 
@@ -97,6 +102,7 @@ dev_dependencies:
 # Falls Build fehlschlägt, führe `flutter upgrade` aus
 
 flutter:
+  generate: true
   uses-material-design: true
 
   assets:

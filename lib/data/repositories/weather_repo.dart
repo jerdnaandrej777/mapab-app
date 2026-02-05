@@ -12,12 +12,7 @@ class WeatherRepository {
   final Dio _dio;
 
   WeatherRepository({Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-              receiveTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-            ));
+      : _dio = dio ?? ApiConfig.createDio();
 
   /// Holt aktuelle Wetterdaten für eine Position
   Future<Weather> getCurrentWeather(LatLng location) async {
@@ -38,6 +33,9 @@ class WeatherRepository {
           ].join(','),
           'timezone': 'auto',
         },
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw WeatherException('Wetter-API Timeout nach 15s'),
       );
 
       final current = response.data['current'];
@@ -95,6 +93,9 @@ class WeatherRepository {
           'forecast_days': forecastDays,
           'timezone': 'auto',
         },
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw WeatherException('Wettervorhersage-API Timeout nach 15s'),
       );
 
       final current = response.data['current'];
@@ -158,9 +159,12 @@ class WeatherRepository {
       selectedPoints.add(routePoints[i]);
     }
 
-    // Wetter für alle Punkte parallel laden
+    // Wetter für alle Punkte parallel laden mit globalem Timeout
     final weatherResults = await Future.wait(
       selectedPoints.map((point) => getCurrentWeather(point)),
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw WeatherException('Routen-Wetter Timeout nach 30s'),
     );
 
     return weatherResults;

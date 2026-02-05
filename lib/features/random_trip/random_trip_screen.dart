@@ -104,7 +104,7 @@ class _ConfigView extends ConsumerWidget {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -172,8 +172,8 @@ class _ModeSelector extends StatelessWidget {
             ),
             child: Material(
               color: isSelected
-                  ? AppTheme.primaryColor.withOpacity(0.1)
-                  : Colors.grey.withOpacity(0.05),
+                  ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                  : Colors.grey.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 onTap: () => onModeChanged(mode),
@@ -185,7 +185,7 @@ class _ModeSelector extends StatelessWidget {
                     border: Border.all(
                       color: isSelected
                           ? AppTheme.primaryColor
-                          : Colors.grey.withOpacity(0.2),
+                          : Colors.grey.withValues(alpha: 0.2),
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -300,7 +300,7 @@ class _PreviewView extends ConsumerWidget {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -364,7 +364,7 @@ class _ConfirmedView extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(

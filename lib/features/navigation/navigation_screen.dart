@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll2;
+import '../../core/l10n/l10n.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
+import '../../data/models/navigation_step.dart';
 import '../../data/models/route.dart' hide LatLngConverter;
 import '../../data/models/trip.dart';
+import '../../data/services/voice_service.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/navigation_poi_discovery_provider.dart';
 import 'providers/navigation_tts_provider.dart';
@@ -44,12 +47,14 @@ class NavigationScreen extends ConsumerStatefulWidget {
   ConsumerState<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends ConsumerState<NavigationScreen> {
+class _NavigationScreenState extends ConsumerState<NavigationScreen>
+    with WidgetsBindingObserver {
   // MapLibre Controller (nullable - erst nach onMapCreated verfuegbar)
   ml.MapLibreMapController? _mapController;
   bool _isOverviewMode = false;
   bool _isStyleLoaded = false;
   bool _sourcesInitialized = false;
+  bool _isPausedByLifecycle = false;
 
   // GeoJSON Source/Layer IDs
   static const _completedSourceId = 'completed-route-source';
@@ -70,12 +75,20 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   int _lastRouteUpdateIndex = -1;
   Set<String> _lastVisitedStopIds = {};
 
+  // Trackt Route-Transition (null → non-null) fuer erzwungenes Update
+  NavigationRoute? _lastNavRoute;
+
   // Verhindert mehrfache Anzeige des Ziel-Dialogs
   bool _arrivalDialogShown = false;
+
+  // Sprachbefehl-Zustand
+  bool _isListening = false;
+  String? _partialVoiceText;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     // Interpolation-Stream abonnieren fuer fluessige Updates
     _interpolationSub = _interpolator.positionStream.listen(_onInterpolatedPosition);
@@ -97,6 +110,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _interpolationSub?.cancel();
     _interpolator.dispose();
     _mapController?.dispose();
@@ -107,6 +121,26 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // App im Hintergrund: GPS-Stream laeuft weiter (Foreground Service),
+      // aber TTS und Interpolation pausieren um Batterie zu sparen
+      _isPausedByLifecycle = true;
+      _interpolator.pause();
+      debugPrint('[Navigation] App in Hintergrund - Interpolation pausiert');
+    } else if (state == AppLifecycleState.resumed) {
+      // App wieder im Vordergrund: Interpolation fortsetzen
+      if (_isPausedByLifecycle) {
+        _isPausedByLifecycle = false;
+        _interpolator.resume();
+        debugPrint('[Navigation] App im Vordergrund - Interpolation fortgesetzt');
+      }
+    }
+  }
+
   /// Wird ~60x pro Sekunde vom Interpolator aufgerufen
   void _onInterpolatedPosition(InterpolatedPosition interpolated) {
     if (!mounted || _isOverviewMode) return;
@@ -115,6 +149,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     if (controller == null) return;
 
     // User-Circle fluessig bewegen
+    // catch: Controller kann waehrend dispose/transition ungueltig sein (60fps-Pfad)
     final circle = _userCircle;
     if (circle != null) {
       try {
@@ -129,6 +164,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     // Kamera fluessig nachfuehren (moveCamera statt animateCamera,
     // verhindert Animation-Stacking bei 60fps)
+    // catch: Controller kann waehrend dispose/transition ungueltig sein (60fps-Pfad)
     try {
       controller.moveCamera(
         ml.CameraUpdate.newCameraPosition(
@@ -154,8 +190,17 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     // Route-Linien nur bei signifikanter Positions-Aenderung aktualisieren
     // (matchedRouteIndex aendert sich nur bei echtem Fortschritt)
-    if (navState.matchedRouteIndex != _lastRouteUpdateIndex) {
+    // WICHTIG: Guard auf _isStyleLoaded verhindert, dass _lastRouteUpdateIndex
+    // im ersten build() gesetzt wird bevor Sources existieren (Bug-Fix v1.9.26)
+    if (_isStyleLoaded && navState.matchedRouteIndex != _lastRouteUpdateIndex) {
       _lastRouteUpdateIndex = navState.matchedRouteIndex;
+      _updateRouteSources(navState);
+    }
+
+    // Route-Transition erkennen: wenn navState.route sich aendert (z.B. null → berechnet),
+    // Update erzwingen unabhaengig vom matchedRouteIndex (Bug-Fix v1.9.26)
+    if (_isStyleLoaded && navState.route != _lastNavRoute) {
+      _lastNavRoute = navState.route;
       _updateRouteSources(navState);
     }
 
@@ -294,18 +339,53 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
           // Loading-Overlay
           if (navState.isLoading)
             Container(
-              color: Colors.black54,
+              color: colorScheme.scrim.withValues(alpha: 0.54),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: Colors.white),
+                    CircularProgressIndicator(color: colorScheme.onInverseSurface),
                     const SizedBox(height: 16),
                     Text(
                       'Navigation wird vorbereitet...',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: colorScheme.onInverseSurface,
                         fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Sprachbefehl-Feedback (wenn Text erkannt wird)
+          if (_partialVoiceText != null)
+            Positioned(
+              bottom: 180,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.mic, color: colorScheme.onPrimaryContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _partialVoiceText!,
+                        style: TextStyle(color: colorScheme.onPrimaryContainer),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -323,6 +403,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               etaMinutes: navState.etaMinutes,
               currentSpeedKmh: navState.currentSpeedKmh,
               isMuted: navState.isMuted,
+              isListening: _isListening,
               onToggleMute: () {
                 ref
                     .read(navigationNotifierProvider.notifier)
@@ -330,6 +411,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               },
               onStop: _stopNavigation,
               onOverview: _toggleOverview,
+              onVoiceCommand: _handleVoiceCommand,
             ),
           ),
         ],
@@ -566,8 +648,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
               ? LatLngConverter.toGeoJsonLine(remainingCoords)
               : LatLngConverter.emptyGeoJson,
         );
-      } catch (_) {
-        // Sources noch nicht bereit
+      } catch (e) {
+        debugPrint('[Navigation] Fehler bei Route-Sources-Update: $e');
       }
     });
   }
@@ -648,20 +730,168 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Dialoge (unveraendert)
+  // Sprachbefehle
+  // ---------------------------------------------------------------------------
+
+  /// Startet oder stoppt die Spracherkennung
+  Future<void> _handleVoiceCommand() async {
+    final voiceService = ref.read(voiceServiceProvider);
+
+    if (_isListening) {
+      // Spracherkennung stoppen
+      await voiceService.stopListening();
+      setState(() {
+        _isListening = false;
+        _partialVoiceText = null;
+      });
+      return;
+    }
+
+    // Spracherkennung starten
+    setState(() {
+      _isListening = true;
+      _partialVoiceText = null;
+    });
+
+    // TTS kurz pausieren waehrend wir zuhoeren
+    await voiceService.stopSpeaking();
+
+    final result = await voiceService.listen(
+      timeout: const Duration(seconds: 8),
+      onPartialResult: (partial) {
+        if (mounted) {
+          setState(() {
+            _partialVoiceText = partial;
+          });
+        }
+      },
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isListening = false;
+      _partialVoiceText = null;
+    });
+
+    if (result == null || result.isEmpty) {
+      // Keine Eingabe erkannt
+      debugPrint('[Voice] Keine Spracheingabe erkannt');
+      return;
+    }
+
+    debugPrint('[Voice] Erkannt: $result');
+
+    // Befehl parsen und ausfuehren
+    final command = voiceService.parseCommand(result);
+    await _executeVoiceCommand(command, voiceService);
+  }
+
+  /// Fuehrt den erkannten Sprachbefehl aus
+  Future<void> _executeVoiceCommand(VoiceCommand command, VoiceService voiceService) async {
+    final navState = ref.read(navigationNotifierProvider);
+
+    switch (command) {
+      case VoiceCommand.timeToDestination:
+        // "Wie lange noch?"
+        final eta = navState.etaMinutes;
+        final dist = navState.distanceToDestinationKm;
+        final hours = eta ~/ 60;
+        final mins = eta % 60;
+        String text;
+        if (hours > 0) {
+          text = 'Noch ${dist.toStringAsFixed(1)} Kilometer. '
+              'Ankunft in etwa $hours Stunde${hours > 1 ? 'n' : ''}'
+              '${mins > 0 ? ' und $mins Minuten' : ''}.';
+        } else {
+          text = 'Noch ${dist.toStringAsFixed(1)} Kilometer. '
+              'Ankunft in etwa $mins Minuten.';
+        }
+        await voiceService.speak(text);
+
+      case VoiceCommand.currentLocation:
+        // "Wo bin ich?"
+        final currentStep = navState.currentStep;
+        if (currentStep != null && currentStep.streetName.isNotEmpty) {
+          await voiceService.speak('Du bist auf ${currentStep.streetName}.');
+        } else {
+          await voiceService.speak('Aktuelle Position auf der Route.');
+        }
+
+      case VoiceCommand.nextStop:
+        // "Nächster Stopp"
+        final nextPOI = navState.nextPOIStop;
+        if (nextPOI != null) {
+          final distMeters = navState.distanceToNextPOIMeters;
+          final distText = distMeters < 1000
+              ? '${distMeters.round()} Meter'
+              : '${(distMeters / 1000).toStringAsFixed(1)} Kilometer';
+          await voiceService.speak(
+            'Nächster Stopp: ${nextPOI.name}. Noch $distText entfernt.',
+          );
+        } else {
+          await voiceService.speak('Kein weiterer Stopp geplant.');
+        }
+
+      case VoiceCommand.stopNavigation:
+        // "Navigation beenden"
+        await voiceService.speak('Navigation wird beendet.');
+        if (mounted) {
+          ref.read(navigationNotifierProvider.notifier).stopNavigation();
+          ref.read(navigationTtsProvider.notifier).reset();
+          ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
+          if (context.mounted) {
+            context.pop();
+          }
+        }
+
+      case VoiceCommand.nearbyPOIs:
+        // "Was ist in der Nähe?"
+        final discoveryState = ref.read(navigationPOIDiscoveryNotifierProvider);
+        final approachingPOI = discoveryState.currentApproachingPOI;
+        if (approachingPOI != null) {
+          await voiceService.speak(
+            'In der Nähe: ${approachingPOI.name}. '
+            '${approachingPOI.category?.label ?? "Sehenswürdigkeit"}.',
+          );
+        } else {
+          await voiceService.speak('Aktuell keine besonderen Orte in der Nähe.');
+        }
+
+      case VoiceCommand.readDescription:
+        // "Beschreibung vorlesen"
+        final nextPOI = navState.nextPOIStop;
+        if (nextPOI != null) {
+          await voiceService.speak('${nextPOI.name}.');
+        } else {
+          await voiceService.speak('Kein Stopp ausgewählt.');
+        }
+
+      case VoiceCommand.previousStop:
+      case VoiceCommand.addToTrip:
+      case VoiceCommand.startNavigation:
+        // Nicht relevant waehrend aktiver Navigation
+        await voiceService.speak('Dieser Befehl ist während der Navigation nicht verfügbar.');
+
+      case VoiceCommand.unknown:
+        await voiceService.speak('Befehl nicht erkannt. '
+            'Sag zum Beispiel "Wie lange noch" oder "Nächster Stopp".');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dialoge
   // ---------------------------------------------------------------------------
 
   void _stopNavigation() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Navigation beenden?'),
-        content: const Text(
-            'Möchtest du die Navigation wirklich beenden?'),
+        title: Text(context.l10n.navEndConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -673,7 +903,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                 context.pop();
               }
             },
-            child: const Text('Beenden'),
+            child: Text(context.l10n.end),
           ),
         ],
       ),
@@ -692,10 +922,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
           size: 48,
           color: Theme.of(context).colorScheme.primary,
         ),
-        title: const Text('Ziel erreicht!'),
-        content: Text(
-          'Du hast ${widget.route.endAddress} erreicht.',
-        ),
+        title: Text(context.l10n.navDestinationReached),
+        content: Text(widget.route.endAddress ?? ''),
         actions: [
           FilledButton(
             onPressed: () {
@@ -707,7 +935,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                 context.pop();
               }
             },
-            child: const Text('Fertig'),
+            child: Text(context.l10n.done),
           ),
         ],
       ),

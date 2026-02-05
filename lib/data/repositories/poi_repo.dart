@@ -36,12 +36,7 @@ class POIRepository {
   final SupabasePOIRepository? _supabaseRepo;
 
   POIRepository({Dio? dio, POICacheService? cacheService, SupabasePOIRepository? supabaseRepo})
-      : _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-              receiveTimeout: const Duration(milliseconds: ApiConfig.overpassTimeout),
-            )),
+      : _dio = dio ?? ApiConfig.createDio(profile: DioProfile.overpass),
         _cacheService = cacheService,
         _supabaseRepo = supabaseRepo;
 
@@ -158,7 +153,11 @@ class POIRepository {
       })
     ).toList();
 
-    final results = await Future.wait(timedFutures);
+    final results = await Future.wait(timedFutures)
+        .timeout(const Duration(seconds: 20), onTimeout: () {
+      debugPrint('[POI] ⚠️ Globaler Timeout nach 20s');
+      return List.generate(timedFutures.length, (_) => <POI>[]);
+    });
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -301,7 +300,11 @@ class POIRepository {
       })
     ).toList();
 
-    final results = await Future.wait(timedFutures);
+    final results = await Future.wait(timedFutures)
+        .timeout(const Duration(seconds: 20), onTimeout: () {
+      debugPrint('[POI] ⚠️ Globaler Timeout nach 20s');
+      return List.generate(timedFutures.length, (_) => <POI>[]);
+    });
 
     for (final poiList in results) {
       for (final poi in poiList) {
@@ -381,41 +384,53 @@ class POIRepository {
     // Grid-basierte Abfrage für größere Radien
     // OPTIMIERUNG v1.6.2: Dynamische Grid-Size für große Radien
     // Maximal 36 Zellen (6x6) um Performance zu gewährleisten
-    // Bei 600km war es vorher 80x80 = 6400 Zellen (10+ Minuten!)
+    // v1.9.28: Batched parallel (4er-Gruppen) statt sequenziell
     const maxCellsPerSide = 6;
     final gridSize = max((radiusKm * 2 / maxCellsPerSide), 15.0);
     final cellsPerSide = min((radiusKm * 2 / gridSize).ceil(), maxCellsPerSide);
 
     debugPrint('[POI] Wikipedia Grid: ${cellsPerSide}x$cellsPerSide Zellen, ${gridSize.toStringAsFixed(0)}km pro Zelle');
 
-    for (int i = 0; i < cellsPerSide && allPOIs.length < 200; i++) {
-      for (int j = 0; j < cellsPerSide && allPOIs.length < 200; j++) {
+    // Grid-Punkte sammeln
+    final gridPoints = <LatLng>[];
+    for (int i = 0; i < cellsPerSide; i++) {
+      for (int j = 0; j < cellsPerSide; j++) {
         final offsetLat = (i - cellsPerSide / 2) * gridSize / 111.0;
         final offsetLng = (j - cellsPerSide / 2) * gridSize /
             (111.0 * cos(center.latitude * pi / 180));
-
         final gridCenter = LatLng(
           center.latitude + offsetLat,
           center.longitude + offsetLng,
         );
-
-        // Nur wenn Gridpunkt im Radius
         if (GeoUtils.haversineDistance(center, gridCenter) <= radiusKm) {
-          try {
-            final pois = await _loadWikipediaPOIsAtPoint(gridCenter, 10000);
-            for (final poi in pois) {
-              if (!seenIds.contains(poi.id)) {
-                seenIds.add(poi.id);
-                allPOIs.add(poi);
-              }
-            }
-          } catch (_) {
-            // Grid-Punkt fehlgeschlagen - weiter
-          }
-
-          // Rate Limiting
-          await Future.delayed(const Duration(milliseconds: 100));
+          gridPoints.add(gridCenter);
         }
+      }
+    }
+
+    // In 3er-Batches parallel abarbeiten mit Rate-Limit-Schutz
+    // Wikipedia Geosearch erlaubt ~200 Requests/Minute
+    // 3 parallel + 300ms Delay = ~180 req/min (sicher unter Limit)
+    const batchSize = 3;
+    for (int b = 0; b < gridPoints.length && allPOIs.length < 200; b += batchSize) {
+      final batch = gridPoints.sublist(b, min(b + batchSize, gridPoints.length));
+      final results = await Future.wait(
+        batch.map((point) => _loadWikipediaPOIsAtPoint(point, 10000)
+            .timeout(const Duration(seconds: 8), onTimeout: () => <POI>[])
+            .catchError((_) => <POI>[])
+        ),
+      );
+      for (final pois in results) {
+        for (final poi in pois) {
+          if (!seenIds.contains(poi.id)) {
+            seenIds.add(poi.id);
+            allPOIs.add(poi);
+          }
+        }
+      }
+      // Rate Limiting zwischen Batches (300ms fuer ~180 req/min)
+      if (b + batchSize < gridPoints.length && allPOIs.length < 200) {
+        await Future.delayed(const Duration(milliseconds: 300));
       }
     }
 
@@ -516,7 +531,11 @@ class POIRepository {
       })
     ).toList();
 
-    final results = await Future.wait(timedFutures);
+    final results = await Future.wait(timedFutures)
+        .timeout(const Duration(seconds: 20), onTimeout: () {
+      debugPrint('[POI] ⚠️ Globaler Timeout nach 20s');
+      return List.generate(timedFutures.length, (_) => <POI>[]);
+    });
 
     // Ergebnisse zusammenführen (Duplikate vermeiden)
     for (final poiList in results) {

@@ -14,12 +14,7 @@ class HotelService {
   final Dio _dio;
 
   HotelService({Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: ApiConfig.defaultTimeout),
-              receiveTimeout: const Duration(milliseconds: ApiConfig.overpassTimeout),
-            ));
+      : _dio = dio ?? ApiConfig.createDio(profile: DioProfile.overpass);
 
   /// Sucht Hotels in einem Radius um einen Punkt
   ///

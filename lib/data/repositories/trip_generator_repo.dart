@@ -319,6 +319,8 @@ class TripGeneratorRepository {
 
     // Post-Validierung: Kein Tag darf 700km Display-Distanz ueberschreiten
     // Wiederhole planDays mit mehr Tagen bis alle unter dem Limit sind (max 3 Versuche)
+    // v1.9.28: Max-Tage-Cap verhindert unkontrolliertes Wachstum
+    final maxAllowedDays = (effectiveDays * 2).clamp(effectiveDays, 28);
     for (int resplitAttempt = 0; resplitAttempt < 3; resplitAttempt++) {
       bool anyOverLimit = false;
       for (final day in tripDays) {
@@ -333,10 +335,17 @@ class TripGeneratorRepository {
       }
       if (!anyOverLimit) break;
 
+      // Nicht mehr Tage hinzufuegen als erlaubt (verhindert Endlosschleife)
+      final newDays = (actualDays + 1).clamp(effectiveDays, maxAllowedDays);
+      if (newDays == actualDays) {
+        debugPrint('[TripGenerator] Post-Validierung: Max-Tage-Cap ($maxAllowedDays) erreicht, keine weitere Verbesserung moeglich');
+        break;
+      }
+
       tripDays = _dayPlanner.planDays(
         pois: optimizedPOIs,
         startLocation: startLocation,
-        days: actualDays + 1,
+        days: newDays,
         returnToStart: !hasDestination,
       );
       actualDays = tripDays.length;
@@ -701,7 +710,8 @@ class TripGeneratorRepository {
 
     // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
     debugPrint('[TripGenerator] WARNING: ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit nach $maxRetries Versuchen nicht erreicht');
-    return lastResult!;
+    if (lastResult != null) return lastResult;
+    throw TripGenerationException('Kein alternativer POI gefunden, der das Tageslimit einhaelt');
   }
 
   // ===== Multi-Day: Tag-beschraenkte POI-Bearbeitung =====
@@ -1014,7 +1024,8 @@ class TripGeneratorRepository {
 
     // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
     debugPrint('[TripGenerator] WARNING: Distanz-Limit nach $maxRetries Versuchen nicht erreicht (Tag $targetDay)');
-    return lastResult!;
+    if (lastResult != null) return lastResult;
+    throw TripGenerationException('Kein alternativer POI gefunden, der das Tageslimit einhaelt');
   }
 
   /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)

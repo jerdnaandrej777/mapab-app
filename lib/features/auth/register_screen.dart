@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/providers/auth_provider.dart';
+import '../../core/l10n/l10n.dart';
 
 /// Registrierungs-Screen
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -44,9 +45,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         context: context,
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-          title: const Text('Registrierung erfolgreich'),
-          content: const Text(
-            'Bitte prüfe deine E-Mails und bestätige dein Konto.',
+          title: Text(context.l10n.authRegistrationSuccess),
+          content: Text(
+            context.l10n.authRegistrationSuccessMessage,
           ),
           actions: [
             FilledButton(
@@ -54,7 +55,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Navigator.pop(context);
                 context.go('/');
               },
-              child: const Text('OK'),
+              child: Text(context.l10n.confirm),
             ),
           ],
         ),
@@ -70,7 +71,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrieren'),
+        title: Text(context.l10n.authRegister),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -82,7 +83,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 // Header
                 Text(
-                  'Konto erstellen',
+                  context.l10n.authCreateAccount,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -90,7 +91,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sichere deine Daten in der Cloud',
+                  context.l10n.authSecureData,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -102,17 +103,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Display Name
                 TextFormField(
                   controller: _displayNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    hintText: 'Wie möchtest du genannt werden?',
-                    prefixIcon: Icon(Icons.person_outlined),
-                    border: OutlineInputBorder(),
+                  maxLength: 50,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.authNameLabel,
+                    hintText: context.l10n.authNameHint,
+                    prefixIcon: const Icon(Icons.person_outlined),
+                    border: const OutlineInputBorder(),
+                    counterText: '',
                   ),
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Bitte Namen eingeben';
+                      return context.l10n.authNameEmpty;
+                    }
+                    if (value.trim().length < 2) {
+                      return context.l10n.authNameMinLength;
                     }
                     return null;
                   },
@@ -123,19 +129,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Email
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'E-Mail',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                  maxLength: 254,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.authEmailLabel,
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: const OutlineInputBorder(),
+                    counterText: '',
                   ),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Bitte E-Mail eingeben';
+                      return context.l10n.authEmailEmpty;
                     }
                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Ungültige E-Mail-Adresse';
+                      return context.l10n.authEmailInvalidAddress;
                     }
                     return null;
                   },
@@ -147,7 +155,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
-                    labelText: 'Passwort',
+                    labelText: context.l10n.authPasswordLabel,
                     prefixIcon: const Icon(Icons.lock_outlined),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
@@ -158,16 +166,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         setState(() => _isPasswordVisible = !_isPasswordVisible);
                       },
                     ),
-                    helperText: 'Mindestens 6 Zeichen',
+                    helperText: context.l10n.authPasswordMinLength,
                   ),
                   obscureText: !_isPasswordVisible,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Bitte Passwort eingeben';
+                      return context.l10n.authPasswordEmpty;
                     }
-                    if (value.length < 6) {
-                      return 'Mindestens 6 Zeichen';
+                    if (value.length < 8) {
+                      return context.l10n.authPasswordMinLength;
+                    }
+                    if (!RegExp(r'[A-Za-z]').hasMatch(value) ||
+                        !RegExp(r'[0-9]').hasMatch(value)) {
+                      return context.l10n.authPasswordRequirements;
                     }
                     return null;
                   },
@@ -179,7 +191,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
-                    labelText: 'Passwort bestätigen',
+                    labelText: context.l10n.authPasswordConfirm,
                     prefixIcon: const Icon(Icons.lock_outlined),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
@@ -196,7 +208,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onFieldSubmitted: (_) => _register(),
                   validator: (value) {
                     if (value != _passwordController.text) {
-                      return 'Passwörter stimmen nicht überein';
+                      return context.l10n.authPasswordMismatch;
                     }
                     return null;
                   },
@@ -237,7 +249,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Registrieren'),
+                      : Text(context.l10n.authRegister),
                 ),
 
                 const SizedBox(height: 16),
@@ -247,12 +259,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Bereits ein Konto? ',
+                      context.l10n.authAlreadyHaveAccount,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                     TextButton(
                       onPressed: () => context.pop(),
-                      child: const Text('Anmelden'),
+                      child: Text(context.l10n.authSignIn),
                     ),
                   ],
                 ),

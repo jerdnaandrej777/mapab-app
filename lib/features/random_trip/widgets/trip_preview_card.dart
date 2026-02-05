@@ -137,7 +137,7 @@ class _TripStatistics extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isOverLimit
-            ? Colors.orange.withOpacity(0.15)
+            ? Colors.orange.withValues(alpha: 0.15)
             : colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: isOverLimit
@@ -228,7 +228,7 @@ class _StatItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: textColor.withOpacity(0.7),
+            color: textColor.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -517,7 +517,7 @@ class _StopItem extends StatelessWidget {
                     Container(
                       width: 2,
                       height: hasPOIImage ? 8 : 16,
-                      color: colorScheme.primary.withOpacity(0.3),
+                      color: colorScheme.primary.withValues(alpha: 0.3),
                     ),
                   // v1.6.9: POI-Bild statt nur Icon
                   if (hasPOIImage && poiId != null)
@@ -527,7 +527,7 @@ class _StopItem extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.1),
+                        color: iconColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                         border: Border.all(color: iconColor, width: 2),
                       ),
@@ -541,7 +541,7 @@ class _StopItem extends StatelessWidget {
                     Container(
                       width: 2,
                       height: hasPOIImage ? 8 : 16,
-                      color: colorScheme.primary.withOpacity(0.3),
+                      color: colorScheme.primary.withValues(alpha: 0.3),
                     ),
                 ],
               ),
@@ -571,7 +571,7 @@ class _StopItem extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.purple.withOpacity(0.15),
+                              color: Colors.purple.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -629,7 +629,7 @@ class _StopItem extends StatelessWidget {
   Widget _buildImagePlaceholder(ColorScheme colorScheme) {
     final cat = category ?? POICategory.attraction;
     return Container(
-      color: Color(cat.colorValue).withOpacity(0.2),
+      color: Color(cat.colorValue).withValues(alpha: 0.2),
       child: Center(
         child: Text(
           emoji ?? cat.icon,

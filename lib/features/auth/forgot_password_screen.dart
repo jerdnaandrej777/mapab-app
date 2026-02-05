@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/providers/auth_provider.dart';
+import '../../core/l10n/l10n.dart';
 
 /// Passwort-Zurücksetzen Screen
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Passwort zurücksetzen'),
+        title: Text(context.l10n.authResetPassword),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -70,7 +71,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
           // Header
           Text(
-            'Passwort vergessen?',
+            context.l10n.authForgotPassword,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -78,7 +79,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen.',
+            context.l10n.authResetPasswordInstructions,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -90,20 +91,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           // Email Field
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'E-Mail',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.authEmailLabel,
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _sendResetEmail(),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Bitte E-Mail eingeben';
+                return context.l10n.authEmailEmpty;
               }
               if (!value.contains('@')) {
-                return 'Ungültige E-Mail';
+                return context.l10n.authEmailInvalid;
               }
               return null;
             },
@@ -144,7 +145,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Link senden'),
+                : Text(context.l10n.authSendLink),
           ),
 
           const SizedBox(height: 16),
@@ -152,7 +153,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           // Back to Login
           TextButton(
             onPressed: () => context.pop(),
-            child: const Text('Zurück zur Anmeldung'),
+            child: Text(context.l10n.authBackToLogin),
           ),
         ],
       ),
@@ -167,7 +168,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: const Icon(
@@ -181,7 +182,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
         // Success Message
         Text(
-          'E-Mail gesendet!',
+          context.l10n.authEmailSent,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -189,7 +190,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Wir haben dir eine E-Mail an\n${_emailController.text}\ngesendet.',
+          '${context.l10n.authEmailSentPrefix}\n${_emailController.text}\n${context.l10n.authEmailSentSuffix}',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -206,7 +207,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            'Klicke auf den Link in der E-Mail, um ein neues Passwort zu setzen. Der Link ist 24 Stunden gültig.',
+            context.l10n.authResetLinkInstructions,
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -219,7 +220,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         // Back to Login
         FilledButton(
           onPressed: () => context.go('/login'),
-          child: const Text('Zurück zur Anmeldung'),
+          child: Text(context.l10n.authBackToLogin),
         ),
 
         const SizedBox(height: 16),
@@ -227,7 +228,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         // Resend
         TextButton(
           onPressed: () => setState(() => _emailSent = false),
-          child: const Text('Erneut senden'),
+          child: Text(context.l10n.authResend),
         ),
       ],
     );

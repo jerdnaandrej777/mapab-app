@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/l10n/l10n.dart';
 import '../../data/providers/account_provider.dart';
 import '../../data/providers/auth_provider.dart';
 
@@ -31,13 +32,13 @@ class ProfileScreen extends ConsumerWidget {
         return _buildLocalAccountProfile(context, ref, account);
       },
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Profil')),
+        appBar: AppBar(title: Text(context.l10n.profileTitle)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Profil')),
+        appBar: AppBar(title: Text(context.l10n.profileTitle)),
         body: Center(
-          child: Text('Fehler: $error', style: TextStyle(color: colorScheme.error)),
+          child: Text('${context.l10n.errorGeneric}: $error', style: TextStyle(color: colorScheme.error)),
         ),
       ),
     );
@@ -59,12 +60,12 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(context.l10n.profileTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () => _showEditProfileDialog(context, ref),
-            tooltip: 'Profil bearbeiten',
+            tooltip: context.l10n.profileEdit,
           ),
         ],
       ),
@@ -112,7 +113,7 @@ class ProfileScreen extends ConsumerWidget {
           // Avatar
           CircleAvatar(
             radius: 50,
-            backgroundColor: colorScheme.primary.withOpacity(0.2),
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
             child: Icon(
               Icons.cloud,
               size: 50,
@@ -157,10 +158,10 @@ class ProfileScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(isDark ? 0.3 : 0.15),
+              color: Colors.green.withValues(alpha: isDark ? 0.3 : 0.15),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.green.withOpacity(0.5),
+                color: Colors.green.withValues(alpha: 0.5),
                 width: 1,
               ),
             ),
@@ -174,7 +175,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Cloud-Account',
+                  context.l10n.profileCloudAccount,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.green.shade700,
@@ -194,7 +195,7 @@ class ProfileScreen extends ConsumerWidget {
               Icon(Icons.sync, size: 14, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
-                'Daten werden automatisch synchronisiert',
+                context.l10n.profileAutoSync,
                 style: TextStyle(
                   fontSize: 12,
                   color: colorScheme.onSurfaceVariant,
@@ -220,7 +221,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Statistiken werden geladen...',
+            context.l10n.profileStatisticsLoading,
             style: TextStyle(
               fontSize: 14,
               color: colorScheme.onSurfaceVariant,
@@ -228,10 +229,10 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Starte deinen ersten Trip, um Statistiken zu sehen!',
+            context.l10n.profileStartFirstTrip,
             style: TextStyle(
               fontSize: 12,
-              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -255,7 +256,7 @@ class ProfileScreen extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: () => _showCloudLogoutDialog(context, ref),
               icon: const Icon(Icons.logout),
-              label: const Text('Ausloggen'),
+              label: Text(context.l10n.profileLogout),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -267,10 +268,10 @@ class ProfileScreen extends ConsumerWidget {
           // Account-Info
           if (authState.userId != null)
             Text(
-              'Account-ID: ${authState.userId!.substring(0, 8)}...',
+              context.l10n.profileAccountId('${authState.userId!.substring(0, 8)}...'),
               style: TextStyle(
                 fontSize: 11,
-                color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
         ],
@@ -285,15 +286,12 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Ausloggen?'),
-        content: const Text(
-          'Möchtest du dich wirklich ausloggen?\n\n'
-          'Deine Cloud-Daten bleiben erhalten und du kannst dich jederzeit wieder anmelden.',
-        ),
+        title: Text(context.l10n.profileLogoutTitle),
+        content: Text(context.l10n.profileLogoutCloudMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -310,7 +308,7 @@ class ProfileScreen extends ConsumerWidget {
               }
             },
             style: TextButton.styleFrom(foregroundColor: colorScheme.error),
-            child: const Text('Ausloggen'),
+            child: Text(context.l10n.profileLogout),
           ),
         ],
       ),
@@ -320,7 +318,7 @@ class ProfileScreen extends ConsumerWidget {
   /// Kein Account View - Weiterleitung zum Login
   Widget _buildNoAccountView(BuildContext context, ColorScheme colorScheme) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(title: Text(context.l10n.profileTitle)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -334,7 +332,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Kein Account',
+                context.l10n.profileNoAccount,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -343,7 +341,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Melde dich an, um dein Profil zu sehen',
+                context.l10n.profileLoginPrompt,
                 style: TextStyle(
                   fontSize: 14,
                   color: colorScheme.onSurfaceVariant,
@@ -354,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
               ElevatedButton.icon(
                 onPressed: () => context.go('/login'),
                 icon: const Icon(Icons.login),
-                label: const Text('Anmelden'),
+                label: Text(context.l10n.profileLogin),
               ),
             ],
           ),
@@ -367,12 +365,12 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildLocalAccountProfile(BuildContext context, WidgetRef ref, dynamic account) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(context.l10n.profileTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () => _showEditProfileDialog(context, ref),
-            tooltip: 'Profil bearbeiten',
+            tooltip: context.l10n.profileEdit,
           ),
         ],
       ),
@@ -406,7 +404,7 @@ class ProfileScreen extends ConsumerWidget {
           // Avatar
           CircleAvatar(
             radius: 50,
-            backgroundColor: colorScheme.primary.withOpacity(0.2),
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
             child: account.avatarUrl != null
                 ? ClipOval(
                     child: Image.network(account.avatarUrl!, fit: BoxFit.cover),
@@ -446,15 +444,15 @@ class ProfileScreen extends ConsumerWidget {
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(isDark ? 0.3 : 0.15),
+                color: Colors.orange.withValues(alpha: isDark ? 0.3 : 0.15),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.orange.withOpacity(0.5),
+                  color: Colors.orange.withValues(alpha: 0.5),
                   width: 1,
                 ),
               ),
               child: Text(
-                'Gast-Account',
+                context.l10n.profileGuestAccount,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.orange.shade700,
@@ -490,7 +488,7 @@ class ProfileScreen extends ConsumerWidget {
               Icon(Icons.phone_android, size: 16, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
-                'Lokal gespeichert',
+                context.l10n.profileLocalStorage,
                 style: TextStyle(
                   fontSize: 13,
                   color: colorScheme.onSurfaceVariant,
@@ -516,7 +514,7 @@ class ProfileScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Level ${account.level}',
+                context.l10n.profileLevel(account.level),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -549,7 +547,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 8),
 
           Text(
-            'Noch ${account.xpToNextLevel} XP bis Level ${account.level + 1}',
+            context.l10n.profileXpProgress(account.xpToNextLevel, account.level + 1),
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,
@@ -570,7 +568,7 @@ class ProfileScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Statistiken',
+            context.l10n.profileStatistics,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -585,7 +583,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildStatCard(
                 context: context,
                 icon: Icons.map,
-                label: 'Trips',
+                label: context.l10n.profileTrips,
                 value: '${account.totalTripsCreated}',
                 color: colorScheme.primary,
               ),
@@ -593,7 +591,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildStatCard(
                 context: context,
                 icon: Icons.pin_drop,
-                label: 'POIs',
+                label: context.l10n.profilePois,
                 value: '${account.totalPoisVisited}',
                 color: Colors.green,
               ),
@@ -601,7 +599,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildStatCard(
                 context: context,
                 icon: Icons.route,
-                label: 'Kilometer',
+                label: context.l10n.profileKilometers,
                 value: '${account.totalKmTraveled.toStringAsFixed(0)}',
                 color: colorScheme.error,
               ),
@@ -627,7 +625,7 @@ class ProfileScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.2 : 0.1),
+          color: color.withValues(alpha: isDark ? 0.2 : 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -670,7 +668,7 @@ class ProfileScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Achievements',
+                context.l10n.profileAchievements,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -702,7 +700,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Noch keine Achievements freigeschaltet. Starte deinen ersten Trip!',
+                      context.l10n.profileNoAchievements,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                   ),
@@ -717,7 +715,7 @@ class ProfileScreen extends ConsumerWidget {
                 return Chip(
                   label: Text(id),
                   avatar: const Icon(Icons.emoji_events, size: 18),
-                  backgroundColor: colorScheme.primary.withOpacity(isDark ? 0.2 : 0.1),
+                  backgroundColor: colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.1),
                 );
               }).toList(),
             ),
@@ -741,7 +739,7 @@ class ProfileScreen extends ConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () => context.go('/register'),
                 icon: const Icon(Icons.cloud_upload),
-                label: const Text('Zu Cloud-Account upgraden'),
+                label: Text(context.l10n.profileUpgradeToCloud),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -756,7 +754,7 @@ class ProfileScreen extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: () => _showLogoutDialog(context, ref),
               icon: const Icon(Icons.logout),
-              label: const Text('Ausloggen'),
+              label: Text(context.l10n.profileLogout),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -772,7 +770,7 @@ class ProfileScreen extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _showDeleteAccountDialog(context, ref),
                 icon: const Icon(Icons.delete_forever),
-                label: const Text('Account löschen'),
+                label: Text(context.l10n.profileDeleteAccount),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colorScheme.error,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -785,7 +783,7 @@ class ProfileScreen extends ConsumerWidget {
 
           // Account-Info
           Text(
-            'Erstellt am: ${_formatDate(account.createdAt)}',
+            context.l10n.profileCreatedAt(_formatDate(account.createdAt)),
             style: TextStyle(
               fontSize: 12,
               color: colorScheme.onSurfaceVariant,
@@ -793,7 +791,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           if (account.lastLoginAt != null)
             Text(
-              'Letzter Login: ${_formatDate(account.lastLoginAt!)}',
+              context.l10n.profileLastLogin(_formatDate(account.lastLoginAt!)),
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSurfaceVariant,
@@ -810,7 +808,7 @@ class ProfileScreen extends ConsumerWidget {
 
   void _showEditProfileDialog(BuildContext context, WidgetRef ref) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profil-Bearbeitung kommt bald!')),
+      SnackBar(content: Text(context.l10n.profileEditComingSoon)),
     );
   }
 
@@ -820,12 +818,12 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Ausloggen?'),
-        content: const Text('Möchtest du dich wirklich ausloggen?'),
+        title: Text(context.l10n.profileLogoutTitle),
+        content: Text(context.l10n.profileLogoutMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -845,7 +843,7 @@ class ProfileScreen extends ConsumerWidget {
               }
             },
             style: TextButton.styleFrom(foregroundColor: colorScheme.error),
-            child: const Text('Ausloggen'),
+            child: Text(context.l10n.profileLogout),
           ),
         ],
       ),
@@ -858,15 +856,12 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Account löschen?'),
-        content: const Text(
-          'Möchtest du deinen Account wirklich löschen? '
-          'Alle Daten werden unwiderruflich gelöscht!',
-        ),
+        title: Text(context.l10n.profileDeleteTitle),
+        content: Text(context.l10n.profileDeleteMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -877,7 +872,7 @@ class ProfileScreen extends ConsumerWidget {
               }
             },
             style: TextButton.styleFrom(foregroundColor: colorScheme.error),
-            child: const Text('Löschen'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),

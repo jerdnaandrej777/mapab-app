@@ -25,9 +25,9 @@ class DaysSelector extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer.withOpacity(0.5),
+            color: colorScheme.primaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -109,7 +109,7 @@ class _HotelToggle extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -117,7 +117,7 @@ class _HotelToggle extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: isEnabled
-                  ? Colors.purple.withOpacity(0.15)
+                  ? Colors.purple.withValues(alpha: 0.15)
                   : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
             ),

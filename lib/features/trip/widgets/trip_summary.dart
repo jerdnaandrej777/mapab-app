@@ -19,6 +19,9 @@ class TripSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onPrimary = colorScheme.onPrimary;
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -34,7 +37,7 @@ class TripSummary extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -50,28 +53,31 @@ class TripSummary extends StatelessWidget {
                 value: FormatUtils.formatDistance(totalDistance),
                 label: 'Gesamt',
                 isLoading: isRecalculating,
+                onPrimary: onPrimary,
               ),
               Container(
                 width: 1,
                 height: 40,
-                color: Colors.white.withOpacity(0.3),
+                color: onPrimary.withValues(alpha: 0.3),
               ),
               _buildStat(
                 icon: Icons.timer,
                 value: FormatUtils.formatDuration(totalDuration),
                 label: 'Fahrzeit',
                 isLoading: isRecalculating,
+                onPrimary: onPrimary,
               ),
               Container(
                 width: 1,
                 height: 40,
-                color: Colors.white.withOpacity(0.3),
+                color: onPrimary.withValues(alpha: 0.3),
               ),
               _buildStat(
                 icon: Icons.place,
                 value: '$stopCount',
                 label: 'Stops',
                 isLoading: false,
+                onPrimary: onPrimary,
               ),
             ],
           ),
@@ -84,28 +90,29 @@ class TripSummary extends StatelessWidget {
     required IconData icon,
     required String value,
     required String label,
+    required Color onPrimary,
     bool isLoading = false,
   }) {
     return Column(
       children: [
         isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(onPrimary),
                 ),
               )
-            : Icon(icon, color: Colors.white, size: 20),
+            : Icon(icon, color: onPrimary, size: 20),
         const SizedBox(height: 8),
         AnimatedOpacity(
           opacity: isLoading ? 0.5 : 1.0,
           duration: const Duration(milliseconds: 200),
           child: Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onPrimary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -114,7 +121,7 @@ class TripSummary extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+            color: onPrimary.withValues(alpha: 0.8),
             fontSize: 12,
           ),
         ),

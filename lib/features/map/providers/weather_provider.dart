@@ -89,16 +89,12 @@ class RouteWeatherState {
       weatherPoints.any((p) => p.weather.condition == WeatherCondition.bad);
 
   /// Hat Schnee
-  bool get hasSnow => weatherPoints.any((p) {
-        final code = p.weather.weatherCode;
-        return (code >= 71 && code <= 77) || code == 85 || code == 86;
-      });
+  bool get hasSnow => weatherPoints
+      .any((p) => WeatherCondition.isSnowCode(p.weather.weatherCode));
 
   /// Hat Regen
-  bool get hasRain => weatherPoints.any((p) {
-        final code = p.weather.weatherCode;
-        return (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
-      });
+  bool get hasRain => weatherPoints
+      .any((p) => WeatherCondition.isRainCode(p.weather.weatherCode));
 
   /// Maximale Windgeschwindigkeit
   double get maxWindSpeed {
@@ -293,6 +289,11 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
           error: 'Wetter konnte nicht geladen werden',
         );
       }
+    } finally {
+      // Safety-Net: isLoading zuruecksetzen wenn noch aktiver Request
+      if (requestId == _loadRequestId && state.isLoading) {
+        state = state.copyWith(isLoading: false);
+      }
     }
   }
 
@@ -372,6 +373,11 @@ class RouteWeatherNotifier extends _$RouteWeatherNotifier {
           isLoading: false,
           error: 'Wetter-Vorhersage konnte nicht geladen werden',
         );
+      }
+    } finally {
+      // Safety-Net: isLoading zuruecksetzen wenn noch aktiver Request
+      if (requestId == _loadRequestId && state.isLoading) {
+        state = state.copyWith(isLoading: false);
       }
     }
   }

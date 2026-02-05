@@ -48,7 +48,7 @@ class AISuggestionBanner extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: fgColor.withOpacity(0.2),
+          color: fgColor.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -74,7 +74,7 @@ class AISuggestionBanner extends StatelessWidget {
                   child: Icon(
                     Icons.close,
                     size: 18,
-                    color: fgColor.withOpacity(0.6),
+                    color: fgColor.withValues(alpha: 0.6),
                   ),
                 ),
             ],
@@ -84,7 +84,7 @@ class AISuggestionBanner extends StatelessWidget {
             '$outdoorCount von $totalCount Stops sind Outdoor-Aktivitaeten.',
             style: TextStyle(
               fontSize: 13,
-              color: fgColor.withOpacity(0.8),
+              color: fgColor.withValues(alpha: 0.8),
             ),
           ),
           if (onSuggestAlternatives != null) ...[

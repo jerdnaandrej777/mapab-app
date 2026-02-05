@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import '../../data/providers/auth_provider.dart';
 import '../../data/providers/account_provider.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../../core/l10n/l10n.dart';
 
 /// Login Screen mit Email/Passwort und Gast-Modus
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,11 +40,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
 
     final settings = ref.read(settingsNotifierProvider);
-    if (settings.hasStoredCredentials) {
-      final password = await ref.read(settingsNotifierProvider.notifier).getSavedPassword();
+    if (settings.rememberMe) {
+      final notifier = ref.read(settingsNotifierProvider.notifier);
+      final email = await notifier.getSavedEmail();
+      final password = await notifier.getSavedPassword();
       if (!mounted) return;
       setState(() {
-        _emailController.text = settings.savedEmail ?? '';
+        _emailController.text = email ?? '';
         _passwordController.text = password ?? '';
         _rememberMe = true;
       });
@@ -66,8 +70,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!SupabaseConfig.isConfigured) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cloud-Login nicht verfügbar - App ohne Supabase-Credentials gebaut'),
+          SnackBar(
+            content: Text(context.l10n.authCloudLoginUnavailable),
             backgroundColor: Colors.red,
           ),
         );
@@ -116,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
+          SnackBar(content: Text('${context.l10n.errorPrefix}$e')),
         );
       }
     } finally {
@@ -134,10 +138,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isCloudAvailable = SupabaseConfig.isConfigured;
     final isLoading = authState.isLoading || _isLocalLoading;
 
-    // Debug-Output für Supabase-Konfiguration
-    debugPrint('[Login] isCloudAvailable: $isCloudAvailable');
-    debugPrint('[Login] SUPABASE_URL: ${SupabaseConfig.supabaseUrl.isEmpty ? "(leer)" : SupabaseConfig.supabaseUrl.substring(0, 20)}...');
-    debugPrint('[Login] SUPABASE_ANON_KEY: ${SupabaseConfig.supabaseAnonKey.isEmpty ? "(leer)" : "${SupabaseConfig.supabaseAnonKey.substring(0, 20)}..."}');
+    // Debug-Output für Supabase-Konfiguration (nur im Debug-Modus)
+    if (kDebugMode) {
+      debugPrint('[Login] isCloudAvailable: $isCloudAvailable');
+      debugPrint('[Login] SUPABASE_URL: ${SupabaseConfig.supabaseUrl.isEmpty ? "(leer)" : SupabaseConfig.supabaseUrl.substring(0, 20)}...');
+      debugPrint('[Login] SUPABASE_ANON_KEY: ${SupabaseConfig.supabaseAnonKey.isEmpty ? "(leer)" : "***"}');
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -153,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Titel
                 Text(
-                  'Willkommen bei MapAB',
+                  context.l10n.authWelcomeTitle,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -161,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Dein AI-Reiseplaner für unvergessliche Trips',
+                  context.l10n.authWelcomeSubtitle,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -233,7 +239,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Cloud nicht verfügbar - App ohne Supabase-Credentials gebaut',
+                      context.l10n.authCloudNotAvailable,
                       style: TextStyle(
                         color: colorScheme.onErrorContainer,
                         fontSize: 13,
@@ -249,19 +255,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Email Field
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'E-Mail',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
+            maxLength: 254,
+            decoration: InputDecoration(
+              labelText: context.l10n.authEmailLabel,
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: const OutlineInputBorder(),
+              counterText: '',
             ),
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Bitte E-Mail eingeben';
+                return context.l10n.authEmailEmpty;
               }
               if (!value.contains('@')) {
-                return 'Ungültige E-Mail';
+                return context.l10n.authEmailInvalid;
               }
               return null;
             },
@@ -273,7 +281,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           TextFormField(
             controller: _passwordController,
             decoration: InputDecoration(
-              labelText: 'Passwort',
+              labelText: context.l10n.authPasswordLabel,
               prefixIcon: const Icon(Icons.lock_outlined),
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
@@ -290,10 +298,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onFieldSubmitted: (_) => _signIn(),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Bitte Passwort eingeben';
+                return context.l10n.authPasswordEmpty;
               }
-              if (value.length < 6) {
-                return 'Mindestens 6 Zeichen';
+              if (value.length < 8) {
+                return context.l10n.authPasswordMinLength;
               }
               return null;
             },
@@ -329,7 +337,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             setState(() => _rememberMe = !_rememberMe);
                           },
                     child: Text(
-                      'Anmeldedaten merken',
+                      context.l10n.authRememberMe,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -340,7 +348,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               // Forgot Password
               TextButton(
                 onPressed: isLoading ? null : () => context.push('/forgot-password'),
-                child: const Text('Passwort vergessen?'),
+                child: Text(context.l10n.authForgotPassword),
               ),
             ],
           ),
@@ -356,7 +364,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Anmelden'),
+                : Text(context.l10n.authSignIn),
           ),
 
           const SizedBox(height: 12),
@@ -366,12 +374,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Noch kein Konto? ',
+                context.l10n.authNoAccount,
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               ),
               TextButton(
                 onPressed: isLoading ? null : () => context.push('/register'),
-                child: const Text('Registrieren'),
+                child: Text(context.l10n.authRegister),
               ),
             ],
           ),
@@ -387,7 +395,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'ODER',
+            context.l10n.or,
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -420,7 +428,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 )
               : const Icon(Icons.person_outline),
-          label: const Text('Als Gast fortfahren'),
+          label: Text(context.l10n.authContinueAsGuest),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
@@ -446,8 +454,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Expanded(
                 child: Text(
                   isCloudAvailable
-                      ? 'Als Gast werden deine Daten nur lokal gespeichert und nicht synchronisiert.'
-                      : 'Deine Daten werden lokal auf deinem Gerät gespeichert.',
+                      ? context.l10n.authGuestInfoCloud
+                      : context.l10n.authGuestInfoLocal,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),

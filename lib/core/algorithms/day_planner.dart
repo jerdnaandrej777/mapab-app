@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../../data/models/poi.dart';
@@ -315,7 +317,9 @@ class DayPlanner {
   /// Tage mit nur 1 POI koennen nicht weiter gesplittet werden.
   void _splitOverlimitDays(List<List<POI>> clusters, LatLng startLocation) {
     var i = 0;
-    var maxIterations = clusters.length * 2; // Schutz gegen Endlosschleifen
+    // v1.9.28: Absolute Obergrenze (50) statt relatives clusters.length*2
+    // da clusters bei jedem Split wachsen koennen
+    var maxIterations = min(clusters.length * 2, 50);
     while (i < clusters.length && maxIterations > 0) {
       maxIterations--;
       final cluster = clusters[i];

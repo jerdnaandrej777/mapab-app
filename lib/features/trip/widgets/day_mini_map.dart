@@ -153,7 +153,7 @@ class _DayMiniMapState extends State<DayMiniMap> {
                       points: widget.routeSegment!,
                       strokeWidth: 4,
                       color: colorScheme.primary,
-                      borderColor: colorScheme.primary.withOpacity(0.3),
+                      borderColor: colorScheme.primary.withValues(alpha: 0.3),
                       borderStrokeWidth: 2,
                     ),
                   ],
@@ -168,19 +168,19 @@ class _DayMiniMapState extends State<DayMiniMap> {
                     height: 36,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: colorScheme.tertiary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: colorScheme.surface, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: colorScheme.shadow.withValues(alpha: 0.2),
                             blurRadius: 4,
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.play_arrow,
-                        color: Colors.white,
+                        color: colorScheme.onTertiary,
                         size: 18,
                       ),
                     ),
@@ -193,10 +193,10 @@ class _DayMiniMapState extends State<DayMiniMap> {
                       height: 30,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: colorScheme.tertiary.withOpacity(0.6),
+                          color: colorScheme.tertiary.withValues(alpha: 0.6),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: colorScheme.tertiary.withOpacity(0.8),
+                            color: colorScheme.tertiary.withValues(alpha: 0.8),
                             width: 1.5,
                           ),
                         ),
@@ -220,10 +220,10 @@ class _DayMiniMapState extends State<DayMiniMap> {
                         decoration: BoxDecoration(
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: colorScheme.surface, width: 2),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: colorScheme.shadow.withValues(alpha: 0.2),
                               blurRadius: 4,
                             ),
                           ],
@@ -264,13 +264,13 @@ class _DayMiniMapState extends State<DayMiniMap> {
             Icon(
               Icons.map_outlined,
               size: 40,
-              color: colorScheme.onSurface.withOpacity(0.3),
+              color: colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 8),
             Text(
               'Keine Stops fuer diesen Tag',
               style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.5),
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
             ),

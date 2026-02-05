@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
 
 /// Filter-Sheet fuer POIs
 class POIFiltersSheet extends StatefulWidget {
@@ -81,7 +82,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                     ),
                     TextButton(
                       onPressed: _resetFilters,
-                      child: const Text('Zuruecksetzen'),
+                      child: Text(context.l10n.reset),
                     ),
                   ],
                 ),
@@ -98,8 +99,8 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                     // Must-See Toggle
                     _buildSwitchTile(
                       colorScheme: colorScheme,
-                      title: 'Nur Must-See',
-                      subtitle: 'Zeige nur Highlights',
+                      title: context.l10n.poiOnlyMustSee,
+                      subtitle: context.l10n.poiShowOnlyHighlights,
                       icon: Icons.star,
                       value: _mustSeeOnly,
                       onChanged: (value) =>
@@ -111,8 +112,8 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                     // Indoor-Only Toggle (v1.9.9)
                     _buildSwitchTile(
                       colorScheme: colorScheme,
-                      title: 'Nur Indoor-POIs',
-                      subtitle: 'Museen, Kirchen, Restaurants & mehr',
+                      title: context.l10n.poiOnlyIndoor,
+                      subtitle: context.l10n.weatherRecBad,
                       icon: Icons.roofing,
                       value: _indoorOnly,
                       onChanged: (value) =>
@@ -147,7 +148,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                           _maxDetour,
                         );
                       },
-                      child: const Text('Filter anwenden'),
+                      child: Text(context.l10n.filterApply),
                     ),
                   ),
                 ),
@@ -170,7 +171,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -179,7 +180,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: value
-                  ? colorScheme.primary.withOpacity(0.1)
+                  ? colorScheme.primary.withValues(alpha: 0.1)
                   : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
             ),
@@ -239,7 +240,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
+                color: colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -264,9 +265,9 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: colorScheme.primary,
-            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.2),
             thumbColor: colorScheme.primary,
-            overlayColor: colorScheme.primary.withOpacity(0.1),
+            overlayColor: colorScheme.primary.withValues(alpha: 0.1),
           ),
           child: Slider(
             value: _maxDetour,
@@ -335,7 +336,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                   }
                 });
               },
-              selectedColor: colorScheme.primary.withOpacity(0.15),
+              selectedColor: colorScheme.primary.withValues(alpha: 0.15),
               checkmarkColor: colorScheme.primary,
             );
           }).toList(),

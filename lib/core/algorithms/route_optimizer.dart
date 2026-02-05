@@ -23,13 +23,17 @@ class RouteOptimizer {
     // 1. Nearest-Neighbor für Startlösung
     var currentOrder = _nearestNeighbor(pois, startLocation);
 
-    // 2. 2-opt Verbesserung
-    currentOrder = _twoOptImprovement(
-      currentOrder,
-      startLocation,
-      returnToStart,
-      maxIterations,
-    );
+    // 2. 2-opt Verbesserung (nur bei kleinen/mittleren Sets)
+    // Bei >50 POIs ist 2-opt O(n^2*iterations) zu teuer fuer Mobile
+    if (pois.length <= 50) {
+      final effectiveIterations = pois.length <= 20 ? maxIterations : 30;
+      currentOrder = _twoOptImprovement(
+        currentOrder,
+        startLocation,
+        returnToStart,
+        effectiveIterations,
+      );
+    }
 
     return currentOrder;
   }

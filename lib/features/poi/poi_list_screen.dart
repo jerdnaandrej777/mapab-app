@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/utils/location_helper.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/constants/categories.dart';
 import '../../core/utils/weather_poi_utils.dart';
 import '../../data/models/poi.dart';
@@ -128,53 +130,39 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
 
     // Sonst: GPS-Position verwenden
     try {
-      // Prüfen ob Location Services aktiviert sind
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[POIList] GPS deaktiviert - zeige Dialog');
-        if (!mounted) return;
-        final openSettings = await _showGpsDialog();
-        if (openSettings) {
-          await Geolocator.openLocationSettings();
-        }
-        return; // Kein Fallback mehr - Benutzer muss GPS aktivieren
-      }
+      final result = await LocationHelper.getCurrentPosition(
+        accuracy: LocationAccuracy.medium,
+      );
 
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        final newPermission = await Geolocator.requestPermission();
-        if (newPermission == LocationPermission.denied ||
-            newPermission == LocationPermission.deniedForever) {
-          debugPrint('[POIList] GPS-Berechtigung verweigert');
-          if (!mounted) return;
+      if (!result.isSuccess) {
+        if (!mounted) return;
+        if (result.isGpsDisabled) {
+          final openSettings = await _showGpsDialog();
+          if (openSettings) await LocationHelper.openSettings();
+        } else if (result.isPermissionDenied) {
           _showPermissionDeniedSnackBar();
-          return;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'GPS-Fehler'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        debugPrint('[POIList] GPS-Berechtigung dauerhaft verweigert');
-        if (!mounted) return;
-        _showPermissionDeniedSnackBar();
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
-      );
-
       await poiNotifier.loadPOIsInRadius(
-        center: LatLng(position.latitude, position.longitude),
+        center: result.position!,
         radiusKm: 50,
       );
     } catch (e) {
       debugPrint('[POIList] GPS-Fehler: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('GPS-Position konnte nicht ermittelt werden'),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(context.l10n.gpsCouldNotDetermine),
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -212,36 +200,17 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
   }
 
   /// Dialog anzeigen wenn GPS deaktiviert ist (v1.5.9)
+  /// Nutzt zentralisierten LocationHelper.showGpsDialog (v1.9.29)
   Future<bool> _showGpsDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('GPS deaktiviert'),
-            content: const Text(
-              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen öffnen'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return LocationHelper.showGpsDialog(context);
   }
 
   /// SnackBar anzeigen wenn GPS-Berechtigung verweigert wurde
   void _showPermissionDeniedSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-            'GPS-Berechtigung wird benötigt um POIs in der Nähe zu finden'),
-        duration: Duration(seconds: 4),
+      SnackBar(
+        content: Text(context.l10n.poiGpsPermissionNeeded),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -254,12 +223,12 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sehenswürdigkeiten'),
+        title: Text(context.l10n.poiTitle),
         actions: [
           if (poiState.hasActiveFilters)
             IconButton(
               icon: const Icon(Icons.filter_alt_off),
-              tooltip: 'Filter zurücksetzen',
+              tooltip: context.l10n.poiResetFilters,
               onPressed: () {
                 ref.read(pOIStateNotifierProvider.notifier).resetFilters();
               },
@@ -285,7 +254,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                     .setSearchQuery(value);
               },
               decoration: InputDecoration(
-                hintText: 'POIs durchsuchen...',
+                hintText: context.l10n.poiSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: poiState.searchQuery.isNotEmpty
                     ? IconButton(
@@ -298,7 +267,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                       )
                     : null,
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -315,7 +284,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _FilterChip(
-                  label: 'Must-See',
+                  label: context.l10n.poiMustSee,
                   icon: '⭐',
                   isSelected: poiState.mustSeeOnly,
                   onTap: () {
@@ -327,7 +296,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                 const SizedBox(width: 8),
                 // Wetter-Tipp Chip (v1.9.9): Sortiert POIs nach Wetter-Relevanz
                 _FilterChip(
-                  label: 'Wetter-Tipp',
+                  label: context.l10n.poiWeatherTip,
                   icon: '\u{1F326}\u{FE0F}',
                   isSelected: _weatherSortActive,
                   onTap: () {
@@ -368,7 +337,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               child: Row(
                 children: [
                   Text(
-                    '${poiState.filteredCount} von ${poiState.totalCount} POIs',
+                    context.l10n.poiResultsCount(poiState.filteredCount, poiState.totalCount),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -382,7 +351,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                             .resetFilters();
                       },
                       icon: const Icon(Icons.clear, size: 16),
-                      label: const Text('Filter löschen'),
+                      label: Text(context.l10n.poiClearFilters),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         textStyle: theme.textTheme.bodySmall,
@@ -417,13 +386,13 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
 
     // Loading
     if (poiState.isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Lade Sehenswürdigkeiten...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(context.l10n.poiLoading),
           ],
         ),
       );
@@ -449,7 +418,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                 _loadPOIs();
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Erneut versuchen'),
+              label: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -469,12 +438,12 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('🗺️', style: TextStyle(fontSize: 64)),
+            const Text('🗺️', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
             Text(
               poiState.hasActiveFilters
-                  ? 'Keine POIs mit diesen Filtern gefunden'
-                  : 'Keine POIs in der Nähe gefunden',
+                  ? context.l10n.poiNoResultsFilter
+                  : context.l10n.poiNoResultsNearby,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),
@@ -484,7 +453,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                 onPressed: () {
                   ref.read(pOIStateNotifierProvider.notifier).resetFilters();
                 },
-                child: const Text('Filter zurücksetzen'),
+                child: Text(context.l10n.poiResetFilters),
               ),
           ],
         ),
@@ -507,8 +476,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: weatherCondition == WeatherCondition.danger
-                    ? colorScheme.errorContainer.withOpacity(0.5)
-                    : colorScheme.tertiaryContainer.withOpacity(0.5),
+                    ? colorScheme.errorContainer.withValues(alpha: 0.5)
+                    : colorScheme.tertiaryContainer.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -521,8 +490,8 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
                   Expanded(
                     child: Text(
                       weatherCondition == WeatherCondition.danger
-                          ? 'Unwetter erwartet \u{2013} Indoor-POIs empfohlen'
-                          : 'Regen erwartet \u{2013} aktiviere "Wetter-Tipp" fuer bessere Sortierung',
+                          ? context.l10n.poiWeatherDangerBanner
+                          : context.l10n.poiWeatherBadBanner,
                       style: TextStyle(
                         fontSize: 12,
                         color: weatherCondition == WeatherCondition.danger
@@ -645,7 +614,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
         // Route wurde erstellt - zum Trip-Tab navigieren
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Route zu "${poi.name}" erstellt'),
+            content: Text(context.l10n.poiRouteCreated(poi.name)),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -656,13 +625,13 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
       // GPS deaktiviert - Dialog anzeigen
       final shouldOpen = await _showGpsDialog();
       if (shouldOpen) {
-        await Geolocator.openLocationSettings();
+        await LocationHelper.openSettings();
       }
     } else {
       // Anderer Fehler
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message ?? 'Fehler beim Hinzufügen'),
+          content: Text(result.message ?? context.l10n.errorAddingToRoute),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -731,13 +700,13 @@ class _FilterChip extends StatelessWidget {
             border: Border.all(
               color: isSelected
                   ? colorScheme.primary
-                  : colorScheme.outline.withOpacity(0.3),
+                  : colorScheme.outline.withValues(alpha: 0.3),
               width: isSelected ? 1.5 : 1.0,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.3),
+                      color: colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

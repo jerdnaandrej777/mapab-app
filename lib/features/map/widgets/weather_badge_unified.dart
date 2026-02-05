@@ -122,7 +122,7 @@ class WeatherBadgeUnified extends StatelessWidget {
         color: info.bgColor,
         shape: BoxShape.circle,
         border: Border.all(
-          color: info.fgColor.withOpacity(0.5),
+          color: info.fgColor.withValues(alpha: 0.5),
           width: 0.5,
         ),
       ),

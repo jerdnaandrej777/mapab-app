@@ -27,9 +27,9 @@ class HotelSuggestionCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
+          color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -115,7 +115,7 @@ class _HotelItem extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? colorScheme.primary
-                    : colorScheme.outline.withOpacity(0.3),
+                    : colorScheme.outline.withValues(alpha: 0.3),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -130,7 +130,7 @@ class _HotelItem extends StatelessWidget {
                     border: Border.all(
                       color: isSelected
                           ? colorScheme.primary
-                          : colorScheme.outline.withOpacity(0.5),
+                          : colorScheme.outline.withValues(alpha: 0.5),
                       width: 2,
                     ),
                   ),

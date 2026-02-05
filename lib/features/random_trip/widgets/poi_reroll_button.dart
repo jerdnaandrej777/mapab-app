@@ -81,8 +81,8 @@ class _ActionButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isDisabled
-                    ? color.withOpacity(0.2)
-                    : color.withOpacity(0.3),
+                    ? color.withValues(alpha: 0.2)
+                    : color.withValues(alpha: 0.3),
               ),
             ),
             child: isLoading
@@ -97,7 +97,7 @@ class _ActionButton extends StatelessWidget {
                 : Icon(
                     icon,
                     size: 16,
-                    color: isDisabled ? color.withOpacity(0.4) : color,
+                    color: isDisabled ? color.withValues(alpha: 0.4) : color,
                   ),
           ),
         ),
@@ -133,7 +133,7 @@ class POIRerollButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: colorScheme.primary.withOpacity(0.3),
+              color: colorScheme.primary.withValues(alpha: 0.3),
             ),
           ),
           child: isLoading
@@ -180,7 +180,7 @@ class TripRerollButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: colorScheme.primary.withOpacity(0.3),
+            color: colorScheme.primary.withValues(alpha: 0.3),
           ),
         ),
       ),

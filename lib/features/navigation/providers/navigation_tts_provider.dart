@@ -205,7 +205,9 @@ class NavigationTts extends _$NavigationTts {
     // Laufende Sprachausgabe stoppen
     try {
       ref.read(voiceServiceProvider).stopSpeaking();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[NavigationTTS] VoiceService.stopSpeaking fehlgeschlagen: $e');
+    }
   }
 }
 

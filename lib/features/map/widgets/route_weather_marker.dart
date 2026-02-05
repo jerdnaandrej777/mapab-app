@@ -42,7 +42,7 @@ class RouteWeatherMarker extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -104,13 +104,13 @@ class RouteWeatherMarker extends StatelessWidget {
     if (isDark) {
       switch (condition) {
         case WeatherCondition.good:
-          return Colors.green.shade900.withOpacity(0.8);
+          return Colors.green.shade900.withValues(alpha: 0.8);
         case WeatherCondition.mixed:
-          return Colors.amber.shade900.withOpacity(0.8);
+          return Colors.amber.shade900.withValues(alpha: 0.8);
         case WeatherCondition.bad:
-          return Colors.orange.shade900.withOpacity(0.8);
+          return Colors.orange.shade900.withValues(alpha: 0.8);
         case WeatherCondition.danger:
-          return Colors.red.shade900.withOpacity(0.8);
+          return Colors.red.shade900.withValues(alpha: 0.8);
         case WeatherCondition.unknown:
           return Colors.grey.shade800;
       }
@@ -216,7 +216,7 @@ void showRouteWeatherDetail(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -264,7 +264,7 @@ void showRouteWeatherDetail(
                         'Gefuehlt ${weather.apparentTemperature!.round()}°C',
                         style: TextStyle(
                           fontSize: 12,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                         ),
                       ),
                   ],
@@ -278,7 +278,7 @@ void showRouteWeatherDetail(
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(

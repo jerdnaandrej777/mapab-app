@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/l10n.dart';
 
 /// Bottom Bar im Navigations-Screen mit ETA, Distanz und Kontrollen
 class NavigationBottomBar extends StatelessWidget {
@@ -6,9 +7,11 @@ class NavigationBottomBar extends StatelessWidget {
   final int etaMinutes;
   final double? currentSpeedKmh;
   final bool isMuted;
+  final bool isListening;
   final VoidCallback onToggleMute;
   final VoidCallback onStop;
   final VoidCallback onOverview;
+  final VoidCallback? onVoiceCommand;
 
   const NavigationBottomBar({
     super.key,
@@ -16,9 +19,11 @@ class NavigationBottomBar extends StatelessWidget {
     required this.etaMinutes,
     this.currentSpeedKmh,
     required this.isMuted,
+    this.isListening = false,
     required this.onToggleMute,
     required this.onStop,
     required this.onOverview,
+    this.onVoiceCommand,
   });
 
   @override
@@ -30,7 +35,7 @@ class NavigationBottomBar extends StatelessWidget {
         color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -49,7 +54,7 @@ class NavigationBottomBar extends StatelessWidget {
                 children: [
                   // Verbleibende Distanz
                   _InfoItem(
-                    label: 'Distanz',
+                    label: context.l10n.navDistance,
                     value: _formatDistance(distanceToDestinationKm),
                     icon: Icons.straighten,
                     colorScheme: colorScheme,
@@ -62,7 +67,7 @@ class NavigationBottomBar extends StatelessWidget {
                   ),
                   // ETA
                   _InfoItem(
-                    label: 'Ankunft',
+                    label: context.l10n.navArrival,
                     value: _formatETA(etaMinutes),
                     icon: Icons.access_time,
                     colorScheme: colorScheme,
@@ -75,7 +80,7 @@ class NavigationBottomBar extends StatelessWidget {
                   ),
                   // Geschwindigkeit
                   _InfoItem(
-                    label: 'Tempo',
+                    label: context.l10n.navSpeed,
                     value: currentSpeedKmh != null
                         ? '${currentSpeedKmh!.round()} km/h'
                         : '-- km/h',
@@ -93,15 +98,25 @@ class NavigationBottomBar extends StatelessWidget {
                     icon: isMuted
                         ? Icons.volume_off
                         : Icons.volume_up,
-                    label: isMuted ? 'Ton an' : 'Ton aus',
+                    label: isMuted ? context.l10n.navMuteOn : context.l10n.navMuteOff,
                     onTap: onToggleMute,
                     colorScheme: colorScheme,
                   ),
                   const SizedBox(width: 8),
+                  // Sprachbefehl
+                  if (onVoiceCommand != null)
+                    _ActionButton(
+                      icon: isListening ? Icons.mic : Icons.mic_none,
+                      label: isListening ? context.l10n.navVoiceListening : context.l10n.navVoice,
+                      onTap: onVoiceCommand!,
+                      colorScheme: colorScheme,
+                      isActive: isListening,
+                    ),
+                  if (onVoiceCommand != null) const SizedBox(width: 8),
                   // Übersicht
                   _ActionButton(
                     icon: Icons.map_outlined,
-                    label: 'Übersicht',
+                    label: context.l10n.navOverview,
                     onTap: onOverview,
                     colorScheme: colorScheme,
                   ),
@@ -111,7 +126,7 @@ class NavigationBottomBar extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed: onStop,
                       icon: const Icon(Icons.close, size: 18),
-                      label: const Text('Beenden'),
+                      label: Text(context.l10n.navEnd),
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.error,
                         foregroundColor: colorScheme.onError,
@@ -159,27 +174,30 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
+    return Semantics(
+      label: '$label: $value',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: colorScheme.onSurfaceVariant,
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -189,16 +207,31 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final ColorScheme colorScheme;
+  final bool isActive;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
     required this.colorScheme,
+    this.isActive = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (isActive) {
+      return FilledButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      );
+    }
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 18),

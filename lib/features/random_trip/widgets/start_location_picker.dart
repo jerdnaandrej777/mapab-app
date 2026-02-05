@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/route.dart';
@@ -17,30 +19,41 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
   final _focusNode = FocusNode();
   List<GeocodingResult> _suggestions = [];
   bool _isSearching = false;
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _searchAddress(String query) async {
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
     if (query.length < 3) {
       setState(() => _suggestions = []);
       return;
     }
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _searchAddress(query);
+    });
+  }
 
+  Future<void> _searchAddress(String query) async {
+    if (!mounted) return;
     setState(() => _isSearching = true);
 
     try {
       final geocodingRepo = ref.read(geocodingRepositoryProvider);
       final results = await geocodingRepo.geocode(query);
+      if (!mounted) return;
       setState(() {
         _suggestions = results.take(5).toList();
         _isSearching = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _suggestions = [];
         _isSearching = false;
@@ -87,7 +100,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
             border: Border.all(
               color: state.hasValidStart && !state.useGPS
                   ? colorScheme.primary
-                  : colorScheme.outline.withOpacity(0.3),
+                  : colorScheme.outline.withValues(alpha: 0.3),
               width: state.hasValidStart && !state.useGPS ? 2 : 1,
             ),
           ),
@@ -120,7 +133,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
-                onChanged: _searchAddress,
+                onChanged: _onSearchChanged,
               ),
 
               // Vorschläge
@@ -128,7 +141,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                 Container(
                   decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                      top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
                     ),
                   ),
                   child: Column(
@@ -191,7 +204,7 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
             decoration: BoxDecoration(
               color: colorScheme.errorContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: colorScheme.error.withOpacity(0.3)),
+              border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -248,7 +261,7 @@ class _GpsButton extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
+                : colorScheme.outline.withValues(alpha: 0.3),
           ),
         ),
         child: Row(

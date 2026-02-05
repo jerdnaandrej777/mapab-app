@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/l10n/l10n.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
@@ -64,19 +65,19 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Favoriten'),
+        title: Text(context.l10n.favTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.route), text: 'Routen'),
-            Tab(icon: Icon(Icons.place), text: 'POIs'),
+          tabs: [
+            Tab(icon: const Icon(Icons.route), text: context.l10n.favRoutes),
+            Tab(icon: const Icon(Icons.place), text: context.l10n.favPois),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
             onPressed: () => _showClearAllDialog(),
-            tooltip: 'Alle löschen',
+            tooltip: context.l10n.favDeleteAll,
           ),
         ],
       ),
@@ -101,7 +102,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             children: [
               Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
               const SizedBox(height: 16),
-              Text('Fehler: $error'),
+              Text('${context.l10n.errorGeneric}: $error'),
             ],
           ),
         ),
@@ -124,16 +125,16 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Keine Favoriten',
-            style: TextStyle(
+          Text(
+            context.l10n.favNoFavorites,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Speichere Routen und POIs für schnellen Zugriff',
+            context.l10n.favNoFavoritesDesc,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
@@ -144,7 +145,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
           ElevatedButton.icon(
             onPressed: () => context.go('/'),
             icon: const Icon(Icons.explore),
-            label: const Text('Entdecken'),
+            label: Text(context.l10n.favExplore),
           ),
         ],
       ),
@@ -166,12 +167,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
               color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
-            const Text('Keine gespeicherten Routen'),
+            Text(context.l10n.favNoRoutes),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => context.go('/'),
               icon: const Icon(Icons.add),
-              label: const Text('Route planen'),
+              label: Text(context.l10n.favPlanRoute),
             ),
           ],
         ),
@@ -199,7 +200,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(Icons.route, color: colorScheme.primary),
@@ -242,7 +243,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 Icon(Icons.place, size: 14, color: colorScheme.outline),
                 const SizedBox(width: 4),
                 Text(
-                  '${trip.stops.length} Stops',
+                  context.l10n.formatStopCount(trip.stops.length),
                   style: TextStyle(color: colorScheme.outline, fontSize: 12),
                 ),
               ],
@@ -273,12 +274,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
               color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
-            const Text('Keine favorisierten POIs'),
+            Text(context.l10n.favNoPois),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => context.go('/pois'),
               icon: const Icon(Icons.add),
-              label: const Text('POIs entdecken'),
+              label: Text(context.l10n.favDiscoverPois),
             ),
           ],
         ),
@@ -381,7 +382,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -403,7 +404,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      color: colorScheme.primary.withOpacity(0.1),
+      color: colorScheme.primary.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           icon,
@@ -418,7 +419,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     // Route-Daten pruefen
     if (trip.route.coordinates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Route-Daten sind unvollständig')),
+        SnackBar(content: Text(context.l10n.errorIncompleteRouteData)),
       );
       return;
     }
@@ -438,30 +439,30 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     context.go('/');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Route "${trip.name}" geladen')),
+      SnackBar(content: Text(context.l10n.favRouteLoaded)),
     );
   }
 
   void _confirmRemoveRoute(Trip trip) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Route entfernen?'),
-        content: Text('Möchtest du "${trip.name}" aus den Favoriten entfernen?'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.favRemoveRoute),
+        content: Text(context.l10n.favRemoveRouteConfirm(trip.name)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               ref.read(favoritesNotifierProvider.notifier).removeRoute(trip.id);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Route entfernt')),
+                SnackBar(content: Text(context.l10n.favRouteRemoved)),
               );
             },
-            child: const Text('Entfernen', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.remove, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -471,23 +472,23 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   void _confirmRemovePOI(POI poi) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('POI entfernen?'),
-        content: Text('Möchtest du "${poi.name}" aus den Favoriten entfernen?'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.favRemovePoi),
+        content: Text(context.l10n.favRemovePoiConfirm(poi.name)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               ref.read(favoritesNotifierProvider.notifier).removePOI(poi.id);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('POI entfernt')),
+                SnackBar(content: Text(context.l10n.favPoiRemoved)),
               );
             },
-            child: const Text('Entfernen', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.remove, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -497,25 +498,23 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   void _showClearAllDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Alle Favoriten löschen?'),
-        content: const Text(
-          'Diese Aktion kann nicht rückgängig gemacht werden.',
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.favClearAll),
+        content: Text(context.l10n.actionCannotBeUndone),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               ref.read(favoritesNotifierProvider.notifier).clearAll();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Alle Favoriten gelöscht')),
+                SnackBar(content: Text(context.l10n.favAllDeleted)),
               );
             },
-            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

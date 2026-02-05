@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'app.dart';
@@ -10,6 +13,35 @@ import 'data/services/poi_cache_service.dart';
 /// Sentry DSN via --dart-define
 const _sentryDsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
 
+/// Hive-Verschluesselungs-Key aus SecureStorage
+const _hiveKeyStorageKey = 'mapab_hive_encryption_key';
+const _hiveSecureStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  iOptions: IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  ),
+);
+
+/// Laedt oder generiert den Hive-Verschluesselungs-Key
+Future<List<int>> _getHiveEncryptionKey() async {
+  try {
+    final stored = await _hiveSecureStorage.read(key: _hiveKeyStorageKey);
+    if (stored != null) {
+      return base64Decode(stored);
+    }
+  } catch (e) {
+    debugPrint('[Hive] Fehler beim Lesen des Encryption-Keys: $e');
+  }
+
+  // Neuen Key generieren
+  final key = Hive.generateSecureKey();
+  await _hiveSecureStorage.write(
+    key: _hiveKeyStorageKey,
+    value: base64Encode(key),
+  );
+  return key;
+}
+
 /// Entry Point der Travel Planner App
 Future<void> main() async {
   // Flutter-Bindings initialisieren
@@ -18,14 +50,19 @@ Future<void> main() async {
   // Hive für lokale Datenbank initialisieren
   await Hive.initFlutter();
 
-  // Hive Boxes öffnen
+  // Verschluesselungs-Key laden oder generieren
+  final encryptionKey = await _getHiveEncryptionKey();
+  final cipher = HiveAesCipher(encryptionKey);
+
+  // Hive Boxes verschluesselt oeffnen
+  // Sensible Boxes mit Verschluesselung, Cache ohne (Performance)
   await Future.wait([
-    Hive.openBox('favorites'),
-    Hive.openBox('savedRoutes'),
-    Hive.openBox('settings'),
-    Hive.openBox('cache'),
-    Hive.openBox('user_accounts'), // Account-System
-    Hive.openBox('active_trip'), // Aktiver Trip für Mehrtages-Reisen
+    Hive.openBox('favorites', encryptionCipher: cipher),
+    Hive.openBox('savedRoutes', encryptionCipher: cipher),
+    Hive.openBox('settings', encryptionCipher: cipher),
+    Hive.openBox('cache'), // Cache muss nicht verschluesselt sein
+    Hive.openBox('user_accounts', encryptionCipher: cipher),
+    Hive.openBox('active_trip', encryptionCipher: cipher),
   ]);
 
   // Supabase initialisieren (falls konfiguriert)

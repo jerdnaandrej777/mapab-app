@@ -97,7 +97,6 @@ class AIService {
       debugPrint('[AI] Response: ${e.response?.data}');
 
       _handleDioError(e);
-      rethrow; // Wird nie erreicht
     } catch (e) {
       debugPrint('[AI] ✗ Unerwarteter Fehler: $e');
       throw AIException('Unerwarteter Fehler: $e');
@@ -139,7 +138,6 @@ class AIService {
       debugPrint('[AI] Response: ${e.response?.data}');
 
       _handleDioError(e);
-      rethrow;
     } catch (e) {
       debugPrint('[AI] ✗ Unerwarteter Fehler: $e');
       throw AIException('Unerwarteter Fehler: $e');
@@ -339,16 +337,28 @@ Antworte als JSON:
         if (errorCode == 'AI_CONFIG_ERROR') {
           throw AIException('AI-Service ist nicht konfiguriert. Bitte kontaktiere den Support.');
         }
-        throw AIException('Server-Fehler: ${errorMessage ?? "Bitte versuche es später erneut"}');
+        throw AIException(
+          'Server-Fehler: ${errorMessage ?? "Bitte versuche es später erneut"}',
+          isRetryable: true,
+        );
       case 503:
-        throw AIException('AI-Service vorübergehend nicht verfügbar. Bitte warte kurz.');
+        throw AIException(
+          'AI-Service vorübergehend nicht verfügbar. Bitte warte kurz.',
+          isRetryable: true,
+        );
       default:
         if (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout) {
-          throw AIException('Zeitüberschreitung. Bitte prüfe deine Internetverbindung.');
+          throw AIException(
+            'Zeitüberschreitung. Bitte prüfe deine Internetverbindung.',
+            isRetryable: true,
+          );
         }
         if (e.type == DioExceptionType.connectionError) {
-          throw AIException('Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung.');
+          throw AIException(
+            'Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung.',
+            isRetryable: true,
+          );
         }
         throw AIException('Verbindungsfehler: ${e.message ?? "Unbekannter Fehler"}');
     }
@@ -432,10 +442,14 @@ class ChatMessage {
   }) : timestamp = timestamp ?? DateTime.now();
 }
 
-/// AI Exception
+/// AI Exception mit optionalem Retry-Hinweis
 class AIException implements Exception {
   final String message;
-  AIException(this.message);
+
+  /// Ob der Fehler vorübergehend ist und ein Retry sinnvoll wäre
+  final bool isRetryable;
+
+  AIException(this.message, {this.isRetryable = false});
 
   @override
   String toString() => 'AIException: $message';

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.9.25 - Navigation Performance-Fix (Step-Index-Cache eliminiert O(n*m) pro GPS-Tick, moveCamera statt animateCamera fuer 60fps, Route/POI-Updates nur bei Aenderung, POI-Discovery 500ms Throttle) | Plattformen: Android, iOS, Desktop
+Version: 1.9.32 - Vollstaendige Lokalisierung (5 Sprachen, ~700 ARB-Keys, GPS-Dialog zentralisiert) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -81,26 +81,33 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/core/constants/trip_constants.dart` | Trip-Konstanten: maxPoisPerDay, kmPerDay, minKmPerDay, maxKmPerDay (v1.5.7, v1.8.1) + maxHaversineKmForDisplay Getter (v1.9.5) |
 | `lib/core/supabase/supabase_config.dart` | Supabase Credentials (--dart-define) |
 | `lib/core/utils/weather_poi_utils.dart` | Zentralisierte Wetter/POI-Logik: getWeatherAdjustedScore, sortByWeatherRelevance, getBadgeInfo, isWeatherRecommended (v1.9.12) |
-| `lib/core/algorithms/random_poi_selector.dart` | POI-Auswahl-Algorithmus mit effectiveScore-Unterstuetzung fuer Wetter-Gewichtung (v1.9.12) |
+| `lib/core/algorithms/random_poi_selector.dart` | POI-Auswahl-Algorithmus mit effectiveScore-Unterstuetzung fuer Wetter-Gewichtung (v1.9.12) + removeAt(indexOf) statt removeWhere fuer O(n) statt O(n^2) Pool-Bereinigung (v1.9.28) |
 | `lib/data/repositories/supabase_poi_repo.dart` | Supabase PostGIS POI-Repository: search_pois_in_radius/bounds RPC, uploadEnrichedPOI/Batch, snake_case→camelCase Mapping (v1.9.13) |
 | `backend/supabase/migrations/002_pois_postgis.sql` | PostGIS Extension + pois Tabelle + search_pois_in_radius/bounds + upsert_poi RPC + RLS Policies (v1.9.13) |
 | `backend/scripts/seed_curated_pois.dart` | Seed-Script: curated_pois.json → Supabase per upsert_poi RPC, idempotent (v1.9.13) |
+| `lib/core/utils/location_helper.dart` | Zentralisiertes GPS-Utility: getCurrentPosition, showGpsDialog, checkPermissions (v1.9.27) |
+| `lib/core/utils/url_utils.dart` | URL-Sanitisierung: validateHttpsUrl, sanitizeApiUrl (v1.9.27) |
+| `analysis_options.yaml` | Lint-Regeln: prefer_const_constructors, avoid_print, use_build_context_synchronously, Excludes fuer generierte Dateien (v1.9.27) |
+| `lib/core/l10n/l10n.dart` | Convenience Extension: `context.l10n` fuer Lokalisierung (v1.9.29) |
+| `lib/core/l10n/category_l10n.dart` | Enum-Lokalisierung: POICategory, TripType, WeatherCondition, AppThemeMode Extensions (v1.9.29) |
+| `lib/l10n/app_de.arb` | Template-ARB mit ~700 lokalisierten Strings (v1.9.29) |
+| `l10n.yaml` | Flutter l10n Konfiguration: arb-dir, template-arb-file, output-class (v1.9.29) |
 
 ### Features
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + ActiveTripResumeBanner + Überschreib-Dialog (v1.7.39) + Ziel als BottomSheet (v1.7.36: 50% Hoehe + Expanded Vorschlagsliste v1.8.1) + GPS-Fix _ensureGPSReady (v1.7.36) + "Navigation starten" Button in TripInfoBar (v1.9.0) + mounted-Checks nach async GPS-Operationen gegen setState-after-dispose (v1.9.22) |
-| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) + Tagesweise Route/POIs bei Mehrtages-Trips (v1.7.40) + Auto-Zoom bei Tageswechsel (v1.8.1) + Mini-Wetter-Badges auf _AITripStopMarker, tagesspezifisch bei Multi-Day (v1.9.12) |
+| `lib/features/map/map_screen.dart` | Hauptscreen mit Karte + Unified Panel Design in beiden Modi + AppBar mit Favoriten/Profil/Settings (v1.7.37: extendBodyBehindAppBar: false, Panel-Kompaktierung) + Euro Trip Tage-Slider statt Radius (v1.7.38) + ActiveTripResumeBanner + Überschreib-Dialog (v1.7.39) + Ziel als BottomSheet (v1.7.36: 50% Hoehe + Expanded Vorschlagsliste v1.8.1) + GPS-Fix _ensureGPSReady (v1.7.36) + "Navigation starten" Button in TripInfoBar (v1.9.0) + mounted-Checks nach async GPS-Operationen gegen setState-after-dispose (v1.9.22) + Listener-Subscriptions mit close() in dispose(), Slider onChangeEnd-Debounce (v1.9.28) |
+| `lib/features/map/widgets/map_view.dart` | Karten-Widget mit Route + AI Trip Preview + Wetter-Badges auf POI-Markern + Routen-Wetter-Marker (v1.7.12) + Tagesweise Route/POIs bei Mehrtages-Trips (v1.7.40) + Auto-Zoom bei Tageswechsel (v1.8.1) + Mini-Wetter-Badges auf _AITripStopMarker, tagesspezifisch bei Multi-Day (v1.9.12) + Listener-Subscriptions mit close() in dispose(), doppelter randomTripNotifier-Listener gemergt (v1.9.28) |
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) + Wetter-Tipp Sortier-Chip + Wetter-Kontext-Banner bei schlechtem Wetter (v1.9.12) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
 | `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) + Wetter-Badges auf Stop-Tiles + Wetter-Hint bei bad/danger Wetter (v1.9.12) |
-| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.3: nativer User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert) + mounted-Check in 60fps Interpolation-Callback (v1.9.22) + Vollstaendiges dispose() mit Provider-Cleanup, lokaler MapController-Capture gegen Race-Condition, _arrivalDialogShown Flag, context.mounted Guards in Dialogen (v1.9.23) + Route/POI-Updates nur bei tatsaechlicher Aenderung statt jedem build(), moveCamera statt animateCamera fuer 60fps ohne Animation-Stacking (v1.9.25) |
+| `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.3: nativer User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert) + mounted-Check in 60fps Interpolation-Callback (v1.9.22) + Vollstaendiges dispose() mit Provider-Cleanup, lokaler MapController-Capture gegen Race-Condition, _arrivalDialogShown Flag, context.mounted Guards in Dialogen (v1.9.23) + Route/POI-Updates nur bei tatsaechlicher Aenderung statt jedem build(), moveCamera statt animateCamera fuer 60fps ohne Animation-Stacking (v1.9.25) + Sprachbefehle via VoiceService: "wie lange noch", "wo bin ich", "naechster Stopp", "Navigation beenden" + partielle Spracherkennung-UI (v1.9.29) |
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
-| `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden Buttons (v1.9.0) |
+| `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden/Mikrofon Buttons (v1.9.0) + Sprachbefehl-Button mit aktiver Listening-Animation (v1.9.29) |
 | `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
-| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) + Fahrzeit-Chip in DayStats (v1.9.6) + Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent inline statt Modal-Sheet, Auto-Close bei Tageswechsel (v1.9.7) + AI-POI-Empfehlungen als actionable Karten (_AIRecommendedPOICard), POI-Entfernen via onRemovePOI-Callback (v1.9.8) + Smart-Empfehlungen Button wetterunabhaengig, MiniMap recommendedPOIs Vorschau-Marker (v1.9.9) + _isIndoorCategory konsolidiert durch POICategory.isIndoor, Auto-Trigger AI bei bad/danger Wetter (v1.9.12) + context.mounted-Check bei doppeltem Navigator.pop (v1.9.22) + Waypoints auf AppRoute gesetzt, context.mounted Guard bei Navigation-Push (v1.9.23) |
+| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) + Fahrzeit-Chip in DayStats (v1.9.6) + Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent inline statt Modal-Sheet, Auto-Close bei Tageswechsel (v1.9.7) + AI-POI-Empfehlungen als actionable Karten (_AIRecommendedPOICard), POI-Entfernen via onRemovePOI-Callback (v1.9.8) + Smart-Empfehlungen Button wetterunabhaengig, MiniMap recommendedPOIs Vorschau-Marker (v1.9.9) + _isIndoorCategory konsolidiert durch POICategory.isIndoor, Auto-Trigger AI bei bad/danger Wetter (v1.9.12) + context.mounted-Check bei doppeltem Navigator.pop (v1.9.22) + Waypoints auf AppRoute gesetzt, context.mounted Guard bei Navigation-Push (v1.9.23) + mounted-Guard in addPostFrameCallback, startLocation Null-Safety (v1.9.28) |
 | `lib/features/trip/widgets/editable_poi_card.dart` | POI-Karte im DayEditor mit Reroll/Delete + WeatherBadgeUnified (v1.9.12: konsolidiert, Dark-Mode-Fix) |
 | `lib/features/trip/widgets/corridor_browser_sheet.dart` | Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) + onAddPOI-Callback (v1.9.5) + CorridorBrowserContent als wiederverwendbares Widget extrahiert, DraggableScrollableSheet fuer TripScreen-Vollbild beibehalten (v1.9.7) + onRemovePOI-Callback mit Bestaetigungs-Dialog + markAsRemoved (v1.9.8) + Wetter-Sortierung, Header-Info, Indoor Quick-Filter Chip (v1.9.12) + Slider onChanged/onChangeEnd Debounce, Indoor-Toggle setCategoriesBatch, dispose() mit reset() (v1.9.20) + Weather-Watch Deduplizierung (einmal in build() statt doppelt in Header+Liste), Wetter-Sortier-Cache mit identical()-Check, ValueKey(poi.id) auf CompactPOICard (v1.9.21) |
 | `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) + onRemove-Callback mit Minus-Icon (rot) fuer hinzugefuegte POIs (v1.9.8) + weatherCondition-Parameter fuer Wetter-Badges (v1.9.12) |
@@ -114,10 +121,16 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/onboarding/onboarding_screen.dart` | Animiertes Onboarding |
 | `lib/features/random_trip/random_trip_screen.dart` | AI Trip Generator (Legacy) |
 | `lib/features/random_trip/widgets/day_tab_selector.dart` | Tag-Auswahl für mehrtägige Trips (v1.5.7) |
+| `lib/features/random_trip/widgets/start_location_picker.dart` | Startpunkt-Eingabe mit Geocoding-Autocomplete + GPS-Fallback + 300ms Debounce-Timer + mounted-Guards (v1.9.28) |
 | `lib/features/random_trip/widgets/trip_preview_card.dart` | AI Trip Preview mit POI-Fotos & Navigation (v1.6.9) |
 | `lib/features/map/widgets/weather_chip.dart` | Kompakter Wetter-Anzeiger auf MapScreen (v1.7.6) |
 | `lib/features/map/widgets/weather_details_sheet.dart` | 7-Tage-Vorhersage Bottom Sheet (v1.7.6, v1.9.10: Vollbild DraggableScrollableSheet 85%) |
 | `lib/features/map/widgets/unified_weather_widget.dart` | Intelligentes Wetter-Widget mit Auto-Modus-Wechsel (v1.7.22: startet zugeklappt) |
+| `lib/features/journal/journal_screen.dart` | Reisetagebuch-Hauptscreen: Eintraege gruppiert nach Tagen, Header mit Statistiken (Fotos, Eintraege, Tage), FAB zum Hinzufuegen, Entry-Details-Sheet (v1.9.29) |
+| `lib/features/journal/widgets/journal_entry_card.dart` | Eintragskarte mit Bild, Zeitstempel-Badge, POI-Name, Notiz-Vorschau (v1.9.29) |
+| `lib/features/journal/widgets/add_journal_entry_sheet.dart` | BottomSheet zum Hinzufuegen: Kamera/Galerie Buttons, Notiz-TextField, Standort-Toggle (v1.9.29) |
+| `lib/features/sharing/qr_scanner_screen.dart` | QR-Code-Scanner fuer Trip-Import: mobile_scanner Integration, mapab:// + https://mapab.app/trip/ Deep-Link-Parsing, automatische Routen-Berechnung via OSRM (v1.9.30) |
+| `lib/features/templates/trip_templates_screen.dart` | Trip-Vorlagen-Auswahl: 12 vordefinierte Reisetypen, Zielgruppen-Filter (Alle/Paare/Familien/etc.), Tage-Stepper, direkte AI-Trip-Generierung (v1.9.30) |
 
 ### Provider
 
@@ -132,12 +145,14 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/providers/map_controller_provider.dart` | MapController + shouldFitToRoute (v1.7.0) |
 | `lib/data/providers/active_trip_provider.dart` | Aktiver Trip Persistenz (keepAlive, v1.7.39) |
 | `lib/data/providers/settings_provider.dart` | Settings mit Remember Me |
-| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) + addPOIToDay() fuer Korridor-Browser DayEditor-Integration (v1.9.5+152) + removePOIFromDay() mit Min-1-Stop-Validierung (v1.9.8) + 700km-Fehlermeldung bei TripGenerationException (v1.9.9) + uebergibt Wetter an Trip-Generator fuer gewichtete POI-Auswahl (v1.9.12) + Null-Safety-Guards: startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (v1.9.22) |
-| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) + Tages-Vorhersage: loadWeatherForRouteWithForecast, getDayForecast, getForecastPerDay (v1.8.0) + Request-Cancellation via _loadRequestId in loadWeatherForRoute + loadWeatherForRouteWithForecast (v1.9.22) |
-| `lib/features/trip/providers/corridor_browser_provider.dart` | Korridor-POI-Browser State: loadCorridorPOIs, bufferKm, Kategorie-Filter (v1.8.0) + markAsRemoved() fuer POI-Entfernen (v1.9.8) + Request-Cancellation via _loadRequestId (v1.9.16) + POI-Limit 150 vor compute() Isolate verhindert O(n*m) Explosion (v1.9.17) + setBufferKmLocal (Slider-Debounce), setCategoriesBatch (Indoor-Toggle-Batch), filteredPOIs Lazy-Cache, reset() cancelt laufende Requests, maxResults:150 (v1.9.20) + copyWith() erhaelt _filteredPOIsCache/_newPOICountCache bei nicht-filter-relevanten Updates, verhindert 150-POI-Refilter bei Slider-Drag (v1.9.21) |
-| `lib/features/ai/providers/ai_trip_advisor_provider.dart` | AI Trip Advisor: analyzeTrip (regelbasiert) + suggestAlternativesForDay (GPT-4o) (v1.8.0) + loadSmartRecommendations() alle Kategorien + Wetter-Gewichtung + Must-See-Bonus + _calculateSmartScore(), AISuggestion um aiReasoning/relevanceScore erweitert, recommendedPOIsPerDay State (v1.9.8, v1.9.9: Smart statt nur Indoor) + _isIndoor durch POICategory.isIndoor konsolidiert (v1.9.12) + _extractDayRoute() fuer tages-spezifische POI-Suche statt gesamte Route (v1.9.16) + Request-Cancellation + Loading-Safety try/finally (v1.9.16) + Stop-Radius statt Korridor (v1.9.18) + Crash-Fix: Nur Supabase+kuratiert (kein Wikipedia/Overpass), max 3 Suchpunkte 15km, Score>=50 Filter, Must-See/UNESCO/kuratiert Bonus, GPT Top-3 statt Top-5 (v1.9.19) + isLoading-Guard entfernt zugunsten requestId-Cancellation, neue Anfragen canceln alte sauber (v1.9.21) |
-| `lib/features/navigation/providers/navigation_provider.dart` | Navigation State Machine: GPS-Stream, Route-Matching, Rerouting, POI-Erkennung (keepAlive, v1.9.0) + Doppel-Stream-Guard in startNavigation(), arrivedAtWaypoint Re-Entry Guard, Reroute Null-Check, GPS-Verfuegbarkeits-Pruefung (v1.9.23) + Step-Index-Cache (_stepRouteIndices) eliminiert O(n*m) pro GPS-Tick, gecachter nextStepRouteIndex (v1.9.25) |
-| `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) |
+| `lib/features/random_trip/providers/random_trip_provider.dart` | AI Trip State mit Tages-Auswahl + Wetter-Kategorien + markAsConfirmed + weatherCategoriesApplied + resetWeatherCategories (v1.7.9) + ActiveTrip Persistenz + restoreFromActiveTrip (v1.7.39) + addPOIToDay() fuer Korridor-Browser DayEditor-Integration (v1.9.5+152) + removePOIFromDay() mit Min-1-Stop-Validierung (v1.9.8) + 700km-Fehlermeldung bei TripGenerationException (v1.9.9) + uebergibt Wetter an Trip-Generator fuer gewichtete POI-Auswahl (v1.9.12) + Null-Safety-Guards: startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (v1.9.22) + Lokale startLocation/startAddress-Capture vor async, generateTrip() Doppel-Aufruf-Guard, Provider-Refresh try-catch (v1.9.28) |
+| `lib/features/map/providers/weather_provider.dart` | RouteWeather + LocationWeather + IndoorOnlyFilter (v1.7.6, v1.7.17 keepAlive) + Tages-Vorhersage: loadWeatherForRouteWithForecast, getDayForecast, getForecastPerDay (v1.8.0) + Request-Cancellation via _loadRequestId in loadWeatherForRoute + loadWeatherForRouteWithForecast (v1.9.22) + finally-Block setzt isLoading zurueck bei Request-Cancellation (v1.9.28) |
+| `lib/features/trip/providers/corridor_browser_provider.dart` | Korridor-POI-Browser State: loadCorridorPOIs, bufferKm, Kategorie-Filter (v1.8.0) + markAsRemoved() fuer POI-Entfernen (v1.9.8) + Request-Cancellation via _loadRequestId (v1.9.16) + POI-Limit 150 vor compute() Isolate verhindert O(n*m) Explosion (v1.9.17) + setBufferKmLocal (Slider-Debounce), setCategoriesBatch (Indoor-Toggle-Batch), filteredPOIs Lazy-Cache, reset() cancelt laufende Requests, maxResults:150 (v1.9.20) + copyWith() erhaelt _filteredPOIsCache/_newPOICountCache bei nicht-filter-relevanten Updates, verhindert 150-POI-Refilter bei Slider-Drag (v1.9.21) + keepAlive: State bleibt bei Screen-Wechsel erhalten (v1.9.27) + bufferKm-Aenderung invalidiert Cache (v1.9.28) |
+| `lib/features/ai/providers/ai_trip_advisor_provider.dart` | AI Trip Advisor: analyzeTrip (regelbasiert) + suggestAlternativesForDay (GPT-4o) (v1.8.0) + loadSmartRecommendations() alle Kategorien + Wetter-Gewichtung + Must-See-Bonus + _calculateSmartScore(), AISuggestion um aiReasoning/relevanceScore erweitert, recommendedPOIsPerDay State (v1.9.8, v1.9.9: Smart statt nur Indoor) + _isIndoor durch POICategory.isIndoor konsolidiert (v1.9.12) + _extractDayRoute() fuer tages-spezifische POI-Suche statt gesamte Route (v1.9.16) + Request-Cancellation + Loading-Safety try/finally (v1.9.16) + Stop-Radius statt Korridor (v1.9.18) + Crash-Fix: Nur Supabase+kuratiert (kein Wikipedia/Overpass), max 3 Suchpunkte 15km, Score>=50 Filter, Must-See/UNESCO/kuratiert Bonus, GPT Top-3 statt Top-5 (v1.9.19) + isLoading-Guard entfernt zugunsten requestId-Cancellation, neue Anfragen canceln alte sauber (v1.9.21) + keepAlive: Empfehlungen bleiben bei Tageswechsel erhalten (v1.9.27) |
+| `lib/features/navigation/providers/navigation_provider.dart` | Navigation State Machine: GPS-Stream, Route-Matching, Rerouting, POI-Erkennung (keepAlive, v1.9.0) + Doppel-Stream-Guard in startNavigation(), arrivedAtWaypoint Re-Entry Guard, Reroute Null-Check, GPS-Verfuegbarkeits-Pruefung (v1.9.23) + Step-Index-Cache (_stepRouteIndices) eliminiert O(n*m) pro GPS-Tick, gecachter nextStepRouteIndex (v1.9.25) + Foreground-Service-Integration: _startForegroundService, _onBackgroundData GPS-Callback, Benachrichtigungs-Updates (v1.9.29) |
+| `lib/features/navigation/providers/navigation_poi_discovery_provider.dart` | Must-See POI-Entdeckung entlang der Route: ref.listen auf GPS-Stream, dismissed/announced Sets, goldene Card + TTS (v1.9.14, keepAlive v1.9.27) |
+| `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) + Silent-Catch Logging (v1.9.27) |
+| `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) |
 
 Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 
@@ -146,15 +161,17 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/data/services/ai_service.dart` | AI via Backend-Proxy + TripContext mit Standort (v1.7.2) |
-| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) + Upload-on-Enrich zu Supabase (v1.9.13) + Future.wait-Timeouts: 10s Parallel-Requests, 8s Fallback-Batch, 8s Geo-Batch (v1.9.22) + Individuelle Timeouts pro Request statt globaler Future.wait-Timeout (v1.9.24) |
+| `lib/data/services/poi_enrichment_service.dart` | Wikipedia/Wikidata Enrichment + Batch-API + Image Pre-Cache + Session-Tracking (v1.7.9) + Upload-on-Enrich zu Supabase (v1.9.13) + Future.wait-Timeouts: 10s Parallel-Requests, 8s Fallback-Batch, 8s Geo-Batch (v1.9.22) + Individuelle Timeouts pro Request statt globaler Future.wait-Timeout (v1.9.24) + Image-Prefetch Concurrency-Limit _maxConcurrentPrefetches=5 (v1.9.28) |
 | `lib/data/services/poi_cache_service.dart` | Hive-basiertes POI Caching |
 | `lib/data/services/sync_service.dart` | Cloud-Sync |
 | `lib/data/services/active_trip_service.dart` | Persistenz für aktive Trips (v1.5.7, v1.7.39 erweitert: POIs, Konfiguration) |
-| `lib/data/services/voice_service.dart` | TTS (de-DE), Spracherkennung, Navigation-Befehle + speakManeuver, speakRerouting, speakPOIApproaching, speakArrived (v1.9.0) |
+| `lib/data/services/voice_service.dart` | TTS (de-DE), Spracherkennung, Navigation-Befehle + speakManeuver, speakRerouting, speakPOIApproaching, speakArrived (v1.9.0) + parseCommand() mit VoiceCommand Enum, listen() mit Partial-Text-Callback fuer Echtzeit-UI (v1.9.29) |
 | `lib/features/navigation/utils/latlong_converter.dart` | Konvertierung latlong2 <-> maplibre_gl, GeoJSON Builder, Bounds-Berechnung (v1.9.1) + Leere-Liste Guard in boundsFromCoords() (v1.9.23) |
 | `lib/features/navigation/services/route_matcher_service.dart` | Snap-to-Road: snapToRoute, isOffRoute, getDistanceAlongRoute, calculateBearing (v1.9.0) |
 | `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
 | `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
+| `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) |
+| `lib/features/navigation/services/navigation_foreground_service.dart` | Android Foreground Service fuer Hintergrund-Navigation: GPS-Tracking im Hintergrund, Benachrichtigungs-Steuerung, Service-Lifecycle-Management via flutter_foreground_task (v1.9.29) |
 
 ### Daten
 
@@ -165,12 +182,14 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/weather.dart` | Weather + DailyForecast Models (Freezed) mit WMO-Code-Interpretation + condition Getter (v1.8.0) |
 | `lib/data/models/navigation_step.dart` | NavigationStep, NavigationLeg, NavigationRoute Models (Freezed) mit ManeuverType/ManeuverModifier Enums (v1.9.0) |
 | `lib/data/models/route.dart` | Route Model mit LatLng Converters |
-| `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS → Client-Fallback → Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) |
+| `lib/data/models/journal_entry.dart` | JournalEntry + TripJournal Models (Freezed): Foto-Eintraege mit Standort, Notiz, POI-Zuordnung, Tag-Gruppierung (v1.9.29) |
+| `lib/data/models/trip_template.dart` | TripTemplate Model (Freezed): 12 vordefinierte Reisevorlagen mit id, name, description, emoji, recommendedDays, categories, tags, targetAudience + TripTemplates.all statische Liste + forAudience()/findById() Helper (v1.9.30) |
+| `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS → Client-Fallback → Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) + Wikipedia-Grid 4er-Batches mit 200ms Pause + 8s Timeout + 200-POI-Cap, globaler 20s Future.wait-Timeout (v1.9.28) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) |
-| `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte A→B Routen (v1.8.1) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage→Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) + lastResult Null-Check statt force-unwrap, Post-Validierung Max-Tage-Cap 2x (v1.9.28) |
+| `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte A→B Routen (v1.8.1) + 2-opt Skip bei >50 POIs, reduzierte Iterationen 20-50 POIs (v1.9.28) |
 | `lib/core/utils/navigation_instruction_generator.dart` | OSRM Maneuver → Deutsche Instruktionen (Abbiegen, Kreisverkehr, Auffahrt, etc.) (v1.9.0) |
-| `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) + Display-basiertes Splitting, Merge-Guard, _splitLastDayIfOverLimit (v1.9.5) + _splitOverlimitDays() Safety-Split fuer Tage die trotz Clustering >700km sind (v1.9.11) |
+| `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) + Display-basiertes Splitting, Merge-Guard, _splitLastDayIfOverLimit (v1.9.5) + _splitOverlimitDays() Safety-Split fuer Tage die trotz Clustering >700km sind (v1.9.11) + Absolute Iterations-Obergrenze min(clusters*2, 50) (v1.9.28) |
 | `assets/data/curated_pois.json` | 527 kuratierte POIs |
 
 ## API-Abhängigkeiten
@@ -207,6 +226,9 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 /search             → SearchScreen
 /random-trip        → RandomTripScreen (Legacy, jetzt in /trip integriert)
 /navigation         → NavigationScreen (Turn-by-Turn, v1.9.0)
+/journal/:tripId    → JournalScreen (Reisetagebuch mit Fotos, v1.9.29)
+/scan               → QRScannerScreen (Trip-Import per QR-Code, v1.9.30)
+/templates          → TripTemplatesScreen (12 vordefinierte Reisevorlagen, v1.9.30)
 /login              → LoginScreen (Supabase)
 /register           → RegisterScreen
 /forgot-password    → ForgotPasswordScreen
@@ -244,6 +266,140 @@ color: AppTheme.textPrimary
 ```
 
 Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
+
+### Internationalisierung (i18n)
+
+Die App unterstützt 5 Sprachen mit Flutter's integriertem l10n-System:
+
+**Unterstützte Sprachen:**
+| Code | Sprache | Status |
+|------|---------|--------|
+| `de` | Deutsch | Basis (Template) |
+| `en` | English | Vollständig |
+| `fr` | Français | Vollständig |
+| `it` | Italiano | Vollständig |
+| `es` | Español | Vollständig |
+
+**Dateien:**
+| Datei | Beschreibung |
+|-------|--------------|
+| `lib/l10n/app_de.arb` | Template-ARB (~700 Strings) |
+| `lib/l10n/app_en.arb` | Englische Übersetzungen |
+| `lib/l10n/app_fr.arb` | Französische Übersetzungen |
+| `lib/l10n/app_it.arb` | Italienische Übersetzungen |
+| `lib/l10n/app_es.arb` | Spanische Übersetzungen |
+| `lib/core/l10n/l10n.dart` | `context.l10n` Extension |
+| `lib/core/l10n/category_l10n.dart` | Enum-Lokalisierung Extensions |
+| `l10n.yaml` | Konfiguration für Code-Generierung |
+
+**Verwendung:**
+
+```dart
+import '../../core/l10n/l10n.dart';
+
+// Einfache Strings
+Text(context.l10n.settingsTitle)
+
+// Plurale
+Text(context.l10n.dayCount(3))  // "3 Tage"
+
+// Parameter
+Text(context.l10n.feelsLike('18'))  // "Gefühlt 18°"
+```
+
+**Enum-Lokalisierung:**
+
+```dart
+import '../../core/l10n/category_l10n.dart';
+
+// POI-Kategorien
+final label = POICategory.castle.localizedLabel(context);  // "Burg"
+
+// Theme-Modi
+final label = AppThemeMode.dark.localizedLabel(context);  // "Dunkel"
+
+// Trip-Typen
+final label = TripType.eurotrip.localizedLabel(context);  // "Euro Trip"
+```
+
+**Neue Strings hinzufügen:**
+1. String in `lib/l10n/app_de.arb` hinzufügen (mit @-Metadaten für Parameter/Plurale)
+2. Übersetzungen in allen anderen ARB-Dateien ergänzen
+3. `flutter gen-l10n` ausführen
+4. Mit `context.l10n.neuerKey` verwenden
+
+**ARB-Key-Konvention:** `bereich_beschreibung` (camelCase)
+- `settingsTitle`, `settingsLanguage` (Settings)
+- `errorNetwork`, `errorRouteCalculation` (Fehler)
+- `categoryMuseum`, `categoryCastle` (POI-Kategorien)
+- `tripGenerating`, `tripSave` (Trip)
+- `authLoginButton`, `authEmailLabel` (Auth)
+
+**Lokalisierungs-Checkliste für neue Features:**
+
+Bei jedem neuen Feature sicherstellen:
+
+1. **Keine hardcodierten Strings verwenden:**
+   ```dart
+   // FALSCH
+   Text('Speichern')
+   const Text('Abbrechen')
+
+   // RICHTIG
+   Text(context.l10n.save)
+   Text(context.l10n.cancel)
+   ```
+
+2. **Import nicht vergessen:**
+   ```dart
+   import '../../core/l10n/l10n.dart';
+   ```
+
+3. **const entfernen bei l10n-Verwendung:**
+   ```dart
+   // FALSCH - Kompilierungsfehler!
+   const Text(context.l10n.save)
+
+   // RICHTIG
+   Text(context.l10n.save)
+   ```
+
+4. **Neue Keys nach Konvention benennen:**
+   - Format: `bereichBeschreibung` (camelCase)
+   - Beispiele: `tripSaveRoute`, `navDistance`, `poiNotFound`
+
+5. **ARB-Dateien aktualisieren:**
+   - Neue Keys in `app_de.arb` hinzufügen (Template)
+   - Übersetzungen in EN/FR/IT/ES ergänzen
+   - `flutter gen-l10n` ausführen
+
+6. **Zentrale Helper nutzen:**
+   - GPS-Dialog: `LocationHelper.showGpsDialog(context)`
+   - Fehler-Snackbar: `AppSnackbar.showError(context, context.l10n.errorXxx)`
+
+7. **Plurale und Parameter:**
+   ```json
+   // ARB-Datei
+   "dayCount": "{count, plural, =1{1 Tag} other{{count} Tage}}",
+   "@dayCount": { "placeholders": { "count": { "type": "int" } } }
+   ```
+   ```dart
+   // Dart-Verwendung
+   Text(context.l10n.dayCount(3))  // "3 Tage"
+   ```
+
+8. **Statische Listen mit Lokalisierung:**
+   ```dart
+   // FALSCH - Lokalisierung zur Compile-Zeit nicht möglich
+   final List<String> items = ['Eins', 'Zwei', 'Drei'];
+
+   // RICHTIG - Methode mit BuildContext
+   List<String> getItems(BuildContext context) => [
+     context.l10n.itemOne,
+     context.l10n.itemTwo,
+     context.l10n.itemThree,
+   ];
+   ```
 
 ## Debugging
 
@@ -316,6 +472,11 @@ Details: [Dokumentation/DARK-MODE.md](Dokumentation/DARK-MODE.md)
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.9.32.md` (Vollstaendige Lokalisierung: 5 Sprachen DE/EN/FR/IT/ES, ~700 ARB-Keys, 202+ hardcodierte Strings ersetzt, GPS-Dialog in LocationHelper zentralisiert mit l10n, Lokalisierungs-Checkliste in CLAUDE.md)
+- `Dokumentation/CHANGELOG-v1.9.31.md` (Euro Trip Crash-Fix: Unendliche Rekursion in _markAttemptedWithoutPhoto() behoben (StackOverflow), Weather API Timeouts 15s/30s hinzugefuegt, Atomares _isGenerating Lock gegen Race Condition bei Doppel-Klick)
+- `Dokumentation/CHANGELOG-v1.9.30.md` (Trip-Templates & QR-Scanner: 12 vordefinierte Reisevorlagen (Romantik, Kultur, Natur, Familie, Stadt, Abenteuer, Strand, Burgen, Wellness, Kulinarik, Foto, Schnell), QR-Code-Scanner fuer Trip-Import via mobile_scanner, Deep-Link-Parsing mapab:// + https://mapab.app/trip/, Zielgruppen-Filter, Template-Auswahl-UI)
+- `Dokumentation/CHANGELOG-v1.9.28.md` (Euro Trip Crash-Fix: 22 Fixes in 7 Phasen - Null-Safety-Guards startLocation/lastResult, Listener-Lifecycle MapScreen/MapView/DayEditor, Race-Condition generateTrip Guard, Performance Wikipedia-Batching/2-opt-Cap/Prefetch-Limit, Weather isLoading finally-Block, Post-Validierungs-Loop Max-Tage-Cap, Slider/Geocoding-Debounce, Corridor-Cache-Invalidierung)
+- `Dokumentation/CHANGELOG-v1.9.27.md` (Sicherheit, Refactoring & Code-Qualitaet: 7-Phasen-Verbesserung mit Security-Hardening, Dead-Code-Bereinigung, GPS-Konsolidierung zu LocationHelper, 298 Tests, 235x withOpacity→withValues Migration, Dark-Mode-Fixes, analysis_options.yaml Lint-Regeln, 3 Provider keepAlive, 3 Features: Zwischenstopp auf Karte, POI-Teilen via share_plus, Route-Optimierung via RouteOptimizer)
 - `Dokumentation/CHANGELOG-v1.9.25.md` (Navigation Performance-Fix: Step-Index-Cache _stepRouteIndices eliminiert O(n*m) pro GPS-Tick in _findCurrentStep, gecachter nextStepRouteIndex eliminiert redundanten findNearestIndex, Route/POI-Map-Updates nur bei tatsaechlicher Aenderung statt jedem build(), moveCamera statt animateCamera verhindert Animation-Stacking bei 60fps, POI-Discovery 500ms Throttle)
 - `Dokumentation/CHANGELOG-v1.9.24.md` (POI-Laden Hotfix: Individuelle Timeouts pro API-Quelle in poi_repo.dart loadPOIsInRadius/loadPOIsInBounds/loadAllPOIs und poi_enrichment_service.dart, verhindert Ergebnisverlust bei einzelnem API-Timeout z.B. Overpass 504)
 - `Dokumentation/CHANGELOG-v1.9.23.md` (Navigation Stabilitaets-Release: GPS-Stream-Leak-Fix mit Stop-before-Start Guard, MapController-Race-Fix via lokale Variable in 60fps Callback, vollstaendiges dispose() mit Provider-Cleanup, PositionInterpolator _isDisposed Safety, arrivedAtWaypoint Re-Entry Guard, Reroute Null-Check, GPS-Verfuegbarkeits-Pruefung, Arrival-Dialog _arrivalDialogShown Flag, context.mounted Guards in Dialogen, TTS Idle-Guard + VoiceService-Stop, Leere-Liste Bounds Guard, DayEditor Waypoints + context.mounted)
@@ -1966,3 +2127,83 @@ CompactPOICard(
   onAdd: () => addPOIToTrip(poi),
 );
 ```
+
+### Reisetagebuch (v1.9.29+)
+
+Dokumentiere deine Reisen mit Fotos und Notizen zu jedem POI.
+
+```dart
+import '../../data/providers/journal_provider.dart';
+import '../../features/journal/journal_screen.dart';
+
+// Tagebuch oeffnen (via GoRouter)
+context.push('/journal/$tripId?name=${Uri.encodeComponent(tripName)}');
+
+// Tagebuch erstellen oder laden
+await ref.read(journalNotifierProvider.notifier).getOrCreateJournal(
+  tripId: tripId,
+  tripName: tripName,
+);
+
+// State abfragen
+final journalState = ref.watch(journalNotifierProvider);
+final journal = journalState.activeJournal;
+
+// Text-Eintrag hinzufuegen
+await ref.read(journalNotifierProvider.notifier).addTextEntry(
+  note: 'Toller Aussichtspunkt!',
+  poiId: poi.id,
+  poiName: poi.name,
+  latitude: location?.latitude,
+  longitude: location?.longitude,
+  dayNumber: 1,
+);
+
+// Foto-Eintrag hinzufuegen (Kamera)
+await ref.read(journalNotifierProvider.notifier).addPhotoFromCamera(
+  note: 'Sonnenuntergang am See',
+  poiId: poi.id,
+  poiName: poi.name,
+  latitude: location?.latitude,
+  longitude: location?.longitude,
+  dayNumber: 1,
+);
+
+// Foto-Eintrag hinzufuegen (Galerie)
+await ref.read(journalNotifierProvider.notifier).addPhotoFromGallery(
+  note: 'Historische Altstadt',
+  dayNumber: 2,
+);
+
+// Eintrag loeschen
+await ref.read(journalNotifierProvider.notifier).deleteEntry(entryId);
+
+// Tagebuch loeschen
+await ref.read(journalNotifierProvider.notifier).deleteJournal(tripId);
+
+// Eintraege fuer einen Tag abrufen
+final dayEntries = journal?.entriesForDay(1);
+
+// Eintraege fuer einen POI abrufen
+final poiEntries = journal?.entriesForPOI(poiId);
+
+// Statistiken
+final photoCount = journal?.photoCount;
+final entryCount = journal?.entryCount;
+final daysWithEntries = journal?.daysWithEntries;
+```
+
+**Einstiegspunkt:**
+- `TripScreen` → Menue (drei Punkte) → "Tagebuch oeffnen"
+
+**Widgets:**
+- `JournalScreen` - Hauptansicht mit Tages-Gruppierung und Statistik-Header
+- `JournalEntryCard` - Kompakte Karte fuer Eintraege mit Bild + Zeitstempel
+- `AddJournalEntrySheet` - Bottom Sheet zum Hinzufuegen (Kamera/Galerie/Notiz)
+- `_EntryDetailsSheet` - Vollbild-Ansicht eines Eintrags
+
+**Speicherung:**
+- Eintraege in Hive Box `journal_entries`
+- Tagebuecher in Hive Box `journals`
+- Bilder im App-Dokumenten-Verzeichnis: `{appDir}/journal/{tripId}/{uuid}.jpg`
+- Bilder werden auf 1920x1080 bei 85% Qualitaet komprimiert

@@ -59,7 +59,7 @@ class ChatMessageBubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withOpacity(isDark ? 0.3 : 0.08),
+                    color: colorScheme.shadow.withValues(alpha: isDark ? 0.3 : 0.08),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -139,7 +139,7 @@ class ChatMessageBubble extends StatelessWidget {
           text: match.group(2),
           style: TextStyle(
             fontStyle: FontStyle.italic,
-            color: baseColor.withOpacity(0.8),
+            color: baseColor.withValues(alpha: 0.8),
           ),
         ));
       }

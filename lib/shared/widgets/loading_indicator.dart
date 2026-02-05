@@ -96,9 +96,9 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                Colors.grey.shade200,
-                Colors.grey.shade100,
-                Colors.grey.shade200,
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+                Theme.of(context).colorScheme.surfaceContainerHigh,
+                Theme.of(context).colorScheme.surfaceContainerHighest,
               ],
               stops: [
                 _animation.value - 0.3,

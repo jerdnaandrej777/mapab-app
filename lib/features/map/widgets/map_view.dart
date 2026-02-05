@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../core/utils/location_helper.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../providers/map_controller_provider.dart';
@@ -35,6 +36,7 @@ class MapView extends ConsumerStatefulWidget {
 class _MapViewState extends ConsumerState<MapView> {
   late final MapController _mapController;
   String? _selectedPOIId;
+  final List<ProviderSubscription<dynamic>> _subscriptions = [];
 
   // Standard-Zentrum: Europa (Deutschland)
   static const _defaultCenter = LatLng(50.0, 10.0);
@@ -45,6 +47,7 @@ class _MapViewState extends ConsumerState<MapView> {
     _mapController = MapController();
     // Register controller globally after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(mapControllerProvider.notifier).state = _mapController;
       _setupWeatherListeners();
     });
@@ -53,41 +56,46 @@ class _MapViewState extends ConsumerState<MapView> {
   /// Wetter-Laden fuer alle Routentypen (v1.7.11)
   void _setupWeatherListeners() {
     // Normale Route
-    ref.listenManual(routePlannerProvider, (previous, next) {
-      if (next.hasRoute && previous?.route != next.route) {
-        ref.read(routeWeatherNotifierProvider.notifier)
-            .loadWeatherForRoute(next.route!.coordinates);
-      }
-    });
-
-    // AI Trip Preview
-    ref.listenManual(randomTripNotifierProvider, (previous, next) {
-      if (next.step == RandomTripStep.preview &&
-          previous?.step != RandomTripStep.preview) {
-        final route = next.generatedTrip?.trip.route;
-        if (route != null) {
+    _subscriptions.add(
+      ref.listenManual(routePlannerProvider, (previous, next) {
+        if (next.hasRoute && previous?.route != next.route) {
           ref.read(routeWeatherNotifierProvider.notifier)
-              .loadWeatherForRoute(route.coordinates);
+              .loadWeatherForRoute(next.route!.coordinates);
         }
-      }
-    });
+      }),
+    );
+
+    // AI Trip Preview + Auto-Zoom bei Tageswechsel (zusammengefuehrt)
+    _subscriptions.add(
+      ref.listenManual(randomTripNotifierProvider, (previous, next) {
+        // Wetter laden bei Trip-Generierung
+        if (next.step == RandomTripStep.preview &&
+            previous?.step != RandomTripStep.preview) {
+          final route = next.generatedTrip?.trip.route;
+          if (route != null) {
+            ref.read(routeWeatherNotifierProvider.notifier)
+                .loadWeatherForRoute(route.coordinates);
+          }
+        }
+        // Auto-Zoom bei Tageswechsel (v1.8.1)
+        if (previous?.selectedDay != next.selectedDay &&
+            next.generatedTrip != null &&
+            next.generatedTrip!.trip.actualDays > 1 &&
+            mounted) {
+          _zoomToDaySegment(next);
+        }
+      }),
+    );
 
     // Trip State (gespeicherte Route laden)
-    ref.listenManual(tripStateProvider, (previous, next) {
-      if (next.hasRoute && previous?.route != next.route) {
-        ref.read(routeWeatherNotifierProvider.notifier)
-            .loadWeatherForRoute(next.route!.coordinates);
-      }
-    });
-
-    // Auto-Zoom bei Tageswechsel (v1.8.1)
-    ref.listenManual(randomTripNotifierProvider, (previous, next) {
-      if (previous?.selectedDay != next.selectedDay &&
-          next.generatedTrip != null &&
-          next.generatedTrip!.trip.actualDays > 1) {
-        _zoomToDaySegment(next);
-      }
-    });
+    _subscriptions.add(
+      ref.listenManual(tripStateProvider, (previous, next) {
+        if (next.hasRoute && previous?.route != next.route) {
+          ref.read(routeWeatherNotifierProvider.notifier)
+              .loadWeatherForRoute(next.route!.coordinates);
+        }
+      }),
+    );
   }
 
   /// Zoomt die Karte auf das Routensegment des ausgewaehlten Tages
@@ -146,6 +154,10 @@ class _MapViewState extends ConsumerState<MapView> {
 
   @override
   void dispose() {
+    for (final sub in _subscriptions) {
+      sub.close();
+    }
+    _subscriptions.clear();
     _mapController.dispose();
     super.dispose();
   }
@@ -242,7 +254,7 @@ class _MapViewState extends ConsumerState<MapView> {
                         []),
                 color: Theme.of(context).colorScheme.primary,
                 strokeWidth: 5,
-                borderColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                 borderStrokeWidth: 2,
               ),
             ],
@@ -463,7 +475,7 @@ class _MapViewState extends ConsumerState<MapView> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -479,7 +491,7 @@ class _MapViewState extends ConsumerState<MapView> {
                   height: 56,
                   decoration: BoxDecoration(
                     color: Color(poi.category?.colorValue ?? 0xFF666666)
-                        .withOpacity(0.2),
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -564,7 +576,7 @@ class _MapViewState extends ConsumerState<MapView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -665,7 +677,21 @@ class _MapViewState extends ConsumerState<MapView> {
               title: const Text('Als Stopp hinzufügen'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Stopp hinzufügen
+                final tripNotifier = ref.read(tripStateProvider.notifier);
+                final tripState = ref.read(tripStateProvider);
+                if (tripState.route == null) {
+                  // Ohne Route kann kein Stopp hinzugefuegt werden
+                  return;
+                }
+                final tempPOI = POI(
+                  id: 'waypoint-${DateTime.now().millisecondsSinceEpoch}',
+                  name: 'Zwischenstopp',
+                  latitude: point.latitude,
+                  longitude: point.longitude,
+                  categoryId: 'attraction',
+                  score: 0,
+                );
+                tripNotifier.addStop(tempPOI);
               },
             ),
           ],
@@ -704,7 +730,7 @@ class _MapViewState extends ConsumerState<MapView> {
       // GPS deaktiviert - Dialog anzeigen
       final shouldOpen = await _showGpsDialog();
       if (shouldOpen) {
-        await Geolocator.openLocationSettings();
+        await LocationHelper.openSettings();
       }
     } else {
       // Anderer Fehler
@@ -718,27 +744,9 @@ class _MapViewState extends ConsumerState<MapView> {
     }
   }
 
+  /// GPS-Dialog anzeigen - nutzt zentralisierten LocationHelper (v1.9.29)
   Future<bool> _showGpsDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('GPS deaktiviert'),
-            content: const Text(
-              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen öffnen'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return LocationHelper.showGpsDialog(context);
   }
 }
 
@@ -789,7 +797,7 @@ class POIMarker extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -818,7 +826,7 @@ class POIMarker extends StatelessWidget {
                     border: Border.all(color: colorScheme.surface, width: 1.5),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 2,
                         offset: const Offset(0, 1),
                       ),
@@ -887,7 +895,7 @@ class StartMarker extends StatelessWidget {
         border: Border.all(color: colorScheme.surface, width: 3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 4,
           ),
         ],
@@ -912,7 +920,7 @@ class EndMarker extends StatelessWidget {
         border: Border.all(color: colorScheme.surface, width: 3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 4,
           ),
         ],
@@ -946,7 +954,7 @@ class StopMarker extends StatelessWidget {
           border: Border.all(color: colorScheme.surface, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 4,
             ),
           ],
@@ -1007,7 +1015,7 @@ class _AITripStopMarker extends StatelessWidget {
                   border: Border.all(color: colorScheme.surface, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

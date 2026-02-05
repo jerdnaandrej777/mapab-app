@@ -9,11 +9,33 @@ import '../models/trip.dart';
 
 part 'sync_service.g.dart';
 
+/// Sync-Fehler mit Kontext
+class SyncError {
+  final String operation;
+  final String message;
+  final DateTime timestamp;
+
+  SyncError({
+    required this.operation,
+    required this.message,
+  }) : timestamp = DateTime.now();
+
+  @override
+  String toString() => '[$operation] $message';
+}
+
 /// Service für Cloud-Synchronisation mit Supabase
 class SyncService {
   final SupabaseClient? _client;
 
   SyncService(this._client);
+
+  /// Letzter aufgetretener Fehler (für UI-Feedback)
+  SyncError? _lastError;
+  SyncError? get lastError => _lastError;
+
+  /// Setzt den letzten Fehler zurück
+  void clearLastError() => _lastError = null;
 
   /// Prüft ob Sync verfügbar ist
   bool get isAvailable => _client != null && isAuthenticated;
@@ -80,6 +102,7 @@ class SyncService {
       debugPrint('[Sync] ✓ Trip gespeichert: $tripId');
       return tripId;
     } catch (e) {
+      _lastError = SyncError(operation: 'saveTrip', message: '$e');
       debugPrint('[Sync] ✗ Fehler beim Speichern: $e');
       return null;
     }
@@ -103,6 +126,7 @@ class SyncService {
       debugPrint('[Sync] ✓ ${response.length} Trips geladen');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
+      _lastError = SyncError(operation: 'loadTrips', message: '$e');
       debugPrint('[Sync] ✗ Fehler beim Laden: $e');
       return [];
     }
@@ -122,6 +146,7 @@ class SyncService {
       debugPrint('[Sync] ✓ Trip abgeschlossen, XP: ${response['xp_earned']}');
       return Map<String, dynamic>.from(response);
     } catch (e) {
+      _lastError = SyncError(operation: 'completeTrip', message: '$e');
       debugPrint('[Sync] ✗ Fehler: $e');
       return null;
     }
@@ -136,6 +161,7 @@ class SyncService {
       debugPrint('[Sync] ✓ Trip gelöscht: $tripId');
       return true;
     } catch (e) {
+      _lastError = SyncError(operation: 'deleteTrip', message: '$e');
       debugPrint('[Sync] ✗ Fehler: $e');
       return false;
     }
@@ -167,6 +193,7 @@ class SyncService {
       debugPrint('[Sync] ✓ Favorit gespeichert');
       return true;
     } catch (e) {
+      _lastError = SyncError(operation: 'saveFavoritePOI', message: '$e');
       debugPrint('[Sync] ✗ Fehler: $e');
       return false;
     }
@@ -188,6 +215,7 @@ class SyncService {
       debugPrint('[Sync] ✓ Favorit entfernt: $poiId');
       return true;
     } catch (e) {
+      _lastError = SyncError(operation: 'removeFavoritePOI', message: '$e');
       debugPrint('[Sync] ✗ Fehler: $e');
       return false;
     }
@@ -211,6 +239,7 @@ class SyncService {
       debugPrint('[Sync] ✓ ${response.length} Favoriten geladen');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
+      _lastError = SyncError(operation: 'loadFavoritePOIs', message: '$e');
       debugPrint('[Sync] ✗ Fehler: $e');
       return [];
     }
@@ -235,6 +264,7 @@ class SyncService {
 
       return Map<String, dynamic>.from(response);
     } catch (e) {
+      _lastError = SyncError(operation: 'loadUserProfile', message: '$e');
       debugPrint('[Sync] ✗ Profil laden fehlgeschlagen: $e');
       return null;
     }
@@ -266,6 +296,7 @@ class SyncService {
 
       return true;
     } catch (e) {
+      _lastError = SyncError(operation: 'updateUserProfile', message: '$e');
       debugPrint('[Sync] ✗ Profil-Update fehlgeschlagen: $e');
       return false;
     }
@@ -290,6 +321,7 @@ class SyncService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
+      _lastError = SyncError(operation: 'loadAchievements', message: '$e');
       debugPrint('[Sync] ✗ Achievements laden fehlgeschlagen: $e');
       return [];
     }

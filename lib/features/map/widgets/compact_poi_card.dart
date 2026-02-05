@@ -48,7 +48,7 @@ class CompactPOICard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isAdded
-                ? colorScheme.primaryContainer.withOpacity(0.3)
+                ? colorScheme.primaryContainer.withValues(alpha: 0.3)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -152,9 +152,9 @@ class CompactPOICard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isAdded
                             ? (onRemove != null
-                                ? colorScheme.errorContainer.withOpacity(0.3)
-                                : colorScheme.primary.withOpacity(0.15))
-                            : colorScheme.primaryContainer.withOpacity(0.5),
+                                ? colorScheme.errorContainer.withValues(alpha: 0.3)
+                                : colorScheme.primary.withValues(alpha: 0.15))
+                            : colorScheme.primaryContainer.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
@@ -209,7 +209,7 @@ class CompactPOICard extends StatelessWidget {
     return Container(
       width: _imageSize,
       height: _imageSize,
-      color: Color(category?.colorValue ?? 0xFF9E9E9E).withOpacity(0.15),
+      color: Color(category?.colorValue ?? 0xFF9E9E9E).withValues(alpha: 0.15),
       child: Center(
         child: Text(
           category?.icon ?? '📍',

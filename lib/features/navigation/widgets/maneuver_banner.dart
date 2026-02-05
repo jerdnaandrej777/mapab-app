@@ -23,13 +23,16 @@ class ManeuverBanner extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Container(
+    return Semantics(
+      liveRegion: true,
+      label: '${_formatDistance(distanceToNextStepMeters)}, ${step.instruction}',
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: colorScheme.primary,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -68,7 +71,7 @@ class ManeuverBanner extends StatelessWidget {
                     Text(
                       step.instruction,
                       style: TextStyle(
-                        color: colorScheme.onPrimary.withOpacity(0.9),
+                        color: colorScheme.onPrimary.withValues(alpha: 0.9),
                         fontSize: 16,
                       ),
                       maxLines: 2,
@@ -81,6 +84,7 @@ class ManeuverBanner extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -113,7 +117,7 @@ class _ManeuverIcon extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(

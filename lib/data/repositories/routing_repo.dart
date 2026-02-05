@@ -18,12 +18,7 @@ class RoutingRepository {
   RoutingRepository({
     Dio? dio,
     String? orsApiKey,
-  })  : _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: ApiConfig.routingTimeout),
-              receiveTimeout: const Duration(milliseconds: ApiConfig.routingTimeout),
-            )),
+  })  : _dio = dio ?? ApiConfig.createDio(profile: DioProfile.routing),
         _orsApiKey = orsApiKey;
 
   /// Berechnet schnelle Route via OSRM
@@ -376,7 +371,7 @@ class RoutingException implements Exception {
 /// Riverpod Provider für RoutingRepository
 @riverpod
 RoutingRepository routingRepository(RoutingRepositoryRef ref) {
-  // TODO: API-Key aus Umgebungsvariable oder sicherem Speicher laden
+  // ORS API-Key wird via --dart-define=ORS_API_KEY=... bereitgestellt
   const orsApiKey = String.fromEnvironment('ORS_API_KEY', defaultValue: '');
   return RoutingRepository(orsApiKey: orsApiKey.isNotEmpty ? orsApiKey : null);
 }

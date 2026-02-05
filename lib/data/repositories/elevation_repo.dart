@@ -1,292 +1,243 @@
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../models/elevation.dart';
 
 part 'elevation_repo.g.dart';
 
-/// Elevation Repository für Höhendaten
+/// Repository fuer Hoehendaten via Open-Meteo Elevation API.
+///
+/// Die API liefert Hoehen basierend auf Copernicus DEM (90m Aufloesung).
+/// Max 100 Koordinaten pro Request, kostenlos, kein API-Key noetig.
 class ElevationRepository {
   final Dio _dio;
 
-  // Open-Elevation API (kostenlos, kein API-Key)
-  static const String _openElevationUrl = 'https://api.open-elevation.com/api/v1/lookup';
+  /// Max Koordinaten pro API-Request (Open-Meteo Limit)
+  static const int _maxCoordsPerRequest = 100;
 
-  // Alternativ: OpenTopoData (falls Open-Elevation nicht erreichbar)
-  static const String _openTopoUrl = 'https://api.opentopodata.org/v1/eudem25m';
+  /// Anzahl Sample-Punkte fuer das Hoehenprofil
+  static const int _samplePoints = 80;
 
-  ElevationRepository(this._dio);
+  ElevationRepository({Dio? dio})
+      : _dio = dio ?? ApiConfig.createDio();
 
-  /// Lädt Höhenprofil für eine Route
-  Future<ElevationProfile?> getElevationProfile(List<LatLng> coordinates) async {
-    if (coordinates.length < 2) return null;
-
-    // Vereinfache Route für API (max 100 Punkte)
-    final simplified = _simplifyRoute(coordinates, 100);
-
-    try {
-      // Versuche Open-Elevation
-      final elevations = await _fetchElevations(simplified);
-      if (elevations != null) {
-        return _buildProfile(simplified, elevations);
-      }
-    } catch (e) {
-      debugPrint('[Elevation] Open-Elevation Fehler: $e');
+  /// Laedt das Hoehenprofil fuer eine Route.
+  ///
+  /// Sampelt [_samplePoints] gleichmaessig verteilte Punkte entlang der Route,
+  /// ruft die Open-Meteo Elevation API auf und berechnet Anstieg/Abstieg.
+  Future<ElevationProfile> getElevationProfile(
+    List<LatLng> routeCoordinates,
+  ) async {
+    if (routeCoordinates.length < 2) {
+      return const ElevationProfile(
+        points: [],
+        totalAscent: 0,
+        totalDescent: 0,
+        maxElevation: 0,
+        minElevation: 0,
+        totalDistanceKm: 0,
+      );
     }
 
-    try {
-      // Fallback: OpenTopoData
-      final elevations = await _fetchElevationsFromOpenTopo(simplified);
-      if (elevations != null) {
-        return _buildProfile(simplified, elevations);
-      }
-    } catch (e) {
-      debugPrint('[Elevation] OpenTopo Fehler: $e');
-    }
+    // Kumulative Distanzen berechnen (einmal, in separatem Isolate bei langen Routen)
+    final cumulativeKm = await _computeCumulativeDistances(routeCoordinates);
+    final totalDistanceKm = cumulativeKm.last;
 
-    // Fallback: Generiere simulierte Daten
-    return _generateSimulatedProfile(simplified);
-  }
+    // Punkte gleichmaessig entlang der Route samplen
+    final sampleCount = math.min(_samplePoints, routeCoordinates.length);
+    final sampledCoords = <LatLng>[];
+    final sampledDistances = <double>[];
 
-  /// Holt Höhendaten von Open-Elevation API
-  Future<List<double>?> _fetchElevations(List<LatLng> coords) async {
-    final locations = coords
-        .map((c) => {'latitude': c.latitude, 'longitude': c.longitude})
-        .toList();
+    // Immer Start und Ende einschliessen
+    sampledCoords.add(routeCoordinates.first);
+    sampledDistances.add(0.0);
 
-    final response = await _dio.post(
-      _openElevationUrl,
-      data: {'locations': locations},
-      options: Options(
-        headers: {'Content-Type': 'application/json'},
-        receiveTimeout: const Duration(seconds: 30),
-      ),
-    );
+    if (sampleCount > 2) {
+      final step = totalDistanceKm / (sampleCount - 1);
+      int routeIdx = 0;
 
-    if (response.statusCode == 200) {
-      final results = response.data['results'] as List?;
-      if (results != null) {
-        return results
-            .map((r) => (r['elevation'] as num?)?.toDouble() ?? 0)
-            .toList();
-      }
-    }
-    return null;
-  }
+      for (int i = 1; i < sampleCount - 1; i++) {
+        final targetDist = step * i;
 
-  /// Holt Höhendaten von OpenTopoData API
-  Future<List<double>?> _fetchElevationsFromOpenTopo(List<LatLng> coords) async {
-    // OpenTopoData akzeptiert max 100 Punkte pro Request
-    final locations = coords
-        .map((c) => '${c.latitude},${c.longitude}')
-        .join('|');
+        // Naechsten Routenpunkt nach targetDist finden
+        while (routeIdx < cumulativeKm.length - 1 &&
+            cumulativeKm[routeIdx + 1] < targetDist) {
+          routeIdx++;
+        }
 
-    final response = await _dio.get(
-      _openTopoUrl,
-      queryParameters: {'locations': locations},
-      options: Options(receiveTimeout: const Duration(seconds: 30)),
-    );
+        // Zwischen zwei Routenpunkten interpolieren
+        if (routeIdx < routeCoordinates.length - 1) {
+          final segStart = cumulativeKm[routeIdx];
+          final segEnd = cumulativeKm[routeIdx + 1];
+          final segLen = segEnd - segStart;
 
-    if (response.statusCode == 200) {
-      final results = response.data['results'] as List?;
-      if (results != null) {
-        return results
-            .map((r) => (r['elevation'] as num?)?.toDouble() ?? 0)
-            .toList();
-      }
-    }
-    return null;
-  }
-
-  /// Baut ElevationProfile aus Koordinaten und Höhen
-  ElevationProfile _buildProfile(List<LatLng> coords, List<double> elevations) {
-    final points = <ElevationPoint>[];
-    double cumulativeDistance = 0;
-    double totalAscent = 0;
-    double totalDescent = 0;
-    double minElevation = double.infinity;
-    double maxElevation = double.negativeInfinity;
-
-    const distance = Distance();
-
-    for (int i = 0; i < coords.length && i < elevations.length; i++) {
-      final elevation = elevations[i];
-
-      // Distanz berechnen
-      if (i > 0) {
-        cumulativeDistance += distance.as(
-          LengthUnit.Kilometer,
-          coords[i - 1],
-          coords[i],
-        );
-
-        // Anstieg/Abstieg berechnen
-        final elevDiff = elevation - elevations[i - 1];
-        if (elevDiff > 0) {
-          totalAscent += elevDiff;
+          if (segLen > 0) {
+            final t = (targetDist - segStart) / segLen;
+            final lat = routeCoordinates[routeIdx].latitude +
+                t * (routeCoordinates[routeIdx + 1].latitude -
+                    routeCoordinates[routeIdx].latitude);
+            final lng = routeCoordinates[routeIdx].longitude +
+                t * (routeCoordinates[routeIdx + 1].longitude -
+                    routeCoordinates[routeIdx].longitude);
+            sampledCoords.add(LatLng(lat, lng));
+          } else {
+            sampledCoords.add(routeCoordinates[routeIdx]);
+          }
         } else {
-          totalDescent += elevDiff.abs();
+          sampledCoords.add(routeCoordinates.last);
         }
-      }
-
-      // Min/Max aktualisieren
-      if (elevation < minElevation) minElevation = elevation;
-      if (elevation > maxElevation) maxElevation = elevation;
-
-      points.add(ElevationPoint(
-        latitude: coords[i].latitude,
-        longitude: coords[i].longitude,
-        elevation: elevation,
-        distance: cumulativeDistance,
-      ));
-    }
-
-    // Schwierigkeit berechnen
-    final difficulty = _calculateDifficulty(
-      totalAscent: totalAscent,
-      maxGradient: _calculateMaxGradient(points),
-      distanceKm: cumulativeDistance,
-    );
-
-    return ElevationProfile(
-      points: points,
-      minElevation: minElevation == double.infinity ? 0 : minElevation,
-      maxElevation: maxElevation == double.negativeInfinity ? 0 : maxElevation,
-      totalAscent: totalAscent,
-      totalDescent: totalDescent,
-      totalDistanceKm: cumulativeDistance,
-      difficulty: difficulty,
-      calculatedAt: DateTime.now(),
-    );
-  }
-
-  /// Berechnet Schwierigkeitsgrad
-  RouteDifficulty _calculateDifficulty({
-    required double totalAscent,
-    required double maxGradient,
-    required double distanceKm,
-  }) {
-    // Punkte-basiertes System
-    int score = 0;
-
-    // Nach Anstieg
-    if (totalAscent > 1500) score += 3;
-    else if (totalAscent > 800) score += 2;
-    else if (totalAscent > 400) score += 1;
-
-    // Nach maximaler Steigung
-    if (maxGradient > 20) score += 3;
-    else if (maxGradient > 12) score += 2;
-    else if (maxGradient > 6) score += 1;
-
-    // Nach Distanz
-    if (distanceKm > 50) score += 2;
-    else if (distanceKm > 25) score += 1;
-
-    // Score zu Difficulty
-    if (score >= 6) return RouteDifficulty.expert;
-    if (score >= 4) return RouteDifficulty.difficult;
-    if (score >= 2) return RouteDifficulty.moderate;
-    return RouteDifficulty.easy;
-  }
-
-  double _calculateMaxGradient(List<ElevationPoint> points) {
-    double maxGradient = 0;
-
-    for (int i = 1; i < points.length; i++) {
-      final distDiff = points[i].distance - points[i - 1].distance;
-      if (distDiff > 0.01) {  // Mindestens 10m
-        final elevDiff = points[i].elevation - points[i - 1].elevation;
-        final gradient = (elevDiff / (distDiff * 1000)) * 100;  // Prozent
-        if (gradient.abs() > maxGradient.abs()) {
-          maxGradient = gradient;
-        }
+        sampledDistances.add(targetDist);
       }
     }
 
-    return maxGradient;
+    sampledCoords.add(routeCoordinates.last);
+    sampledDistances.add(totalDistanceKm);
+
+    // Hoehendaten von Open-Meteo laden (max 100 pro Request)
+    final elevations = await _fetchElevations(sampledCoords);
+
+    debugPrint('[Elevation] ${sampledCoords.length} Punkte geladen, '
+        '${totalDistanceKm.toStringAsFixed(1)} km Gesamtdistanz');
+
+    return ElevationProfile.fromRawData(
+      elevations: elevations,
+      cumulativeDistancesKm: sampledDistances,
+    );
   }
 
-  /// Generiert simuliertes Profil (für Demo/Fallback)
-  ElevationProfile _generateSimulatedProfile(List<LatLng> coords) {
-    final points = <ElevationPoint>[];
-    double cumulativeDistance = 0;
-    const distance = Distance();
+  /// Ruft Hoehendaten von der Open-Meteo Elevation API ab.
+  /// Splittet automatisch in Batches von max 100 Koordinaten.
+  Future<List<double>> _fetchElevations(List<LatLng> coords) async {
+    if (coords.isEmpty) return [];
 
-    // Simuliere hügeliges Terrain
-    double baseElevation = 200;
-    double totalAscent = 0;
-    double totalDescent = 0;
+    final allElevations = <double>[];
 
-    for (int i = 0; i < coords.length; i++) {
-      if (i > 0) {
-        cumulativeDistance += distance.as(
-          LengthUnit.Kilometer,
-          coords[i - 1],
-          coords[i],
+    // In Batches aufteilen (API-Limit: 100 Koordinaten)
+    for (int i = 0; i < coords.length; i += _maxCoordsPerRequest) {
+      final batch = coords.sublist(
+        i,
+        math.min(i + _maxCoordsPerRequest, coords.length),
+      );
+
+      final latitudes = batch.map((c) => c.latitude.toStringAsFixed(4)).join(',');
+      final longitudes = batch.map((c) => c.longitude.toStringAsFixed(4)).join(',');
+
+      try {
+        final response = await _dio.get(
+          ApiEndpoints.openMeteoElevation,
+          queryParameters: {
+            'latitude': latitudes,
+            'longitude': longitudes,
+          },
         );
+
+        final elevationData = response.data['elevation'] as List;
+        allElevations.addAll(
+          elevationData.map((e) => (e as num).toDouble()),
+        );
+      } on DioException catch (e) {
+        debugPrint('[Elevation] API-Fehler: ${e.message}');
+        // Bei Fehler: Nullen fuer diesen Batch einfuegen
+        allElevations.addAll(List.filled(batch.length, 0.0));
       }
 
-      // Simulierte Höhe mit Sinus-Variation
-      final variation = 150 * _sin(cumulativeDistance * 0.3) +
-                        50 * _sin(cumulativeDistance * 1.2);
-      final elevation = baseElevation + variation;
-
-      if (i > 0) {
-        final diff = elevation - points[i - 1].elevation;
-        if (diff > 0) totalAscent += diff;
-        else totalDescent += diff.abs();
+      // Rate-Limit zwischen Batches
+      if (i + _maxCoordsPerRequest < coords.length) {
+        await Future.delayed(const Duration(milliseconds: 200));
       }
-
-      points.add(ElevationPoint(
-        latitude: coords[i].latitude,
-        longitude: coords[i].longitude,
-        elevation: elevation,
-        distance: cumulativeDistance,
-      ));
     }
 
-    final elevations = points.map((p) => p.elevation).toList();
-
-    return ElevationProfile(
-      points: points,
-      minElevation: elevations.reduce((a, b) => a < b ? a : b),
-      maxElevation: elevations.reduce((a, b) => a > b ? a : b),
-      totalAscent: totalAscent,
-      totalDescent: totalDescent,
-      totalDistanceKm: cumulativeDistance,
-      difficulty: _calculateDifficulty(
-        totalAscent: totalAscent,
-        maxGradient: 8,
-        distanceKm: cumulativeDistance,
-      ),
-      calculatedAt: DateTime.now(),
-    );
+    return allElevations;
   }
 
-  double _sin(double x) {
-    // Einfache Sin-Approximation
-    x = x % (2 * 3.14159);
-    return x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
+  /// Berechnet kumulative Distanzen entlang der Route.
+  /// Bei langen Routen (>500 Punkte) wird compute() verwendet.
+  Future<List<double>> _computeCumulativeDistances(
+    List<LatLng> coords,
+  ) async {
+    if (coords.length > 500) {
+      // In separatem Isolate berechnen um UI nicht zu blockieren
+      return compute(
+        _cumulativeDistancesIsolate,
+        _CoordsData(
+          lats: coords.map((c) => c.latitude).toList(),
+          lngs: coords.map((c) => c.longitude).toList(),
+        ),
+      );
+    }
+
+    return _calculateCumulativeDistances(coords);
   }
 
-  List<LatLng> _simplifyRoute(List<LatLng> route, int maxPoints) {
-    if (route.length <= maxPoints) return route;
-    final step = route.length ~/ maxPoints;
-    return [
-      for (int i = 0; i < route.length; i += step) route[i],
-      route.last,
-    ];
+  /// Kumulative Distanzen (Main-Thread-Version)
+  static List<double> _calculateCumulativeDistances(List<LatLng> coords) {
+    final distances = <double>[0.0];
+    for (int i = 1; i < coords.length; i++) {
+      final dist = _haversineRaw(
+        coords[i - 1].latitude,
+        coords[i - 1].longitude,
+        coords[i].latitude,
+        coords[i].longitude,
+      );
+      distances.add(distances.last + dist);
+    }
+    return distances;
+  }
+
+  /// Haversine-Distanz in km (raw, ohne LatLng-Import)
+  static double _haversineRaw(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const r = 6371.0;
+    const deg2rad = math.pi / 180;
+    final dLat = (lat2 - lat1) * deg2rad;
+    final dLng = (lng2 - lng1) * deg2rad;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * deg2rad) *
+            math.cos(lat2 * deg2rad) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 }
 
-/// Elevation Repository Provider
+/// Daten-Container fuer Isolate (muss top-level oder static sein)
+class _CoordsData {
+  final List<double> lats;
+  final List<double> lngs;
+
+  _CoordsData({required this.lats, required this.lngs});
+}
+
+/// Isolate-Funktion fuer kumulative Distanzen
+List<double> _cumulativeDistancesIsolate(_CoordsData data) {
+  const r = 6371.0;
+  const deg2rad = math.pi / 180;
+  final distances = <double>[0.0];
+
+  for (int i = 1; i < data.lats.length; i++) {
+    final dLat = (data.lats[i] - data.lats[i - 1]) * deg2rad;
+    final dLng = (data.lngs[i] - data.lngs[i - 1]) * deg2rad;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(data.lats[i - 1] * deg2rad) *
+            math.cos(data.lats[i] * deg2rad) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final dist = r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    distances.add(distances.last + dist);
+  }
+
+  return distances;
+}
+
+/// Riverpod Provider fuer ElevationRepository
 @riverpod
 ElevationRepository elevationRepository(ElevationRepositoryRef ref) {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
-  return ElevationRepository(dio);
+  return ElevationRepository();
 }

@@ -109,12 +109,12 @@ class _DayTab extends StatelessWidget {
       borderColor = colorScheme.primary;
       textColor = colorScheme.onPrimary;
     } else if (isCompleted) {
-      backgroundColor = Colors.green.withOpacity(0.1);
+      backgroundColor = Colors.green.withValues(alpha: 0.1);
       borderColor = Colors.green;
       textColor = Colors.green;
     } else {
       backgroundColor = colorScheme.surfaceContainerHighest;
-      borderColor = colorScheme.outline.withOpacity(0.3);
+      borderColor = colorScheme.outline.withValues(alpha: 0.3);
       textColor = colorScheme.onSurface;
     }
 
@@ -170,7 +170,7 @@ class _DayTab extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: isSelected
-                      ? textColor.withOpacity(0.8)
+                      ? textColor.withValues(alpha: 0.8)
                       : colorScheme.onSurfaceVariant,
                 ),
               ),

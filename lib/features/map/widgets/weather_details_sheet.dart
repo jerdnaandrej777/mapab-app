@@ -57,7 +57,7 @@ class WeatherDetailsSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -131,10 +131,10 @@ class WeatherDetailsSheet extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _getConditionColor(weather.condition).withOpacity(0.1),
+        color: _getConditionColor(weather.condition).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _getConditionColor(weather.condition).withOpacity(0.3),
+          color: _getConditionColor(weather.condition).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -240,8 +240,8 @@ class WeatherDetailsSheet extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isToday
-                      ? colorScheme.primaryContainer.withOpacity(0.5)
-                      : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -356,7 +356,7 @@ class WeatherDetailsSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -397,9 +397,9 @@ class WeatherDetailsSheet extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -414,7 +414,7 @@ class WeatherDetailsSheet extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: color.withOpacity(0.8),
+                    color: color.withValues(alpha: 0.8),
                   ),
                 ),
                 Text(

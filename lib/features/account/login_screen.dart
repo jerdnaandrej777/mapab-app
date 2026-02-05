@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/l10n/l10n.dart';
 import '../../data/providers/account_provider.dart';
 
 /// Login/Willkommens-Screen
@@ -38,7 +39,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
+          SnackBar(content: Text('${context.l10n.errorPrefix}$e')),
         );
       }
     } finally {
@@ -51,37 +52,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _showCreateAccountDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Lokales Profil erstellen'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.authCreateLocalProfile),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Benutzername',
-                hintText: 'z.B. reisefan123',
-                prefixIcon: Icon(Icons.person),
+              decoration: InputDecoration(
+                labelText: context.l10n.authUsernameLabel,
+                hintText: context.l10n.authUsernameHint,
+                prefixIcon: const Icon(Icons.person),
               ),
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _displayNameController,
-              decoration: const InputDecoration(
-                labelText: 'Anzeigename',
-                hintText: 'z.B. Max Mustermann',
-                prefixIcon: Icon(Icons.badge),
+              decoration: InputDecoration(
+                labelText: context.l10n.authDisplayNameLabel,
+                hintText: context.l10n.authDisplayNameHint,
+                prefixIcon: const Icon(Icons.badge),
               ),
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'E-Mail (optional)',
-                hintText: 'z.B. max@example.com',
-                prefixIcon: Icon(Icons.email),
+              decoration: InputDecoration(
+                labelText: context.l10n.authEmailOptional,
+                hintText: context.l10n.authEmailHint,
+                prefixIcon: const Icon(Icons.email),
               ),
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
@@ -90,12 +91,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: _createLocalAccount,
-            child: const Text('Erstellen'),
+            child: Text(context.l10n.authCreate),
           ),
         ],
       ),
@@ -109,8 +110,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (username.isEmpty || displayName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Benutzername und Anzeigename sind erforderlich'),
+        SnackBar(
+          content: Text(context.l10n.authRequiredFields),
         ),
       );
       return;
@@ -132,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
+          SnackBar(content: Text('${context.l10n.errorPrefix}$e')),
         );
       }
     } finally {
@@ -164,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -177,9 +178,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 32),
 
             // Titel
-            const Text(
-              'Willkommen bei MapAB',
-              style: TextStyle(
+            Text(
+              context.l10n.authWelcomeTitle,
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -190,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
             // Untertitel
             Text(
-              'Dein AI-Reiseplaner für unvergessliche Trips',
+              context.l10n.authWelcomeSubtitle,
               style: TextStyle(
                 fontSize: 16,
                 color: AppTheme.textSecondary,
@@ -206,7 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: ElevatedButton.icon(
                 onPressed: _continueAsGuest,
                 icon: const Icon(Icons.login),
-                label: const Text('Als Gast fortfahren'),
+                label: Text(context.l10n.authContinueAsGuest),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: AppTheme.primaryColor,
@@ -223,7 +224,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: OutlinedButton.icon(
                 onPressed: _showCreateAccountDialog,
                 icon: const Icon(Icons.person_add),
-                label: const Text('Lokales Profil erstellen'),
+                label: Text(context.l10n.authCreateLocalProfile),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -236,7 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.1),
+                color: AppTheme.infoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -245,7 +246,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Als Gast kannst du sofort loslegen. Deine Daten werden lokal auf deinem Gerät gespeichert.',
+                      context.l10n.authGuestDescription,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.textSecondary,
@@ -260,7 +261,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
             // Cloud-Login Placeholder (später)
             Text(
-              'Cloud-Login kommt bald:',
+              context.l10n.authComingSoon,
               style: TextStyle(
                 fontSize: 14,
                 color: AppTheme.textSecondary,

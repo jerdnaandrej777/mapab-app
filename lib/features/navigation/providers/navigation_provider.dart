@@ -3,10 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../core/utils/location_helper.dart';
 import '../../../data/models/navigation_step.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/repositories/routing_repo.dart';
+import '../services/navigation_foreground_service.dart';
 import '../services/route_matcher_service.dart';
 
 part 'navigation_provider.g.dart';
@@ -254,6 +256,13 @@ class NavigationNotifier extends _$NavigationNotifier {
       // GPS-Stream starten
       await _startPositionStream();
 
+      // Foreground Service fuer Hintergrund-Navigation starten
+      await _startForegroundService(
+        destinationName: baseRoute.endAddress,
+        distanceKm: navRoute.baseRoute.distanceKm,
+        etaMinutes: navRoute.baseRoute.durationMinutes,
+      );
+
       debugPrint('[Navigation] Navigation gestartet: '
           '${navRoute.totalSteps} Steps, '
           '${navRoute.legs.length} Legs');
@@ -275,6 +284,9 @@ class NavigationNotifier extends _$NavigationNotifier {
     _lastRerouteTime = null;
     _stepRouteIndices = null;
     state = const NavigationState();
+
+    // Foreground Service stoppen
+    _stopForegroundService();
   }
 
   /// Schaltet Sprachausgabe ein/aus
@@ -325,27 +337,13 @@ class NavigationNotifier extends _$NavigationNotifier {
     _positionStream?.cancel();
 
     // GPS-Verfuegbarkeit pruefen
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[Navigation] GPS-Dienst nicht aktiviert');
-        state = state.copyWith(
-          error: 'GPS-Dienst nicht aktiviert',
-        );
-        return;
-      }
-
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        debugPrint('[Navigation] GPS-Berechtigung fehlt: $permission');
-        state = state.copyWith(
-          error: 'GPS-Berechtigung fehlt',
-        );
-        return;
-      }
-    } catch (e) {
-      debugPrint('[Navigation] GPS-Check fehlgeschlagen: $e');
+    final gpsCheck = await LocationHelper.getCurrentPosition();
+    if (!gpsCheck.isSuccess) {
+      debugPrint('[Navigation] GPS nicht verfuegbar: ${gpsCheck.error}');
+      state = state.copyWith(
+        error: gpsCheck.message ?? 'GPS nicht verfuegbar',
+      );
+      return;
     }
 
     const locationSettings = LocationSettings(
@@ -493,6 +491,23 @@ class NavigationNotifier extends _$NavigationNotifier {
       status: NavigationStatus.navigating,
       error: null,
     );
+
+    // 10. Foreground-Service-Benachrichtigung aktualisieren (alle ~30 Sekunden)
+    _maybeUpdateForegroundNotification(remainingKm, eta);
+  }
+
+  int _lastNotificationUpdateSec = 0;
+
+  void _maybeUpdateForegroundNotification(double remainingKm, int etaMinutes) {
+    final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (nowSec - _lastNotificationUpdateSec < 30) return;
+    _lastNotificationUpdateSec = nowSec;
+
+    NavigationForegroundService.updateNotification(
+      destinationName: state.route?.baseRoute.endAddress ?? 'Ziel',
+      distanceKm: remainingKm,
+      etaMinutes: etaMinutes,
+    );
   }
 
   /// Behandelt Abweichung von der Route
@@ -581,6 +596,78 @@ class NavigationNotifier extends _$NavigationNotifier {
     _stepRouteIndices = List<int>.generate(allSteps.length, (i) {
       return _routeMatcher.findNearestIndex(routeCoords, allSteps[i].location);
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Foreground Service (Hintergrund-Navigation)
+  // ---------------------------------------------------------------------------
+
+  /// Startet den Foreground Service fuer Hintergrund-GPS-Tracking
+  Future<void> _startForegroundService({
+    required String destinationName,
+    required double distanceKm,
+    required int etaMinutes,
+  }) async {
+    try {
+      final success = await NavigationForegroundService.startService(
+        destinationName: destinationName,
+        distanceKm: distanceKm,
+        etaMinutes: etaMinutes,
+      );
+      if (success) {
+        debugPrint('[Navigation] Foreground Service gestartet');
+        // Callback fuer Hintergrund-GPS-Updates registrieren
+        NavigationForegroundService.setDataCallback(_onBackgroundData);
+      }
+    } catch (e) {
+      debugPrint('[Navigation] Foreground Service Fehler: $e');
+      // Nicht kritisch - Navigation funktioniert weiterhin im Vordergrund
+    }
+  }
+
+  /// Stoppt den Foreground Service
+  Future<void> _stopForegroundService() async {
+    try {
+      NavigationForegroundService.removeDataCallback(_onBackgroundData);
+      await NavigationForegroundService.stopService();
+      debugPrint('[Navigation] Foreground Service gestoppt');
+    } catch (e) {
+      debugPrint('[Navigation] Foreground Service Stop-Fehler: $e');
+    }
+  }
+
+  /// Callback fuer GPS-Updates vom Foreground Service (App im Hintergrund)
+  void _onBackgroundData(Object data) {
+    if (data is! Map<String, dynamic>) return;
+
+    final type = data['type'] as String?;
+    if (type == 'position') {
+      final lat = data['latitude'] as double?;
+      final lng = data['longitude'] as double?;
+      final heading = data['heading'] as double?;
+      final speed = data['speed'] as double?;
+
+      if (lat != null && lng != null) {
+        // GPS-Update als Position-Objekt verarbeiten
+        final position = Position(
+          latitude: lat,
+          longitude: lng,
+          heading: heading ?? 0,
+          speed: speed ?? 0,
+          accuracy: data['accuracy'] as double? ?? 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+          speedAccuracy: 0,
+          timestamp: data['timestamp'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(data['timestamp'] as int)
+              : DateTime.now(),
+        );
+        _onPositionUpdate(position);
+      }
+    } else if (type == 'error') {
+      debugPrint('[Navigation] Hintergrund-Fehler: ${data['message']}');
+    }
   }
 
   /// Findet den aktuellen Navigation-Step basierend auf Route-Index.

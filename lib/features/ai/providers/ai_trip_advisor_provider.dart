@@ -105,7 +105,9 @@ class AITripAdvisorState {
   }
 }
 
-/// AI Trip Advisor - generiert Vorschlaege basierend auf Wetter + Route
+/// AI Trip Advisor - generiert Vorschlaege basierend auf Wetter + Route.
+/// keepAlive: Empfehlungen bleiben bei Tageswechsel und Screen-Wechsel erhalten.
+/// reset() wird bei neuem Trip oder manuell aufgerufen.
 @Riverpod(keepAlive: true)
 class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
   /// Request-ID fuer Cancellation: Nur die neueste Anfrage darf State setzen

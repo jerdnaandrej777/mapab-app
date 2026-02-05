@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/l10n/l10n.dart';
 import 'models/onboarding_page_data.dart';
 import 'providers/onboarding_provider.dart';
 import 'widgets/animated_ai_circle.dart';
@@ -25,6 +26,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // Die drei Onboarding-Seiten
   late final List<OnboardingPageData> _pages;
+  bool _pagesInitialized = false;
 
   @override
   void initState() {
@@ -39,30 +41,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
+  }
 
-    _pages = [
-      OnboardingPageData(
-        title: 'Entdecke Sehenswürdigkeiten',
-        highlightWord: 'Sehenswürdigkeiten',
-        subtitle: 'Finde über 500 handverlesene POIs in ganz Europa.\nSchlösser, Seen, Museen und Geheimtipps warten auf dich.',
-        highlightColor: const Color(0xFF3B82F6),  // Blue
-        animationBuilder: () => const AnimatedRoute(),
-      ),
-      OnboardingPageData(
-        title: 'Dein KI-Reiseassistent',
-        highlightWord: 'KI',
-        subtitle: 'Lass dir automatisch die perfekte Route planen.\nMit smarter Optimierung für deine Interessen.',
-        highlightColor: const Color(0xFF06B6D4),  // Cyan
-        animationBuilder: () => const AnimatedAICircle(),
-      ),
-      OnboardingPageData(
-        title: 'Deine Reisen in der Cloud',
-        highlightWord: 'Cloud',
-        subtitle: 'Speichere Favoriten und Trips sicher online.\nSynchronisiert auf allen deinen Geräten.',
-        highlightColor: const Color(0xFF22C55E),  // Green
-        animationBuilder: () => const AnimatedSync(),
-      ),
-    ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_pagesInitialized) {
+      _pagesInitialized = true;
+      final l10n = context.l10n;
+      _pages = [
+        OnboardingPageData(
+          title: l10n.onboardingTitle1,
+          highlightWord: l10n.onboardingHighlight1,
+          subtitle: l10n.onboardingSubtitle1,
+          highlightColor: const Color(0xFF3B82F6),  // Blue
+          animationBuilder: () => const AnimatedRoute(),
+        ),
+        OnboardingPageData(
+          title: l10n.onboardingTitle2,
+          highlightWord: l10n.onboardingHighlight2,
+          subtitle: l10n.onboardingSubtitle2,
+          highlightColor: const Color(0xFF06B6D4),  // Cyan
+          animationBuilder: () => const AnimatedAICircle(),
+        ),
+        OnboardingPageData(
+          title: l10n.onboardingTitle3,
+          highlightWord: l10n.onboardingHighlight3,
+          subtitle: l10n.onboardingSubtitle3,
+          highlightColor: const Color(0xFF22C55E),  // Green
+          animationBuilder: () => const AnimatedSync(),
+        ),
+      ];
+    }
   }
 
   @override
@@ -173,7 +183,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           TextButton(
             onPressed: _skipOnboarding,
             child: Text(
-              'Überspringen',
+              context.l10n.skip,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.7),
@@ -207,7 +217,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 elevation: 0,
               ),
               child: Text(
-                isLastPage ? "Los geht's" : 'Weiter',
+                isLastPage ? context.l10n.onboardingStart : context.l10n.next,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -235,9 +245,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  'Ich habe bereits ein Konto',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.authExistingAccount,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),

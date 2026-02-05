@@ -53,26 +53,8 @@ class Weather with _$Weather {
   factory Weather.fromJson(Map<String, dynamic> json) =>
       _$WeatherFromJson(json);
 
-  /// Wetter-Zustand basierend auf Code
-  WeatherCondition get condition {
-    // WMO Weather Codes: https://open-meteo.com/en/docs
-    // 0 = Klar, 1-3 = Leicht bewölkt, 45-48 = Nebel
-    // 51-67 = Regen, 71-77 = Schnee, 80-82 = Schauer
-    // 85-86 = Schneeschauer, 95-99 = Gewitter
-
-    if (weatherCode == 0 || weatherCode == 1) {
-      return WeatherCondition.good;
-    } else if (weatherCode <= 3) {
-      return WeatherCondition.mixed;
-    } else if (weatherCode >= 45 && weatherCode <= 48) {
-      // Nebel = schlecht fuer Outdoor (Aussichtspunkte, Wanderungen, Scenic Drives)
-      return WeatherCondition.bad;
-    } else if (weatherCode >= 95) {
-      return WeatherCondition.danger;
-    } else {
-      return WeatherCondition.bad;
-    }
-  }
+  /// Wetter-Zustand basierend auf WMO-Code
+  WeatherCondition get condition => WeatherCondition.fromWmoCode(weatherCode);
 
   /// Wetter-Icon basierend auf Code
   String get icon {
@@ -194,14 +176,8 @@ class DailyForecast with _$DailyForecast {
   factory DailyForecast.fromJson(Map<String, dynamic> json) =>
       _$DailyForecastFromJson(json);
 
-  /// Wetter-Zustand basierend auf Code
-  WeatherCondition get condition {
-    if (weatherCode == 0 || weatherCode == 1) return WeatherCondition.good;
-    if (weatherCode <= 3) return WeatherCondition.mixed;
-    if (weatherCode >= 45 && weatherCode <= 48) return WeatherCondition.bad;
-    if (weatherCode >= 95) return WeatherCondition.danger;
-    return WeatherCondition.bad;
-  }
+  /// Wetter-Zustand basierend auf WMO-Code
+  WeatherCondition get condition => WeatherCondition.fromWmoCode(weatherCode);
 
   /// Wetter-Icon
   String get icon {

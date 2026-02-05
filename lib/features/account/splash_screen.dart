@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/providers/account_provider.dart';
 import '../../data/providers/auth_provider.dart';
@@ -111,7 +112,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -137,9 +138,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             const SizedBox(height: 8),
 
             // Tagline
-            const Text(
-              'Dein AI-Reiseplaner',
-              style: TextStyle(
+            Text(
+              context.l10n.splashTagline,
+              style: const TextStyle(
                 fontSize: 16,
                 color: Colors.white70,
                 letterSpacing: 1,
@@ -157,10 +158,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
             // Status Text
             Text(
-              'Lade...',
+              context.l10n.authLoadingText,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ],

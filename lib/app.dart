@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:travel_planner/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/supabase/supabase_client.dart' show isAuthenticated, isSupabaseAvailable;
@@ -22,6 +24,9 @@ import 'features/account/splash_screen.dart';
 import 'features/favorites/favorites_screen.dart';
 import 'features/navigation/navigation_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/journal/journal_screen.dart';
+import 'features/sharing/qr_scanner_screen.dart';
+import 'features/templates/trip_templates_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -55,6 +60,11 @@ class TravelPlannerApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Travel Planner',
       debugShowCheckedModeBanner: false,
+
+      // Lokalisierung
+      locale: Locale(settings.language),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
 
       // Theme mit Provider-Integration
       theme: AppTheme.lightTheme,
@@ -209,6 +219,31 @@ final _router = GoRouter(
       name: 'favorites',
       builder: (context, state) => const FavoritesScreen(),
     ),
+
+    // Reisetagebuch
+    GoRoute(
+      path: '/journal/:tripId',
+      name: 'journal',
+      builder: (context, state) {
+        final tripId = state.pathParameters['tripId']!;
+        final tripName = state.uri.queryParameters['name'] ?? 'Reisetagebuch';
+        return JournalScreen(tripId: tripId, tripName: tripName);
+      },
+    ),
+
+    // QR-Code Scanner (Trip-Import)
+    GoRoute(
+      path: '/scan',
+      name: 'scan',
+      builder: (context, state) => const QRScannerScreen(),
+    ),
+
+    // Trip-Vorlagen
+    GoRoute(
+      path: '/templates',
+      name: 'templates',
+      builder: (context, state) => const TripTemplatesScreen(),
+    ),
   ],
 
   // Error Handler
@@ -220,7 +255,7 @@ final _router = GoRouter(
           const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
           Text(
-            'Seite nicht gefunden',
+            AppLocalizations.of(context).pageNotFound,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
@@ -228,7 +263,7 @@ final _router = GoRouter(
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => context.go('/'),
-            child: const Text('Zur Startseite'),
+            child: Text(AppLocalizations.of(context).goToHome),
           ),
         ],
       ),

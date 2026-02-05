@@ -1,157 +1,137 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 
-part 'elevation.freezed.dart';
-part 'elevation.g.dart';
+/// Einzelner Punkt im Hoehenprofil
+class ElevationPoint {
+  /// Kumulative Distanz vom Start in km
+  final double distanceKm;
 
-/// Routing-Modus
-enum RoutingMode {
-  car('Auto', '🚗', 'driving'),
-  bicycle('Fahrrad', '🚲', 'cycling'),
-  walking('Wandern', '🥾', 'walking'),
-  ebike('E-Bike', '⚡🚲', 'cycling');
+  /// Hoehe in Metern ueber NN
+  final double elevation;
 
-  final String label;
-  final String emoji;
-  final String osrmProfile;
-  const RoutingMode(this.label, this.emoji, this.osrmProfile);
-
-  bool get needsElevation => this != RoutingMode.car;
+  const ElevationPoint({
+    required this.distanceKm,
+    required this.elevation,
+  });
 }
 
-/// Schwierigkeitsgrad für Wandern/Radfahren
-enum RouteDifficulty {
-  easy('Leicht', '🟢', 0),
-  moderate('Moderat', '🟡', 1),
-  difficult('Schwer', '🔴', 2),
-  expert('Experte', '⚫', 3);
+/// Hoehenprofil einer Route
+class ElevationProfile {
+  /// Alle Messpunkte (sortiert nach Distanz)
+  final List<ElevationPoint> points;
 
-  final String label;
-  final String emoji;
-  final int level;
-  const RouteDifficulty(this.label, this.emoji, this.level);
-}
+  /// Gesamtanstieg in Metern
+  final double totalAscent;
 
-/// Einzelner Punkt mit Höhendaten
-@freezed
-class ElevationPoint with _$ElevationPoint {
-  const factory ElevationPoint({
-    required double latitude,
-    required double longitude,
-    required double elevation,  // Meter über NN
-    required double distance,   // Kumulierte Distanz in km
-  }) = _ElevationPoint;
+  /// Gesamtabstieg in Metern
+  final double totalDescent;
 
-  const ElevationPoint._();
+  /// Hoechste Hoehe in Metern
+  final double maxElevation;
 
-  LatLng get location => LatLng(latitude, longitude);
+  /// Niedrigste Hoehe in Metern
+  final double minElevation;
 
-  factory ElevationPoint.fromJson(Map<String, dynamic> json) =>
-      _$ElevationPointFromJson(json);
-}
+  /// Gesamtdistanz in km
+  final double totalDistanceKm;
 
-/// Höhenprofil einer Route
-@freezed
-class ElevationProfile with _$ElevationProfile {
-  const factory ElevationProfile({
-    required List<ElevationPoint> points,
-    required double minElevation,
-    required double maxElevation,
-    required double totalAscent,    // Gesamtanstieg in Metern
-    required double totalDescent,   // Gesamtabstieg in Metern
-    required double totalDistanceKm,
-    required RouteDifficulty difficulty,
-    DateTime? calculatedAt,
-  }) = _ElevationProfile;
+  const ElevationProfile({
+    required this.points,
+    required this.totalAscent,
+    required this.totalDescent,
+    required this.maxElevation,
+    required this.minElevation,
+    required this.totalDistanceKm,
+  });
 
-  const ElevationProfile._();
-
-  /// Höhenunterschied
-  double get elevationDifference => maxElevation - minElevation;
-
-  /// Durchschnittliche Steigung in Prozent
-  double get averageGradient {
-    if (totalDistanceKm == 0) return 0;
-    return (totalAscent / (totalDistanceKm * 1000)) * 100;
-  }
-
-  /// Geschätzte Dauer für Wandern (Minuten)
-  int estimateWalkingDuration() {
-    // DIN 33466: 4 km/h horizontal + 300m Anstieg pro Stunde
-    final horizontalTime = totalDistanceKm / 4 * 60;
-    final ascentTime = totalAscent / 300 * 60;
-    return (horizontalTime + ascentTime * 0.5).round();  // Hälfte addieren
-  }
-
-  /// Geschätzte Dauer für Radfahren (Minuten)
-  int estimateCyclingDuration({bool isEbike = false}) {
-    // 15-20 km/h für normales Rad, 20-25 km/h für E-Bike
-    final speed = isEbike ? 22 : 15;
-    final baseTime = totalDistanceKm / speed * 60;
-    // Anstieg verlangsamt
-    final ascentPenalty = totalAscent / (isEbike ? 500 : 200) * 60;
-    return (baseTime + ascentPenalty).round();
-  }
-
-  /// Geschätzte verbrannte Kalorien
-  int estimateCalories({
-    required RoutingMode mode,
-    double weightKg = 75,
+  /// Erstellt ein ElevationProfile aus rohen Hoehendaten und kumulativen Distanzen.
+  ///
+  /// [elevations] - Hoehenwerte in Metern (gleiche Laenge wie [cumulativeDistancesKm])
+  /// [cumulativeDistancesKm] - Kumulative Distanzen in km ab Start
+  factory ElevationProfile.fromRawData({
+    required List<double> elevations,
+    required List<double> cumulativeDistancesKm,
   }) {
-    // MET-Werte (Metabolic Equivalent of Task)
-    final met = switch (mode) {
-      RoutingMode.walking => 4.0 + (averageGradient * 0.2),  // Wandern
-      RoutingMode.bicycle => 6.0 + (averageGradient * 0.3),  // Radfahren
-      RoutingMode.ebike => 4.0 + (averageGradient * 0.1),    // E-Bike
-      RoutingMode.car => 1.5,                                  // Sitzen
-    };
+    assert(elevations.length == cumulativeDistancesKm.length);
 
-    final durationHours = switch (mode) {
-      RoutingMode.walking => estimateWalkingDuration() / 60,
-      RoutingMode.bicycle => estimateCyclingDuration() / 60,
-      RoutingMode.ebike => estimateCyclingDuration(isEbike: true) / 60,
-      RoutingMode.car => totalDistanceKm / 80,
-    };
+    if (elevations.isEmpty) {
+      return const ElevationProfile(
+        points: [],
+        totalAscent: 0,
+        totalDescent: 0,
+        maxElevation: 0,
+        minElevation: 0,
+        totalDistanceKm: 0,
+      );
+    }
 
-    // Formel: Kalorien = MET * Gewicht * Dauer
-    return (met * weightKg * durationHours).round();
+    double ascent = 0;
+    double descent = 0;
+    double maxElev = elevations[0];
+    double minElev = elevations[0];
+
+    final points = <ElevationPoint>[];
+
+    for (int i = 0; i < elevations.length; i++) {
+      final elev = elevations[i];
+      points.add(ElevationPoint(
+        distanceKm: cumulativeDistancesKm[i],
+        elevation: elev,
+      ));
+
+      maxElev = math.max(maxElev, elev);
+      minElev = math.min(minElev, elev);
+
+      if (i > 0) {
+        final diff = elev - elevations[i - 1];
+        if (diff > 0) {
+          ascent += diff;
+        } else {
+          descent += diff.abs();
+        }
+      }
+    }
+
+    return ElevationProfile(
+      points: points,
+      totalAscent: ascent,
+      totalDescent: descent,
+      maxElevation: maxElev,
+      minElevation: minElev,
+      totalDistanceKm: cumulativeDistancesKm.last,
+    );
   }
 
-  factory ElevationProfile.fromJson(Map<String, dynamic> json) =>
-      _$ElevationProfileFromJson(json);
-}
+  /// Hoehenunterschied zwischen Start und Ziel
+  double get elevationDifference =>
+      points.isNotEmpty ? points.last.elevation - points.first.elevation : 0;
 
-/// Segment mit Steigungsinformation
-@freezed
-class GradientSegment with _$GradientSegment {
-  const factory GradientSegment({
-    required double startDistance,  // km
-    required double endDistance,    // km
-    required double gradient,       // Prozent (positiv = Anstieg)
-    required double startElevation,
-    required double endElevation,
-  }) = _GradientSegment;
+  /// Formatierter Gesamtanstieg
+  String get formattedAscent => '${totalAscent.round()} m';
 
-  const GradientSegment._();
+  /// Formatierter Gesamtabstieg
+  String get formattedDescent => '${totalDescent.round()} m';
 
-  double get length => endDistance - startDistance;
+  /// Formatierte Maximalhoehe
+  String get formattedMaxElevation => '${maxElevation.round()} m';
 
-  bool get isUphill => gradient > 2;
-  bool get isDownhill => gradient < -2;
-  bool get isFlat => gradient.abs() <= 2;
+  /// Formatierte Minimalhoehe
+  String get formattedMinElevation => '${minElevation.round()} m';
 
-  /// Farbe basierend auf Steigung
-  int get colorValue {
-    if (gradient > 15) return 0xFF8B0000;      // Dunkelrot
-    if (gradient > 10) return 0xFFFF0000;      // Rot
-    if (gradient > 5) return 0xFFFF8C00;       // Orange
-    if (gradient > 2) return 0xFFFFD700;       // Gelb
-    if (gradient > -2) return 0xFF32CD32;      // Grün
-    if (gradient > -5) return 0xFF00CED1;      // Türkis
-    if (gradient > -10) return 0xFF1E90FF;     // Blau
-    return 0xFF00008B;                          // Dunkelblau
+  /// Hoehe an einer bestimmten Distanz (km) interpoliert
+  double? elevationAtDistance(double distanceKm) {
+    if (points.isEmpty) return null;
+    if (distanceKm <= points.first.distanceKm) return points.first.elevation;
+    if (distanceKm >= points.last.distanceKm) return points.last.elevation;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      if (distanceKm >= points[i].distanceKm &&
+          distanceKm <= points[i + 1].distanceKm) {
+        final segLen = points[i + 1].distanceKm - points[i].distanceKm;
+        if (segLen == 0) return points[i].elevation;
+        final t = (distanceKm - points[i].distanceKm) / segLen;
+        return points[i].elevation + t * (points[i + 1].elevation - points[i].elevation);
+      }
+    }
+    return null;
   }
-
-  factory GradientSegment.fromJson(Map<String, dynamic> json) =>
-      _$GradientSegmentFromJson(json);
 }

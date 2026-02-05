@@ -1,0 +1,2353 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Spanish Castilian (`es`).
+class AppLocalizationsEs extends AppLocalizations {
+  AppLocalizationsEs([String locale = 'es']) : super(locale);
+
+  @override
+  String get appName => 'MapAB';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get confirm => 'Confirmar';
+
+  @override
+  String get save => 'Guardar';
+
+  @override
+  String get delete => 'Eliminar';
+
+  @override
+  String get remove => 'Quitar';
+
+  @override
+  String get retry => 'Reintentar';
+
+  @override
+  String get close => 'Cerrar';
+
+  @override
+  String get back => 'Atrás';
+
+  @override
+  String get next => 'Siguiente';
+
+  @override
+  String get done => 'Hecho';
+
+  @override
+  String get yes => 'Sí';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get or => 'O';
+
+  @override
+  String get edit => 'Editar';
+
+  @override
+  String get loading => 'Cargando...';
+
+  @override
+  String get search => 'Buscar';
+
+  @override
+  String get show => 'Mostrar';
+
+  @override
+  String get apply => 'Aplicar';
+
+  @override
+  String get active => 'Activo';
+
+  @override
+  String get discard => 'Descartar';
+
+  @override
+  String get resume => 'Continuar';
+
+  @override
+  String get skip => 'Omitir';
+
+  @override
+  String get all => 'Todos';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get newLabel => 'Nuevo';
+
+  @override
+  String get start => 'Inicio';
+
+  @override
+  String get destination => 'Destino';
+
+  @override
+  String get showOnMap => 'Mostrar en el mapa';
+
+  @override
+  String get openSettings => 'Abrir ajustes';
+
+  @override
+  String get actionCannotBeUndone => 'Esta acción no se puede deshacer.';
+
+  @override
+  String get details => 'Detalles';
+
+  @override
+  String get generate => 'Generar';
+
+  @override
+  String get clear => 'Borrar';
+
+  @override
+  String get reset => 'Restablecer';
+
+  @override
+  String get end => 'Terminar';
+
+  @override
+  String get reroll => 'Volver a tirar';
+
+  @override
+  String get filterApply => 'Aplicar filtro';
+
+  @override
+  String get openInGoogleMaps => 'Abrir en Google Maps';
+
+  @override
+  String get shareLinkCopied => '¡Enlace copiado al portapapeles!';
+
+  @override
+  String get shareAsText => 'Compartir como texto';
+
+  @override
+  String get errorGeneric => 'Ha ocurrido un error';
+
+  @override
+  String get errorNetwork => 'Sin conexión a Internet';
+
+  @override
+  String get errorNetworkMessage =>
+      'Por favor, comprueba tu conexión e inténtalo de nuevo.';
+
+  @override
+  String get errorServer => 'Servidor no disponible';
+
+  @override
+  String get errorServerMessage =>
+      'El servidor no responde. Inténtalo más tarde.';
+
+  @override
+  String get errorNoResults => 'Sin resultados';
+
+  @override
+  String get errorLocation => 'Ubicación no disponible';
+
+  @override
+  String get errorLocationMessage =>
+      'Por favor, permite el acceso a tu ubicación.';
+
+  @override
+  String get errorPrefix => 'Error: ';
+
+  @override
+  String get pageNotFound => 'Página no encontrada';
+
+  @override
+  String get goToHome => 'Ir al inicio';
+
+  @override
+  String get errorRouteCalculation =>
+      'Error al calcular la ruta. Por favor, inténtalo de nuevo.';
+
+  @override
+  String errorTripGeneration(String error) {
+    return 'Error al generar el viaje: $error';
+  }
+
+  @override
+  String get errorGoogleMapsNotOpened => 'No se pudo abrir Google Maps';
+
+  @override
+  String get errorRouteNotShared => 'No se pudo compartir la ruta';
+
+  @override
+  String get errorAddingToRoute => 'Error al añadir';
+
+  @override
+  String get errorIncompleteRouteData =>
+      'Los datos de la ruta están incompletos';
+
+  @override
+  String get gpsDisabledTitle => 'GPS desactivado';
+
+  @override
+  String get gpsDisabledMessage =>
+      'Los servicios de ubicación están desactivados. ¿Quieres abrir los ajustes del GPS?';
+
+  @override
+  String get gpsPermissionDenied => 'Permiso de GPS denegado';
+
+  @override
+  String get gpsPermissionDeniedForeverTitle => 'Permiso de GPS denegado';
+
+  @override
+  String get gpsPermissionDeniedForeverMessage =>
+      'El permiso de GPS ha sido denegado permanentemente. Por favor, permite el acceso a la ubicación en los ajustes de la aplicación.';
+
+  @override
+  String get gpsCouldNotDetermine => 'No se pudo determinar la posición GPS';
+
+  @override
+  String get appSettingsButton => 'Ajustes de la aplicación';
+
+  @override
+  String get myLocation => 'Mi ubicación';
+
+  @override
+  String get authWelcomeTitle => 'Bienvenido a MapAB';
+
+  @override
+  String get authWelcomeSubtitle =>
+      'Tu planificador de viajes con IA para escapadas inolvidables';
+
+  @override
+  String get authCloudNotAvailable =>
+      'Nube no disponible - App compilada sin credenciales de Supabase';
+
+  @override
+  String get authCloudLoginUnavailable =>
+      'Inicio de sesión en la nube no disponible - App compilada sin credenciales de Supabase';
+
+  @override
+  String get authEmailLabel => 'Correo electrónico';
+
+  @override
+  String get authEmailEmpty => 'Por favor, introduce el correo electrónico';
+
+  @override
+  String get authEmailInvalid => 'Correo electrónico no válido';
+
+  @override
+  String get authEmailInvalidAddress =>
+      'Dirección de correo electrónico no válida';
+
+  @override
+  String get authPasswordLabel => 'Contraseña';
+
+  @override
+  String get authPasswordEmpty => 'Por favor, introduce la contraseña';
+
+  @override
+  String get authPasswordMinLength => 'Mínimo 8 caracteres';
+
+  @override
+  String get authPasswordRequirements => 'Debe contener letras y números';
+
+  @override
+  String get authPasswordConfirm => 'Confirmar contraseña';
+
+  @override
+  String get authPasswordMismatch => 'Las contraseñas no coinciden';
+
+  @override
+  String get authRememberMe => 'Recordar credenciales';
+
+  @override
+  String get authForgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
+  String get authSignIn => 'Iniciar sesión';
+
+  @override
+  String get authNoAccount => '¿No tienes cuenta? ';
+
+  @override
+  String get authRegister => 'Registrarse';
+
+  @override
+  String get authContinueAsGuest => 'Continuar como invitado';
+
+  @override
+  String get authGuestInfoCloud =>
+      'Como invitado, tus datos solo se guardan localmente y no se sincronizan.';
+
+  @override
+  String get authGuestInfoLocal =>
+      'Tus datos se guardan localmente en tu dispositivo.';
+
+  @override
+  String get authCreateAccount => 'Crear cuenta';
+
+  @override
+  String get authSecureData => 'Guarda tus datos en la nube';
+
+  @override
+  String get authNameLabel => 'Nombre';
+
+  @override
+  String get authNameHint => '¿Cómo te gustaría que te llamaran?';
+
+  @override
+  String get authNameEmpty => 'Por favor, introduce tu nombre';
+
+  @override
+  String get authNameMinLength => 'El nombre debe tener al menos 2 caracteres';
+
+  @override
+  String get authAlreadyHaveAccount => '¿Ya tienes una cuenta? ';
+
+  @override
+  String get authExistingAccount => 'Ya tengo una cuenta';
+
+  @override
+  String get authRegistrationSuccess => 'Registro exitoso';
+
+  @override
+  String get authRegistrationSuccessMessage =>
+      'Por favor, revisa tu correo y confirma tu cuenta.';
+
+  @override
+  String get authResetPassword => 'Restablecer contraseña';
+
+  @override
+  String get authResetPasswordInstructions =>
+      'Introduce tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.';
+
+  @override
+  String get authSendLink => 'Enviar enlace';
+
+  @override
+  String get authBackToLogin => 'Volver al inicio de sesión';
+
+  @override
+  String get authEmailSent => '¡Correo enviado!';
+
+  @override
+  String get authEmailSentPrefix => 'Te hemos enviado un correo a';
+
+  @override
+  String get authEmailSentSuffix => '.';
+
+  @override
+  String get authResetLinkInstructions =>
+      'Haz clic en el enlace del correo para establecer una nueva contraseña. El enlace es válido durante 24 horas.';
+
+  @override
+  String get authResend => 'Reenviar';
+
+  @override
+  String get authCreateLocalProfile => 'Crear perfil local';
+
+  @override
+  String get authUsernameLabel => 'Nombre de usuario';
+
+  @override
+  String get authUsernameHint => 'p. ej. viajero123';
+
+  @override
+  String get authDisplayNameLabel => 'Nombre visible';
+
+  @override
+  String get authDisplayNameHint => 'p. ej. Juan Pérez';
+
+  @override
+  String get authEmailOptional => 'Correo (opcional)';
+
+  @override
+  String get authEmailHint => 'p. ej. juan@ejemplo.com';
+
+  @override
+  String get authCreate => 'Crear';
+
+  @override
+  String get authRequiredFields =>
+      'Se requieren nombre de usuario y nombre visible';
+
+  @override
+  String get authGuestDescription =>
+      'Como invitado puedes empezar inmediatamente. Tus datos se guardan localmente en tu dispositivo.';
+
+  @override
+  String get authComingSoon => 'Inicio de sesión en la nube próximamente:';
+
+  @override
+  String get authLoadingText => 'Cargando...';
+
+  @override
+  String get splashTagline => 'Tu planificador de viaje con IA';
+
+  @override
+  String get onboardingTitle1 => 'Descubre lugares de interés';
+
+  @override
+  String get onboardingHighlight1 => 'lugares de interés';
+
+  @override
+  String get onboardingSubtitle1 =>
+      'Encuentra más de 500 POIs seleccionados en toda Europa.\nCastillos, lagos, museos y lugares secretos te esperan.';
+
+  @override
+  String get onboardingTitle2 => 'Tu asistente de viaje con IA';
+
+  @override
+  String get onboardingHighlight2 => 'IA';
+
+  @override
+  String get onboardingSubtitle2 =>
+      'Deja que planifique automáticamente la ruta perfecta.\nCon optimización inteligente según tus intereses.';
+
+  @override
+  String get onboardingTitle3 => 'Tus viajes en la nube';
+
+  @override
+  String get onboardingHighlight3 => 'Nube';
+
+  @override
+  String get onboardingSubtitle3 =>
+      'Guarda favoritos y viajes de forma segura online.\nSincronizado en todos tus dispositivos.';
+
+  @override
+  String get onboardingStart => 'Empezar';
+
+  @override
+  String get categoryCastle => 'Castillos y fortalezas';
+
+  @override
+  String get categoryNature => 'Naturaleza y bosques';
+
+  @override
+  String get categoryMuseum => 'Museos';
+
+  @override
+  String get categoryViewpoint => 'Miradores';
+
+  @override
+  String get categoryLake => 'Lagos';
+
+  @override
+  String get categoryCoast => 'Costas y playas';
+
+  @override
+  String get categoryPark => 'Parques y parques nacionales';
+
+  @override
+  String get categoryCity => 'Ciudades';
+
+  @override
+  String get categoryActivity => 'Actividades';
+
+  @override
+  String get categoryHotel => 'Hoteles';
+
+  @override
+  String get categoryRestaurant => 'Restaurantes';
+
+  @override
+  String get categoryUnesco => 'Patrimonio de la UNESCO';
+
+  @override
+  String get categoryChurch => 'Iglesias';
+
+  @override
+  String get categoryMonument => 'Monumentos';
+
+  @override
+  String get categoryAttraction => 'Atracciones';
+
+  @override
+  String get weatherGood => 'Bueno';
+
+  @override
+  String get weatherMixed => 'Variable';
+
+  @override
+  String get weatherBad => 'Malo';
+
+  @override
+  String get weatherDanger => 'Peligroso';
+
+  @override
+  String get weatherUnknown => 'Desconocido';
+
+  @override
+  String get weatherClear => 'Despejado';
+
+  @override
+  String get weatherMostlyClear => 'Mayormente despejado';
+
+  @override
+  String get weatherPartlyCloudy => 'Parcialmente nublado';
+
+  @override
+  String get weatherCloudy => 'Nublado';
+
+  @override
+  String get weatherFog => 'Niebla';
+
+  @override
+  String get weatherDrizzle => 'Llovizna';
+
+  @override
+  String get weatherFreezingDrizzle => 'Llovizna helada';
+
+  @override
+  String get weatherRain => 'Lluvia';
+
+  @override
+  String get weatherFreezingRain => 'Lluvia helada';
+
+  @override
+  String get weatherSnow => 'Nieve';
+
+  @override
+  String get weatherSnowGrains => 'Gránulos de nieve';
+
+  @override
+  String get weatherRainShowers => 'Chubascos';
+
+  @override
+  String get weatherSnowShowers => 'Nevadas';
+
+  @override
+  String get weatherThunderstorm => 'Tormenta';
+
+  @override
+  String get weatherThunderstormHail => 'Tormenta con granizo';
+
+  @override
+  String get weatherForecast7Day => 'Pronóstico de 7 días';
+
+  @override
+  String get weatherToday => 'Hoy';
+
+  @override
+  String weatherFeelsLike(String temp) {
+    return 'Sensación $temp°';
+  }
+
+  @override
+  String get weatherSunrise => 'Amanecer';
+
+  @override
+  String get weatherSunset => 'Atardecer';
+
+  @override
+  String get weatherUvIndex => 'Índice UV';
+
+  @override
+  String get weatherPrecipitation => 'Precipitación';
+
+  @override
+  String get weatherWind => 'Viento';
+
+  @override
+  String get weatherRainRisk => 'Riesgo de lluvia';
+
+  @override
+  String get weatherRecommendationToday => 'Recomendación para hoy';
+
+  @override
+  String get weatherRecGood =>
+      '¡Clima perfecto para actividades al aire libre! Miradores, naturaleza y lagos recomendados.';
+
+  @override
+  String get weatherRecMixed =>
+      'Clima variable. Posibles tanto actividades interiores como exteriores.';
+
+  @override
+  String get weatherRecBad =>
+      'Se espera lluvia. Actividades de interior como museos e iglesias recomendadas.';
+
+  @override
+  String get weatherRecDanger =>
+      '¡Alerta meteorológica! Por favor, evita actividades al aire libre y permanece en el interior.';
+
+  @override
+  String get weatherRecUnknown => 'No hay datos meteorológicos disponibles.';
+
+  @override
+  String weatherUvLow(String value) {
+    return '$value (Bajo)';
+  }
+
+  @override
+  String weatherUvMedium(String value) {
+    return '$value (Medio)';
+  }
+
+  @override
+  String weatherUvHigh(String value) {
+    return '$value (Alto)';
+  }
+
+  @override
+  String weatherUvVeryHigh(String value) {
+    return '$value (Muy alto)';
+  }
+
+  @override
+  String weatherUvExtreme(String value) {
+    return '$value (Extremo)';
+  }
+
+  @override
+  String get weatherLoading => 'Cargando clima...';
+
+  @override
+  String get weatherWinterWeather => 'Clima invernal';
+
+  @override
+  String get weatherStormOnRoute => 'Tormenta en la ruta';
+
+  @override
+  String get weatherRainPossible => 'Posible lluvia';
+
+  @override
+  String get weatherGoodWeather => 'Buen tiempo';
+
+  @override
+  String get weatherChangeable => 'Variable';
+
+  @override
+  String get weatherBadWeather => 'Mal tiempo';
+
+  @override
+  String get weatherStormWarning => 'Alerta de tormenta';
+
+  @override
+  String get weatherPerfect => 'Perfecto';
+
+  @override
+  String get weatherStorm => 'Tormenta';
+
+  @override
+  String get weatherIdealOutdoor => 'Hoy ideal para POIs exteriores';
+
+  @override
+  String get weatherFlexiblePlanning => 'Variable - planifica con flexibilidad';
+
+  @override
+  String get weatherRainIndoor => 'Lluvia - POIs interiores recomendados';
+
+  @override
+  String get weatherStormIndoorOnly => 'Tormenta - ¡solo POIs interiores!';
+
+  @override
+  String get weatherOnlyIndoor => 'Solo POIs interiores';
+
+  @override
+  String weatherStormHighWinds(String speed) {
+    return '¡Alerta de tormenta! Vientos fuertes ($speed km/h) en la ruta.';
+  }
+
+  @override
+  String get weatherStormDelay =>
+      '¡Alerta meteorológica! Se recomienda posponer el viaje.';
+
+  @override
+  String get weatherWinterWarning => '¡Clima invernal! Posible nieve/hielo.';
+
+  @override
+  String get weatherRainRecommendation =>
+      'Se espera lluvia. Actividades de interior recomendadas.';
+
+  @override
+  String get weatherBadOnRoute => 'Mal tiempo en la ruta.';
+
+  @override
+  String get weatherPerfectOutdoor =>
+      'Clima perfecto para actividades al aire libre';
+
+  @override
+  String get weatherBePrepared => 'Variable - estar preparado para todo';
+
+  @override
+  String get weatherSnowWarning =>
+      'Nevadas - precaución en carreteras resbaladizas';
+
+  @override
+  String get weatherBadIndoor =>
+      'Mal tiempo - actividades de interior recomendadas';
+
+  @override
+  String get weatherStormCaution =>
+      '¡Alerta meteorológica! Precaución en este tramo';
+
+  @override
+  String get weatherNoData => 'No hay datos meteorológicos disponibles';
+
+  @override
+  String weatherRoutePoint(int index, int total) {
+    return 'Punto de ruta $index de $total';
+  }
+
+  @override
+  String weatherExpectedOnDay(String weather, int day) {
+    return '$weather esperado el día $day';
+  }
+
+  @override
+  String weatherOutdoorStops(int outdoor, int total) {
+    return '$outdoor de $total paradas son actividades al aire libre.';
+  }
+
+  @override
+  String get weatherSuggestIndoor => 'Sugerir alternativas de interior';
+
+  @override
+  String get weatherStormExpected => 'Se espera tormenta';
+
+  @override
+  String get weatherRainExpected => 'Se espera lluvia';
+
+  @override
+  String get weatherIdealOutdoorWeather => 'Clima ideal para exteriores';
+
+  @override
+  String get weatherStormIndoorPrefer =>
+      'Se espera tormenta – preferir paradas de interior';
+
+  @override
+  String get weatherRainIndoorHighlight =>
+      'Se espera lluvia – paradas de interior destacadas';
+
+  @override
+  String get weekdayMon => 'Lu';
+
+  @override
+  String get weekdayTue => 'Ma';
+
+  @override
+  String get weekdayWed => 'Mi';
+
+  @override
+  String get weekdayThu => 'Ju';
+
+  @override
+  String get weekdayFri => 'Vi';
+
+  @override
+  String get weekdaySat => 'Sá';
+
+  @override
+  String get weekdaySun => 'Do';
+
+  @override
+  String get mapFavorites => 'Favoritos';
+
+  @override
+  String get mapProfile => 'Perfil';
+
+  @override
+  String get mapSettings => 'Ajustes';
+
+  @override
+  String get mapToRoute => 'A la ruta';
+
+  @override
+  String get mapSetAsStart => 'Establecer como inicio';
+
+  @override
+  String get mapSetAsDestination => 'Establecer como destino';
+
+  @override
+  String get mapAddAsStop => 'Añadir como parada';
+
+  @override
+  String get tripConfigGps => 'GPS';
+
+  @override
+  String get tripConfigCityOrAddress => 'Ciudad o dirección...';
+
+  @override
+  String get tripConfigDestinationOptional => 'Destino (opcional)';
+
+  @override
+  String get tripConfigAddDestination => 'Añadir destino (opcional)';
+
+  @override
+  String get tripConfigEnterDestination => 'Introducir destino...';
+
+  @override
+  String get tripConfigNoDestinationRoundtrip =>
+      'Sin destino: viaje circular desde el inicio';
+
+  @override
+  String get tripConfigSurpriseMe => '¡Sorpréndeme!';
+
+  @override
+  String get tripConfigDeleteRoute => 'Eliminar ruta';
+
+  @override
+  String get tripConfigTripDuration => 'Duración del viaje';
+
+  @override
+  String get tripConfigDay => 'Día';
+
+  @override
+  String get tripConfigDays => 'Días';
+
+  @override
+  String tripConfigDayTrip(String distance) {
+    return 'Excursión de un día — aprox. $distance km';
+  }
+
+  @override
+  String tripConfigWeekendTrip(String distance) {
+    return 'Escapada de fin de semana — aprox. $distance km';
+  }
+
+  @override
+  String tripConfigShortVacation(String distance) {
+    return 'Escapada corta — aprox. $distance km';
+  }
+
+  @override
+  String tripConfigWeekTravel(String distance) {
+    return 'Viaje de una semana — aprox. $distance km';
+  }
+
+  @override
+  String tripConfigEpicEuroTrip(String distance) {
+    return 'Épico viaje europeo — aprox. $distance km';
+  }
+
+  @override
+  String get tripConfigRadius => 'Radio';
+
+  @override
+  String get tripConfigPoiCategories => 'Categorías de POI';
+
+  @override
+  String get tripConfigResetAll => 'Restablecer todo';
+
+  @override
+  String get tripConfigAllCategories => 'Todas las categorías seleccionadas';
+
+  @override
+  String tripConfigCategoriesSelected(int selected, int total) {
+    return '$selected de $total seleccionadas';
+  }
+
+  @override
+  String get tripConfigCategories => 'Categorías';
+
+  @override
+  String tripConfigSelectedCount(int count) {
+    return '$count seleccionadas';
+  }
+
+  @override
+  String get tripConfigPoisAlongRoute => 'POIs a lo largo de la ruta';
+
+  @override
+  String get tripConfigActiveTripTitle => 'Viaje activo existente';
+
+  @override
+  String tripConfigActiveTripMessage(int days, int completed) {
+    return 'Tienes un viaje activo de $days días con $completed días completados. Un nuevo viaje sobrescribirá este.';
+  }
+
+  @override
+  String get tripConfigCreateNewTrip => 'Crear nuevo viaje';
+
+  @override
+  String get tripInfoGenerating => 'Generando viaje...';
+
+  @override
+  String get tripInfoLoadingPois => 'Cargando POIs, optimizando ruta';
+
+  @override
+  String get tripInfoAiEuroTrip => 'Viaje europeo con IA';
+
+  @override
+  String get tripInfoAiDayTrip => 'Excursión de un día con IA';
+
+  @override
+  String get tripInfoEditTrip => 'Editar viaje';
+
+  @override
+  String get tripInfoStartNavigation => 'Iniciar navegación';
+
+  @override
+  String get tripInfoStops => 'Paradas';
+
+  @override
+  String get tripInfoDistance => 'Distancia';
+
+  @override
+  String get tripInfoDaysLabel => 'Días';
+
+  @override
+  String get activeTripTitle => 'Viaje europeo activo';
+
+  @override
+  String get activeTripDiscard => 'Descartar viaje activo';
+
+  @override
+  String get activeTripDiscardTitle => '¿Descartar viaje?';
+
+  @override
+  String activeTripDiscardMessage(int days, int completed) {
+    return 'Tu viaje de $days días con $completed días completados será eliminado.';
+  }
+
+  @override
+  String activeTripDayPending(int day) {
+    return 'Día $day pendiente';
+  }
+
+  @override
+  String activeTripDaysCompleted(int completed, int total) {
+    return '$completed de $total días completados';
+  }
+
+  @override
+  String get tripModeAiDayTrip => 'Excursión de un día con IA';
+
+  @override
+  String get tripModeAiEuroTrip => 'Viaje europeo con IA';
+
+  @override
+  String get tripRoutePlanning => 'Planificar ruta';
+
+  @override
+  String get tripNoRoute => 'No hay ruta disponible';
+
+  @override
+  String get tripTapMap => 'Toca el mapa para establecer inicio y destino';
+
+  @override
+  String get tripToMap => 'Al mapa';
+
+  @override
+  String get tripGeneratingDescription =>
+      'Cargando POIs, optimizando ruta, buscando hoteles';
+
+  @override
+  String get tripElevationLoading => 'Cargando perfil de elevación...';
+
+  @override
+  String get tripSaveRoute => 'Guardar ruta';
+
+  @override
+  String get tripRouteName => 'Nombre de la ruta';
+
+  @override
+  String get tripExampleDayTrip => 'p. ej. Escapada de fin de semana';
+
+  @override
+  String get tripExampleAiDayTrip => 'p. ej. Excursión con IA';
+
+  @override
+  String get tripExampleAiEuroTrip => 'p. ej. Viaje europeo con IA';
+
+  @override
+  String tripRouteSaved(String name) {
+    return 'Ruta \"$name\" guardada';
+  }
+
+  @override
+  String get tripYourRoute => 'Tu ruta';
+
+  @override
+  String get tripDrivingTime => 'Tiempo de conducción';
+
+  @override
+  String get tripStopRemoved => 'Parada eliminada';
+
+  @override
+  String get tripOptimizeRoute => 'Optimizar ruta';
+
+  @override
+  String get tripOptimizeBestOrder => 'Calcular mejor orden';
+
+  @override
+  String get tripShareRoute => 'Compartir ruta';
+
+  @override
+  String get tripDeleteAllStops => 'Eliminar todas las paradas';
+
+  @override
+  String get tripDeleteEntireRoute => 'Eliminar toda la ruta';
+
+  @override
+  String get tripDeleteRouteAndStops => 'Eliminar ruta y todas las paradas';
+
+  @override
+  String get tripConfirmDeleteAllStops => '¿Eliminar todas las paradas?';
+
+  @override
+  String get tripConfirmDeleteEntireRoute => '¿Eliminar toda la ruta?';
+
+  @override
+  String get tripDeleteEntireRouteMessage =>
+      'La ruta y todas las paradas serán eliminadas. Esta acción no se puede deshacer.';
+
+  @override
+  String get tripBackToConfig => 'Volver a la configuración';
+
+  @override
+  String tripExportDay(int day) {
+    return 'Día $day en Google Maps';
+  }
+
+  @override
+  String tripReExportDay(int day) {
+    return 'Exportar día $day de nuevo';
+  }
+
+  @override
+  String get tripGoogleMapsHint =>
+      'Google Maps calcula su propia ruta a través de las paradas';
+
+  @override
+  String tripNoStopsForDay(int day) {
+    return 'Sin paradas para el día $day';
+  }
+
+  @override
+  String get tripCompleted => '¡Viaje completado!';
+
+  @override
+  String tripAllDaysExported(int days) {
+    return 'Los $days días se han exportado con éxito. ¿Quieres guardar el viaje en tus favoritos?';
+  }
+
+  @override
+  String get tripKeep => 'Mantener';
+
+  @override
+  String get tripSaveToFavorites => 'Guardar en favoritos';
+
+  @override
+  String get tripShareHeader => 'Mi ruta con MapAB';
+
+  @override
+  String tripShareStart(String address) {
+    return 'Inicio: $address';
+  }
+
+  @override
+  String tripShareEnd(String address) {
+    return 'Destino: $address';
+  }
+
+  @override
+  String tripShareDistance(String distance) {
+    return 'Distancia: $distance km';
+  }
+
+  @override
+  String tripShareDuration(String duration) {
+    return 'Duración: $duration min';
+  }
+
+  @override
+  String get tripShareStops => 'Paradas:';
+
+  @override
+  String get tripShareOpenMaps => 'Abrir en Google Maps:';
+
+  @override
+  String get tripMyRoute => 'Mi ruta';
+
+  @override
+  String get tripGoogleMaps => 'Google Maps';
+
+  @override
+  String get tripShowInFavorites => 'Ver';
+
+  @override
+  String get tripGoogleMapsError => 'No se pudo abrir Google Maps';
+
+  @override
+  String get tripShareError => 'No se pudo compartir la ruta';
+
+  @override
+  String get tripWeatherDangerHint =>
+      'Tiempo severo previsto – prefiere paradas cubiertas';
+
+  @override
+  String get tripWeatherBadHint =>
+      'Lluvia prevista – paradas cubiertas destacadas';
+
+  @override
+  String get tripStart => 'Inicio';
+
+  @override
+  String get tripDestination => 'Destino';
+
+  @override
+  String get tripNew => 'Nuevo';
+
+  @override
+  String get dayEditorTitle => 'Editar viaje';
+
+  @override
+  String get dayEditorNoTrip => 'No hay viaje disponible';
+
+  @override
+  String get dayEditorStartNotAvailable => 'Punto de inicio no disponible';
+
+  @override
+  String dayEditorEditDay(int day) {
+    return 'Editar día $day';
+  }
+
+  @override
+  String get dayEditorRegenerate => 'Regenerar';
+
+  @override
+  String dayEditorMaxStops(int max) {
+    return 'Máx. $max paradas por día posibles en Google Maps';
+  }
+
+  @override
+  String get dayEditorSearchRecommendations =>
+      'Buscando recomendaciones de POI...';
+
+  @override
+  String get dayEditorLoadRecommendations => 'Cargar recomendaciones de POI';
+
+  @override
+  String get dayEditorAiRecommendations => 'Recomendaciones de IA';
+
+  @override
+  String get dayEditorRecommended => 'Recomendado';
+
+  @override
+  String dayEditorAddedToDay(int day) {
+    return 'añadido al día $day';
+  }
+
+  @override
+  String get dayEditorAllDaysExported =>
+      'Todos los días se han exportado con éxito a Google Maps. ¡Buen viaje!';
+
+  @override
+  String get dayEditorAddPois => 'Añadir POIs';
+
+  @override
+  String dayEditorMyRouteDay(int day) {
+    return 'Mi ruta - Día $day con MapAB';
+  }
+
+  @override
+  String dayEditorMapabRouteDay(int day) {
+    return 'Ruta MapAB - Día $day';
+  }
+
+  @override
+  String dayEditorSwapped(String name) {
+    return '\"$name\" intercambiado';
+  }
+
+  @override
+  String get corridorTitle => 'POIs a lo largo de la ruta';
+
+  @override
+  String corridorFound(int total) {
+    return '$total encontrados';
+  }
+
+  @override
+  String corridorFoundWithNew(int total, int newCount) {
+    return '$total encontrados ($newCount nuevos)';
+  }
+
+  @override
+  String corridorWidth(int km) {
+    return 'Corredor: $km km';
+  }
+
+  @override
+  String get corridorSearching => 'Buscando POIs en el corredor...';
+
+  @override
+  String get corridorNoPoiInCategory =>
+      'No se encontraron POIs en esta categoría';
+
+  @override
+  String get corridorNoPois => 'No se encontraron POIs en el corredor';
+
+  @override
+  String get corridorTryWider => 'Intenta con un corredor más ancho';
+
+  @override
+  String get corridorRemoveStop => '¿Eliminar parada?';
+
+  @override
+  String get corridorMinOneStop => 'Se requiere al menos 1 parada por día';
+
+  @override
+  String corridorPoiRemoved(String name) {
+    return '\"$name\" eliminado';
+  }
+
+  @override
+  String get navEndConfirm => '¿Finalizar navegación?';
+
+  @override
+  String get navDestinationReached => '¡Destino alcanzado!';
+
+  @override
+  String get navDistance => 'Distancia';
+
+  @override
+  String get navArrival => 'Llegada';
+
+  @override
+  String get navSpeed => 'Velocidad';
+
+  @override
+  String get navMuteOn => 'Sonido activado';
+
+  @override
+  String get navMuteOff => 'Sonido desactivado';
+
+  @override
+  String get navOverview => 'Vista general';
+
+  @override
+  String get navEnd => 'Finalizar';
+
+  @override
+  String get navVoice => 'Voz';
+
+  @override
+  String get navVoiceListening => 'Escuchando...';
+
+  @override
+  String get navStartButton => 'Iniciar navegación';
+
+  @override
+  String get navRerouting => 'Recalculando ruta';
+
+  @override
+  String get navVisited => 'Visitado';
+
+  @override
+  String navDistanceMeters(String distance) {
+    return 'a $distance m';
+  }
+
+  @override
+  String navDistanceKm(String distance) {
+    return 'a $distance km';
+  }
+
+  @override
+  String get navDepart => 'Iniciar ruta';
+
+  @override
+  String navDepartOn(String street) {
+    return 'Iniciar ruta por $street';
+  }
+
+  @override
+  String get navArrive => 'Ha llegado a su destino';
+
+  @override
+  String navArriveAt(String street) {
+    return 'Destino alcanzado: $street';
+  }
+
+  @override
+  String navContinueOn(String street) {
+    return 'Continuar por $street';
+  }
+
+  @override
+  String get navContinue => 'Continuar';
+
+  @override
+  String get navTurnRight => 'Gire a la derecha';
+
+  @override
+  String get navTurnLeft => 'Gire a la izquierda';
+
+  @override
+  String navTurnRightOn(String street) {
+    return 'Gire a la derecha por $street';
+  }
+
+  @override
+  String navTurnLeftOn(String street) {
+    return 'Gire a la izquierda por $street';
+  }
+
+  @override
+  String get navSlightRight => 'Gire ligeramente a la derecha';
+
+  @override
+  String get navSlightLeft => 'Gire ligeramente a la izquierda';
+
+  @override
+  String navSlightRightOn(String street) {
+    return 'Ligeramente a la derecha por $street';
+  }
+
+  @override
+  String navSlightLeftOn(String street) {
+    return 'Ligeramente a la izquierda por $street';
+  }
+
+  @override
+  String get navSharpRight => 'Gire cerrado a la derecha';
+
+  @override
+  String get navSharpLeft => 'Gire cerrado a la izquierda';
+
+  @override
+  String get navUturn => 'Dé la vuelta';
+
+  @override
+  String get navStraight => 'Continúe recto';
+
+  @override
+  String navStraightOn(String street) {
+    return 'Recto por $street';
+  }
+
+  @override
+  String get navMerge => 'Incorpórese';
+
+  @override
+  String navMergeOn(String street) {
+    return 'Incorpórese a $street';
+  }
+
+  @override
+  String get navOnRamp => 'Tome la entrada';
+
+  @override
+  String navOnRampOn(String street) {
+    return 'Entrada a $street';
+  }
+
+  @override
+  String get navOffRamp => 'Tome la salida';
+
+  @override
+  String navOffRampOn(String street) {
+    return 'Salida $street';
+  }
+
+  @override
+  String navRoundaboutExit(String ordinal) {
+    return 'En la rotonda, tome la $ordinal salida';
+  }
+
+  @override
+  String navRoundaboutExitOn(String ordinal, String street) {
+    return 'En la rotonda, tome la $ordinal salida por $street';
+  }
+
+  @override
+  String get navRoundaboutEnter => 'Entre en la rotonda';
+
+  @override
+  String get navRoundaboutLeave => 'Salga de la rotonda';
+
+  @override
+  String get navForkLeft => 'En la bifurcación, manténgase a la izquierda';
+
+  @override
+  String get navForkRight => 'En la bifurcación, manténgase a la derecha';
+
+  @override
+  String navForkLeftOn(String street) {
+    return 'En la bifurcación a la izquierda por $street';
+  }
+
+  @override
+  String navForkRightOn(String street) {
+    return 'En la bifurcación a la derecha por $street';
+  }
+
+  @override
+  String get navEndOfRoadLeft => 'Al final de la calle, gire a la izquierda';
+
+  @override
+  String get navEndOfRoadRight => 'Al final de la calle, gire a la derecha';
+
+  @override
+  String navEndOfRoadLeftOn(String street) {
+    return 'Al final de la calle a la izquierda por $street';
+  }
+
+  @override
+  String navEndOfRoadRightOn(String street) {
+    return 'Al final de la calle a la derecha por $street';
+  }
+
+  @override
+  String navInDistance(String distance, String instruction) {
+    return 'En $distance $instruction';
+  }
+
+  @override
+  String navNow(String instruction) {
+    return 'Ahora $instruction';
+  }
+
+  @override
+  String navMeters(String value) {
+    return '$value metros';
+  }
+
+  @override
+  String navKilometers(String value) {
+    return '$value kilómetros';
+  }
+
+  @override
+  String get navOrdinalFirst => 'primera';
+
+  @override
+  String get navOrdinalSecond => 'segunda';
+
+  @override
+  String get navOrdinalThird => 'tercera';
+
+  @override
+  String get navOrdinalFourth => 'cuarta';
+
+  @override
+  String get navOrdinalFifth => 'quinta';
+
+  @override
+  String get navMustSeeStop => 'Parar';
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsAppearance => 'Apariencia';
+
+  @override
+  String get settingsDesign => 'Diseño';
+
+  @override
+  String get settingsAutoDarkMode => 'Modo oscuro automático';
+
+  @override
+  String get settingsAutoDarkModeDesc => 'Activar automáticamente al anochecer';
+
+  @override
+  String get settingsFeedback => 'Comentarios';
+
+  @override
+  String get settingsHaptic => 'Vibración táctil';
+
+  @override
+  String get settingsHapticDesc => 'Vibraciones al interactuar';
+
+  @override
+  String get settingsSound => 'Efectos de sonido';
+
+  @override
+  String get settingsSoundDesc => 'Sonidos en acciones';
+
+  @override
+  String get settingsAbout => 'Acerca de';
+
+  @override
+  String get settingsAppVersion => 'Versión de la aplicación';
+
+  @override
+  String get settingsLicenses => 'Licencias de código abierto';
+
+  @override
+  String get settingsLanguage => 'Idioma';
+
+  @override
+  String get settingsThemeSystem => 'Sistema';
+
+  @override
+  String get settingsThemeLight => 'Claro';
+
+  @override
+  String get settingsThemeDark => 'Oscuro';
+
+  @override
+  String get settingsThemeOled => 'Negro OLED';
+
+  @override
+  String get profileTitle => 'Perfil';
+
+  @override
+  String get profileEdit => 'Editar perfil';
+
+  @override
+  String get profileCloudAccount => 'Cuenta en la nube';
+
+  @override
+  String get profileAutoSync => 'Los datos se sincronizan automáticamente';
+
+  @override
+  String get profileGuestAccount => 'Cuenta de invitado';
+
+  @override
+  String get profileLocalStorage => 'Almacenado localmente';
+
+  @override
+  String get profileUpgradeToCloud => 'Actualizar a cuenta en la nube';
+
+  @override
+  String get profileDeleteAccount => 'Eliminar cuenta';
+
+  @override
+  String get profileNoAccount => 'Sin cuenta';
+
+  @override
+  String get profileLoginPrompt => 'Inicia sesión para ver tu perfil';
+
+  @override
+  String get profileLogin => 'Iniciar sesión';
+
+  @override
+  String profileLevel(int level) {
+    return 'Nivel $level';
+  }
+
+  @override
+  String profileXpProgress(int xp, int level) {
+    return 'Faltan $xp XP para el nivel $level';
+  }
+
+  @override
+  String get profileStatistics => 'Estadísticas';
+
+  @override
+  String get profileStatisticsLoading => 'Cargando estadísticas...';
+
+  @override
+  String get profileStartFirstTrip =>
+      '¡Inicia tu primer viaje para ver estadísticas!';
+
+  @override
+  String get profileTrips => 'Viajes';
+
+  @override
+  String get profilePois => 'POIs';
+
+  @override
+  String get profileKilometers => 'Kilómetros';
+
+  @override
+  String get profileAchievements => 'Logros';
+
+  @override
+  String get profileNoAchievements =>
+      'Aún no hay logros desbloqueados. ¡Inicia tu primer viaje!';
+
+  @override
+  String profileAccountId(String id) {
+    return 'ID de cuenta: $id';
+  }
+
+  @override
+  String profileCreatedAt(String date) {
+    return 'Creado el: $date';
+  }
+
+  @override
+  String profileLastLogin(String date) {
+    return 'Último inicio: $date';
+  }
+
+  @override
+  String get profileEditComingSoon => '¡Edición de perfil próximamente!';
+
+  @override
+  String get profileLogoutTitle => '¿Cerrar sesión?';
+
+  @override
+  String get profileLogoutMessage => '¿Realmente quieres cerrar sesión?';
+
+  @override
+  String get profileLogoutCloudMessage =>
+      '¿Realmente quieres cerrar sesión?\n\nTus datos en la nube se conservarán y podrás volver a iniciar sesión en cualquier momento.';
+
+  @override
+  String get profileLogout => 'Cerrar sesión';
+
+  @override
+  String get profileDeleteTitle => '¿Eliminar cuenta?';
+
+  @override
+  String get profileDeleteMessage =>
+      '¿Realmente quieres eliminar tu cuenta? ¡Todos los datos se eliminarán de forma permanente!';
+
+  @override
+  String get favTitle => 'Favoritos';
+
+  @override
+  String get favRoutes => 'Rutas';
+
+  @override
+  String get favPois => 'POIs';
+
+  @override
+  String get favDeleteAll => 'Eliminar todo';
+
+  @override
+  String get favNoFavorites => 'Sin favoritos';
+
+  @override
+  String get favNoFavoritesDesc => 'Guarda rutas y POIs para acceso rápido';
+
+  @override
+  String get favExplore => 'Explorar';
+
+  @override
+  String get favNoRoutes => 'Sin rutas guardadas';
+
+  @override
+  String get favPlanRoute => 'Planificar ruta';
+
+  @override
+  String get favNoPois => 'Sin POIs favoritos';
+
+  @override
+  String get favDiscoverPois => 'Descubrir POIs';
+
+  @override
+  String get favRemoveRoute => '¿Eliminar ruta?';
+
+  @override
+  String favRemoveRouteConfirm(String name) {
+    return '¿Quieres eliminar \"$name\" de los favoritos?';
+  }
+
+  @override
+  String get favRemovePoi => '¿Eliminar POI?';
+
+  @override
+  String favRemovePoiConfirm(String name) {
+    return '¿Quieres eliminar \"$name\" de los favoritos?';
+  }
+
+  @override
+  String get favRouteLoaded => 'Ruta cargada';
+
+  @override
+  String get favRouteRemoved => 'Ruta eliminada';
+
+  @override
+  String get favPoiRemoved => 'POI eliminado';
+
+  @override
+  String get favClearAll => '¿Eliminar todos los favoritos?';
+
+  @override
+  String get favAllDeleted => 'Todos los favoritos eliminados';
+
+  @override
+  String get poiSearchHint => 'Buscar POIs...';
+
+  @override
+  String get poiClearFilters => 'Borrar filtros';
+
+  @override
+  String get poiResetFilters => 'Restablecer filtros';
+
+  @override
+  String get poiLoading => 'Cargando lugares de interés...';
+
+  @override
+  String get poiNotFound => 'POI no encontrado';
+
+  @override
+  String get poiLoadingDetails => 'Cargando detalles...';
+
+  @override
+  String get poiMoreOnWikipedia => 'Más en Wikipedia';
+
+  @override
+  String get poiOpeningHours => 'Horario de apertura';
+
+  @override
+  String poiRouteCreated(String name) {
+    return 'Ruta a \"$name\" creada';
+  }
+
+  @override
+  String get poiOnlyMustSee => 'Solo imprescindibles';
+
+  @override
+  String get poiShowOnlyHighlights => 'Mostrar solo destacados';
+
+  @override
+  String get poiOnlyIndoor => 'Solo POIs de interior';
+
+  @override
+  String get poiApplyFilters => 'Aplicar filtros';
+
+  @override
+  String get poiReroll => 'Generar de nuevo';
+
+  @override
+  String get poiTitle => 'Atracciones';
+
+  @override
+  String get poiMustSee => 'Imprescindibles';
+
+  @override
+  String get poiWeatherTip => 'Consejo meteorológico';
+
+  @override
+  String poiResultsCount(int filtered, int total) {
+    return '$filtered de $total POIs';
+  }
+
+  @override
+  String get poiNoResultsFilter => 'No se encontraron POIs con estos filtros';
+
+  @override
+  String get poiNoResultsNearby => 'No se encontraron POIs cercanos';
+
+  @override
+  String get poiGpsPermissionNeeded =>
+      'Se necesita permiso GPS para encontrar POIs cercanos';
+
+  @override
+  String get poiWeatherDangerBanner =>
+      'Tormenta esperada – POIs interiores recomendados';
+
+  @override
+  String get poiWeatherBadBanner =>
+      'Lluvia esperada – activa \"Consejo meteorológico\" para mejor ordenación';
+
+  @override
+  String get poiAboutPlace => 'Sobre este lugar';
+
+  @override
+  String get poiNoDescription => 'No hay descripción disponible.';
+
+  @override
+  String get poiDescriptionLoading => 'Cargando descripción...';
+
+  @override
+  String get poiContactInfo => 'Contacto e Info';
+
+  @override
+  String get poiPhone => 'Teléfono';
+
+  @override
+  String get poiWebsite => 'Sitio web';
+
+  @override
+  String get poiEmailLabel => 'E-mail';
+
+  @override
+  String get poiDetour => 'Desvío';
+
+  @override
+  String get poiTime => 'Tiempo';
+
+  @override
+  String get poiPosition => 'Posición';
+
+  @override
+  String get poiCurated => 'Seleccionado';
+
+  @override
+  String get poiVerified => 'Verificado';
+
+  @override
+  String poiAddedToRoute(String name) {
+    return '$name añadido a la ruta';
+  }
+
+  @override
+  String poiFoundedYear(int year) {
+    return 'Fundado en $year';
+  }
+
+  @override
+  String poiRating(String rating, int count) {
+    return '$rating de 5 ($count reseñas)';
+  }
+
+  @override
+  String get poiAddToRoute => 'Añadir a la ruta';
+
+  @override
+  String get scanTitle => 'Escanear trip';
+
+  @override
+  String get scanInstruction => 'Escanear código QR';
+
+  @override
+  String get scanDescription =>
+      'Coloca tu teléfono sobre un código QR de MapAB para importar un trip compartido.';
+
+  @override
+  String get scanLoading => 'Cargando trip...';
+
+  @override
+  String get scanInvalidCode => 'Código QR no válido';
+
+  @override
+  String get scanInvalidMapabCode => 'Código QR de MapAB no válido';
+
+  @override
+  String get scanLoadError => 'No se pudo cargar el trip';
+
+  @override
+  String get scanTripFound => '¡Trip encontrado!';
+
+  @override
+  String scanStops(int count) {
+    return '$count paradas';
+  }
+
+  @override
+  String scanDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scanImportQuestion => '¿Quieres importar este trip?';
+
+  @override
+  String get scanImport => 'Importar';
+
+  @override
+  String scanImportSuccess(String name) {
+    return '¡$name fue importado!';
+  }
+
+  @override
+  String get scanImportError => 'No se pudo importar el trip';
+
+  @override
+  String get templatesTitle => 'Plantillas de viaje';
+
+  @override
+  String get templatesScanQr => 'Escanear QR';
+
+  @override
+  String get templatesAudienceAll => 'Todos';
+
+  @override
+  String get templatesAudienceCouples => 'Parejas';
+
+  @override
+  String get templatesAudienceFamilies => 'Familias';
+
+  @override
+  String get templatesAudienceAdventurers => 'Aventureros';
+
+  @override
+  String get templatesAudienceFoodies => 'Foodies';
+
+  @override
+  String get templatesAudiencePhotographers => 'Fotógrafos';
+
+  @override
+  String templatesDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String templatesCategories(int count) {
+    return '$count categorías';
+  }
+
+  @override
+  String get templatesIncludedCategories => 'Categorías incluidas';
+
+  @override
+  String get templatesDuration => 'Duración del viaje';
+
+  @override
+  String templatesRecommended(int days, String daysText) {
+    return 'Recomendado: $days $daysText';
+  }
+
+  @override
+  String templatesBestSeason(String season) {
+    return 'Mejor temporada: $season';
+  }
+
+  @override
+  String get templatesStartPlanning => 'Planificar viaje';
+
+  @override
+  String get seasonSpring => 'Primavera';
+
+  @override
+  String get seasonSummer => 'Verano';
+
+  @override
+  String get seasonAutumn => 'Otoño';
+
+  @override
+  String get seasonWinter => 'Invierno';
+
+  @override
+  String get seasonSpringAutumn => 'Primavera a otoño';
+
+  @override
+  String get seasonYearRound => 'Todo el año';
+
+  @override
+  String get day => 'día';
+
+  @override
+  String get days => 'días';
+
+  @override
+  String get searchSelectStart => 'Seleccionar inicio';
+
+  @override
+  String get searchSelectDestination => 'Seleccionar destino';
+
+  @override
+  String get searchStartHint => 'Buscar punto de inicio...';
+
+  @override
+  String get searchDestinationHint => 'Buscar destino...';
+
+  @override
+  String get searchOfflineMode =>
+      'Sin Internet - Mostrando sugerencias locales';
+
+  @override
+  String get searchEnterLocation => 'Introduce ubicación para buscar';
+
+  @override
+  String get searchNoResults => 'No se encontraron resultados';
+
+  @override
+  String get searchLocationNotFound => 'No se pudo encontrar la ubicación';
+
+  @override
+  String get chatTitle => 'Asistente de IA';
+
+  @override
+  String get chatClear => 'Limpiar chat';
+
+  @override
+  String get chatWelcome =>
+      '¡Hola! Soy tu asistente de viaje con IA. ¿Cómo puedo ayudarte con la planificación?';
+
+  @override
+  String get chatInputHint => 'Escribe un mensaje...';
+
+  @override
+  String get chatClearConfirm => '¿Limpiar chat?';
+
+  @override
+  String get chatClearMessage => 'La conversación completa será eliminada.';
+
+  @override
+  String get chatCheckAgain => 'Comprobar de nuevo';
+
+  @override
+  String get chatAccept => 'Aceptar';
+
+  @override
+  String chatShowAllPois(int count) {
+    return 'Mostrar los $count POIs';
+  }
+
+  @override
+  String get chatDestinationOptional => 'Destino (opcional)';
+
+  @override
+  String get chatEmptyRandomRoute => 'Vacío = Ruta aleatoria desde el inicio';
+
+  @override
+  String get chatStartOptional => 'Punto de inicio (opcional)';
+
+  @override
+  String get chatEmptyUseGps => 'Vacío = Usar ubicación GPS';
+
+  @override
+  String get chatIndoorTips => 'Consejos de interior con lluvia';
+
+  @override
+  String get chatPoisNearMe => 'POIs cerca de mí';
+
+  @override
+  String get chatAttractions => 'Lugares de interés';
+
+  @override
+  String get chatRestaurants => 'Restaurantes';
+
+  @override
+  String get chatOutdoorHighlights => 'Destacados al aire libre';
+
+  @override
+  String get chatNatureParks => 'Naturaleza y parques';
+
+  @override
+  String get chatSearchRadius => 'Radio de búsqueda';
+
+  @override
+  String get chatGenerateAiTrip => 'Generar viaje AI';
+
+  @override
+  String get randomTripNoTrip => 'No se ha generado ningún viaje';
+
+  @override
+  String get randomTripRegenerate => 'Generar de nuevo';
+
+  @override
+  String get randomTripConfirm => 'Confirmar viaje';
+
+  @override
+  String randomTripStopsDay(int day) {
+    return 'Paradas (Día $day)';
+  }
+
+  @override
+  String get randomTripStops => 'Paradas';
+
+  @override
+  String get randomTripEnterAddress => 'Introduce ciudad o dirección...';
+
+  @override
+  String get randomTripShowDetails => 'Mostrar detalles';
+
+  @override
+  String get randomTripOpenGoogleMaps => 'Abrir en Google Maps';
+
+  @override
+  String get randomTripSave => 'Guardar viaje';
+
+  @override
+  String get randomTripShow => 'Mostrar viaje';
+
+  @override
+  String get randomTripBack => 'Atrás';
+
+  @override
+  String get tripTypeDayTrip => 'Excursión de un día';
+
+  @override
+  String get tripTypeEuroTrip => 'Viaje europeo';
+
+  @override
+  String get tripTypeMultiDay => 'Viaje de varios días';
+
+  @override
+  String get tripTypeScenic => 'Ruta panorámica';
+
+  @override
+  String get tripTypeDayTripDistance => '30-200 km';
+
+  @override
+  String get tripTypeEuroTripDistance => '200-800 km';
+
+  @override
+  String get tripTypeMultiDayDistance => '2-7 días';
+
+  @override
+  String get tripTypeScenicDistance => 'variable';
+
+  @override
+  String get tripTypeDayTripDesc =>
+      'Selección de actividades, basado en el clima';
+
+  @override
+  String get tripTypeEuroTripDesc => 'Otro país, sugerencias de hoteles';
+
+  @override
+  String get tripTypeMultiDayDesc => 'Paradas nocturnas automáticas';
+
+  @override
+  String get tripTypeScenicDesc => 'Miradores priorizados';
+
+  @override
+  String get accessWheelchair => 'Accesible en silla de ruedas';
+
+  @override
+  String get accessNoStairs => 'Sin escaleras';
+
+  @override
+  String get accessParking => 'Plaza de aparcamiento para discapacitados';
+
+  @override
+  String get accessToilet => 'Aseo para discapacitados';
+
+  @override
+  String get accessElevator => 'Ascensor disponible';
+
+  @override
+  String get accessBraille => 'Braille';
+
+  @override
+  String get accessAudioGuide => 'Audioguía';
+
+  @override
+  String get accessSignLanguage => 'Lenguaje de signos';
+
+  @override
+  String get accessAssistDogs => 'Perros de asistencia permitidos';
+
+  @override
+  String get accessFullyAccessible => 'Totalmente accesible';
+
+  @override
+  String get accessLimited => 'Accesibilidad limitada';
+
+  @override
+  String get accessNotAccessible => 'No accesible';
+
+  @override
+  String get accessUnknown => 'Desconocido';
+
+  @override
+  String get highlightUnesco => 'Patrimonio de la UNESCO';
+
+  @override
+  String get highlightMustSee => 'Imprescindible';
+
+  @override
+  String get highlightSecret => 'Lugar secreto';
+
+  @override
+  String get highlightHistoric => 'Histórico';
+
+  @override
+  String get highlightFamilyFriendly => 'Familiar';
+
+  @override
+  String experienceDetourKm(int km) {
+    return '+$km km de desvío';
+  }
+
+  @override
+  String get formatMinShort => 'min';
+
+  @override
+  String get formatHourShort => 'h';
+
+  @override
+  String get formatMinLong => 'minutos';
+
+  @override
+  String formatHourLong(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'horas',
+      one: 'hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String formatDayCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String formatStopCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count paradas',
+      one: '1 parada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get formatNoInfo => 'Sin información';
+
+  @override
+  String get formatJustNow => 'Justo ahora';
+
+  @override
+  String formatAgoMinutes(int count) {
+    return 'Hace $count min';
+  }
+
+  @override
+  String formatAgoHours(int count) {
+    return 'Hace $count h';
+  }
+
+  @override
+  String formatAgoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hace $count días',
+      one: 'Hace 1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get formatUnknown => 'Desconocido';
+
+  @override
+  String get journalTitle => 'Diario de viaje';
+
+  @override
+  String get journalEmptyTitle => 'Sin entradas';
+
+  @override
+  String get journalEmptySubtitle =>
+      'Captura tus recuerdos de viaje con fotos y notas.';
+
+  @override
+  String get journalAddEntry => 'Añadir entrada';
+
+  @override
+  String get journalAddFirstEntry => 'Crear primera entrada';
+
+  @override
+  String get journalNewEntry => 'Nueva entrada';
+
+  @override
+  String get journalAddPhoto => 'Añadir foto';
+
+  @override
+  String get journalCamera => 'Cámara';
+
+  @override
+  String get journalGallery => 'Galería';
+
+  @override
+  String get journalAddNote => 'Añadir nota';
+
+  @override
+  String get journalNoteHint => '¿Qué has vivido?';
+
+  @override
+  String get journalSaveNote => 'Guardar solo nota';
+
+  @override
+  String get journalSaveLocation => 'Guardar ubicación';
+
+  @override
+  String get journalLocationAvailable => 'Ubicación GPS disponible';
+
+  @override
+  String get journalLocationLoading => 'Cargando ubicación...';
+
+  @override
+  String get journalEnterNote => 'Por favor ingresa una nota';
+
+  @override
+  String get journalDeleteEntryTitle => '¿Eliminar entrada?';
+
+  @override
+  String get journalDeleteEntryMessage =>
+      'Esta entrada se eliminará permanentemente.';
+
+  @override
+  String get journalDeleteTitle => '¿Eliminar diario?';
+
+  @override
+  String get journalDeleteMessage =>
+      'Todas las entradas y fotos se eliminarán permanentemente.';
+
+  @override
+  String journalPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fotos',
+      one: '1 foto',
+      zero: 'Sin fotos',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String journalEntries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entradas',
+      one: '1 entrada',
+      zero: 'Sin entradas',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String journalDay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String journalDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String journalDayNumber(int day) {
+    return 'Día $day';
+  }
+
+  @override
+  String get journalOther => 'Otros';
+
+  @override
+  String get journalEntry => 'entrada';
+
+  @override
+  String get journalEntriesPlural => 'entradas';
+
+  @override
+  String get journalOpenJournal => 'Abrir diario';
+
+  @override
+  String get journalAllJournals => 'Todos los diarios';
+
+  @override
+  String get journalNoJournals => 'Ningún diario todavía';
+}

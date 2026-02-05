@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../core/utils/location_helper.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/repositories/routing_repo.dart';
@@ -62,50 +62,17 @@ class TripState extends _$TripState {
     debugPrint('[TripState] Keine Route vorhanden - erstelle Route von GPS zu POI');
 
     try {
-      // GPS-Status prüfen
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[TripState] GPS deaktiviert');
-        return const AddStopResult(
+      final locationResult = await LocationHelper.getCurrentPosition();
+      if (!locationResult.isSuccess) {
+        return AddStopResult(
           success: false,
-          error: 'gps_disabled',
-          message: 'GPS ist deaktiviert. Bitte aktiviere die Ortungsdienste.',
+          error: locationResult.error ?? 'gps_error',
+          message: locationResult.message,
         );
       }
 
-      // Berechtigung prüfen
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          debugPrint('[TripState] GPS-Berechtigung verweigert');
-          return const AddStopResult(
-            success: false,
-            error: 'permission_denied',
-            message: 'GPS-Berechtigung wurde verweigert.',
-          );
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        debugPrint('[TripState] GPS-Berechtigung dauerhaft verweigert');
-        return const AddStopResult(
-          success: false,
-          error: 'permission_denied_forever',
-          message: 'GPS-Berechtigung wurde dauerhaft verweigert. Bitte in den Einstellungen aktivieren.',
-        );
-      }
-
-      // GPS-Position abrufen
       state = state.copyWith(isRecalculating: true);
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
-
-      final startLocation = LatLng(position.latitude, position.longitude);
-      debugPrint('[TripState] GPS-Position: ${position.latitude}, ${position.longitude}');
+      final startLocation = locationResult.position!;
 
       // Route berechnen von GPS-Standort zum POI
       final routingRepo = ref.read(routingRepositoryProvider);

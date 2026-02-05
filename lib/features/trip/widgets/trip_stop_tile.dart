@@ -46,7 +46,7 @@ class TripStopTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -163,13 +163,13 @@ class TripStopTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'remove',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Entfernen', style: TextStyle(color: Colors.red)),
+                    Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('Entfernen', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   ],
                 ),
               ),

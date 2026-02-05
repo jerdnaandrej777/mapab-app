@@ -54,7 +54,7 @@ class POICard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -196,7 +196,7 @@ class POICard extends StatelessWidget {
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Icon(
@@ -325,7 +325,7 @@ class POICard extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -356,7 +356,7 @@ class POICard extends StatelessWidget {
     return Container(
       width: _imageSize,
       height: _minCardHeight,
-      color: Color(category.colorValue).withOpacity(0.15),
+      color: Color(category.colorValue).withValues(alpha: 0.15),
       child: Center(
         child: Text(
           category.icon,

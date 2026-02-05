@@ -76,7 +76,7 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
                 : null,
             boxShadow: [
               BoxShadow(
-                color: colorScheme.shadow.withOpacity(0.15),
+                color: colorScheme.shadow.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -92,7 +92,7 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
                     width: 32,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -192,7 +192,7 @@ class _CorridorBrowserContentState
 
         Divider(
           height: 1,
-          color: colorScheme.outline.withOpacity(0.15),
+          color: colorScheme.outline.withValues(alpha: 0.15),
         ),
 
         // Buffer Slider
@@ -203,7 +203,7 @@ class _CorridorBrowserContentState
 
         Divider(
           height: 1,
-          color: colorScheme.outline.withOpacity(0.15),
+          color: colorScheme.outline.withValues(alpha: 0.15),
         ),
 
         // POI-Liste
@@ -401,12 +401,12 @@ class _CorridorBrowserContentState
                   decoration: BoxDecoration(
                     color: isIndoorActive
                         ? colorScheme.tertiary
-                        : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: isIndoorActive
                         ? [
                             BoxShadow(
-                              color: colorScheme.tertiary.withOpacity(0.3),
+                              color: colorScheme.tertiary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),
@@ -463,12 +463,12 @@ class _CorridorBrowserContentState
                 decoration: BoxDecoration(
                   color: isSelected
                       ? colorScheme.primary
-                      : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: colorScheme.primary.withOpacity(0.3),
+                            color: colorScheme.primary.withValues(alpha: 0.3),
                             blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),
@@ -589,7 +589,7 @@ class _CorridorBrowserContentState
             children: [
               Icon(
                 Icons.location_off_rounded,
-                color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 size: 40,
               ),
               const SizedBox(height: 8),
@@ -608,7 +608,7 @@ class _CorridorBrowserContentState
                 'Versuche einen breiteren Korridor',
                 style: TextStyle(
                   fontSize: 12,
-                  color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -781,7 +781,7 @@ class _QuickSelectChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(

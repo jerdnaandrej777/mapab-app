@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../providers/route_session_provider.dart';
 import '../providers/weather_provider.dart';
@@ -50,7 +51,7 @@ class UnifiedWeatherWidget extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -101,13 +102,13 @@ class UnifiedWeatherWidget extends ConsumerWidget {
       // Dark Mode: Subtilere Farben
       switch (condition) {
         case WeatherCondition.good:
-          return Colors.green.withOpacity(0.15);
+          return Colors.green.withValues(alpha: 0.15);
         case WeatherCondition.mixed:
-          return Colors.amber.withOpacity(0.15);
+          return Colors.amber.withValues(alpha: 0.15);
         case WeatherCondition.bad:
-          return Colors.orange.withOpacity(0.15);
+          return Colors.orange.withValues(alpha: 0.15);
         case WeatherCondition.danger:
-          return Colors.red.withOpacity(0.15);
+          return Colors.red.withValues(alpha: 0.15);
         case WeatherCondition.unknown:
           return colorScheme.surfaceContainerHighest;
       }
@@ -154,7 +155,7 @@ class _LocationWeatherHeader extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text('Wetter laden...', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
+            Expanded(child: Text(context.l10n.weatherLoading, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
             _ExpandIcon(isCollapsed: isCollapsed, colorScheme: colorScheme),
           ],
         ),
@@ -265,7 +266,7 @@ class _RouteWeatherHeader extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text('Wetter laden...', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
+            Expanded(child: Text(context.l10n.weatherLoading, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant))),
             _ExpandIcon(isCollapsed: isCollapsed, colorScheme: colorScheme),
           ],
         ),
@@ -517,9 +518,9 @@ class _WeatherCategoryToggle extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: Color.alphaBlend(
-                color.withOpacity(0.15), colorScheme.surface),
+                color.withValues(alpha: 0.15), colorScheme.surface),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
           ),
           child: Row(
             children: [
@@ -537,7 +538,7 @@ class _WeatherCategoryToggle extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: isApplied ? color : color.withOpacity(0.2),
+                  color: isApplied ? color : color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -697,8 +698,8 @@ class _RouteWeatherAlert extends ConsumerWidget {
     final isDanger = weatherState.hasDanger;
     final bgColor = isDark
         ? (isDanger
-            ? Colors.red.withOpacity(0.2)
-            : Colors.orange.withOpacity(0.2))
+            ? Colors.red.withValues(alpha: 0.2)
+            : Colors.orange.withValues(alpha: 0.2))
         : (isDanger ? Colors.red.shade100 : Colors.orange.shade100);
 
     return Container(

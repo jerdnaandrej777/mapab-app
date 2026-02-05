@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/utils/url_utils.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
@@ -62,7 +62,13 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final isMultiDay = trip.actualDays > 1;
     final selectedDay = state.selectedDay;
     final stopsForDay = trip.getStopsForDay(selectedDay);
-    final startLocation = state.startLocation!;
+    final startLocation = state.startLocation;
+    if (startLocation == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Trip bearbeiten')),
+        body: const Center(child: Text('Startpunkt nicht verfuegbar')),
+      );
+    }
 
     // Route-Segment fuer den ausgewaehlten Tag
     final fullRoute = trip.route;
@@ -113,6 +119,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
         _lastAutoTriggeredDay != selectedDay) {
       _lastAutoTriggeredDay = selectedDay;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         ref.read(aITripAdvisorNotifierProvider.notifier).loadSmartRecommendations(
               day: selectedDay,
               trip: trip,
@@ -293,10 +300,10 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.orange.withOpacity(0.3),
+                          color: Colors.orange.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -412,8 +419,8 @@ class _DayStats extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: hasAnyWarning
-            ? Colors.orange.withOpacity(0.1)
-            : colorScheme.primaryContainer.withOpacity(0.5),
+            ? Colors.orange.withValues(alpha: 0.1)
+            : colorScheme.primaryContainer.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -505,7 +512,7 @@ class _StatChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -537,7 +544,7 @@ class _AISuggestionsSection extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -555,7 +562,7 @@ class _AISuggestionsSection extends ConsumerWidget {
               'Suche POI-Empfehlungen...',
               style: TextStyle(
                 fontSize: 13,
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -574,7 +581,7 @@ class _AISuggestionsSection extends ConsumerWidget {
           label: const Text('POI-Empfehlungen laden'),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 40),
-            side: BorderSide(color: colorScheme.primary.withOpacity(0.3)),
+            side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
           ),
         ),
       );
@@ -611,7 +618,7 @@ class _AISuggestionsSection extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
-                color: colorScheme.onSurface.withOpacity(0.5),
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -637,14 +644,14 @@ class _AISuggestionsSection extends ConsumerWidget {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isWeather
-                  ? colorScheme.tertiaryContainer.withOpacity(0.3)
+                  ? colorScheme.tertiaryContainer.withValues(alpha: 0.3)
                   : isAlternative
-                      ? colorScheme.primaryContainer.withOpacity(0.3)
+                      ? colorScheme.primaryContainer.withValues(alpha: 0.3)
                       : colorScheme.surfaceContainerHighest
-                          .withOpacity(0.3),
+                          .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: colorScheme.outline.withOpacity(0.1),
+                color: colorScheme.outline.withValues(alpha: 0.1),
               ),
             ),
             child: Row(
@@ -667,7 +674,7 @@ class _AISuggestionsSection extends ConsumerWidget {
                     suggestion.message,
                     style: TextStyle(
                       fontSize: 12,
-                      color: colorScheme.onSurface.withOpacity(0.8),
+                      color: colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -704,10 +711,10 @@ class _AIRecommendedPOICard extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.15),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.primary.withOpacity(0.2),
+          color: colorScheme.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -721,7 +728,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -770,7 +777,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.15),
+                            color: Colors.green.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -800,7 +807,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontStyle: FontStyle.italic,
-                  color: colorScheme.onSurface.withOpacity(0.6),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -828,7 +835,7 @@ class _AIRecommendedPOICard extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer.withOpacity(0.5),
+            color: colorScheme.primaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Icon(
@@ -903,7 +910,7 @@ class _BottomActions extends ConsumerWidget {
         color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1049,10 +1056,7 @@ class _BottomActions extends ConsumerWidget {
         '&travelmode=driving';
 
     try {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrlSafe(Uri.parse(url));
 
       ref.read(randomTripNotifierProvider.notifier).completeDay(selectedDay);
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/utils/location_helper.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
 import '../../core/utils/weather_poi_utils.dart';
@@ -107,50 +108,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     try {
-      // GPS-Status prüfen
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[AI-Chat] GPS deaktiviert');
-        if (mounted) {
-          setState(() {
-            _isLoadingLocation = false;
-          });
-        }
-        return;
-      }
-
-      // Berechtigung prüfen
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          debugPrint('[AI-Chat] GPS-Berechtigung verweigert');
-          if (mounted) {
-            setState(() {
-              _isLoadingLocation = false;
-            });
-          }
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        debugPrint('[AI-Chat] GPS-Berechtigung dauerhaft verweigert');
-        if (mounted) {
-          setState(() {
-            _isLoadingLocation = false;
-          });
-        }
-        return;
-      }
-
-      // Position abrufen
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
+      final result = await LocationHelper.getCurrentPosition(
+        accuracy: LocationAccuracy.medium,
       );
 
-      final location = LatLng(position.latitude, position.longitude);
+      if (!result.isSuccess) {
+        debugPrint('[AI-Chat] GPS nicht verfuegbar: ${result.error}');
+        if (mounted) {
+          setState(() => _isLoadingLocation = false);
+        }
+        return;
+      }
+
+      final location = result.position!;
 
       // Reverse Geocoding für Ortsname
       String? locationName;
@@ -185,26 +155,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// GPS-Dialog anzeigen wenn deaktiviert
   Future<bool> _showGpsDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('GPS deaktiviert'),
-            content: const Text(
-              'Die Ortungsdienste sind deaktiviert. Möchtest du die GPS-Einstellungen öffnen?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen öffnen'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return LocationHelper.showGpsDialog(context);
   }
 
   Future<void> _checkBackendHealth() async {
@@ -329,7 +280,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      color: Colors.orange.withOpacity(0.15),
+      color: Colors.orange.withValues(alpha: 0.15),
       child: Row(
         children: [
           Icon(Icons.cloud_off, color: Colors.orange.shade700, size: 20),
@@ -358,10 +309,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         border: Border(
           bottom: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.3),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
           ),
         ),
       ),
@@ -420,11 +371,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 TextButton.icon(
                   onPressed: () async {
                     final serviceEnabled =
-                        await Geolocator.isLocationServiceEnabled();
+                        await LocationHelper.isServiceEnabled();
                     if (!serviceEnabled) {
                       final shouldOpen = await _showGpsDialog();
                       if (shouldOpen) {
-                        await Geolocator.openLocationSettings();
+                        await LocationHelper.openSettings();
                       }
                       return;
                     }
@@ -451,7 +402,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -568,7 +519,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -607,7 +558,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: colorScheme.shadow.withOpacity(0.1),
+              color: colorScheme.shadow.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -833,7 +784,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -997,11 +948,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       if (_currentLocation == null) {
         // Kein Standort verfügbar
-        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        final serviceEnabled = await LocationHelper.isServiceEnabled();
         if (!serviceEnabled) {
           final shouldOpen = await _showGpsDialog();
           if (shouldOpen) {
-            await Geolocator.openLocationSettings();
+            await LocationHelper.openSettings();
           }
         }
 
@@ -1713,7 +1664,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      destinationController.dispose();
+      startController.dispose();
+    });
   }
 
   Future<void> _generateTrip({
@@ -1833,73 +1787,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     // GPS-Standort abfragen
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Bitte aktiviere die Ortungsdienste')),
-          );
-        }
-        return null;
-      }
+    final gpsResult = await LocationHelper.getCurrentPosition(
+      accuracy: LocationAccuracy.medium,
+    );
 
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Standort-Berechtigung verweigert')),
-            );
-          }
-          return null;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Standort-Berechtigung dauerhaft verweigert. '
-                      'Bitte in Einstellungen aktivieren.'),
-            ),
-          );
-        }
-        return null;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
-      );
-
-      // Reverse Geocoding für Adresse
-      String address = 'Mein Standort';
-      try {
-        final geocodingRepo = ref.read(geocodingRepositoryProvider);
-        final result = await geocodingRepo.reverseGeocode(
-          LatLng(position.latitude, position.longitude),
-        );
-        if (result != null) {
-          address = result.shortName ?? result.displayName ?? address;
-        }
-      } catch (e) {
-        debugPrint('[AI-Trip] Reverse Geocoding Fehler: $e');
-      }
-
-      return (lat: position.latitude, lng: position.longitude, address: address);
-    } catch (e) {
-      debugPrint('[AI-Trip] GPS Fehler: $e');
+    if (!gpsResult.isSuccess) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('GPS-Fehler: $e')),
+          SnackBar(content: Text(gpsResult.message ?? 'GPS-Fehler')),
         );
       }
       return null;
     }
+
+    final position = gpsResult.position!;
+
+    // Reverse Geocoding für Adresse
+    String address = 'Mein Standort';
+    try {
+      final geocodingRepo = ref.read(geocodingRepositoryProvider);
+      final result = await geocodingRepo.reverseGeocode(position);
+      if (result != null) {
+        address = result.shortName ?? result.displayName ?? address;
+      }
+    } catch (e) {
+      debugPrint('[AI-Trip] Reverse Geocoding Fehler: $e');
+    }
+
+    return (lat: position.latitude, lng: position.longitude, address: address);
   }
 
   /// Interessen-Liste zu POI-Kategorien mappen

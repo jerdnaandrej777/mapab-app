@@ -9,8 +9,21 @@ class ApiConfig {
     defaultValue: '',
   );
 
-  /// Prüft ob Backend konfiguriert ist
-  static bool get isConfigured => backendBaseUrl.isNotEmpty;
+  /// Prüft ob Backend konfiguriert ist und die URL sicher ist
+  static bool get isConfigured =>
+      backendBaseUrl.isNotEmpty && _isValidBackendUrl;
+
+  /// Prüft ob die Backend-URL sicher ist (HTTPS in Produktion)
+  static bool get _isValidBackendUrl {
+    if (backendBaseUrl.isEmpty) return false;
+    final uri = Uri.tryParse(backendBaseUrl);
+    if (uri == null) return false;
+    // Erlaube HTTP nur fuer localhost (Entwicklung)
+    if (uri.scheme == 'http') {
+      return uri.host == 'localhost' || uri.host == '127.0.0.1';
+    }
+    return uri.scheme == 'https';
+  }
 
   /// Timeout für API-Anfragen
   static const Duration connectTimeout = Duration(seconds: 30);

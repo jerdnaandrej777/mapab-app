@@ -33,7 +33,7 @@ class AppTheme {
   // Schatten
   static List<BoxShadow> get cardShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),
@@ -41,7 +41,7 @@ class AppTheme {
 
   static List<BoxShadow> get elevatedShadow => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           blurRadius: 20,
           offset: const Offset(0, 8),
         ),
@@ -147,7 +147,7 @@ class AppTheme {
       // Chips
       chipTheme: ChipThemeData(
         backgroundColor: backgroundColor,
-        selectedColor: primaryColor.withOpacity(0.15),
+        selectedColor: primaryColor.withValues(alpha: 0.15),
         labelStyle: const TextStyle(fontSize: 14),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -288,7 +288,7 @@ class AppTheme {
       // Chips
       chipTheme: ChipThemeData(
         backgroundColor: darkSurfaceColor,
-        selectedColor: primaryLight.withOpacity(0.3),
+        selectedColor: primaryLight.withValues(alpha: 0.3),
         labelStyle: const TextStyle(fontSize: 14, color: darkTextPrimary),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -363,7 +363,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return primaryLight.withOpacity(0.5);
+            return primaryLight.withValues(alpha: 0.5);
           }
           return Colors.grey.shade800;
         }),

@@ -1,242 +1,333 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/journal.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../models/journal_entry.dart';
+import '../services/journal_service.dart';
 
 part 'journal_provider.g.dart';
 
-/// Journal Provider für Reisetagebuch-Verwaltung
+/// Provider fuer den JournalService
+@riverpod
+JournalService journalService(Ref ref) {
+  return JournalService();
+}
+
+/// State fuer das aktive Tagebuch
+class JournalState {
+  final TripJournal? activeJournal;
+  final List<TripJournal> allJournals;
+  final bool isLoading;
+  final String? error;
+  final int? selectedDay;
+
+  const JournalState({
+    this.activeJournal,
+    this.allJournals = const [],
+    this.isLoading = false,
+    this.error,
+    this.selectedDay,
+  });
+
+  JournalState copyWith({
+    TripJournal? activeJournal,
+    List<TripJournal>? allJournals,
+    bool? isLoading,
+    String? error,
+    int? selectedDay,
+    bool clearActiveJournal = false,
+    bool clearError = false,
+  }) {
+    return JournalState(
+      activeJournal: clearActiveJournal ? null : (activeJournal ?? this.activeJournal),
+      allJournals: allJournals ?? this.allJournals,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+      selectedDay: selectedDay ?? this.selectedDay,
+    );
+  }
+
+  /// Eintraege fuer den aktuell ausgewaehlten Tag
+  List<JournalEntry> get selectedDayEntries {
+    if (activeJournal == null || selectedDay == null) return [];
+    return activeJournal!.entriesForDay(selectedDay!);
+  }
+
+  /// Alle Eintraege des aktiven Tagebuchs
+  List<JournalEntry> get allEntries {
+    return activeJournal?.entries ?? [];
+  }
+}
+
+/// Notifier fuer Reisetagebuch-Verwaltung
 @Riverpod(keepAlive: true)
 class JournalNotifier extends _$JournalNotifier {
-  late Box _journalBox;
-  final ImagePicker _imagePicker = ImagePicker();
+  late JournalService _service;
 
   @override
-  Map<String, TripJournal> build() {
-    _journalBox = Hive.box('settings');
-    return _loadJournals();
+  JournalState build() {
+    _service = ref.watch(journalServiceProvider);
+    _initService();
+    return const JournalState();
   }
 
-  Map<String, TripJournal> _loadJournals() {
-    final json = _journalBox.get('journals');
-    if (json != null) {
-      try {
-        final map = Map<String, dynamic>.from(json);
-        return map.map((key, value) =>
-            MapEntry(key, TripJournal.fromJson(Map<String, dynamic>.from(value))));
-      } catch (e) {
-        debugPrint('[Journal] Laden fehlgeschlagen: $e');
-      }
+  Future<void> _initService() async {
+    await _service.init();
+    await loadAllJournals();
+  }
+
+  /// Laedt alle Tagebuecher
+  Future<void> loadAllJournals() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final journals = await _service.getAllJournals();
+      state = state.copyWith(
+        allJournals: journals,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Laden der Tagebuecher: $e',
+      );
     }
-    return {};
   }
 
-  Future<void> _saveJournals() async {
-    final json = state.map((key, value) => MapEntry(key, value.toJson()));
-    await _journalBox.put('journals', json);
-  }
-
-  /// Holt oder erstellt Journal für einen Trip
-  TripJournal getOrCreateJournal(String tripId, String tripName) {
-    if (state.containsKey(tripId)) {
-      return state[tripId]!;
-    }
-
-    final journal = TripJournal(
-      tripId: tripId,
-      tripName: tripName,
-    );
-
-    state = {...state, tripId: journal};
-    _saveJournals();
-    return journal;
-  }
-
-  /// Fügt einen neuen Eintrag hinzu
-  Future<void> addEntry({
+  /// Erstellt ein neues Tagebuch oder laedt ein existierendes
+  Future<TripJournal?> getOrCreateJournal({
     required String tripId,
     required String tripName,
+    DateTime? startDate,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      var journal = await _service.getJournal(tripId);
+      if (journal == null) {
+        journal = await _service.createJournal(
+          tripId: tripId,
+          tripName: tripName,
+          startDate: startDate,
+        );
+      }
+      state = state.copyWith(
+        activeJournal: journal,
+        isLoading: false,
+      );
+      await loadAllJournals();
+      return journal;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Erstellen des Tagebuchs: $e',
+      );
+      return null;
+    }
+  }
+
+  /// Setzt das aktive Tagebuch
+  Future<void> setActiveJournal(String tripId) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final journal = await _service.getJournal(tripId);
+      state = state.copyWith(
+        activeJournal: journal,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Laden des Tagebuchs: $e',
+      );
+    }
+  }
+
+  /// Setzt den ausgewaehlten Tag
+  void selectDay(int? dayNumber) {
+    state = state.copyWith(selectedDay: dayNumber);
+  }
+
+  /// Fuegt einen Text-Eintrag hinzu
+  Future<JournalEntry?> addTextEntry({
+    required String note,
     String? poiId,
     String? poiName,
     double? latitude,
     double? longitude,
-    String? title,
-    String? content,
-    List<String>? photoUrls,
-    List<String>? localPhotoPaths,
-    int? rating,
-    String? mood,
+    String? locationName,
+    int? dayNumber,
   }) async {
-    final journal = getOrCreateJournal(tripId, tripName);
+    if (state.activeJournal == null) return null;
 
-    final entry = JournalEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      tripId: tripId,
-      timestamp: DateTime.now(),
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final entry = await _service.addEntry(
+        tripId: state.activeJournal!.tripId,
+        poiId: poiId,
+        poiName: poiName,
+        note: note,
+        latitude: latitude,
+        longitude: longitude,
+        locationName: locationName,
+        dayNumber: dayNumber ?? state.selectedDay,
+      );
+
+      await _refreshActiveJournal();
+      return entry;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Hinzufuegen des Eintrags: $e',
+      );
+      return null;
+    }
+  }
+
+  /// Fuegt einen Foto-Eintrag hinzu (Kamera)
+  Future<JournalEntry?> addPhotoFromCamera({
+    String? note,
+    String? poiId,
+    String? poiName,
+    double? latitude,
+    double? longitude,
+    String? locationName,
+    int? dayNumber,
+  }) async {
+    return _addPhotoEntry(
+      source: ImageSource.camera,
+      note: note,
       poiId: poiId,
       poiName: poiName,
       latitude: latitude,
       longitude: longitude,
-      title: title,
-      content: content,
-      photoUrls: photoUrls ?? [],
-      localPhotoPaths: localPhotoPaths ?? [],
-      rating: rating,
-      mood: mood,
+      locationName: locationName,
+      dayNumber: dayNumber,
     );
+  }
 
-    final updatedJournal = journal.copyWith(
-      entries: [...journal.entries, entry],
+  /// Fuegt einen Foto-Eintrag hinzu (Galerie)
+  Future<JournalEntry?> addPhotoFromGallery({
+    String? note,
+    String? poiId,
+    String? poiName,
+    double? latitude,
+    double? longitude,
+    String? locationName,
+    int? dayNumber,
+  }) async {
+    return _addPhotoEntry(
+      source: ImageSource.gallery,
+      note: note,
+      poiId: poiId,
+      poiName: poiName,
+      latitude: latitude,
+      longitude: longitude,
+      locationName: locationName,
+      dayNumber: dayNumber,
     );
-
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
   }
 
-  /// Aktualisiert einen bestehenden Eintrag
-  Future<void> updateEntry(String tripId, JournalEntry updatedEntry) async {
-    final journal = state[tripId];
-    if (journal == null) return;
+  Future<JournalEntry?> _addPhotoEntry({
+    required ImageSource source,
+    String? note,
+    String? poiId,
+    String? poiName,
+    double? latitude,
+    double? longitude,
+    String? locationName,
+    int? dayNumber,
+  }) async {
+    if (state.activeJournal == null) return null;
 
-    final updatedEntries = journal.entries.map((e) =>
-        e.id == updatedEntry.id ? updatedEntry : e
-    ).toList();
-
-    final updatedJournal = journal.copyWith(entries: updatedEntries);
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
-  }
-
-  /// Löscht einen Eintrag
-  Future<void> deleteEntry(String tripId, String entryId) async {
-    final journal = state[tripId];
-    if (journal == null) return;
-
-    final updatedEntries = journal.entries
-        .where((e) => e.id != entryId)
-        .toList();
-
-    final updatedJournal = journal.copyWith(entries: updatedEntries);
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
-  }
-
-  /// Setzt Cover-Foto für Journal
-  Future<void> setCoverPhoto(String tripId, String photoUrl) async {
-    final journal = state[tripId];
-    if (journal == null) return;
-
-    final updatedJournal = journal.copyWith(coverPhotoUrl: photoUrl);
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
-  }
-
-  /// Setzt Tags für Journal
-  Future<void> setTags(String tripId, List<String> tags) async {
-    final journal = state[tripId];
-    if (journal == null) return;
-
-    final updatedJournal = journal.copyWith(tags: tags);
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
-  }
-
-  /// Setzt Zusammenfassung für Journal
-  Future<void> setSummary(String tripId, String summary) async {
-    final journal = state[tripId];
-    if (journal == null) return;
-
-    final updatedJournal = journal.copyWith(summary: summary);
-    state = {...state, tripId: updatedJournal};
-    await _saveJournals();
-  }
-
-  /// Löscht gesamtes Journal
-  Future<void> deleteJournal(String tripId) async {
-    state = Map.from(state)..remove(tripId);
-    await _saveJournals();
-  }
-
-  /// Wählt Foto aus Galerie
-  Future<List<String>?> pickPhotosFromGallery({int maxImages = 5}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final images = await _imagePicker.pickMultiImage(
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
+      final entry = await _service.addEntryWithPhoto(
+        tripId: state.activeJournal!.tripId,
+        source: source,
+        poiId: poiId,
+        poiName: poiName,
+        note: note,
+        latitude: latitude,
+        longitude: longitude,
+        locationName: locationName,
+        dayNumber: dayNumber ?? state.selectedDay,
       );
 
-      if (images.isEmpty) return null;
-
-      return images.take(maxImages).map((img) => img.path).toList();
-    } catch (e) {
-      debugPrint('[Journal] Foto-Auswahl fehlgeschlagen: $e');
-      return null;
-    }
-  }
-
-  /// Nimmt Foto mit Kamera auf
-  Future<String?> takePhoto() async {
-    try {
-      final image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      return image?.path;
-    } catch (e) {
-      debugPrint('[Journal] Kamera-Fehler: $e');
-      return null;
-    }
-  }
-
-  /// Exportiert Journal als Text
-  String exportAsText(String tripId) {
-    final journal = state[tripId];
-    if (journal == null) return '';
-
-    final buffer = StringBuffer();
-    buffer.writeln('# ${journal.tripName}');
-    buffer.writeln('');
-
-    if (journal.summary != null) {
-      buffer.writeln(journal.summary);
-      buffer.writeln('');
-    }
-
-    for (final dayEntry in journal.entriesByDay.entries) {
-      buffer.writeln('## ${dayEntry.key}');
-      buffer.writeln('');
-
-      for (final entry in dayEntry.value) {
-        if (entry.title != null) {
-          buffer.writeln('### ${entry.formattedTime} - ${entry.title}');
-        } else if (entry.poiName != null) {
-          buffer.writeln('### ${entry.formattedTime} - ${entry.poiName}');
-        } else {
-          buffer.writeln('### ${entry.formattedTime}');
-        }
-
-        if (entry.content != null) {
-          buffer.writeln(entry.content);
-        }
-
-        if (entry.rating != null) {
-          buffer.writeln('Bewertung: ${'⭐' * entry.rating!}');
-        }
-
-        buffer.writeln('');
+      if (entry != null) {
+        await _refreshActiveJournal();
+      } else {
+        state = state.copyWith(isLoading: false);
       }
+      return entry;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Hinzufuegen des Fotos: $e',
+      );
+      return null;
+    }
+  }
+
+  /// Aktualisiert einen Eintrag (z.B. Notiz aendern)
+  Future<void> updateEntry(JournalEntry entry) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.updateEntry(entry);
+      await _refreshActiveJournal();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Aktualisieren: $e',
+      );
+    }
+  }
+
+  /// Loescht einen Eintrag
+  Future<void> deleteEntry(String entryId) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteEntry(entryId);
+      await _refreshActiveJournal();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Loeschen: $e',
+      );
+    }
+  }
+
+  /// Loescht ein komplettes Tagebuch
+  Future<void> deleteJournal(String tripId) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteJournal(tripId);
+      if (state.activeJournal?.tripId == tripId) {
+        state = state.copyWith(clearActiveJournal: true);
+      }
+      await loadAllJournals();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Fehler beim Loeschen des Tagebuchs: $e',
+      );
+    }
+  }
+
+  /// Schliesst das aktive Tagebuch
+  void closeActiveJournal() {
+    state = state.copyWith(clearActiveJournal: true, selectedDay: null);
+  }
+
+  /// Aktualisiert das aktive Tagebuch
+  Future<void> _refreshActiveJournal() async {
+    if (state.activeJournal == null) {
+      state = state.copyWith(isLoading: false);
+      return;
     }
 
-    if (journal.tags.isNotEmpty) {
-      buffer.writeln('Tags: ${journal.tags.join(', ')}');
-    }
-
-    return buffer.toString();
+    final journal = await _service.getJournal(state.activeJournal!.tripId);
+    state = state.copyWith(
+      activeJournal: journal,
+      isLoading: false,
+    );
+    await loadAllJournals();
   }
 }

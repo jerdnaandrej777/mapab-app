@@ -47,16 +47,17 @@ class AppSnackbar {
   /// Zeigt eine Info-/Warnmeldung
   static void showWarning(BuildContext context, String message) {
     if (!context.mounted) return;
+    final colorScheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.warning_amber, color: Colors.black87, size: 20),
+            Icon(Icons.warning_amber, color: colorScheme.onTertiaryContainer, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.black87))),
+            Expanded(child: Text(message, style: TextStyle(color: colorScheme.onTertiaryContainer))),
           ],
         ),
-        backgroundColor: Colors.amber,
+        backgroundColor: colorScheme.tertiaryContainer,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
       ),

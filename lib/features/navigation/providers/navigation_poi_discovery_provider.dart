@@ -91,7 +91,9 @@ class NavigationPOIDiscoveryState {
   }
 }
 
-/// Provider der Must-See POIs entlang der Route erkennt und ankuendigt
+/// Provider der Must-See POIs entlang der Route erkennt und ankuendigt.
+/// keepAlive: POI-Discovery-State bleibt bei kurzen Screen-Wechseln waehrend
+/// Navigation erhalten. reset() wird bei Navigation-Ende aufgerufen.
 @Riverpod(keepAlive: true)
 class NavigationPOIDiscoveryNotifier
     extends _$NavigationPOIDiscoveryNotifier {

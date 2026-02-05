@@ -54,14 +54,14 @@ void main() {
     });
 
     test('Euro Trip Quick-Select hat 4 Werte', () {
-      expect(TripConstants.euroTripQuickSelectRadii.length, 4);
+      expect(TripConstants.euroTripQuickSelectDays.length, 4);
     });
 
     test('Euro Trip Quick-Select sind aufsteigend', () {
-      for (int i = 1; i < TripConstants.euroTripQuickSelectRadii.length; i++) {
+      for (int i = 1; i < TripConstants.euroTripQuickSelectDays.length; i++) {
         expect(
-          TripConstants.euroTripQuickSelectRadii[i],
-          greaterThan(TripConstants.euroTripQuickSelectRadii[i - 1]),
+          TripConstants.euroTripQuickSelectDays[i],
+          greaterThan(TripConstants.euroTripQuickSelectDays[i - 1]),
         );
       }
     });

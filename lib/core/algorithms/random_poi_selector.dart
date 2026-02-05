@@ -60,8 +60,9 @@ class RandomPOISelector {
         categoryCount[selectedPOI.poi.categoryId] = catCount + 1;
       }
 
-      // Aus Pool entfernen
-      pool.removeWhere((wp) => wp.poi.id == selectedPOI.poi.id);
+      // Aus Pool entfernen (O(n) via indexOf statt O(n) removeWhere)
+      final idx = pool.indexOf(selectedPOI);
+      if (idx >= 0) pool.removeAt(idx);
     }
 
     return selected;

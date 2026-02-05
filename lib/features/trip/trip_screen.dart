@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/algorithms/route_optimizer.dart';
 import '../../core/constants/categories.dart';
+import '../../core/l10n/l10n.dart';
+import '../../core/utils/url_utils.dart';
 import '../../core/constants/trip_constants.dart';
 import '../../data/models/trip.dart';
 import '../../data/providers/favorites_provider.dart';
@@ -17,8 +19,11 @@ import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
 import '../random_trip/widgets/trip_preview_card.dart';
 import '../random_trip/widgets/hotel_suggestion_card.dart';
+import 'providers/elevation_provider.dart';
 import 'providers/trip_state_provider.dart';
 import 'widgets/corridor_browser_sheet.dart';
+import 'widgets/elevation_chart.dart';
+import 'widgets/trip_statistics_card.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
 
@@ -45,13 +50,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getTitle(tripState, randomTripState)),
+        title: Text(_getTitle(context, tripState, randomTripState)),
         actions: [
           // Speichern-Button (nur wenn Route vorhanden)
           if (tripState.hasRoute)
             IconButton(
               icon: const Icon(Icons.bookmark_add),
-              tooltip: 'Route speichern',
+              tooltip: context.l10n.tripSaveRoute,
               onPressed: () => _saveRoute(context, ref, tripState),
             ),
           if (hasRoute || tripState.hasStops)
@@ -69,19 +74,19 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     );
   }
 
-  String _getTitle(TripStateData tripState, RandomTripState randomTripState) {
+  String _getTitle(BuildContext context, TripStateData tripState, RandomTripState randomTripState) {
     if (randomTripState.step == RandomTripStep.generating) {
-      return 'Trip wird generiert...';
+      return context.l10n.tripInfoGenerating;
     }
     if (randomTripState.step == RandomTripStep.preview) {
       return randomTripState.mode == RandomTripMode.daytrip
-          ? 'AI Tagesausflug'
-          : 'AI Euro Trip';
+          ? context.l10n.tripInfoAiDayTrip
+          : context.l10n.tripInfoAiEuroTrip;
     }
     if (tripState.hasRoute || tripState.hasStops) {
-      return 'Deine Route';
+      return context.l10n.tripYourRoute;
     }
-    return 'Route planen';
+    return context.l10n.tripRoutePlanning;
   }
 
   /// Ansicht wenn keine Route vorhanden
@@ -100,18 +105,18 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             Icon(
               Icons.route,
               size: 80,
-              color: colorScheme.onSurface.withOpacity(0.3),
+              color: colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
-              'Keine Route vorhanden',
+              context.l10n.tripNoRoute,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Tippe auf die Karte, um Start und Ziel festzulegen',
+              context.l10n.tripTapMap,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
@@ -121,7 +126,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             ElevatedButton.icon(
               onPressed: () => context.go('/'),
               icon: const Icon(Icons.map),
-              label: const Text('Zur Karte'),
+              label: Text(context.l10n.tripToMap),
             ),
           ],
         ),
@@ -150,14 +155,14 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Trip wird generiert...',
+            context.l10n.tripInfoGenerating,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'POIs laden, Route optimieren, Hotels suchen',
+            context.l10n.tripGeneratingDescription,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -178,24 +183,24 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Route speichern'),
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.tripSaveRoute),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Name der Route',
-            hintText: 'z.B. Wochenendausflug',
+          decoration: InputDecoration(
+            labelText: context.l10n.tripRouteName,
+            hintText: context.l10n.tripExampleDayTrip,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, nameController.text),
-            child: const Text('Speichern'),
+            onPressed: () => Navigator.pop(ctx, nameController.text),
+            child: Text(context.l10n.save),
           ),
         ],
       ),
@@ -219,10 +224,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Route "$result" gespeichert'),
+          content: Text(context.l10n.tripRouteSaved(result)),
           duration: const Duration(seconds: 1),
           action: SnackBarAction(
-            label: 'Anzeigen',
+            label: context.l10n.tripShowInFavorites,
             onPressed: () => context.push('/favorites'),
           ),
         ),
@@ -245,26 +250,26 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Route speichern'),
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.tripSaveRoute),
         content: TextField(
           controller: nameController,
           decoration: InputDecoration(
-            labelText: 'Name der Route',
+            labelText: context.l10n.tripRouteName,
             hintText: randomTripState.mode == RandomTripMode.daytrip
-                ? 'z.B. AI Tagesausflug'
-                : 'z.B. AI Euro Trip',
+                ? context.l10n.tripExampleAiDayTrip
+                : context.l10n.tripExampleAiEuroTrip,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, nameController.text),
-            child: const Text('Speichern'),
+            onPressed: () => Navigator.pop(ctx, nameController.text),
+            child: Text(context.l10n.save),
           ),
         ],
       ),
@@ -291,10 +296,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Route "$result" gespeichert'),
+          content: Text(context.l10n.tripRouteSaved(result)),
           duration: const Duration(seconds: 1),
           action: SnackBarAction(
-            label: 'Anzeigen',
+            label: context.l10n.tripShowInFavorites,
             onPressed: () => context.push('/favorites'),
           ),
         ),
@@ -328,17 +333,22 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     debugPrint('[GoogleMaps] Opening URL: $url');
 
     try {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
+      final success = await launchUrlSafe(Uri.parse(url));
+      if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.tripGoogleMapsError),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[GoogleMaps] Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Maps konnte nicht geöffnet werden'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.l10n.tripGoogleMapsError),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -356,7 +366,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final stopsForDay = trip.getStopsForDay(dayNumber);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Keine Stops für Tag $dayNumber')),
+        SnackBar(content: Text(context.l10n.tripNoStopsForDay(dayNumber))),
       );
       return;
     }
@@ -414,10 +424,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     debugPrint('[GoogleMaps] Opening URL: $url');
 
     try {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrlSafe(Uri.parse(url));
 
       // Tag als abgeschlossen markieren
       ref.read(randomTripNotifierProvider.notifier).completeDay(dayNumber);
@@ -435,9 +442,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       debugPrint('[GoogleMaps] Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Maps konnte nicht geöffnet werden'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.l10n.tripGoogleMapsError),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -449,19 +456,18 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Trip abgeschlossen!'),
+        title: Text(context.l10n.tripCompleted),
         content: Text(
-          'Alle ${trip.actualDays} Tage wurden erfolgreich exportiert. '
-          'Möchtest du den Trip in deinen Favoriten speichern?',
+          context.l10n.tripAllDaysExported(trip.actualDays),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'keep'),
-            child: const Text('Behalten'),
+            child: Text(context.l10n.tripKeep),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, 'save'),
-            child: const Text('In Favoriten speichern'),
+            child: Text(context.l10n.tripSaveToFavorites),
           ),
         ],
       ),
@@ -515,14 +521,14 @@ $mapsUrl
 ''';
 
     try {
-      await Share.share(shareText, subject: 'Meine Route');
+      await Share.share(shareText, subject: context.l10n.tripMyRoute);
     } catch (e) {
       debugPrint('[Share] Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Route konnte nicht geteilt werden'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.l10n.tripShareError),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -545,12 +551,28 @@ $mapsUrl
     final route = tripState.route;
     final stops = tripState.stops;
 
-    // Wetter fuer Stop-Badges
-    final routeWeather = ref.watch(routeWeatherNotifierProvider);
-    final locationWeather = ref.watch(locationWeatherNotifierProvider);
-    final tripWeatherCondition = routeWeather.overallCondition != WeatherCondition.unknown
-        ? routeWeather.overallCondition
-        : locationWeather.condition;
+    // Hoehenprofil laden wenn Route vorhanden
+    if (route != null && route.coordinates.length >= 2) {
+      // Async laden ohne build zu blockieren (Provider cached intern)
+      Future.microtask(() {
+        ref.read(elevationNotifierProvider.notifier)
+            .loadElevation(route.coordinates);
+      });
+    }
+
+    // Hoehenprofil-State
+    final elevationState = ref.watch(elevationNotifierProvider);
+
+    // Wetter fuer Stop-Badges (nur benoetigte Properties selektieren)
+    final routeOverallCondition = ref.watch(
+      routeWeatherNotifierProvider.select((w) => w.overallCondition),
+    );
+    final locationCondition = ref.watch(
+      locationWeatherNotifierProvider.select((w) => w.condition),
+    );
+    final tripWeatherCondition = routeOverallCondition != WeatherCondition.unknown
+        ? routeOverallCondition
+        : locationCondition;
 
     return Column(
       children: [
@@ -582,8 +604,8 @@ $mapsUrl
                 const SizedBox(width: 4),
                 Text(
                   tripWeatherCondition == WeatherCondition.danger
-                      ? 'Unwetter erwartet \u2013 Indoor-Stops bevorzugen'
-                      : 'Regen erwartet \u2013 Indoor-Stops hervorgehoben',
+                      ? context.l10n.tripWeatherDangerHint
+                      : context.l10n.tripWeatherBadHint,
                   style: TextStyle(
                     fontSize: 11,
                     color: tripWeatherCondition == WeatherCondition.danger
@@ -596,6 +618,38 @@ $mapsUrl
           ),
 
         const SizedBox(height: 8),
+
+        // Hoehenprofil (wenn geladen)
+        if (elevationState.hasProfile) ...[
+          ElevationChart(profile: elevationState.profile!),
+          const SizedBox(height: 8),
+          TripStatisticsCard(profile: elevationState.profile!),
+          const SizedBox(height: 8),
+        ] else if (elevationState.isLoading) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.tripElevationLoading,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
 
         // Stops-Liste
         Expanded(
@@ -621,8 +675,8 @@ $mapsUrl
                   key: const ValueKey('start'),
                   icon: Icons.trip_origin,
                   iconColor: Colors.green,
-                  title: route?.startAddress ?? 'Keine Route',
-                  subtitle: 'Start',
+                  title: route?.startAddress ?? context.l10n.tripNoRoute,
+                  subtitle: context.l10n.tripStart,
                   isFirst: true,
                 );
               }
@@ -634,8 +688,8 @@ $mapsUrl
                   key: const ValueKey('end'),
                   icon: Icons.place,
                   iconColor: Colors.red,
-                  title: route?.endAddress ?? 'Keine Route',
-                  subtitle: 'Ziel',
+                  title: route?.endAddress ?? context.l10n.tripNoRoute,
+                  subtitle: context.l10n.tripDestination,
                   isLast: true,
                 );
               }
@@ -665,7 +719,7 @@ $mapsUrl
                 onRemove: () {
                   ref.read(tripStateProvider.notifier).removeStop(stop.id);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Stop entfernt')),
+                    SnackBar(content: Text(context.l10n.tripStopRemoved)),
                   );
                 },
                 onEdit: () {
@@ -697,7 +751,7 @@ $mapsUrl
                           }
                         : null,
                     icon: const Icon(Icons.map_outlined),
-                    label: const Text('Auf Karte anzeigen'),
+                    label: Text(context.l10n.showOnMap),
                   ),
                 ),
                 // POIs entdecken Button
@@ -715,7 +769,7 @@ $mapsUrl
                               .toSet(),
                         ),
                         icon: const Icon(Icons.add_location_alt_rounded),
-                        label: const Text('POIs entlang der Route'),
+                        label: Text(context.l10n.tripConfigPoisAlongRoute),
                       ),
                     ),
                   ),
@@ -738,7 +792,7 @@ $mapsUrl
                           },
                         ),
                         icon: const Icon(Icons.navigation),
-                        label: const Text('Navigation starten'),
+                        label: Text(context.l10n.tripInfoStartNavigation),
                       ),
                     ),
                   ),
@@ -751,7 +805,7 @@ $mapsUrl
                             ? () => _openInGoogleMaps(context, tripState)
                             : null,
                         icon: const Icon(Icons.open_in_new),
-                        label: const Text('Google Maps'),
+                        label: Text(context.l10n.tripGoogleMaps),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -761,7 +815,7 @@ $mapsUrl
                             ? () => _shareRoute(context, tripState)
                             : null,
                         icon: const Icon(Icons.share),
-                        label: const Text('Route Teilen'),
+                        label: Text(context.l10n.tripShareRoute),
                       ),
                     ),
                   ],
@@ -785,6 +839,15 @@ $mapsUrl
     final trip = state.generatedTrip?.trip;
     final isMultiDay = trip != null && trip.actualDays > 1;
 
+    // Hoehenprofil fuer AI Trip laden
+    if (trip != null && trip.route.coordinates.length >= 2) {
+      Future.microtask(() {
+        ref.read(elevationNotifierProvider.notifier)
+            .loadElevation(trip.route.coordinates);
+      });
+    }
+    final elevationState = ref.watch(elevationNotifierProvider);
+
     return Column(
       children: [
         Expanded(
@@ -794,7 +857,38 @@ $mapsUrl
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const TripPreviewCard(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // Hoehenprofil (wenn geladen)
+                if (elevationState.hasProfile) ...[
+                  ElevationChart(profile: elevationState.profile!),
+                  const SizedBox(height: 8),
+                  TripStatisticsCard(profile: elevationState.profile!),
+                  const SizedBox(height: 16),
+                ] else if (elevationState.isLoading)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          context.l10n.tripElevationLoading,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // Hotel-Vorschläge (für Mehrtages-Trips)
                 if (state.isMultiDay && state.hotelSuggestions.isNotEmpty) ...[
@@ -816,7 +910,7 @@ $mapsUrl
             color: colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -836,7 +930,7 @@ $mapsUrl
                       context.go('/');
                     },
                     icon: const Icon(Icons.map_outlined),
-                    label: const Text('Auf Karte anzeigen'),
+                    label: Text(context.l10n.showOnMap),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -858,7 +952,7 @@ $mapsUrl
                             trip.stops.map((s) => s.poiId).toSet(),
                       ),
                       icon: const Icon(Icons.add_location_alt_rounded),
-                      label: const Text('POIs entlang der Route'),
+                      label: Text(context.l10n.tripConfigPoisAlongRoute),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -882,7 +976,7 @@ $mapsUrl
                           },
                         ),
                         icon: const Icon(Icons.navigation),
-                        label: const Text('Navigation starten'),
+                        label: Text(context.l10n.tripInfoStartNavigation),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -910,8 +1004,8 @@ $mapsUrl
                       icon: const Icon(Icons.map),
                       label: Text(
                         state.isDayCompleted(state.selectedDay)
-                            ? 'Tag ${state.selectedDay} erneut exportieren'
-                            : 'Tag ${state.selectedDay} in Google Maps',
+                            ? context.l10n.tripReExportDay(state.selectedDay)
+                            : context.l10n.tripExportDay(state.selectedDay),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: state.isDayCompleted(state.selectedDay)
@@ -929,7 +1023,7 @@ $mapsUrl
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Google Maps berechnet eine eigene Route durch die Stops',
+                    context.l10n.tripGoogleMapsHint,
                     style: TextStyle(
                       fontSize: 11,
                       color: colorScheme.onSurfaceVariant,
@@ -947,7 +1041,7 @@ $mapsUrl
                     OutlinedButton.icon(
                       onPressed: () => notifier.backToConfig(),
                       icon: const Icon(Icons.edit),
-                      label: const Text('Bearbeiten'),
+                      label: Text(context.l10n.edit),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                         shape: RoundedRectangleBorder(
@@ -960,7 +1054,7 @@ $mapsUrl
                     OutlinedButton.icon(
                       onPressed: () => notifier.regenerateTrip(),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Neu'),
+                      label: Text(context.l10n.tripNew),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                         shape: RoundedRectangleBorder(
@@ -977,7 +1071,7 @@ $mapsUrl
                           await _saveAITrip(context, ref, state);
                         },
                         icon: const Icon(Icons.check),
-                        label: const Text('Speichern'),
+                        label: Text(context.l10n.save),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: colorScheme.onPrimary,
@@ -1024,7 +1118,7 @@ $mapsUrl
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1035,7 +1129,7 @@ $mapsUrl
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 24),
@@ -1072,24 +1166,33 @@ $mapsUrl
 
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.auto_fix_high),
-              title: const Text('Route optimieren'),
-              subtitle: const Text('Beste Reihenfolge berechnen'),
+              title: Text(context.l10n.tripOptimizeRoute),
+              subtitle: Text(context.l10n.tripOptimizeBestOrder),
               onTap: () {
-                Navigator.pop(context);
-                // TODO: Optimieren
+                Navigator.pop(ctx);
+                final tripState = ref.read(tripStateProvider);
+                if (tripState.route == null || tripState.stops.length < 3) return;
+                final optimizer = RouteOptimizer();
+                final optimized = optimizer.optimizeRoute(
+                  pois: tripState.stops,
+                  startLocation: tripState.route!.start,
+                  returnToStart: false,
+                );
+                final tripNotifier = ref.read(tripStateProvider.notifier);
+                tripNotifier.setStops(optimized);
               },
             ),
             ListTile(
               leading: const Icon(Icons.save),
-              title: const Text('Route speichern'),
+              title: Text(context.l10n.tripSaveRoute),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 final tripState = ref.read(tripStateProvider);
                 final rtState = ref.read(randomTripNotifierProvider);
                 if (rtState.step == RandomTripStep.preview ||
@@ -1102,9 +1205,9 @@ $mapsUrl
             ),
             ListTile(
               leading: const Icon(Icons.share),
-              title: const Text('Route teilen'),
+              title: Text(context.l10n.tripShareRoute),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 final tripState = ref.read(tripStateProvider);
                 if (tripState.hasRoute) {
                   _shareRoute(context, tripState);
@@ -1112,21 +1215,30 @@ $mapsUrl
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Alle Stops löschen',
-                  style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.auto_stories),
+              title: Text(context.l10n.journalOpenJournal),
+              subtitle: Text(context.l10n.journalTitle),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
+                _openJournal(context, ref);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text(context.l10n.tripDeleteAllStops,
+                  style: const TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
                 _clearAllStops(context, ref);
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text('Gesamte Route löschen',
-                  style: TextStyle(color: Colors.red)),
-              subtitle: const Text('Route und alle Stops löschen'),
+              title: Text(context.l10n.tripDeleteEntireRoute,
+                  style: const TextStyle(color: Colors.red)),
+              subtitle: Text(context.l10n.tripDeleteRouteAndStops),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _clearEntireRoute(context, ref);
               },
             ),
@@ -1134,9 +1246,9 @@ $mapsUrl
             if (randomTripState.step == RandomTripStep.preview)
               ListTile(
                 leading: const Icon(Icons.arrow_back),
-                title: const Text('Zurück zur Konfiguration'),
+                title: Text(context.l10n.tripBackToConfig),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(ctx);
                   ref.read(randomTripNotifierProvider.notifier).backToConfig();
                 },
               ),
@@ -1149,20 +1261,20 @@ $mapsUrl
   void _clearAllStops(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Alle Stops löschen?'),
-        content: const Text('Diese Aktion kann nicht rückgängig gemacht werden.'),
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.tripConfirmDeleteAllStops),
+        content: Text(context.l10n.actionCannotBeUndone),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               ref.read(tripStateProvider.notifier).clearStops();
             },
-            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1172,20 +1284,17 @@ $mapsUrl
   void _clearEntireRoute(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Gesamte Route löschen?'),
-        content: const Text(
-          'Die Route und alle Stops werden gelöscht. '
-          'Diese Aktion kann nicht rückgängig gemacht werden.',
-        ),
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.tripConfirmDeleteEntireRoute),
+        content: Text(context.l10n.tripDeleteEntireRouteMessage),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               // Route im Route-Planner löschen (löscht auch Trip-State)
               ref.read(routePlannerProvider.notifier).clearRoute();
               // AI Trip State zurücksetzen
@@ -1193,10 +1302,37 @@ $mapsUrl
               // Zur Karte navigieren
               context.go('/');
             },
-            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  void _openJournal(BuildContext context, WidgetRef ref) {
+    final tripState = ref.read(tripStateProvider);
+    final randomTripState = ref.read(randomTripNotifierProvider);
+
+    // Trip-ID und Name bestimmen
+    String tripId;
+    String tripName;
+
+    if (randomTripState.step == RandomTripStep.preview ||
+        randomTripState.step == RandomTripStep.confirmed) {
+      // AI Trip aktiv
+      final trip = randomTripState.generatedTrip?.trip;
+      tripId = trip?.id ?? const Uuid().v4();
+      tripName = trip?.name ?? (randomTripState.mode == RandomTripMode.daytrip
+          ? context.l10n.tripInfoAiDayTrip
+          : context.l10n.tripInfoAiEuroTrip);
+    } else if (tripState.hasRoute) {
+      // Normale Route
+      tripId = tripState.route?.hashCode.toString() ?? const Uuid().v4();
+      tripName = context.l10n.tripYourRoute;
+    } else {
+      return;
+    }
+
+    context.push('/journal/$tripId?name=${Uri.encodeComponent(tripName)}');
   }
 }

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/utils/location_helper.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/constants/categories.dart'; // Enthält WeatherCondition
 import '../../../data/models/poi.dart';
@@ -28,6 +28,9 @@ part 'random_trip_provider.g.dart';
 class RandomTripNotifier extends _$RandomTripNotifier {
   late TripGeneratorRepository _tripGenerator;
   late GeocodingRepository _geocodingRepo;
+
+  /// Atomares Lock um Race Conditions bei Doppel-Klick zu verhindern
+  bool _isGenerating = false;
 
   @override
   RandomTripState build() {
@@ -191,42 +194,18 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // Location Services Check
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[RandomTrip] Location Services deaktiviert');
+      final locationResult = await LocationHelper.getCurrentPosition(
+        timeLimit: const Duration(seconds: 15),
+      );
+      if (!locationResult.isSuccess) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Bitte aktiviere die Ortungsdienste in den Einstellungen',
+          error: locationResult.message,
         );
         return;
       }
 
-      // Berechtigungen prüfen
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Standort-Berechtigung verweigert');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception(
-          'Standort-Berechtigung dauerhaft verweigert. '
-          'Bitte in den Einstellungen aktivieren.',
-        );
-      }
-
-      // Position abrufen
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
-
-      debugPrint('[RandomTrip] Position erhalten: ${position.latitude}, ${position.longitude}');
-
-      final location = LatLng(position.latitude, position.longitude);
+      final location = locationResult.position!;
 
       // Adresse ermitteln
       final result = await _geocodingRepo.reverseGeocode(location);
@@ -243,12 +222,6 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       state = state.copyWith(
         isLoading: false,
         error: 'GPS-Standort konnte nicht rechtzeitig ermittelt werden. Bitte versuche es erneut oder gib eine Adresse ein.',
-      );
-    } on LocationServiceDisabledException catch (_) {
-      debugPrint('[RandomTrip] Location Services deaktiviert');
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Bitte aktiviere die Ortungsdienste in den Einstellungen',
       );
     } catch (e) {
       debugPrint('[RandomTrip] GPS-Fehler: $e');
@@ -268,23 +241,21 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Generiert den Trip
   /// Wenn kein Startpunkt gesetzt ist, wird automatisch GPS-Standort abgefragt
   Future<void> generateTrip() async {
-    // Wenn kein Startpunkt gesetzt ist, automatisch GPS-Standort abfragen
-    if (!state.hasValidStart) {
-      await useCurrentLocation();
+    // Atomares Lock - pruefen UND setzen in einem Schritt (vor jeglichem State-Zugriff)
+    if (_isGenerating) {
+      debugPrint('[RandomTrip] Trip-Generierung laeuft bereits (Lock), ignoriere');
+      return;
+    }
+    _isGenerating = true;
 
-      // Prüfen ob GPS erfolgreich war
-      if (!state.hasValidStart) {
-        state = state.copyWith(
-          error: 'Bitte gib einen Startpunkt ein oder aktiviere GPS',
-        );
-        return;
-      }
+    // Zusaetzlicher State-Check als Backup
+    if (state.step == RandomTripStep.generating) {
+      debugPrint('[RandomTrip] Trip-Generierung laeuft bereits (State), ignoriere');
+      _isGenerating = false;
+      return;
     }
 
-    // Alten aktiven Trip löschen (neuer Trip ersetzt ihn)
-    await ref.read(activeTripServiceProvider).clearTrip();
-    ref.read(activeTripNotifierProvider.notifier).refresh();
-
+    // Step sofort auf generating setzen um Race Conditions zu verhindern
     state = state.copyWith(
       step: RandomTripStep.generating,
       isLoading: true,
@@ -292,6 +263,43 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       completedDays: {},
       selectedDay: 1,
     );
+
+    // Wenn kein Startpunkt gesetzt ist, automatisch GPS-Standort abfragen
+    if (!state.hasValidStart) {
+      await useCurrentLocation();
+
+      // Prüfen ob GPS erfolgreich war
+      if (!state.hasValidStart) {
+        state = state.copyWith(
+          step: RandomTripStep.config,
+          isLoading: false,
+          error: 'Bitte gib einen Startpunkt ein oder aktiviere GPS',
+        );
+        _isGenerating = false;
+        return;
+      }
+    }
+
+    // Startpunkt in lokale Variablen capturen (Null-Safety vor async Ops)
+    final startLoc = state.startLocation;
+    final startAddr = state.startAddress;
+    if (startLoc == null || startAddr == null) {
+      state = state.copyWith(
+        step: RandomTripStep.config,
+        isLoading: false,
+        error: 'Startpunkt nicht verfuegbar. Bitte erneut eingeben.',
+      );
+      _isGenerating = false;
+      return;
+    }
+
+    // Alten aktiven Trip löschen (neuer Trip ersetzt ihn)
+    await ref.read(activeTripServiceProvider).clearTrip();
+    try {
+      ref.read(activeTripNotifierProvider.notifier).refresh();
+    } catch (e) {
+      debugPrint('[RandomTrip] ActiveTrip-Refresh fehlgeschlagen: $e');
+    }
 
     try {
       GeneratedTrip result;
@@ -304,8 +312,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       if (state.mode == RandomTripMode.daytrip) {
         result = await _tripGenerator.generateDayTrip(
-          startLocation: state.startLocation!,
-          startAddress: state.startAddress!,
+          startLocation: startLoc,
+          startAddress: startAddr,
           radiusKm: state.radiusKm,
           categories: state.selectedCategories,
           poiCount: (state.radiusKm / 20).clamp(3, 8).round(),
@@ -315,10 +323,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         );
       } else {
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
-        debugPrint('[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: ${state.startAddress}${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
+        debugPrint('[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: $startAddr${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
         result = await _tripGenerator.generateEuroTrip(
-          startLocation: state.startLocation!,
-          startAddress: state.startAddress!,
+          startLocation: startLoc,
+          startAddress: startAddr,
           radiusKm: state.radiusKm,
           days: state.days,
           categories: state.selectedCategories,
@@ -353,6 +361,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
         error: 'Trip-Generierung fehlgeschlagen: $e',
       );
+    } finally {
+      // Lock immer zuruecksetzen, egal ob Erfolg oder Fehler
+      _isGenerating = false;
     }
   }
 
@@ -363,7 +374,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Würfelt einen einzelnen POI neu
   Future<void> rerollPOI(String poiId) async {
-    if (state.generatedTrip == null || state.startLocation == null) return;
+    final generatedTrip = state.generatedTrip;
+    final startLoc = state.startLocation;
+    if (generatedTrip == null || startLoc == null) return;
 
     state = state.copyWith(
       isLoading: true,
@@ -372,9 +385,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
     try {
       final result = await _tripGenerator.rerollPOI(
-        currentTrip: state.generatedTrip!,
+        currentTrip: generatedTrip,
         poiIdToReroll: poiId,
-        startLocation: state.startLocation!,
+        startLocation: startLoc,
         startAddress: state.startAddress ?? '',
         categories: state.selectedCategories,
       );
@@ -395,10 +408,12 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Entfernt einen einzelnen POI aus dem Trip
   Future<void> removePOI(String poiId) async {
-    if (state.generatedTrip == null || state.startLocation == null) return;
+    final generatedTrip = state.generatedTrip;
+    final startLoc = state.startLocation;
+    if (generatedTrip == null || startLoc == null) return;
 
     // Prüfen ob genug POIs übrig bleiben
-    if (state.generatedTrip!.selectedPOIs.length <= 2) {
+    if (generatedTrip.selectedPOIs.length <= 2) {
       state = state.copyWith(
         error: 'Mindestens 2 Stops müssen im Trip bleiben',
       );
@@ -412,9 +427,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
     try {
       final result = await _tripGenerator.removePOI(
-        currentTrip: state.generatedTrip!,
+        currentTrip: generatedTrip,
         poiIdToRemove: poiId,
-        startLocation: state.startLocation!,
+        startLocation: startLoc,
         startAddress: state.startAddress ?? '',
       );
 
@@ -449,16 +464,18 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Fuegt einen POI zu einem bestimmten Tag des AI Trips hinzu.
   /// Wird vom Korridor-Browser im DayEditor aufgerufen.
   Future<bool> addPOIToDay(POI poi, int dayNumber) async {
-    if (state.generatedTrip == null || state.startLocation == null) return false;
+    final generatedTrip = state.generatedTrip;
+    final startLoc = state.startLocation;
+    if (generatedTrip == null || startLoc == null) return false;
 
     state = state.copyWith(isLoading: true);
 
     try {
       final result = await _tripGenerator.addPOIToTrip(
-        currentTrip: state.generatedTrip!,
+        currentTrip: generatedTrip,
         newPOI: poi,
         targetDay: dayNumber,
-        startLocation: state.startLocation!,
+        startLocation: startLoc,
         startAddress: state.startAddress ?? '',
       );
 
@@ -504,10 +521,12 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Entfernt einen POI von einem bestimmten Tag.
   /// Wird vom Korridor-Browser im DayEditor aufgerufen.
   Future<bool> removePOIFromDay(String poiId, int dayNumber) async {
-    if (state.generatedTrip == null || state.startLocation == null) return false;
+    final generatedTrip = state.generatedTrip;
+    final startLoc = state.startLocation;
+    if (generatedTrip == null || startLoc == null) return false;
 
     // Pruefen: Tag muss nach Entfernung mindestens 1 Stop haben
-    final dayStops = state.generatedTrip!.trip.getStopsForDay(dayNumber);
+    final dayStops = generatedTrip.trip.getStopsForDay(dayNumber);
     if (dayStops.length <= 1) {
       state = state.copyWith(
         error: 'Mindestens 1 Stop pro Tag erforderlich',
@@ -519,9 +538,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
     try {
       final result = await _tripGenerator.removePOI(
-        currentTrip: state.generatedTrip!,
+        currentTrip: generatedTrip,
         poiIdToRemove: poiId,
-        startLocation: state.startLocation!,
+        startLocation: startLoc,
         startAddress: state.startAddress ?? '',
       );
 
@@ -698,7 +717,11 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         destinationLocation: state.destinationLocation,
         destinationAddress: state.destinationAddress,
       );
-      ref.read(activeTripNotifierProvider.notifier).refresh();
+      try {
+        ref.read(activeTripNotifierProvider.notifier).refresh();
+      } catch (e) {
+        debugPrint('[RandomTrip] ActiveTrip-Refresh fehlgeschlagen: $e');
+      }
     } catch (e) {
       debugPrint('[RandomTrip] Fehler beim Persistieren des aktiven Trips: $e');
     }

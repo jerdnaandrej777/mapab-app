@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../map_screen.dart';
 import '../providers/app_ui_mode_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
@@ -34,7 +33,7 @@ class TripModeSelector extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),

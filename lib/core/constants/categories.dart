@@ -102,6 +102,24 @@ enum WeatherCondition {
   final String icon;
 
   const WeatherCondition(this.label, this.icon);
+
+  /// Zentrales Mapping: WMO Weather Code → WeatherCondition
+  /// https://open-meteo.com/en/docs (WMO Weather interpretation codes)
+  static WeatherCondition fromWmoCode(int code) {
+    if (code == 0 || code == 1) return WeatherCondition.good;
+    if (code <= 3) return WeatherCondition.mixed;
+    if (code >= 45 && code <= 48) return WeatherCondition.bad; // Nebel
+    if (code >= 95) return WeatherCondition.danger; // Gewitter
+    return WeatherCondition.bad; // Regen, Schnee, Schauer
+  }
+
+  /// Prueft ob ein WMO-Code Schnee bedeutet (71-77, 85-86)
+  static bool isSnowCode(int code) =>
+      (code >= 71 && code <= 77) || code == 85 || code == 86;
+
+  /// Prueft ob ein WMO-Code Regen bedeutet (51-67, 80-82)
+  static bool isRainCode(int code) =>
+      (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
 }
 
 /// Barrierefreiheits-Optionen

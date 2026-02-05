@@ -72,9 +72,9 @@ class RadiusSlider extends ConsumerWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: colorScheme.primary,
-            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.2),
             thumbColor: colorScheme.primary,
-            overlayColor: colorScheme.primary.withOpacity(0.1),
+            overlayColor: colorScheme.primary.withValues(alpha: 0.1),
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
           ),
@@ -154,9 +154,9 @@ class RadiusSlider extends ConsumerWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: colorScheme.primary,
-            inactiveTrackColor: colorScheme.primary.withOpacity(0.2),
+            inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.2),
             thumbColor: colorScheme.primary,
-            overlayColor: colorScheme.primary.withOpacity(0.1),
+            overlayColor: colorScheme.primary.withValues(alpha: 0.1),
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
           ),
@@ -232,7 +232,7 @@ class _QuickSelectButton extends StatelessWidget {
             border: Border.all(
               color: isSelected
                   ? colorScheme.primary
-                  : colorScheme.outline.withOpacity(0.3),
+                  : colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: Text(

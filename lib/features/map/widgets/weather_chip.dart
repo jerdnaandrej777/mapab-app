@@ -36,7 +36,7 @@ class WeatherChip extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -110,7 +110,7 @@ class WeatherChip extends ConsumerWidget {
         Icon(
           Icons.keyboard_arrow_down_rounded,
           size: 16,
-          color: _getTextColor(weatherState).withOpacity(0.7),
+          color: _getTextColor(weatherState).withValues(alpha: 0.7),
         ),
       ],
     );

@@ -85,7 +85,9 @@ class POIEnrichmentService {
 
   /// Session-Map: POIs die kuerzlich versucht wurden (ohne Foto)
   /// Erlaubt Retry nach 10 Minuten Cooldown statt permanenter Blockade
+  /// Max 500 Eintraege um unbegrenztes Wachstum bei langer App-Session zu verhindern
   static final Map<String, DateTime> _sessionAttemptedWithoutPhoto = {};
+  static const int _maxSessionAttemptedEntries = 500;
 
   /// Prueft ob POI kuerzlich (< 10 Min) erfolglos versucht wurde
   static bool _wasRecentlyAttempted(String poiId) {
@@ -94,16 +96,27 @@ class POIEnrichmentService {
     return DateTime.now().difference(lastAttempt).inMinutes < 10;
   }
 
+  /// Registriert erfolglosen Versuch mit automatischem Cleanup bei Ueberlauf
+  static void _markAttemptedWithoutPhoto(String poiId) {
+    // Cleanup: Aelteste Eintraege entfernen wenn Limit erreicht
+    if (_sessionAttemptedWithoutPhoto.length >= _maxSessionAttemptedEntries) {
+      final entries = _sessionAttemptedWithoutPhoto.entries.toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
+      // Aelteste 20% entfernen
+      final removeCount = (_maxSessionAttemptedEntries * 0.2).round();
+      for (int i = 0; i < removeCount && i < entries.length; i++) {
+        _sessionAttemptedWithoutPhoto.remove(entries[i].key);
+      }
+      debugPrint('[Enrichment] Session-Cache bereinigt: $removeCount alte Eintraege entfernt');
+    }
+    _sessionAttemptedWithoutPhoto[poiId] = DateTime.now();
+  }
+
   final SupabasePOIRepository? _supabaseRepo;
 
   POIEnrichmentService({Dio? dio, POICacheService? cacheService, SupabasePOIRepository? supabaseRepo})
       : _supabaseRepo = supabaseRepo,
-        _dio = dio ??
-            Dio(BaseOptions(
-              headers: {'User-Agent': ApiConfig.userAgent},
-              connectTimeout: const Duration(milliseconds: _enrichmentTimeout),
-              receiveTimeout: const Duration(milliseconds: _enrichmentTimeout),
-            )),
+        _dio = dio ?? ApiConfig.createDio(profile: DioProfile.enrichment),
         _cacheService = cacheService;
 
   /// FIX v1.5.3: Setzt alle static States zurück (für Clean Start nach Hot-Reload)
@@ -120,13 +133,21 @@ class POIEnrichmentService {
   bool isEnriching(String poiId) => _enrichingPOIs.contains(poiId);
 
   /// v1.7.9: Image vorladen fuer sofortige Anzeige im UI
+  /// v1.9.28: Concurrency-Limit (max 5 gleichzeitig) gegen OOM bei vielen POIs
+  static int _activePrefetches = 0;
+  static const int _maxConcurrentPrefetches = 5;
+
   Future<void> _prefetchImage(String url) async {
+    if (_activePrefetches >= _maxConcurrentPrefetches) return;
+    _activePrefetches++;
     try {
       await DefaultCacheManager().getSingleFile(url).timeout(
             const Duration(seconds: 10),
           );
     } catch (e) {
       debugPrint('[Enrichment] Pre-Cache fehlgeschlagen: $url ($e)');
+    } finally {
+      _activePrefetches--;
     }
   }
 
@@ -429,7 +450,7 @@ class POIEnrichmentService {
       } else if (!enrichment.hasImage) {
         debugPrint('[Enrichment] ⚠️ POI nicht gecacht (kein Bild): ${poi.name}');
         // v1.7.27: Session-Tracking fuer Single-POI ohne Bild (wie bei Batch)
-        _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+        _markAttemptedWithoutPhoto(poi.id);
       }
 
       // v1.7.9: Image Pre-Caching fuer sofortige Anzeige
@@ -1303,7 +1324,7 @@ LIMIT 30
               // v1.7.27: Image Pre-Caching fuer sofortige Anzeige
               unawaited(_prefetchImage(imageUrl));
             } else {
-              _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+              _markAttemptedWithoutPhoto(poi.id);
             }
           });
 
@@ -1357,7 +1378,7 @@ LIMIT 30
           } else {
             // FIX v1.7.9: NICHT als isEnriched markieren wenn kein Bild gefunden
             // Nur in Session-Set aufnehmen um Endlos-Schleifen zu verhindern
-            _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+            _markAttemptedWithoutPhoto(poi.id);
             return MapEntry(poi.id, poi);
           }
         });
@@ -1549,7 +1570,7 @@ LIMIT 30
         }
 
         if (!found) {
-          _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+          _markAttemptedWithoutPhoto(poi.id);
         }
       }
 
@@ -1586,7 +1607,7 @@ LIMIT 30
           }
           unawaited(_prefetchImage(openverseUrl));
         } else {
-          _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+          _markAttemptedWithoutPhoto(poi.id);
         }
         await Future.delayed(const Duration(milliseconds: 300));
       }
@@ -1602,7 +1623,7 @@ LIMIT 30
     // So koennen sie nach 10-Minuten-Cooldown erneut versucht werden
     for (final poi in uncachedPOIs) {
       if (!results.containsKey(poi.id) || results[poi.id]?.imageUrl == null) {
-        _sessionAttemptedWithoutPhoto[poi.id] = DateTime.now();
+        _markAttemptedWithoutPhoto(poi.id);
       }
     }
 

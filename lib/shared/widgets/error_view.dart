@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Fehler-Anzeige Widget
@@ -7,32 +8,34 @@ class ErrorView extends StatelessWidget {
   final String? message;
   final IconData icon;
   final VoidCallback? onRetry;
-  final String retryLabel;
+  final String? retryLabel;
 
   const ErrorView({
     super.key,
-    this.title = 'Ein Fehler ist aufgetreten',
+    required this.title,
     this.message,
     this.icon = Icons.error_outline,
     this.onRetry,
-    this.retryLabel = 'Erneut versuchen',
+    this.retryLabel,
   });
 
   /// Netzwerk-Fehler
-  factory ErrorView.network({VoidCallback? onRetry}) {
+  factory ErrorView.network({required BuildContext context, VoidCallback? onRetry}) {
+    final l10n = context.l10n;
     return ErrorView(
-      title: 'Keine Internetverbindung',
-      message: 'Bitte überprüfe deine Verbindung und versuche es erneut.',
+      title: l10n.errorNetwork,
+      message: l10n.errorNetworkMessage,
       icon: Icons.wifi_off,
       onRetry: onRetry,
     );
   }
 
   /// Server-Fehler
-  factory ErrorView.server({VoidCallback? onRetry}) {
+  factory ErrorView.server({required BuildContext context, VoidCallback? onRetry}) {
+    final l10n = context.l10n;
     return ErrorView(
-      title: 'Server nicht erreichbar',
-      message: 'Der Server antwortet nicht. Versuche es später erneut.',
+      title: l10n.errorServer,
+      message: l10n.errorServerMessage,
       icon: Icons.cloud_off,
       onRetry: onRetry,
     );
@@ -40,24 +43,26 @@ class ErrorView extends StatelessWidget {
 
   /// Keine Ergebnisse
   factory ErrorView.empty({
-    String title = 'Keine Ergebnisse',
+    required BuildContext context,
+    String? title,
     String? message,
   }) {
     return ErrorView(
-      title: title,
+      title: title ?? context.l10n.errorNoResults,
       message: message,
       icon: Icons.search_off,
     );
   }
 
   /// Standort-Fehler
-  factory ErrorView.location({VoidCallback? onRetry}) {
+  factory ErrorView.location({required BuildContext context, VoidCallback? onRetry}) {
+    final l10n = context.l10n;
     return ErrorView(
-      title: 'Standort nicht verfügbar',
-      message: 'Bitte erlaube den Zugriff auf deinen Standort.',
+      title: l10n.errorLocation,
+      message: l10n.errorLocationMessage,
       icon: Icons.location_off,
       onRetry: onRetry,
-      retryLabel: 'Einstellungen öffnen',
+      retryLabel: l10n.openSettings,
     );
   }
 
@@ -72,7 +77,7 @@ class ErrorView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withOpacity(0.1),
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -106,7 +111,7 @@ class ErrorView extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: Text(retryLabel),
+                label: Text(retryLabel ?? context.l10n.retry),
               ),
             ],
           ],

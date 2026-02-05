@@ -85,8 +85,8 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: isSelected
-          ? Color(category.colorValue).withOpacity(0.15)
-          : Colors.grey.withOpacity(0.08),
+          ? Color(category.colorValue).withValues(alpha: 0.15)
+          : Colors.grey.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -98,7 +98,7 @@ class _CategoryChip extends StatelessWidget {
             border: Border.all(
               color: isSelected
                   ? Color(category.colorValue)
-                  : Colors.grey.withOpacity(0.2),
+                  : Colors.grey.withValues(alpha: 0.2),
               width: isSelected ? 1.5 : 1,
             ),
           ),

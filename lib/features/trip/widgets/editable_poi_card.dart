@@ -50,8 +50,8 @@ class EditablePOICard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: showWeatherWarning
-              ? Colors.orange.withOpacity(0.5)
-              : colorScheme.outline.withOpacity(0.15),
+              ? Colors.orange.withValues(alpha: 0.5)
+              : colorScheme.outline.withValues(alpha: 0.15),
           width: showWeatherWarning ? 1.5 : 1,
         ),
       ),
@@ -99,7 +99,7 @@ class EditablePOICard extends ConsumerWidget {
                               category?.label ?? stop.categoryId,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: colorScheme.onSurface.withOpacity(0.6),
+                                color: colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -123,7 +123,7 @@ class EditablePOICard extends ConsumerWidget {
                           '+${stop.detourKm!.toStringAsFixed(1)} km Umweg',
                           style: TextStyle(
                             fontSize: 11,
-                            color: colorScheme.onSurface.withOpacity(0.5),
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -177,7 +177,7 @@ class EditablePOICard extends ConsumerWidget {
 
   Widget _buildPlaceholder(ColorScheme colorScheme, POICategory cat) {
     return Container(
-      color: Color(cat.colorValue).withOpacity(0.2),
+      color: Color(cat.colorValue).withValues(alpha: 0.2),
       child: Center(
         child: Text(
           cat.icon,
