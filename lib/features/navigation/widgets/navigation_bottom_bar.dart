@@ -90,37 +90,44 @@ class NavigationBottomBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Button-Zeile
+              // Button-Zeile - alle Buttons gleichmäßig verteilt
               Row(
                 children: [
                   // Mute/Unmute
-                  _ActionButton(
-                    icon: isMuted
-                        ? Icons.volume_off
-                        : Icons.volume_up,
-                    label: isMuted ? context.l10n.navMuteOn : context.l10n.navMuteOff,
-                    onTap: onToggleMute,
-                    colorScheme: colorScheme,
-                  ),
-                  const SizedBox(width: 8),
-                  // Sprachbefehl
-                  if (onVoiceCommand != null)
-                    _ActionButton(
-                      icon: isListening ? Icons.mic : Icons.mic_none,
-                      label: isListening ? context.l10n.navVoiceListening : context.l10n.navVoice,
-                      onTap: onVoiceCommand!,
+                  Expanded(
+                    child: _ActionButton(
+                      icon: isMuted
+                          ? Icons.volume_off
+                          : Icons.volume_up,
+                      label: isMuted ? context.l10n.navMuteOn : context.l10n.navMuteOff,
+                      onTap: onToggleMute,
                       colorScheme: colorScheme,
-                      isActive: isListening,
                     ),
-                  if (onVoiceCommand != null) const SizedBox(width: 8),
-                  // Übersicht
-                  _ActionButton(
-                    icon: Icons.map_outlined,
-                    label: context.l10n.navOverview,
-                    onTap: onOverview,
-                    colorScheme: colorScheme,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  // Sprachbefehl
+                  if (onVoiceCommand != null) ...[
+                    Expanded(
+                      child: _ActionButton(
+                        icon: isListening ? Icons.mic : Icons.mic_none,
+                        label: isListening ? context.l10n.navVoiceListening : context.l10n.navVoice,
+                        onTap: onVoiceCommand!,
+                        colorScheme: colorScheme,
+                        isActive: isListening,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  // Übersicht
+                  Expanded(
+                    child: _ActionButton(
+                      icon: Icons.map_outlined,
+                      label: context.l10n.navOverview,
+                      onTap: onOverview,
+                      colorScheme: colorScheme,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                   // Navigation beenden
                   Expanded(
                     child: FilledButton.icon(
@@ -223,22 +230,34 @@ class _ActionButton extends StatelessWidget {
       return FilledButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 18),
-        label: Text(label, style: const TextStyle(fontSize: 12)),
+        label: Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
       );
     }
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 18),
-      label: Text(label, style: const TextStyle(fontSize: 12)),
+      label: Flexible(
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 11),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
   }

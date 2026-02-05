@@ -291,6 +291,25 @@ class PublicTrip with _$PublicTrip {
 
 ---
 
+## Bugfixes
+
+### Navigation Bottom Bar - Beenden-Button sichtbar
+
+**Problem:** Der "Beenden" Button in der Navigations-Bottom-Bar wurde auf schmalen Bildschirmen abgeschnitten (nur roter Streifen sichtbar).
+
+**Ursache:** Die ersten 3 Buttons (Mute, Sprache, Uebersicht) waren nicht in `Expanded` gewickelt und nahmen ihren natuerlichen Platz ein, wodurch der Beenden-Button aus dem sichtbaren Bereich gedrueckt wurde.
+
+**Loesung:**
+- Alle 4 Buttons in `Expanded` gewickelt fuer gleichmaessige Verteilung
+- Button-Padding von 12px auf 8px reduziert
+- Schriftgroesse von 12 auf 11 reduziert
+- Abstaende zwischen Buttons von 8px auf 6px reduziert
+- `Flexible` + `TextOverflow.ellipsis` fuer zu lange Labels
+
+**Datei:** `lib/features/navigation/widgets/navigation_bottom_bar.dart`
+
+---
+
 ## Verifikation
 
 1. **Galerie oeffnen:** Trips werden geladen
@@ -313,4 +332,4 @@ class PublicTrip with _$PublicTrip {
 | Neue ARB-Keys | 26 |
 | Supabase-Tabellen | 4 |
 | RPC-Funktionen | 6 |
-| APK-Groesse | 117.9 MB |
+| APK-Groesse | 116.4 MB |
