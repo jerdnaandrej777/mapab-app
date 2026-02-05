@@ -343,7 +343,6 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         maxChildSize: 1.0,
         expand: false,
         builder: (context, scrollController) => _FilterSheet(
-          state: state,
           scrollController: scrollController,
         ),
       ),
@@ -353,16 +352,16 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
 
 /// Filter Bottom Sheet
 class _FilterSheet extends ConsumerWidget {
-  final GalleryState state;
   final ScrollController scrollController;
 
   const _FilterSheet({
-    required this.state,
     required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // State direkt aus dem Provider holen fuer sofortige Updates
+    final state = ref.watch(galleryNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     // Beliebte Tags (koennte spaeter aus API kommen)

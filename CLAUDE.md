@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.4 - AI Euro Trip Crash-Fix (ConcurrentModificationException + Debouncer Race Condition) | Plattformen: Android, iOS, Desktop
+Version: 1.10.7 - Filter-Modal Fix (Galerie-Buttons sofort reaktiv) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -103,7 +103,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) + Wetter-Tipp Sortier-Chip + Wetter-Kontext-Banner bei schlechtem Wetter (v1.9.12) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) + Wetter-Badges auf Stop-Tiles + Wetter-Hint bei bad/danger Wetter (v1.9.12) |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) + Wetter-Badges auf Stop-Tiles + Wetter-Hint bei bad/danger Wetter (v1.9.12) + AppBar Speichern-Button fuer AI Trips (v1.10.6) |
 | `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.3: nativer User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert) + mounted-Check in 60fps Interpolation-Callback (v1.9.22) + Vollstaendiges dispose() mit Provider-Cleanup, lokaler MapController-Capture gegen Race-Condition, _arrivalDialogShown Flag, context.mounted Guards in Dialogen (v1.9.23) + Route/POI-Updates nur bei tatsaechlicher Aenderung statt jedem build(), moveCamera statt animateCamera fuer 60fps ohne Animation-Stacking (v1.9.25) + Sprachbefehle via VoiceService: "wie lange noch", "wo bin ich", "naechster Stopp", "Navigation beenden" + partielle Spracherkennung-UI (v1.9.29) |
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden/Mikrofon Buttons (v1.9.0) + Sprachbefehl-Button mit aktiver Listening-Animation (v1.9.29) |
@@ -132,7 +132,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/journal/widgets/add_journal_entry_sheet.dart` | BottomSheet zum Hinzufuegen: Kamera/Galerie Buttons, Notiz-TextField, Standort-Toggle (v1.9.29) |
 | `lib/features/sharing/qr_scanner_screen.dart` | QR-Code-Scanner fuer Trip-Import: mobile_scanner Integration, mapab:// + https://mapab.app/trip/ Deep-Link-Parsing, automatische Routen-Berechnung via OSRM (v1.9.30) |
 | `lib/features/templates/trip_templates_screen.dart` | Trip-Vorlagen-Auswahl: 12 vordefinierte Reisetypen, Zielgruppen-Filter (Alle/Paare/Familien/etc.), Tage-Stepper, direkte AI-Trip-Generierung (v1.9.30) |
-| `lib/features/social/gallery_screen.dart` | Oeffentliche Trip-Galerie: Featured-Trips horizontal, Grid-Ansicht, Filter-Sheet (Vollbild, v1.10.0), Suche, Sortierung (Beliebt/Neueste/Likes), Trip-Typ-Filter, Tags, Infinite Scroll (v1.10.0) + FilterChip/ChoiceChip explizite Textfarben colorScheme.onPrimary/onSurface (v1.10.1) |
+| `lib/features/social/gallery_screen.dart` | Oeffentliche Trip-Galerie: Featured-Trips horizontal, Grid-Ansicht, Filter-Sheet (Vollbild, v1.10.0), Suche, Sortierung (Beliebt/Neueste/Likes), Trip-Typ-Filter, Tags, Infinite Scroll (v1.10.0) + FilterChip/ChoiceChip explizite Textfarben colorScheme.onPrimary/onSurface (v1.10.1) + _FilterSheet ref.watch() statt state-Parameter fuer sofortige Button-Updates (v1.10.7) |
 | `lib/features/social/widgets/public_trip_card.dart` | Trip-Karte in Galerie: Thumbnail, Statistiken, Like-Button, Author-Info (v1.10.0) |
 | `lib/features/social/trip_detail_screen.dart` | Trip-Detail-Ansicht: Route auf Karte, Stops, Author-Profil, Like/Import-Buttons (v1.10.0) |
 | `lib/features/social/publish_trip_sheet.dart` | Bottom Sheet zum Veroeffentlichen: Name, Beschreibung, Tags, Sichtbarkeit (v1.10.0) |
@@ -482,6 +482,9 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.7.md` (Filter-Modal Fix: Trip-Galerie Filter-Buttons reagieren sofort auf Auswahl, _FilterSheet holt State via ref.watch() statt als Parameter)
+- `Dokumentation/CHANGELOG-v1.10.6.md` (Route Speichern Button Fix: AppBar Button fuer AI Trips erweitert, Button wird jetzt auch bei RandomTripStep.preview und confirmed angezeigt, ruft _saveAITrip() statt _saveRoute() auf)
+- `Dokumentation/CHANGELOG-v1.10.5.md` (AI Euro Trip Crash-Fix Enrichment Safety: Fire-and-forget async mit runZonedGuarded abgesichert, Sub-Batching mit max 10 POIs pro Batch bei Euro Trips)
 - `Dokumentation/CHANGELOG-v1.10.4.md` (AI Euro Trip Crash-Fix: ConcurrentModificationException in _flushPendingEnrichments() behoben durch Map-Kopie vor Iteration, Debouncer Race Condition in enrichPOIsBatch() behoben durch _enrichmentBatchActive Flag, Thread-Safety fuer POI-Enrichment)
 - `Dokumentation/CHANGELOG-v1.10.3.md` (Vollstaendige Lokalisierung: Navigation Instructions mit l10n-Parameter, Voice Service dynamische TTS/STT-Sprache + mehrsprachige Sprachbefehle, AI Chat komplett lokalisiert, AI Trip Advisor lokalisiert, AI Service language-Parameter, 100+ neue ARB-Keys in allen 5 Sprachen, Gallery DB-Fix public_trips)
 - `Dokumentation/CHANGELOG-v1.10.2.md` (MapScreen Lokalisierung: AI Tagestrip/Euro Trip Buttons, Trip-Config-Panel komplett lokalisiert, 13 neue ARB-Keys in allen 5 Sprachen)
