@@ -71,7 +71,7 @@ class SocialRepository {
   Future<List<PublicTrip>> loadFeaturedTrips({int limit = 5}) async {
     try {
       final response = await _client
-          .from('public_trips')
+          .from('trips')
           .select('''
             *,
             user_profiles!inner(display_name, avatar_url)
@@ -115,7 +115,7 @@ class SocialRepository {
   Future<List<PublicTrip>> loadUserTrips(String userId, {int limit = 20}) async {
     try {
       final response = await _client
-          .from('public_trips')
+          .from('trips')
           .select()
           .eq('user_id', userId)
           .eq('is_hidden', false)
@@ -237,7 +237,7 @@ class SocialRepository {
   Future<bool> deletePublishedTrip(String tripId) async {
     try {
       await _client
-          .from('public_trips')
+          .from('trips')
           .delete()
           .eq('id', tripId);
       debugPrint('[Social] Trip geloescht: $tripId');
@@ -255,7 +255,7 @@ class SocialRepository {
 
     try {
       final response = await _client
-          .from('public_trips')
+          .from('trips')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);

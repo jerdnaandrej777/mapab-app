@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.4 - Download</title>
+    <title>MapAB v1.10.6 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,11 +202,11 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.4 (Build 185)</div>
-        <span class="release-tag">Euro Trip Crash-Fix</span>
+        <div class="version">Version 1.10.6 (Build 187)</div>
+        <span class="release-tag">Trip-Galerie Fix</span>
         <p class="subtitle">
-            Kritische Bugfixes!<br>
-            AI Euro Trip funktioniert jetzt stabil.
+            Bugfix Release!<br>
+            Trip-Galerie Datenbank-Fehler behoben.
         </p>
 
         <div class="qr-container">
@@ -214,19 +214,18 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.4/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.6/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (117 MB)
         </a>
 
         <div class="features">
-            <h3>&#x1F41B; Bugfixes in v1.10.4:</h3>
+            <h3>&#x1F41B; Bugfixes in v1.10.6:</h3>
             <ul>
-                <li class="highlight">AI Euro Trip Crash behoben</li>
-                <li class="highlight">ConcurrentModificationException gefixt</li>
-                <li class="highlight">Debouncer Race Condition behoben</li>
-                <li>POI-Enrichment Thread-Safety</li>
-                <li>Stabilere Trip-Generierung</li>
-                <li>Keine Abstuerze mehr beim "Ueberrasch mich!"</li>
+                <li class="highlight">Trip-Galerie Datenbank-Fehler behoben</li>
+                <li class="highlight">Tabellenname public_trips → trips korrigiert</li>
+                <li>Featured Trips laden jetzt korrekt</li>
+                <li>User-Trips anzeigen funktioniert</li>
+                <li>Trip löschen/veröffentlichen repariert</li>
             </ul>
         </div>
 
@@ -247,7 +246,7 @@
 
         <p class="info">
             Android 8.0+ erforderlich<br>
-            Letzte Aktualisierung: 5. Februar 2026
+            Letzte Aktualisierung: 6. Februar 2026
         </p>
     </div>
 
@@ -257,7 +256,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.4/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.6/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
