@@ -193,8 +193,17 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   children: GalleryTripTypeFilter.values.map((filter) {
                     final isSelected = state.tripTypeFilter == filter;
                     return FilterChip(
-                      label: Text(filter.label),
+                      label: Text(
+                        filter.label,
+                        style: TextStyle(
+                          color: isSelected
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
+                      ),
                       selected: isSelected,
+                      selectedColor: colorScheme.primary,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
                       onSelected: (_) {
                         ref
                             .read(galleryNotifierProvider.notifier)
@@ -327,10 +336,11 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
         expand: false,
         builder: (context, scrollController) => _FilterSheet(
           state: state,
@@ -369,145 +379,176 @@ class _FilterSheet extends ConsumerWidget {
       'fotografie',
     ];
 
-    return Column(
-      children: [
-        // Handle
-        Center(
-          child: Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.outline.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-        ),
 
-        // Header
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Text(
-                context.l10n.galleryFilter,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const Spacer(),
-              if (state.hasActiveFilters)
-                TextButton(
-                  onPressed: () {
-                    ref.read(galleryNotifierProvider.notifier).resetFilters();
-                    Navigator.pop(context);
-                  },
-                  child: Text(context.l10n.galleryFilterReset),
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Text(
+                  context.l10n.galleryFilter,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
                 ),
-            ],
-          ),
-        ),
-
-        const Divider(height: 1),
-
-        // Content
-        Expanded(
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Trip-Typ
-              Text(
-                context.l10n.galleryTripType,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: GalleryTripTypeFilter.values.map((filter) {
-                  final isSelected = state.tripTypeFilter == filter;
-                  return ChoiceChip(
-                    label: Text(filter.label),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      ref
-                          .read(galleryNotifierProvider.notifier)
-                          .setTripTypeFilter(filter);
+                const Spacer(),
+                if (state.hasActiveFilters)
+                  TextButton(
+                    onPressed: () {
+                      ref.read(galleryNotifierProvider.notifier).resetFilters();
+                      Navigator.pop(context);
                     },
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Tags
-              Text(
-                context.l10n.galleryTags,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: popularTags.map((tag) {
-                  final isSelected = state.selectedTags.contains(tag);
-                  return FilterChip(
-                    label: Text('#$tag'),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      ref.read(galleryNotifierProvider.notifier).toggleTag(tag);
-                    },
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Sortierung
-              Text(
-                context.l10n.gallerySort,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              ...GallerySortBy.values.map((sort) {
-                return RadioListTile<GallerySortBy>(
-                  title: Text(sort.label),
-                  value: sort,
-                  groupValue: state.sortBy,
-                  onChanged: (value) {
-                    if (value != null) {
-                      ref
-                          .read(galleryNotifierProvider.notifier)
-                          .setSortBy(value);
-                    }
-                  },
-                  contentPadding: EdgeInsets.zero,
-                );
-              }),
-            ],
+                    child: Text(context.l10n.galleryFilterReset),
+                  ),
+              ],
+            ),
           ),
-        ),
 
-        // Apply Button
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.apply),
+          const Divider(height: 1),
+
+          // Content
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Trip-Typ
+                Text(
+                  context.l10n.galleryTripType,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: GalleryTripTypeFilter.values.map((filter) {
+                    final isSelected = state.tripTypeFilter == filter;
+                    return ChoiceChip(
+                      label: Text(
+                        filter.label,
+                        style: TextStyle(
+                          color: isSelected
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: colorScheme.primary,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      onSelected: (_) {
+                        ref
+                            .read(galleryNotifierProvider.notifier)
+                            .setTripTypeFilter(filter);
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Tags
+                Text(
+                  context.l10n.galleryTags,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: popularTags.map((tag) {
+                    final isSelected = state.selectedTags.contains(tag);
+                    return FilterChip(
+                      label: Text(
+                        '#$tag',
+                        style: TextStyle(
+                          color: isSelected
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: colorScheme.primary,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      onSelected: (_) {
+                        ref.read(galleryNotifierProvider.notifier).toggleTag(tag);
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Sortierung
+                Text(
+                  context.l10n.gallerySort,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                ...GallerySortBy.values.map((sort) {
+                  return RadioListTile<GallerySortBy>(
+                    title: Text(
+                      sort.label,
+                      style: TextStyle(color: colorScheme.onSurface),
+                    ),
+                    value: sort,
+                    groupValue: state.sortBy,
+                    onChanged: (value) {
+                      if (value != null) {
+                        ref
+                            .read(galleryNotifierProvider.notifier)
+                            .setSortBy(value);
+                      }
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  );
+                }),
+              ],
+            ),
+          ),
+
+          // Apply Button
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(context.l10n.apply),
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
