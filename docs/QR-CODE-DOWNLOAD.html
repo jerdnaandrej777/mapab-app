@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MapAB v1.10.0 - Download</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -76,6 +75,10 @@
             justify-content: center;
             align-items: center;
             min-height: 200px;
+        }
+
+        #qrcode img {
+            border-radius: 12px;
         }
 
         #qrcode canvas {
@@ -227,25 +230,18 @@
         </p>
     </div>
 
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
-        // QR-Code automatisch generieren basierend auf aktueller URL
+        // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
-            const currentUrl = window.location.href;
-
-            QRCode.toCanvas(document.createElement('canvas'), currentUrl, {
+            new QRCode(document.getElementById("qrcode"), {
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.0/mapab-v1.10.0.apk",
                 width: 200,
-                margin: 2,
-                color: {
-                    dark: '#1a1a2e',
-                    light: '#ffffff'
-                }
-            }, function(error, canvas) {
-                if (error) {
-                    console.error(error);
-                    return;
-                }
-                canvas.style.borderRadius = '12px';
-                document.getElementById('qrcode').appendChild(canvas);
+                height: 200,
+                colorDark: "#1a1a2e",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
             });
         });
     </script>

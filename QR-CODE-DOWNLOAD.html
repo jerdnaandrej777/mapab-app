@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB App - Download QR-Code</title>
+    <title>MapAB v1.10.0 - Download</title>
     <style>
         * {
             margin: 0;
@@ -12,8 +12,8 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,11 +21,11 @@
             padding: 20px;
         }
 
-        .container {
+        .card {
             background: white;
             border-radius: 24px;
-            padding: 48px;
-            max-width: 600px;
+            padding: 40px;
+            max-width: 450px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
@@ -34,415 +34,237 @@
         .logo {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            margin: 0 auto 24px;
+            align-items: center;
+            margin: 0 auto 20px;
             font-size: 40px;
         }
 
         h1 {
-            font-size: 32px;
-            color: #1a202c;
+            color: #1a1a2e;
+            font-size: 28px;
             margin-bottom: 8px;
         }
 
         .version {
-            color: #718096;
-            font-size: 18px;
-            margin-bottom: 32px;
-        }
-
-        .qr-container {
-            background: #f7fafc;
-            border-radius: 16px;
-            padding: 32px;
-            margin: 32px 0;
-            display: inline-block;
-        }
-
-        #qrcode {
-            display: inline-block;
-        }
-
-        .download-link {
-            background: #2563EB;
-            color: white;
-            padding: 16px 32px;
-            border-radius: 12px;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 24px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .download-link:hover {
-            background: #1E40AF;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .info {
-            margin-top: 32px;
-            padding: 24px;
-            background: #edf2f7;
-            border-radius: 12px;
-            text-align: left;
-        }
-
-        .info h3 {
-            color: #2d3748;
-            margin-bottom: 12px;
-            font-size: 18px;
-        }
-
-        .info ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .info li {
-            padding: 8px 0;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-        }
-
-        .info li::before {
-            content: "✅";
-            margin-right: 12px;
+            color: #667eea;
             font-size: 16px;
-        }
-
-        .info li.new::before {
-            content: "🆕";
-        }
-
-        .footer {
-            margin-top: 24px;
-            color: #718096;
-            font-size: 14px;
-        }
-
-        .instructions {
-            background: #fff5f5;
-            border-left: 4px solid #fc8181;
-            padding: 16px;
-            border-radius: 8px;
-            margin-top: 24px;
-            text-align: left;
-        }
-
-        .instructions h4 {
-            color: #c53030;
+            font-weight: 600;
             margin-bottom: 8px;
         }
 
-        .instructions p {
-            color: #4a5568;
-            line-height: 1.6;
+        .release-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
         }
 
-        @media print {
-            body {
-                background: white;
-            }
-            .container {
-                box-shadow: none;
-            }
-            .download-link {
-                display: none;
-            }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        #qrcode img {
+            border-radius: 12px;
+        }
+
+        #qrcode canvas {
+            border-radius: 12px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
+        .info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .features h3 {
+            color: #1a1a2e;
+            font-size: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            color: #666;
+            font-size: 13px;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .features li::before {
+            content: "\2713";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .features li.highlight::before {
+            content: "\2B50";
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .scan-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">🗺️</div>
-        <h1>MapAB Flutter App</h1>
-        <p class="version">Version 1.9.32 - Vollstaendige Lokalisierung (5 Sprachen)</p>
+    <div class="card">
+        <div class="logo">&#x1F5FA;&#xFE0F;</div>
+        <h1>MapAB</h1>
+        <div class="version">Version 1.10.0 (Build 180)</div>
+        <span class="release-tag">Social Features Release</span>
+        <p class="subtitle">
+            Teile deine Trips mit der Community!<br>
+            Entdecke, like und importiere Trips anderer Nutzer.
+        </p>
 
         <div class="qr-container">
             <div id="qrcode"></div>
+            <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <p style="color: #4a5568; margin-bottom: 16px;">
-            Scanne den QR-Code mit deinem Android-Gerät<br>
-            oder klicke auf den Button unten
-        </p>
-
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.32"
-           class="download-link"
-           target="_blank">
-            📥 Zum Download auf GitHub
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.0/mapab-v1.10.0.apk" class="download-btn" download>
+            &#x1F4F1; APK herunterladen (117.9 MB)
         </a>
 
-        <div class="info">
-            <h3>📱 Enthaltene Features</h3>
+        <div class="features">
+            <h3>&#x1F389; Neu in v1.10.0:</h3>
             <ul>
-                <li class="new">🌍 Vollstaendige Lokalisierung - 5 Sprachen: Deutsch, English, Français, Italiano, Español (NEU v1.9.32)</li>
-                <li class="new">📝 ~700 lokalisierte Strings - Alle UI-Texte, Dialoge, Fehlermeldungen uebersetzt (NEU v1.9.32)</li>
-                <li class="new">📍 GPS-Dialog zentralisiert - Einheitlicher Helper mit Lokalisierung in allen Screens (NEU v1.9.32)</li>
-                <li>🛡️ Euro Trip Crash-Fix - Unendliche Rekursion in POI-Enrichment behoben (v1.9.31)</li>
-                <li>⏱️ Weather API Timeouts - 15s/30s Timeouts verhindern App-Freeze bei langsamen APIs (v1.9.31)</li>
-                <li>🔒 Race Condition Guard - Atomares Lock verhindert parallele Trip-Generierungen bei Doppel-Klick (v1.9.31)</li>
-                <li>📋 12 Trip-Vorlagen - Romantisches Wochenende, Kulturreise, Natur-Auszeit, Familienspass, Staedtetrip, Abenteuer-Trip, Strand & Kueste, Burgen & Schloesser, Wellness, Kulinarische Reise, Foto-Tour, Schneller Tagesausflug (v1.9.30)</li>
-                <li>📷 QR-Scanner - Trip-Import per QR-Code, scannt mapab:// Deep-Links und laedt Trips direkt in die App (v1.9.30)</li>
-                <li>🎯 Template-Auswahl UI - Filterbare Vorlagen nach Zielgruppe (Alle, Paare, Familien, Abenteurer, Fotografen, Feinschmecker) (v1.9.30)</li>
-                <li>🎤 Sprachbefehle - "Wie lange noch?", "Wo bin ich?", "Nächster Stopp", "Navigation beenden" per Spracheingabe (v1.9.29)</li>
-                <li>📱 Hintergrund-Navigation - GPS-Tracking laeuft im Android Foreground Service weiter wenn App minimiert (v1.9.29)</li>
-                <li>🎙️ Mikrofon-Button - Sprach-Button in der Navigation-Bottom-Bar mit visueller Listening-Animation (v1.9.29)</li>
-                <li>🔔 Benachrichtigungs-Steuerung - Live-Update von Distanz/ETA in der Android-Benachrichtigung (v1.9.29)</li>
-                <li>🛡️ Euro Trip Crash-Fix - 22 Fixes in 7 Phasen: Null-Safety, Listener-Lifecycle, Race Conditions, Performance, Weather, Debounce (v1.9.28)</li>
-                <li>🔒 Sicherheits-Hardening - Passwort-Mindestlaenge, HTTPS-Validierung, Hive-Verschluesselung (v1.9.27)</li>
-                <li>🧹 Code-Qualitaet - Dead Code entfernt, GPS konsolidiert, Lint-Regeln, 298 Tests (v1.9.27)</li>
-                <li>🗺️ Navigation Route-Fix - Route-Linie wird jetzt zuverlaessig auf der Karte gerendert (v1.9.26)</li>
-                <li>⚡ Navigation Performance-Fix - Step-Index-Cache, moveCamera statt animateCamera, Map-Update Throttling (v1.9.25)</li>
-                <li>🔧 POI-Laden Hotfix - Individuelle Timeouts pro API-Quelle, Overpass-Ausfall verliert keine Ergebnisse mehr (v1.9.24)</li>
-                <li>🛡️ Navigation Crash-Fix - 10 kritische + 4 hohe Stabilitaetsprobleme in der Navigation behoben (v1.9.23)</li>
-                <li>🔒 GPS-Stream-Leak Fix - Doppelte GPS-Streams bei wiederholtem Navigation-Start verhindert (v1.9.23)</li>
-                <li>⚡ MapController Race-Fix - Lokale Variable statt Feld-Zugriff im 60fps Callback (v1.9.23)</li>
-                <li>🧹 Provider-Cleanup - NavigationProvider/TTS/POI-Discovery werden bei Screen-Exit sauber gestoppt (v1.9.23)</li>
-                <li>🛡️ PositionInterpolator Safety - _isDisposed Flag verhindert Timer-Callbacks nach dispose() (v1.9.23)</li>
-                <li>📍 GPS-Permission-Check - Navigation prueft GPS-Dienst und Berechtigung vor Stream-Start (v1.9.23)</li>
-                <li>🔧 Arrival-Dialog Fix - Ziel-Dialog erscheint genau 1x statt mehrfach (v1.9.23)</li>
-                <li>⏱️ Future.wait Timeouts - 12s Timeout in loadPOIsInRadius + loadAllPOIs verhindert ANR (v1.9.22)</li>
-                <li>🛡️ Null-Safety Guards - startLocation-Check in rerollPOI/removePOI/addPOIToDay/removePOIFromDay (v1.9.24)</li>
-                <li>🔧 Navigator-Fix - context.mounted Check bei doppeltem Navigator.pop im DayEditor (v1.9.24)</li>
-                <li>📍 Mounted-Checks - setState-after-dispose Fix nach async GPS-Operationen im MapScreen (v1.9.24)</li>
-                <li>🌤️ Weather-Cancellation - Request-ID Pattern in Weather-Provider verhindert veraltete Updates (v1.9.24)</li>
-                <li>⏱️ Enrichment-Timeouts - 10s/8s Timeouts fuer parallele Wikipedia/Wikidata-Requests (v1.9.24)</li>
-                <li>🛡️ ANR-Fix - App friert nicht mehr ein bei 150 POIs im Korridor-Browser (v1.9.21)</li>
-                <li>💾 Cache-Erhalt - copyWith() bewahrt filteredPOIs-Cache bei Slider-Drag (v1.9.21)</li>
-                <li>⚡ Sortier-Cache - Wetter-Sortierung nur bei POI/Wetter-Aenderung, nicht pro Frame (v1.9.21)</li>
-                <li>🔧 Weather-Watch Fix - Provider nur 1x in build() statt 4x in Sub-Methoden (v1.9.21)</li>
-                <li>🔑 ValueKey Recycling - ListView recycelt CompactPOICards statt 150x neu aufzubauen (v1.9.21)</li>
-                <li>⏱️ API-Timeout 12s - Future.wait bricht ab statt endlos auf Overpass zu warten (v1.9.21)</li>
-                <li>🤖 AI-Advisor Fix - Manuelle Anfragen ersetzen Auto-Trigger sauber via requestId (v1.9.21)</li>
-                <li>⚡ Slider-Debounce - Korridor-Slider friert App nicht mehr ein, Load nur bei Loslassen (v1.9.20)</li>
-                <li>🏠 Indoor-Toggle Fix - Ein State-Write statt 8-15, kein Ruckeln mehr (v1.9.20)</li>
-                <li>🧹 Dispose-Cleanup - Laufende Requests werden bei Sheet-Schliessen abgebrochen (v1.9.20)</li>
-                <li>💾 filteredPOIs Cache - Lazy-Cache eliminiert redundante List-Allokationen pro Frame (v1.9.20)</li>
-                <li>🛡️ Crash-Fix - AI-Empfehlungen stuerzen nicht mehr ab, nur Supabase+kuratiert (v1.9.19)</li>
-                <li>⭐ Must-See Only - Nur beruemhte Highlights empfehlen statt alle POIs (v1.9.19)</li>
-                <li>🔍 Max 3 Suchpunkte - Start/Mitte/Ende statt jeden Stop, 15km Radius (v1.9.19)</li>
-                <li>🤖 GPT Top-3 - GPT-4o empfiehlt nur 3 Must-See Highlights statt 5 (v1.9.19)</li>
-                <li>📍 Stop-Radius Suche - AI-Empfehlungen im Umkreis jedes Stops statt Korridor (v1.9.18)</li>
-                <li>🤖 Ortsspezifisches GPT-Ranking - GPT-4o beruecksichtigt Naehe zu konkreten Stops (v1.9.18)</li>
-                <li>🛡️ POI Result-Limit - Max 200 POIs aus allen Quellen, verhindert Ueberladung (v1.9.17)</li>
-                <li>⚡ Compute-Limit - Max 150 POIs im Isolate, 5x schnellere Berechnung (v1.9.17)</li>
-                <li>🎯 Korridor 25km - Halbiertes Suchgebiet, praezisere Empfehlungen (v1.9.17)</li>
-                <li>⏱️ Echtes Timeout - Korridor-Laden bricht nach 12s ab statt endlos zu haengen (v1.9.17)</li>
-                <li>🛤️ Tages-Route-Segment - Empfehlungen laden nur POIs fuer den aktuellen Tag (v1.9.16)</li>
-                <li>🔄 Request-Cancellation - Alte Anfragen werden automatisch abgebrochen (v1.9.16)</li>
-                <li>🔒 Loading-Safety - isLoading wird per try/finally immer zurueckgesetzt (v1.9.16)</li>
-                <li>⚡ UI-Freeze Fix - Route-Berechnungen in separatem Isolate (v1.9.15)</li>
-                <li>🔒 Re-Entry Guard - Kein doppeltes Laden von Smart-Empfehlungen (v1.9.15)</li>
-                <li>⏱️ Pipeline-Timeouts - Korridor + GPT max 15s, automatischer Fallback (v1.9.15)</li>
-                <li>🧭 Fluessige Navigation - 60fps Positions-Interpolation wie Google Maps (v1.9.14)</li>
-                <li>⭐ Must-See POI Entdeckung - Goldene Card + TTS bei Annaeherung an Highlights (v1.9.14)</li>
-                <li>🏙️ Staedte/Seen/Kuesten-Erkennung - Verbesserte POI-Kategorisierung (v1.9.14)</li>
-                <li>🗄️ Supabase PostGIS Backend - POIs werden jetzt zuerst aus der Cloud geladen (~100ms statt ~5s) (v1.9.13)</li>
-                <li>🔄 Hybrid-Architektur - Supabase-first mit automatischem Fallback auf Client-APIs (v1.9.13)</li>
-                <li>📤 Crowdsourced Enrichment - Angereicherte POIs werden automatisch hochgeladen fuer alle User (v1.9.13)</li>
-                <li>🌤️ Wetter-POI-Integration - Wetter-Badges, Sortierung & Indoor-Chips auf ALLEN Screens (v1.9.12)</li>
-                <li>🔧 WeatherBadgeUnified - Einheitliches Badge-Widget in 3 Groessen (v1.9.12)</li>
-                <li>📏 Tagesdistanz-Fix - getDistanceForDay Doppelzaehlung behoben, kein Tag mehr ueber 700km (v1.9.11)</li>
-                <li>🌤️ Wetter-Details Vollbild - Sheet oeffnet auf 85% Bildschirmhoehe, scrollbar (v1.9.10)</li>
-                <li>🤖 Smart AI-Empfehlungen - Must-See POIs + Wetter-Gewichtung, alle Kategorien statt nur Indoor (v1.9.9)</li>
-                <li>🗺️ Vorschau-Marker - Empfohlene POIs als Stern-Marker auf der MiniMap sichtbar (v1.9.9)</li>
-                <li>📏 700km-Tageslimit - Hartes Limit statt nur Warning, Re-Split bei Ueberschreitung (v1.9.9)</li>
-                <li>🤖 AI-POI-Empfehlungen - GPT-4o rankt Indoor-Alternativen bei schlechtem Wetter als actionable POI-Karten (v1.9.8)</li>
-                <li>➖ POI-Entfernen - Hinzugefuegte POIs direkt im Korridor-Browser wieder entfernen (v1.9.8)</li>
-                <li>🎯 Hinzufuegen/Tauschen - AI empfiehlt POIs mit Begruendung, direkt zum Trip hinzufuegen oder Outdoor-Stop ersetzen (v1.9.8)</li>
-                <li>📌 Korridor-Browser Inline - POI-Browser direkt im Tag-Editor statt als Modal-Sheet (v1.9.7)</li>
-                <li>🔒 Fixierte MiniMap + Stats - Karte und Tages-Statistiken bleiben beim Scrollen sichtbar (v1.9.7)</li>
-                <li>🔄 Layout-Umschaltung - Nahtloser Wechsel zwischen POI-Liste und Korridor-Browser (v1.9.7)</li>
-                <li>🗺️ Korridor-Browser Echtzeit-Vorschau - POIs hinzufuegen und sofort auf MiniMap sehen (v1.9.6)</li>
-                <li>⏱️ Fahrzeit-Anzeige im Tag-Editor - Geschaetzte Fahrdauer pro Tag (~80 km/h) (v1.9.6)</li>
-                <li>📏 700km Tageslimit - Kein Tag ueberschreitet mehr 700km Display-Distanz (v1.9.5)</li>
-                <li>🧭 Dominanter Navi-Button - Navigation starten als primaere Aktion im Tag-Editor (v1.9.4)</li>
-                <li>📤 Route Teilen im Tag-Editor - Tages-Route mit Stops per System-Share teilen (v1.9.4)</li>
-                <li>🎨 Button-Redesign - 3-Ebenen Layout: POIs + Teilen, Navigation, Google Maps (v1.9.4)</li>
-                <li>🗺️ 3D Navigation - Echte 3D-Perspektive mit 50° Neigung via MapLibre GL</li>
-                <li>🎯 Vektor-Tiles - OpenFreeMap statt Raster, schaerfer & schneller</li>
-                <li>🔄 Heading-Up Kamera - Karte rotiert automatisch in Fahrtrichtung</li>
-                <li>🧭 In-App Navigation - Vollwertige Turn-by-Turn Navigation mit OSRM</li>
-                <li>📍 GPS-Tracking - Positionsverfolgung mit Route-Matching</li>
-                <li>🔊 TTS-Sprachansagen - Deutsche Abbiegehinweise (500m, 200m, jetzt)</li>
-                <li>🔄 Auto-Rerouting - Neuberechnung bei Abweichung >75m</li>
-                <li>📌 POI-Waypoints - Annaeherungs-Cards bei POI-Stops</li>
-                <li>🗺️ Google Maps Export-Fix - Stops in korrekter Reihenfolge, keine Zickzack-Routen mehr</li>
-                <li>📏 Realistische Distanz-Anzeige - Geschaetzte Fahrstrecke inkl. Tagesziel-Segment</li>
-                <li>🗺️ Tag-Editor Mini-Map Fix - Kartenausschnitt aktualisiert bei Tageswechsel</li>
-                <li>🎯 Ziel-Eingabe BottomSheet - Oeffnet jetzt vollstaendig, keine abgeschnittenen Vorschlaege mehr</li>
-                <li>🧭 Richtungs-optimierte Routen - Kein Hin-und-Her bei A→B Trips, POIs vorwaerts entlang der Reiserichtung</li>
-                <li>📏 Distanz-basierte Tagesaufteilung - 200-700 km pro Tag statt gleichmaessige POI-Verteilung</li>
-                <li>🗺️ Auto-Zoom bei Tageswechsel - Hauptkarte zoomt auf jeweiliges Tages-Segment</li>
-                <li>🌤️ Tages-Wettervorhersage - Echte Vorhersage pro Reisetag statt nur aktuelles Wetter</li>
-                <li>🤖 AI Indoor/Outdoor-Vorschlaege - GPT-4o schlaegt Alternativen bei schlechtem Wetter vor</li>
-                <li>🔍 Korridor-POI-Browser - Weitere POIs entlang der Route entdecken & hinzufuegen</li>
-                <li>📊 Wetter-Badges pro POI - Outdoor bei Regen? Indoor-Empfehlung! Kontext-aware Badges</li>
-                <li>🗺️ Tagesweise Karten-Anzeige - Nur Route & POIs des ausgewählten Tages</li>
-                <li>📍 Tages-POI-Nummerierung - 1, 2, 3... pro Tag statt global</li>
-                <li>🎨 Major UI Redesign - 2 grosse Buttons: AI Tagestrip & AI Euro Trip</li>
-                <li>✏️ Day Editor Overlay - Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten & Delete/Reroll</li>
-                <li>🗺️ Mini-Map pro Tag - Tagesweise Route + nummerierte POI-Marker im Editor</li>
-                <li>🤖 AI Trip Advisor - Wetter-basierte Vorschlaege, Indoor-Alternativen bei Regen</li>
-                <li>🌧️ Wetter-Banner im Day Editor - Automatische Warnung bei Outdoor-POIs + schlechtem Wetter</li>
-                <li>📊 Trip-Info-Leiste - Kompakte Statistiken (Stops, Distanz, Tage) nach Generierung</li>
-                <li>🔄 Route-Optimierung via AI - Backend-Integration fuer intelligente Trip-Vorschlaege</li>
-                <li>💾 Aktiver Trip Persistenz - Mehrtägige Trips überleben App-Neustart (v1.7.39)</li>
-                <li>🔄 Resume-Banner - Aktive Trips auf MapScreen fortsetzen (v1.7.39)</li>
-                <li>✅ Trip-Abschluss-Dialog - In Favoriten speichern nach letztem Tag (v1.7.39)</li>
-                <li>📅 Euro Trip Tage-Auswahl - Tage (1-14) statt Radius als primärer Input (v1.7.38)</li>
-                <li>🎯 Quick-Select: 2, 4, 7, 10 Tage - Schnelle Reisedauer-Wahl (v1.7.38)</li>
-                <li>📱 AppBar-Fix - Favoriten, Profil & Settings Buttons nicht mehr verdeckt (v1.7.37)</li>
-                <li>📐 Panel-Kompaktierung - Alle Buttons ohne Scrollen sichtbar (v1.7.37)</li>
-                <li>📋 Aufklappbares AI Trip Panel - Kompakte Info-Leiste nach Routenberechnung (v1.7.35)</li>
-                <li>📷 POI-Foto ~100% Trefferquote - 6 neue Bildquellen: Multi-Sprach-Wikipedia, Wikidata Geo-Radius, Openverse CC (v1.7.27)</li>
-                <li>🔧 Kategorie-Modal Live-Update - Auswahl wird sofort angezeigt statt erst nach Neuoeffnen (v1.7.27)</li>
-                <li>🎨 Kategorie-Chips konsistent - Modal & AI Trip Chips wie Quick-Filter (v1.7.26)</li>
-                <li>🔐 Application ID auf com.mapab.app geändert - Google Play ready (v1.7.23)</li>
-                <li>🔒 Passwort-Sicherheit - flutter_secure_storage statt Base64 (v1.7.23)</li>
-                <li>🛡️ R8/ProGuard Code-Minimierung aktiviert (v1.7.23)</li>
-                <li>📊 Sentry Crash-Reporting integriert (v1.7.23)</li>
-                <li>🌙 Dark Mode Fix - Alle hartcodierten Farben ersetzt (v1.7.23)</li>
-                <li>🏷️ Alle 15 Kategorien als Quick-Filter (v1.7.23)</li>
-                <li>📏 Konsistente 12px Abstände - Mode-Toggle zu Panel einheitlich (v1.7.22)</li>
-                <li>🌤️ Wetter-Widget zugeklappt - Startet collapsed für mehr Kartenplatz (v1.7.22)</li>
-                <li>📜 Unified Panel Design - Beide Modi nutzen scrollbares Panel-Design (v1.7.21)</li>
-                <li>🌤️ Wetter-Widget überall - Konsistentes Design in beiden Modi (v1.7.21)</li>
-                <li>📏 Divider zwischen Elementen - Saubere Trennung mit grauen Linien (v1.7.21)</li>
-                <li>🎯 Volle-Breite Buttons - Route Löschen & Starten nutzen volle Breite (v1.7.21)</li>
-                <li>📜 Scrollbar-Funktion - Max 65% Bildschirmhöhe, alles scrollbar (v1.7.21)</li>
-                <li>🌤️ Wetter-Widget im AI Trip - Feature-Parität, beide Modi zeigen jetzt Wetter (v1.7.20)</li>
-                <li>📂 Elegante Modal-Kategorien - Alle 13 Kategorien ohne Scroll, moderne Bottom Sheet UI (v1.7.20)</li>
-                <li>🧹 UI-Cleanup - Redundante Widgets entfernt, konsistente 12px Abstände überall (v1.7.20)</li>
-                <li>🗺️ GPS zeigt Stadtnamen - "München" statt "Mein Standort" via Reverse Geocoding (v1.7.19)</li>
-                <li>🌤️ Intelligentes Wetter-Widget - 3 Widgets zu 1 zusammengeführt, auto Modus-Wechsel (v1.7.19)</li>
-                <li>⚡ Snackbar Auto-Dismiss - "Route gespeichert" verschwindet nach 1 Sekunde statt 4 Sekunden (v1.7.18)</li>
-                <li>🌤️ Persistente Wetter-Widgets - Bleiben bei Navigation sichtbar, 90% weniger API-Calls (v1.7.17)</li>
-                <li>🌤️ WeatherBar einklappbar - Tap auf Header wechselt zwischen ein-/ausgeklappt, mehr Platz (v1.7.16)</li>
-                <li>📍 Dauerhafte Adress-Anzeige - Start/Ziel mit Distanz/Dauer sichtbar bis Route gelöscht (v1.7.16)</li>
-                <li>🎯 GPS-Button Optimierung - Redundanter Button entfernt, klarere UX (v1.7.15)</li>
-                <li>🔄 GPS-Standort-Synchronisation - Standort automatisch zwischen Schnell & AI Trip Modi (v1.7.14)</li>
-                <li>✅ Nahtloser Modus-Wechsel - GPS einmal klicken, in beiden Modi verfügbar (v1.7.14)</li>
-                <li>💾 Routen-Favoriten Fix - JSON-Serialisierung für Route & Stops behoben (v1.7.13)</li>
-                <li>🔧 @JsonKey Annotationen - Explizite Konverter für nested Freezed-Klassen (v1.7.13)</li>
-                <li>🧹 clearAllRoutes() Migration - Alte defekte Routen löschen (v1.7.13)</li>
-                <li>🌤️ Wetter-Marker auf Route - 5 Wetterpunkte mit Icon, Temperatur & Empfehlung direkt auf der Karte (v1.7.12)</li>
-                <li>📋 Tap-Details - Bottom Sheet mit Wind, Niederschlag, Regenrisiko & Warnungen (v1.7.12)</li>
-                <li>⚡ Auto-Wetter-Laden - Wetter bei jeder Routenberechnung, AI Trip & gespeicherten Routen (v1.7.12)</li>
-                <li>📷 POI-Foto Coverage ~98% - Batch-Limit 5→15, isEnriched-Fix, Pre-Caching (v1.7.11)</li>
-                <li>⚡ Inkrementelle Foto-Anzeige - 2-Stufen-UI statt Batch-Warten (v1.7.11)</li>
-                <li>🏷️ Kategorisierung erweitert - 12 Overpass-Tags, 23 AI-Chat-Mappings (v1.7.11)</li>
-                <li>💾 AI Trip in Favoriten speichern - Routen dauerhaft in Hive + Supabase (v1.7.10)</li>
-                <li>📂 Gespeicherte Routen laden - Aus Favoriten direkt auf Karte anzeigen (v1.7.10)</li>
-                <li>📤 Route teilen aus More-Options - Share-Funktion jetzt aktiv (v1.7.10)</li>
-                <li>💾 Route speichern aus More-Options - Speicherfunktion jetzt aktiv (v1.7.10)</li>
-                <li>🌤️ Wetter-Banner opak - Karte scheint nicht mehr durch, satter Hintergrund (v1.7.9)</li>
-                <li>🔄 Wetter-Empfehlung Toggle - Anwenden & Deaktivieren per Klick (v1.7.9)</li>
-                <li>📍 POI-Marker Wetter-Badges - Mini-Badges auf Karten-Markern (v1.7.9)</li>
-                <li>▶️ Route Starten Button - Manuell zum Trip-Tab statt Auto-Navigation (v1.7.8)</li>
-                <li>🌤️ Wetter-Empfehlung auf Hauptseite - Banner auf beiden Modi + Aktiv-Status (v1.7.8)</li>
-                <li>🔗 AI Trip + POI-Stops - Stops aus POI-Liste zur AI-Route hinzufügen (v1.7.8)</li>
-                <li>📷 POI-Bildquellen optimiert - ~95% Trefferquote + Chat-Bilder (v1.7.7)</li>
-                <li>🌤️ Wetter-Integration - WeatherChip, AlertBanner, 7-Tage-Vorhersage (v1.7.6)</li>
-                <li>🗑️ Route Löschen für AI-Chat - Button auch bei AI-Assistent Routen (v1.7.5)</li>
-                <li>📍 Auto-Route von GPS zu POI - POI hinzufügen erstellt Route automatisch (v1.7.4)</li>
-                <li>⚡ POI-Foto Batch-Enrichment - 7x schneller! (v1.7.3)</li>
-                <li>📍 AI-Chat mit standortbasierten POI-Vorschlägen (v1.7.2)</li>
-                <li>🔄 Dynamische Route-Neuberechnung bei Stop-Änderungen (v1.7.2)</li>
-                <li>📍 GPS-Fallback für Kartenausschnitt ohne Route (v1.7.2)</li>
-                <li>🔍 Auto-Zoom auf Route beim Tab-Wechsel zur Karte (v1.7.0)</li>
-                <li>📍 Auf Karte anzeigen Button im TripScreen (v1.7.0)</li>
-                <li>📷 POI-Fotos überall - Favoriten, Trip-Stops, AI Trip Preview (v1.6.9)</li>
-                <li>📍 GPS-Dialog & Löschbutton - Konsistentes UX bei AI Trip (v1.6.8)</li>
-                <li>🔧 POI-Detail Fix - Fotos & Highlights laden korrekt (v1.6.7)</li>
-                <li>📷 POI-Foto CORS & Rate-Limit Fix - Bilder laden zuverlässig (v1.6.6)</li>
-                <li>🔧 TripScreen vereinfacht - Nur berechnete Routen angezeigt (v1.6.5)</li>
-                <li>🔇 Snackbar entfernt - POIs werden still zur Route hinzugefügt (v1.6.4)</li>
-                <li>🗺️ Euro Trip Route-Anzeige Fix - Route erscheint jetzt auf Karte (v1.6.3)</li>
-                <li>⚡ Euro Trip Performance-Fix - Grid-Suche 100x schneller (v1.6.2)</li>
-                <li>👆 POI-Marker Direktnavigation - Klick öffnet sofort Details (v1.6.1)</li>
-                <li>📷 POI-Fotos Lazy-Loading - Alle Bilder laden beim Scrollen (v1.6.0)</li>
-                <li>📍 GPS-Fallback entfernt - POI-Liste zeigt Dialog statt München-Teststandort (v1.5.9)</li>
-                <li>🔐 Login-Screen Fix - Formular immer sichtbar, Warnungen bei fehlender Config (v1.5.8)</li>
-                <li>🗓️ Mehrtägige Euro Trips - Tagesweiser Google Maps Export (v1.5.7)</li>
-                <li>📊 600km = 1 Tag - Automatische Tagesberechnung aus Radius (v1.5.7)</li>
-                <li>🔢 Max 9 POIs/Tag - Google Maps Waypoint-Limit beachtet (v1.5.7)</li>
-                <li>🎨 Floating Buttons ausblenden bei AI Trip (v1.5.6)</li>
-                <li>🔧 POI-Card Layout-Fix - Alle POIs werden jetzt angezeigt (v1.5.5)</li>
-                <li>📍 GPS-Dialog - Fragt ob GPS-Einstellungen geöffnet werden sollen (v1.5.4)</li>
-                <li>🔧 POI-Liste zeigt alle POIs - detourKm Filter nur bei Route (v1.5.3)</li>
-                <li>📷 Fotos laden zuverlässiger - Cache-Fix & Failure-Logs (v1.5.3)</li>
-                <li>🔧 POI-Liste Filter Fix - Filter werden automatisch zurückgesetzt (v1.5.2)</li>
-                <li>🐛 POI-Liste Race Condition behoben (v1.5.1)</li>
-                <li>🗺️ AI Trip direkt auf MapScreen - Karte immer sichtbar (v1.5.0)</li>
-                <li>📍 AI Trip POI-Marker - Nummerierte Icons auf der Karte (v1.5.0)</li>
-                <li>🔄 Auto-Modus-Wechsel - Panel blendet nach Generierung aus (v1.5.0)</li>
-                <li>🔧 AI Trip Navigation Fix - Keine separate Seite mehr (v1.4.9)</li>
-                <li>🎯 Integrierter Trip-Planer - AI Trip direkt im Trip-Screen (v1.4.8)</li>
-                <li>🌍 Erweiterter Radius - Tagesausflug bis 300 km, Euro Trip bis 5000 km (v1.4.7)</li>
-                <li>🎨 POI-Card Redesign - Kompaktes horizontales Layout (v1.4.5)</li>
-                <li>🤖 AI-Chat Verbesserungen - Alle Vorschläge funktionieren (v1.4.5)</li>
-                <li>🗑️ POI-Löschen - Einzelne POIs aus AI-Trip entfernen (v1.4.4)</li>
-                <li>🎲 POI-Würfeln - Einzelnen POI neu würfeln (v1.4.4)</li>
-                <li>🗺️ Auto-Zoom auf Route - Karte zeigt Route beim Wechsel</li>
-                <li>🗺️ Google Maps Export - Funktioniert auf Android 11+</li>
-                <li>📤 Route Teilen - WhatsApp, Email, SMS etc.</li>
-                <li>🎨 Neues App-Logo - Modernes Design mit App-Farben Blau/Grün</li>
-                <li>🗺️ Mehr POIs - Filter gelockert, OSM & Wikipedia POIs sichtbar</li>
-                <li>🔐 Login-Fix - Remember Me funktioniert zuverlässig</li>
-                <li>🎬 Onboarding - Animierte Intro bei jedem Start</li>
-                <li>⚡ Paralleles POI-Laden - 50-70% schneller</li>
-                <li>💾 Region-Cache - Sofortiges Laden bei erneutem Besuch</li>
-                <li>🤖 AI Trip Button - Direkter Zugang zum AI Trip Generator</li>
-                <li>☁️ Cloud-Sync - Trips & Favoriten in der Cloud</li>
-                <li>🔐 Account-System - Email/Passwort Login</li>
-                <li>👤 Profil mit XP & 21 Achievements</li>
-                <li>🤖 AI-Trip-Generator (automatische Routenplanung)</li>
-                <li>💬 AI-Chat mit OpenAI GPT-4o</li>
-                <li>🌙 Dark Mode mit Auto-Sunset</li>
+                <li class="highlight">Oeffentliche Trip-Galerie</li>
+                <li class="highlight">Trips liken und importieren</li>
+                <li class="highlight">Eigene Trips veroeffentlichen</li>
+                <li class="highlight">Featured-Trips entdecken</li>
+                <li>Vollstaendige Lokalisierung (5 Sprachen)</li>
+                <li>~700 lokalisierte Strings</li>
+                <li>26 neue Social-Features ARB-Keys</li>
             </ul>
         </div>
 
-        <div class="instructions">
-            <h4>🔧 Installation</h4>
-            <p>
-                1. QR-Code scannen oder Link öffnen<br>
-                2. "MapAB-v1.9.32.apk" herunterladen (Vollstaendige Lokalisierung)<br>
-
-                3. ⚠️ Alte Version deinstallieren (falls Package-ID sich geändert hat)<br>
-                4. "Aus unbekannten Quellen installieren" erlauben<br>
-                5. APK öffnen und Installation bestätigen
-            </p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">5</div>
+                <div class="stat-label">Sprachen</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">700+</div>
+                <div class="stat-label">POIs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">AI</div>
+                <div class="stat-label">Trip-Planung</div>
+            </div>
         </div>
 
-        <div class="footer">
-            <p>
-                <strong>Repository:</strong> github.com/jerdnaandrej777/mapab-app<br>
-                <strong>Build-Datum:</strong> 5. Februar 2026<br>
-                <strong>Groesse:</strong> 115.3 MB
-            </p>
-        </div>
+        <p class="info">
+            Android 8.0+ erforderlich<br>
+            Letzte Aktualisierung: 5. Februar 2026
+        </p>
     </div>
 
-    <!-- QR Code Generator Library -->
+    <!-- QR Code Library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
         // QR-Code generieren
-        new QRCode(document.getElementById("qrcode"), {
-            text: "https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.9.32",
-            width: 256,
-            height: 256,
-            colorDark: "#1a202c",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
+        document.addEventListener('DOMContentLoaded', function() {
+            new QRCode(document.getElementById("qrcode"), {
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.0/mapab-v1.10.0.apk",
+                width: 200,
+                height: 200,
+                colorDark: "#1a1a2e",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
         });
     </script>
 </body>
