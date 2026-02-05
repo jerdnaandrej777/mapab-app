@@ -27,6 +27,8 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/journal/journal_screen.dart';
 import 'features/sharing/qr_scanner_screen.dart';
 import 'features/templates/trip_templates_screen.dart';
+import 'features/social/gallery_screen.dart';
+import 'features/social/trip_detail_public_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -243,6 +245,23 @@ final _router = GoRouter(
       path: '/templates',
       name: 'templates',
       builder: (context, state) => const TripTemplatesScreen(),
+    ),
+
+    // Trip-Galerie (Social Features)
+    GoRoute(
+      path: '/gallery',
+      name: 'gallery',
+      builder: (context, state) => const GalleryScreen(),
+    ),
+
+    // Oeffentlicher Trip Detail
+    GoRoute(
+      path: '/gallery/:tripId',
+      name: 'gallery_detail',
+      builder: (context, state) {
+        final tripId = state.pathParameters['tripId']!;
+        return TripDetailPublicScreen(tripId: tripId);
+      },
     ),
   ],
 

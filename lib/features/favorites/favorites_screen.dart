@@ -11,6 +11,7 @@ import '../map/providers/route_planner_provider.dart';
 import '../poi/providers/poi_state_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
+import '../social/widgets/publish_trip_sheet.dart';
 
 /// Favoriten-Screen für gespeicherte Routen und POIs
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -250,9 +251,21 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () => _confirmRemoveRoute(trip),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Publish-Button
+            IconButton(
+              icon: Icon(Icons.public_outlined, color: colorScheme.primary),
+              onPressed: () => _publishTrip(trip),
+              tooltip: context.l10n.publishTitle,
+            ),
+            // Delete-Button
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () => _confirmRemoveRoute(trip),
+            ),
+          ],
         ),
         onTap: () => _loadSavedRoute(trip),
       ),
@@ -441,6 +454,16 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.favRouteLoaded)),
     );
+  }
+
+  /// Veroeffentlicht einen Trip in der Galerie
+  Future<void> _publishTrip(Trip trip) async {
+    final published = await PublishTripSheet.show(context, trip);
+    if (published && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.publishSuccess)),
+      );
+    }
   }
 
   void _confirmRemoveRoute(Trip trip) {

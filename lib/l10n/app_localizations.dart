@@ -4165,6 +4165,306 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Noch keine Tagebücher vorhanden'**
   String get journalNoJournals;
+
+  /// No description provided for @galleryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip-Galerie'**
+  String get galleryTitle;
+
+  /// No description provided for @gallerySearch.
+  ///
+  /// In de, this message translates to:
+  /// **'Trips suchen...'**
+  String get gallerySearch;
+
+  /// No description provided for @galleryFeatured.
+  ///
+  /// In de, this message translates to:
+  /// **'Featured'**
+  String get galleryFeatured;
+
+  /// No description provided for @galleryAllTrips.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Trips'**
+  String get galleryAllTrips;
+
+  /// No description provided for @galleryNoTrips.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Trips gefunden'**
+  String get galleryNoTrips;
+
+  /// No description provided for @galleryResetFilters.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurücksetzen'**
+  String get galleryResetFilters;
+
+  /// No description provided for @galleryFilter.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter'**
+  String get galleryFilter;
+
+  /// No description provided for @galleryFilterReset.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen'**
+  String get galleryFilterReset;
+
+  /// No description provided for @galleryTripType.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip-Typ'**
+  String get galleryTripType;
+
+  /// No description provided for @galleryTags.
+  ///
+  /// In de, this message translates to:
+  /// **'Tags'**
+  String get galleryTags;
+
+  /// No description provided for @gallerySort.
+  ///
+  /// In de, this message translates to:
+  /// **'Sortierung'**
+  String get gallerySort;
+
+  /// No description provided for @gallerySortPopular.
+  ///
+  /// In de, this message translates to:
+  /// **'Beliebt'**
+  String get gallerySortPopular;
+
+  /// No description provided for @gallerySortRecent.
+  ///
+  /// In de, this message translates to:
+  /// **'Neueste'**
+  String get gallerySortRecent;
+
+  /// No description provided for @gallerySortLikes.
+  ///
+  /// In de, this message translates to:
+  /// **'Meiste Likes'**
+  String get gallerySortLikes;
+
+  /// No description provided for @galleryTypeAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle'**
+  String get galleryTypeAll;
+
+  /// No description provided for @galleryTypeDaytrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagesausflug'**
+  String get galleryTypeDaytrip;
+
+  /// No description provided for @galleryTypeEurotrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Euro Trip'**
+  String get galleryTypeEurotrip;
+
+  /// No description provided for @galleryRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut versuchen'**
+  String get galleryRetry;
+
+  /// No description provided for @galleryLikes.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Noch keine Likes} =1{1 Like} other{{count} Likes}}'**
+  String galleryLikes(int count);
+
+  /// No description provided for @galleryViews.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Aufruf} other{{count} Aufrufe}}'**
+  String galleryViews(int count);
+
+  /// No description provided for @galleryImports.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Import} other{{count} Importe}}'**
+  String galleryImports(int count);
+
+  /// No description provided for @gallerySharedAt.
+  ///
+  /// In de, this message translates to:
+  /// **'Geteilt am {date}'**
+  String gallerySharedAt(String date);
+
+  /// No description provided for @galleryTripsShared.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Trips geteilt'**
+  String galleryTripsShared(int count);
+
+  /// No description provided for @galleryImportToFavorites.
+  ///
+  /// In de, this message translates to:
+  /// **'In Favoriten'**
+  String get galleryImportToFavorites;
+
+  /// No description provided for @galleryImported.
+  ///
+  /// In de, this message translates to:
+  /// **'Importiert'**
+  String get galleryImported;
+
+  /// No description provided for @galleryShowOnMap.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Karte'**
+  String get galleryShowOnMap;
+
+  /// No description provided for @galleryShareComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Teilen wird bald verfügbar'**
+  String get galleryShareComingSoon;
+
+  /// No description provided for @galleryMapComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Karten-Ansicht wird bald verfügbar'**
+  String get galleryMapComingSoon;
+
+  /// No description provided for @galleryImportSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip in Favoriten importiert'**
+  String get galleryImportSuccess;
+
+  /// No description provided for @galleryImportError.
+  ///
+  /// In de, this message translates to:
+  /// **'Import fehlgeschlagen'**
+  String get galleryImportError;
+
+  /// No description provided for @galleryTripNotFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip nicht gefunden'**
+  String get galleryTripNotFound;
+
+  /// No description provided for @galleryLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Laden'**
+  String get galleryLoadError;
+
+  /// No description provided for @publishTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip veröffentlichen'**
+  String get publishTitle;
+
+  /// No description provided for @publishSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Teile deinen Trip mit der Community'**
+  String get publishSubtitle;
+
+  /// No description provided for @publishTripName.
+  ///
+  /// In de, this message translates to:
+  /// **'Name des Trips'**
+  String get publishTripName;
+
+  /// No description provided for @publishTripNameHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Südfrankreich Roadtrip'**
+  String get publishTripNameHint;
+
+  /// No description provided for @publishTripNameRequired.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte gib einen Namen ein'**
+  String get publishTripNameRequired;
+
+  /// No description provided for @publishTripNameMinLength.
+  ///
+  /// In de, this message translates to:
+  /// **'Name muss mindestens 3 Zeichen haben'**
+  String get publishTripNameMinLength;
+
+  /// No description provided for @publishDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Beschreibung (optional)'**
+  String get publishDescription;
+
+  /// No description provided for @publishDescriptionHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erzähle anderen von deinem Trip...'**
+  String get publishDescriptionHint;
+
+  /// No description provided for @publishTags.
+  ///
+  /// In de, this message translates to:
+  /// **'Tags (optional)'**
+  String get publishTags;
+
+  /// No description provided for @publishTagsHelper.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilf anderen, deinen Trip zu finden'**
+  String get publishTagsHelper;
+
+  /// No description provided for @publishMaxTags.
+  ///
+  /// In de, this message translates to:
+  /// **'Maximal 5 Tags'**
+  String get publishMaxTags;
+
+  /// No description provided for @publishInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Trip wird öffentlich sichtbar. Andere können ihn liken und in ihre Favoriten importieren.'**
+  String get publishInfo;
+
+  /// No description provided for @publishButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Veröffentlichen'**
+  String get publishButton;
+
+  /// No description provided for @publishPublishing.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird veröffentlicht...'**
+  String get publishPublishing;
+
+  /// No description provided for @publishSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip veröffentlicht!'**
+  String get publishSuccess;
+
+  /// No description provided for @publishError.
+  ///
+  /// In de, this message translates to:
+  /// **'Veröffentlichen fehlgeschlagen'**
+  String get publishError;
+
+  /// No description provided for @publishEuroTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Euro Trip'**
+  String get publishEuroTrip;
+
+  /// No description provided for @publishDaytrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagesausflug'**
+  String get publishDaytrip;
 }
 
 class _AppLocalizationsDelegate

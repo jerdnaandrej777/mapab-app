@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapAB v1.10.0 - Download</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+
+        h1 {
+            color: #1a1a2e;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .version {
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        #qrcode canvas {
+            border-radius: 12px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
+        .info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .features h3 {
+            color: #1a1a2e;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            color: #666;
+            font-size: 13px;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .features li::before {
+            content: "\2713";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .scan-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">&#x1F5FA;&#xFE0F;</div>
+        <h1>MapAB</h1>
+        <div class="version">Version 1.10.0 (Build 180)</div>
+        <p class="subtitle">
+            Social Features Release - Teile deine Trips mit der Community!
+        </p>
+
+        <div class="qr-container">
+            <div id="qrcode"></div>
+            <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
+        </div>
+
+        <a href="mapab-v1.10.0.apk" class="download-btn" download>
+            &#x1F4F1; APK herunterladen (117.9 MB)
+        </a>
+
+        <div class="features">
+            <h3>Neu in v1.10.0:</h3>
+            <ul>
+                <li>Oeffentliche Trip-Galerie</li>
+                <li>Trips liken und importieren</li>
+                <li>Eigene Trips veroeffentlichen</li>
+                <li>Featured-Trips entdecken</li>
+                <li>Vollstaendige Lokalisierung (5 Sprachen)</li>
+            </ul>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">5</div>
+                <div class="stat-label">Sprachen</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">700+</div>
+                <div class="stat-label">POIs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">AI</div>
+                <div class="stat-label">Trip-Planung</div>
+            </div>
+        </div>
+
+        <p class="info">
+            Android 8.0+ erforderlich<br>
+            Letzte Aktualisierung: 5. Februar 2026
+        </p>
+    </div>
+
+    <script>
+        // QR-Code automatisch generieren basierend auf aktueller URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentUrl = window.location.href;
+
+            QRCode.toCanvas(document.createElement('canvas'), currentUrl, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#1a1a2e',
+                    light: '#ffffff'
+                }
+            }, function(error, canvas) {
+                if (error) {
+                    console.error(error);
+                    return;
+                }
+                canvas.style.borderRadius = '12px';
+                document.getElementById('qrcode').appendChild(canvas);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -2356,4 +2356,185 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get journalNoJournals => 'Aucun carnet encore';
+
+  @override
+  String get galleryTitle => 'Galerie de trips';
+
+  @override
+  String get gallerySearch => 'Rechercher des trips...';
+
+  @override
+  String get galleryFeatured => 'À la une';
+
+  @override
+  String get galleryAllTrips => 'Tous les trips';
+
+  @override
+  String get galleryNoTrips => 'Aucun trip trouvé';
+
+  @override
+  String get galleryResetFilters => 'Réinitialiser les filtres';
+
+  @override
+  String get galleryFilter => 'Filtrer';
+
+  @override
+  String get galleryFilterReset => 'Réinitialiser';
+
+  @override
+  String get galleryTripType => 'Type de trip';
+
+  @override
+  String get galleryTags => 'Tags';
+
+  @override
+  String get gallerySort => 'Trier par';
+
+  @override
+  String get gallerySortPopular => 'Populaire';
+
+  @override
+  String get gallerySortRecent => 'Récent';
+
+  @override
+  String get gallerySortLikes => 'Plus aimés';
+
+  @override
+  String get galleryTypeAll => 'Tous';
+
+  @override
+  String get galleryTypeDaytrip => 'Excursion';
+
+  @override
+  String get galleryTypeEurotrip => 'Euro Trip';
+
+  @override
+  String get galleryRetry => 'Réessayer';
+
+  @override
+  String galleryLikes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count likes',
+      one: '1 like',
+      zero: 'Aucun like',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String galleryViews(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vues',
+      one: '1 vue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String galleryImports(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count imports',
+      one: '1 import',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String gallerySharedAt(String date) {
+    return 'Partagé le $date';
+  }
+
+  @override
+  String galleryTripsShared(int count) {
+    return '$count trips partagés';
+  }
+
+  @override
+  String get galleryImportToFavorites => 'Ajouter aux favoris';
+
+  @override
+  String get galleryImported => 'Importé';
+
+  @override
+  String get galleryShowOnMap => 'Sur la carte';
+
+  @override
+  String get galleryShareComingSoon => 'Partage bientôt disponible';
+
+  @override
+  String get galleryMapComingSoon => 'Vue carte bientôt disponible';
+
+  @override
+  String get galleryImportSuccess => 'Trip ajouté aux favoris';
+
+  @override
+  String get galleryImportError => 'Échec de l\'import';
+
+  @override
+  String get galleryTripNotFound => 'Trip non trouvé';
+
+  @override
+  String get galleryLoadError => 'Erreur de chargement';
+
+  @override
+  String get publishTitle => 'Publier le trip';
+
+  @override
+  String get publishSubtitle => 'Partagez votre trip avec la communauté';
+
+  @override
+  String get publishTripName => 'Nom du trip';
+
+  @override
+  String get publishTripNameHint => 'ex. Road trip Sud de la France';
+
+  @override
+  String get publishTripNameRequired => 'Veuillez entrer un nom';
+
+  @override
+  String get publishTripNameMinLength =>
+      'Le nom doit contenir au moins 3 caractères';
+
+  @override
+  String get publishDescription => 'Description (optionnel)';
+
+  @override
+  String get publishDescriptionHint => 'Racontez votre trip aux autres...';
+
+  @override
+  String get publishTags => 'Tags (optionnel)';
+
+  @override
+  String get publishTagsHelper => 'Aidez les autres à trouver votre trip';
+
+  @override
+  String get publishMaxTags => 'Maximum 5 tags';
+
+  @override
+  String get publishInfo =>
+      'Votre trip sera visible publiquement. Les autres peuvent l\'aimer et l\'importer dans leurs favoris.';
+
+  @override
+  String get publishButton => 'Publier';
+
+  @override
+  String get publishPublishing => 'Publication en cours...';
+
+  @override
+  String get publishSuccess => 'Trip publié !';
+
+  @override
+  String get publishError => 'Échec de la publication';
+
+  @override
+  String get publishEuroTrip => 'Euro Trip';
+
+  @override
+  String get publishDaytrip => 'Excursion';
 }

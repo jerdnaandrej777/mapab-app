@@ -2349,4 +2349,184 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get journalNoJournals => 'Noch keine Tagebücher vorhanden';
+
+  @override
+  String get galleryTitle => 'Trip-Galerie';
+
+  @override
+  String get gallerySearch => 'Trips suchen...';
+
+  @override
+  String get galleryFeatured => 'Featured';
+
+  @override
+  String get galleryAllTrips => 'Alle Trips';
+
+  @override
+  String get galleryNoTrips => 'Keine Trips gefunden';
+
+  @override
+  String get galleryResetFilters => 'Filter zurücksetzen';
+
+  @override
+  String get galleryFilter => 'Filter';
+
+  @override
+  String get galleryFilterReset => 'Zurücksetzen';
+
+  @override
+  String get galleryTripType => 'Trip-Typ';
+
+  @override
+  String get galleryTags => 'Tags';
+
+  @override
+  String get gallerySort => 'Sortierung';
+
+  @override
+  String get gallerySortPopular => 'Beliebt';
+
+  @override
+  String get gallerySortRecent => 'Neueste';
+
+  @override
+  String get gallerySortLikes => 'Meiste Likes';
+
+  @override
+  String get galleryTypeAll => 'Alle';
+
+  @override
+  String get galleryTypeDaytrip => 'Tagesausflug';
+
+  @override
+  String get galleryTypeEurotrip => 'Euro Trip';
+
+  @override
+  String get galleryRetry => 'Erneut versuchen';
+
+  @override
+  String galleryLikes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Likes',
+      one: '1 Like',
+      zero: 'Noch keine Likes',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String galleryViews(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Aufrufe',
+      one: '1 Aufruf',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String galleryImports(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Importe',
+      one: '1 Import',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String gallerySharedAt(String date) {
+    return 'Geteilt am $date';
+  }
+
+  @override
+  String galleryTripsShared(int count) {
+    return '$count Trips geteilt';
+  }
+
+  @override
+  String get galleryImportToFavorites => 'In Favoriten';
+
+  @override
+  String get galleryImported => 'Importiert';
+
+  @override
+  String get galleryShowOnMap => 'Auf Karte';
+
+  @override
+  String get galleryShareComingSoon => 'Teilen wird bald verfügbar';
+
+  @override
+  String get galleryMapComingSoon => 'Karten-Ansicht wird bald verfügbar';
+
+  @override
+  String get galleryImportSuccess => 'Trip in Favoriten importiert';
+
+  @override
+  String get galleryImportError => 'Import fehlgeschlagen';
+
+  @override
+  String get galleryTripNotFound => 'Trip nicht gefunden';
+
+  @override
+  String get galleryLoadError => 'Fehler beim Laden';
+
+  @override
+  String get publishTitle => 'Trip veröffentlichen';
+
+  @override
+  String get publishSubtitle => 'Teile deinen Trip mit der Community';
+
+  @override
+  String get publishTripName => 'Name des Trips';
+
+  @override
+  String get publishTripNameHint => 'z.B. Südfrankreich Roadtrip';
+
+  @override
+  String get publishTripNameRequired => 'Bitte gib einen Namen ein';
+
+  @override
+  String get publishTripNameMinLength => 'Name muss mindestens 3 Zeichen haben';
+
+  @override
+  String get publishDescription => 'Beschreibung (optional)';
+
+  @override
+  String get publishDescriptionHint => 'Erzähle anderen von deinem Trip...';
+
+  @override
+  String get publishTags => 'Tags (optional)';
+
+  @override
+  String get publishTagsHelper => 'Hilf anderen, deinen Trip zu finden';
+
+  @override
+  String get publishMaxTags => 'Maximal 5 Tags';
+
+  @override
+  String get publishInfo =>
+      'Dein Trip wird öffentlich sichtbar. Andere können ihn liken und in ihre Favoriten importieren.';
+
+  @override
+  String get publishButton => 'Veröffentlichen';
+
+  @override
+  String get publishPublishing => 'Wird veröffentlicht...';
+
+  @override
+  String get publishSuccess => 'Trip veröffentlicht!';
+
+  @override
+  String get publishError => 'Veröffentlichen fehlgeschlagen';
+
+  @override
+  String get publishEuroTrip => 'Euro Trip';
+
+  @override
+  String get publishDaytrip => 'Tagesausflug';
 }

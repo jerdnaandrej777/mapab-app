@@ -234,6 +234,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         backgroundColor: colorScheme.surface,
         elevation: 0,
         actions: [
+          // Galerie-Button
+          IconButton(
+            icon: const Icon(Icons.explore_outlined),
+            onPressed: () => context.push('/gallery'),
+            tooltip: context.l10n.galleryTitle,
+          ),
           // Favoriten-Button
           IconButton(
             icon: const Icon(Icons.favorite_border),
