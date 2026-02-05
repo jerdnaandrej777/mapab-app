@@ -1,0 +1,16 @@
+# GitHub Pages Jekyll Configuration
+# Exclude files that contain Liquid-like syntax (e.g., Flutter ARB plurals)
+exclude:
+  - CLAUDE.md
+  - Dokumentation/
+  - lib/
+  - android/
+  - ios/
+  - test/
+  - build/
+  - .dart_tool/
+  - pubspec.yaml
+  - pubspec.lock
+  - analysis_options.yaml
+  - "*.dart"
+  - "*.arb"
