@@ -349,13 +349,18 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
       _enrichGeneratedPOIs(result);
-    } on TripGenerationException catch (e) {
+    } on TripGenerationException catch (e, stackTrace) {
+      debugPrint('[RandomTrip] TripGenerationException: ${e.message}');
+      debugPrint('[RandomTrip] StackTrace: $stackTrace');
       state = state.copyWith(
         step: RandomTripStep.config,
         isLoading: false,
         error: e.message,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[RandomTrip] UNERWARTETER FEHLER: $e');
+      debugPrint('[RandomTrip] Typ: ${e.runtimeType}');
+      debugPrint('[RandomTrip] StackTrace: $stackTrace');
       state = state.copyWith(
         step: RandomTripStep.config,
         isLoading: false,
@@ -775,23 +780,32 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   }
 
   /// v1.6.9: Enriched die generierten POIs für Foto-Anzeige
+  /// v1.10.2: FIX - Verwendet addPOIsBatch() statt Loop + await enrichPOIsBatch()
   /// Wird nach Trip-Generierung aufgerufen
-  void _enrichGeneratedPOIs(GeneratedTrip result) {
-    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+  Future<void> _enrichGeneratedPOIs(GeneratedTrip result) async {
+    try {
+      final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
 
-    // POIs zum State hinzufuegen
-    for (final poi in result.selectedPOIs) {
-      poiNotifier.addPOI(poi);
-    }
+      // FIX v1.10.2: EIN Batch-Update statt 12 einzelne addPOI() Aufrufe
+      poiNotifier.addPOIsBatch(result.selectedPOIs);
 
-    // v1.7.9: Batch-Enrichment statt Einzel-Calls (7x schneller)
-    final poisToEnrich = result.selectedPOIs
-        .where((p) => p.imageUrl == null)
-        .toList();
+      // Kurze Verzögerung damit UI rendern kann bevor Enrichment startet
+      await Future.delayed(const Duration(milliseconds: 100));
 
-    if (poisToEnrich.isNotEmpty) {
-      debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
-      poiNotifier.enrichPOIsBatch(poisToEnrich);
+      // v1.7.9: Batch-Enrichment statt Einzel-Calls (7x schneller)
+      // v1.10.2: Jetzt awaited um Race Conditions zu verhindern
+      final poisToEnrich = result.selectedPOIs
+          .where((p) => p.imageUrl == null)
+          .toList();
+
+      if (poisToEnrich.isNotEmpty) {
+        debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+        await poiNotifier.enrichPOIsBatch(poisToEnrich);
+      }
+    } catch (e, stackTrace) {
+      // Enrichment-Fehler sollten den Trip nicht blockieren
+      debugPrint('[RandomTrip] Enrichment-Fehler (nicht kritisch): $e');
+      debugPrint('[RandomTrip] Enrichment-StackTrace: $stackTrace');
     }
   }
 }

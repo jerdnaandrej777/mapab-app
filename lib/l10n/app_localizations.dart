@@ -3722,6 +3722,84 @@ abstract class AppLocalizations {
   /// **'Zurück'**
   String get randomTripBack;
 
+  /// No description provided for @mapModeAiDayTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'AI Tagestrip'**
+  String get mapModeAiDayTrip;
+
+  /// No description provided for @mapModeAiEuroTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'AI Euro Trip'**
+  String get mapModeAiEuroTrip;
+
+  /// No description provided for @travelDuration.
+  ///
+  /// In de, this message translates to:
+  /// **'Reisedauer'**
+  String get travelDuration;
+
+  /// No description provided for @radiusLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Radius'**
+  String get radiusLabel;
+
+  /// No description provided for @categoriesLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorien'**
+  String get categoriesLabel;
+
+  /// No description provided for @tripDescDayTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagesausflug — ca. {radius} km'**
+  String tripDescDayTrip(int radius);
+
+  /// No description provided for @tripDescWeekend.
+  ///
+  /// In de, this message translates to:
+  /// **'Wochenend-Trip — ca. {radius} km'**
+  String tripDescWeekend(int radius);
+
+  /// No description provided for @tripDescShortVacation.
+  ///
+  /// In de, this message translates to:
+  /// **'Kurzurlaub — ca. {radius} km'**
+  String tripDescShortVacation(int radius);
+
+  /// No description provided for @tripDescWeekTrip.
+  ///
+  /// In de, this message translates to:
+  /// **'Wochenreise — ca. {radius} km'**
+  String tripDescWeekTrip(int radius);
+
+  /// No description provided for @tripDescEpic.
+  ///
+  /// In de, this message translates to:
+  /// **'Epischer Euro Trip — ca. {radius} km'**
+  String tripDescEpic(int radius);
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} ausgewählt'**
+  String selectedCount(int count);
+
+  /// No description provided for @destinationOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Ziel (optional)'**
+  String get destinationOptional;
+
+  /// No description provided for @enterDestination.
+  ///
+  /// In de, this message translates to:
+  /// **'Zielort eingeben...'**
+  String get enterDestination;
+
   /// No description provided for @tripTypeDayTrip.
   ///
   /// In de, this message translates to:

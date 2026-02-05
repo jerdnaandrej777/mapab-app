@@ -2039,6 +2039,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get randomTripBack => 'Back';
 
   @override
+  String get mapModeAiDayTrip => 'AI Day Trip';
+
+  @override
+  String get mapModeAiEuroTrip => 'AI Euro Trip';
+
+  @override
+  String get travelDuration => 'Travel duration';
+
+  @override
+  String get radiusLabel => 'Radius';
+
+  @override
+  String get categoriesLabel => 'Categories';
+
+  @override
+  String tripDescDayTrip(int radius) {
+    return 'Day trip — approx. $radius km';
+  }
+
+  @override
+  String tripDescWeekend(int radius) {
+    return 'Weekend trip — approx. $radius km';
+  }
+
+  @override
+  String tripDescShortVacation(int radius) {
+    return 'Short vacation — approx. $radius km';
+  }
+
+  @override
+  String tripDescWeekTrip(int radius) {
+    return 'Week trip — approx. $radius km';
+  }
+
+  @override
+  String tripDescEpic(int radius) {
+    return 'Epic Euro Trip — approx. $radius km';
+  }
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get destinationOptional => 'Destination (optional)';
+
+  @override
+  String get enterDestination => 'Enter destination...';
+
+  @override
   String get tripTypeDayTrip => 'Day trip';
 
   @override

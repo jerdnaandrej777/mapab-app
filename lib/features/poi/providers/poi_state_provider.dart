@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:latlong2/latlong.dart';
@@ -228,7 +229,11 @@ class POIStateNotifier extends _$POIStateNotifier {
     }
   }
 
-  /// Reichert mehrere POIs in einem Batch an (OPTIMIERT v1.7.3)
+  /// FIX v1.10.2: Pending Enrichments fuer Debouncing
+  final Map<String, POI> _pendingEnrichments = {};
+  Timer? _enrichmentDebouncer;
+
+  /// Reichert mehrere POIs in einem Batch an (OPTIMIERT v1.7.3, v1.10.2 Debouncing)
   /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 POIs gleichzeitig
   Future<void> enrichPOIsBatch(List<POI> pois) async {
     if (pois.isEmpty) return;
@@ -252,54 +257,41 @@ class POIStateNotifier extends _$POIStateNotifier {
     try {
       final enrichmentService = ref.read(poiEnrichmentServiceProvider);
 
-      // v1.7.9: 2-Stufen Update - Fotos sofort anzeigen statt auf Batch-Ende warten
+      // v1.10.2: Debounced Updates statt sofortiger State-Kopie bei jedem Callback
       final enrichedPOIs = await enrichmentService.enrichPOIsBatch(
         unenrichedPOIs,
         onPartialResult: (partialResults) {
-          // Inkrementelles State-Update: Fotos sofort sichtbar machen
-          final currentPOIs = List<POI>.from(state.pois);
-          final updatedIds = <String>{};
-          for (final entry in partialResults.entries) {
-            final index = currentPOIs.indexWhere((p) => p.id == entry.key);
-            if (index != -1) {
-              currentPOIs[index] = entry.value;
-              updatedIds.add(entry.key);
-            }
-          }
-          // Partial enriching IDs entfernen
-          final partialRemainingIds = Set<String>.from(state.enrichingPOIIds)
-            ..removeAll(updatedIds);
-          state = state.copyWith(
-            pois: currentPOIs,
-            isEnriching: partialRemainingIds.isNotEmpty,
-            enrichingPOIIds: partialRemainingIds,
-          );
+          // Sammle Ergebnisse statt sofort zu updaten
+          _pendingEnrichments.addAll(partialResults);
+
+          // Debounce: Nur alle 300ms ein State-Update
+          _enrichmentDebouncer?.cancel();
+          _enrichmentDebouncer = Timer(const Duration(milliseconds: 300), () {
+            _flushPendingEnrichments();
+          });
         },
       );
 
-      // Finales State-Update mit allen Ergebnissen
-      final currentPOIs = List<POI>.from(state.pois);
-      for (final entry in enrichedPOIs.entries) {
-        final index = currentPOIs.indexWhere((p) => p.id == entry.key);
-        if (index != -1) {
-          currentPOIs[index] = entry.value;
-        }
-      }
+      // Debouncer canceln und finale Ergebnisse flushen
+      _enrichmentDebouncer?.cancel();
+      _pendingEnrichments.addAll(enrichedPOIs);
+      _flushPendingEnrichments();
 
       // Loading State entfernen - ALLE gesendeten POIs, nicht nur die mit Ergebnis
-      // FIX v1.7.9: POIs ohne Foto sind nicht mehr im results-Map,
-      // muessen aber trotzdem aus dem Loading-State entfernt werden
       final remainingEnrichingIds = Set<String>.from(state.enrichingPOIIds)
         ..removeAll(unenrichedPOIs.map((p) => p.id));
 
       state = state.copyWith(
-        pois: currentPOIs,
         isEnriching: remainingEnrichingIds.isNotEmpty,
         enrichingPOIIds: remainingEnrichingIds,
       );
 
       debugPrint('[POIState] Batch-Enrichment abgeschlossen: ${enrichedPOIs.length} POIs aktualisiert');
     } catch (e) {
+      // Cleanup bei Fehler
+      _enrichmentDebouncer?.cancel();
+      _pendingEnrichments.clear();
+
       // Loading State entfernen bei Fehler
       final remainingEnrichingIds = Set<String>.from(state.enrichingPOIIds)
         ..removeAll(unenrichedPOIs.map((p) => p.id));
@@ -309,6 +301,35 @@ class POIStateNotifier extends _$POIStateNotifier {
       );
       debugPrint('[POIState] Batch-Enrichment Fehler: $e');
     }
+  }
+
+  /// FIX v1.10.2: Flusht alle pending Enrichments in einem State-Update
+  void _flushPendingEnrichments() {
+    if (_pendingEnrichments.isEmpty) return;
+
+    final currentPOIs = List<POI>.from(state.pois);
+    final updatedIds = <String>{};
+
+    for (final entry in _pendingEnrichments.entries) {
+      final index = currentPOIs.indexWhere((p) => p.id == entry.key);
+      if (index != -1) {
+        currentPOIs[index] = entry.value;
+        updatedIds.add(entry.key);
+      }
+    }
+
+    // Enriching IDs entfernen
+    final remainingIds = Set<String>.from(state.enrichingPOIIds)
+      ..removeAll(updatedIds);
+
+    state = state.copyWith(
+      pois: currentPOIs,
+      isEnriching: remainingIds.isNotEmpty,
+      enrichingPOIIds: remainingIds,
+    );
+
+    debugPrint('[POIState] Flushed ${_pendingEnrichments.length} enriched POIs');
+    _pendingEnrichments.clear();
   }
 
   /// Reichert einen einzelnen POI an (on-demand)
@@ -480,6 +501,31 @@ class POIStateNotifier extends _$POIStateNotifier {
       state = state.copyWith(pois: [...state.pois, poi]);
       debugPrint('[POIState] POI hinzugefügt: ${poi.name}');
     }
+  }
+
+  /// FIX v1.10.2: Fügt mehrere POIs in einem Batch hinzu
+  /// Verhindert 12+ einzelne State-Updates bei Euro Trip Generierung
+  void addPOIsBatch(List<POI> pois) {
+    if (pois.isEmpty) return;
+
+    final updatedPOIs = List<POI>.from(state.pois);
+    int added = 0;
+    int updated = 0;
+
+    for (final poi in pois) {
+      final existingIndex = updatedPOIs.indexWhere((p) => p.id == poi.id);
+      if (existingIndex != -1) {
+        updatedPOIs[existingIndex] = poi;
+        updated++;
+      } else {
+        updatedPOIs.add(poi);
+        added++;
+      }
+    }
+
+    // EIN State-Update statt N Updates
+    state = state.copyWith(pois: updatedPOIs);
+    debugPrint('[POIState] Batch: $added hinzugefügt, $updated aktualisiert (gesamt: ${updatedPOIs.length})');
   }
 
   /// Prüft ob ein POI gerade enriched wird (für UI)

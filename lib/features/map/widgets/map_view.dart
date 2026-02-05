@@ -18,6 +18,27 @@ import '../../../data/models/poi.dart';
 import 'route_weather_marker.dart';
 import 'weather_badge_unified.dart';
 
+/// Maximale Anzahl Koordinaten für Polyline-Rendering (Performance)
+const int _maxPolylinePoints = 2000;
+
+/// Reduziert Koordinaten für flüssiges Karten-Rendering
+/// Bei >2000 Punkten wird jeder n-te Punkt genommen (Anfang+Ende bleiben erhalten)
+List<LatLng> _downsampleCoordinates(List<LatLng> coords) {
+  if (coords.length <= _maxPolylinePoints) return coords;
+
+  final step = coords.length / _maxPolylinePoints;
+  final result = <LatLng>[coords.first];
+
+  for (int i = 1; i < _maxPolylinePoints - 1; i++) {
+    final index = (i * step).floor().clamp(1, coords.length - 2);
+    result.add(coords[index]);
+  }
+
+  result.add(coords.last);
+  debugPrint('[MapView] Route downsampled: ${coords.length} → ${result.length} Punkte');
+  return result;
+}
+
 /// Karten-Widget mit MapLibre/flutter_map
 class MapView extends ConsumerStatefulWidget {
   final LatLng? initialCenter;
@@ -247,11 +268,14 @@ class _MapViewState extends ConsumerState<MapView> {
               Polyline(
                 // AI Trip Preview hat Priorität, dann TripState, dann RoutePlanner
                 // Bei Mehrtages-Trips: Nur Segment des ausgewählten Tages
-                points: (isAITripPreview && aiRouteCoordinates.isNotEmpty)
-                    ? aiRouteCoordinates
-                    : (tripState.route?.coordinates ??
-                        routePlanner.route?.coordinates ??
-                        []),
+                // v1.10.2: Downsampling für lange Routen (ANR-Fix)
+                points: _downsampleCoordinates(
+                  (isAITripPreview && aiRouteCoordinates.isNotEmpty)
+                      ? aiRouteCoordinates
+                      : (tripState.route?.coordinates ??
+                          routePlanner.route?.coordinates ??
+                          []),
+                ),
                 color: Theme.of(context).colorScheme.primary,
                 strokeWidth: 5,
                 borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),

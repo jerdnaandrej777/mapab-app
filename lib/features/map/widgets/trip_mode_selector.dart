@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../providers/app_ui_mode_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
@@ -47,7 +48,7 @@ class TripModeSelector extends ConsumerWidget {
             children: [
               Expanded(
                 child: _TripModeButton(
-                  label: 'AI Tagestrip',
+                  label: context.l10n.mapModeAiDayTrip,
                   icon: Icons.wb_sunny_outlined,
                   activeIcon: Icons.wb_sunny,
                   isSelected: currentMode == MapPlanMode.aiTagestrip,
@@ -57,7 +58,7 @@ class TripModeSelector extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _TripModeButton(
-                  label: 'AI Euro Trip',
+                  label: context.l10n.mapModeAiEuroTrip,
                   icon: Icons.flight_outlined,
                   activeIcon: Icons.flight,
                   isSelected: currentMode == MapPlanMode.aiEuroTrip,

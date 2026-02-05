@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.1 - Galerie-Bugfix (Tabellen-Fix, Chip-Textfarben) | Plattformen: Android, iOS, Desktop
+Version: 1.10.2 - MapScreen Lokalisierung (AI Tagestrip/Euro Trip Buttons, Trip-Config-Panel) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -481,6 +481,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.2.md` (MapScreen Lokalisierung: AI Tagestrip/Euro Trip Buttons, Trip-Config-Panel komplett lokalisiert, 13 neue ARB-Keys in allen 5 Sprachen)
 - `Dokumentation/CHANGELOG-v1.10.1.md` (Galerie-Bugfix: Tabellenname public_trips→trips in social_repo.dart, FilterChip/ChoiceChip Textfarben mit explizitem colorScheme.onPrimary/onSurface, Filter-Sheet Vollbild-Modus)
 - `Dokumentation/CHANGELOG-v1.10.0.md` (Social Features Release: Oeffentliche Trip-Galerie, Trips liken und importieren, Eigene Trips veroeffentlichen, Featured-Trips, Supabase Backend, Filter-Sheet Vollbild-Fix)
 - `Dokumentation/CHANGELOG-v1.9.32.md` (Vollstaendige Lokalisierung: 5 Sprachen DE/EN/FR/IT/ES, ~700 ARB-Keys, 202+ hardcodierte Strings ersetzt, GPS-Dialog in LocationHelper zentralisiert mit l10n, Lokalisierungs-Checkliste in CLAUDE.md)

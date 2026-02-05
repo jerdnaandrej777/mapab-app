@@ -2047,6 +2047,57 @@ class AppLocalizationsIt extends AppLocalizations {
   String get randomTripBack => 'Indietro';
 
   @override
+  String get mapModeAiDayTrip => 'AI Gita';
+
+  @override
+  String get mapModeAiEuroTrip => 'AI Euro Trip';
+
+  @override
+  String get travelDuration => 'Durata del viaggio';
+
+  @override
+  String get radiusLabel => 'Raggio';
+
+  @override
+  String get categoriesLabel => 'Categorie';
+
+  @override
+  String tripDescDayTrip(int radius) {
+    return 'Gita giornaliera — ca. $radius km';
+  }
+
+  @override
+  String tripDescWeekend(int radius) {
+    return 'Fine settimana — ca. $radius km';
+  }
+
+  @override
+  String tripDescShortVacation(int radius) {
+    return 'Vacanza breve — ca. $radius km';
+  }
+
+  @override
+  String tripDescWeekTrip(int radius) {
+    return 'Viaggio settimanale — ca. $radius km';
+  }
+
+  @override
+  String tripDescEpic(int radius) {
+    return 'Epico Euro Trip — ca. $radius km';
+  }
+
+  @override
+  String selectedCount(int count) {
+    return '$count selezionati';
+  }
+
+  @override
+  String get destinationOptional => 'Destinazione (opzionale)';
+
+  @override
+  String get enterDestination => 'Inserisci destinazione...';
+
+  @override
   String get tripTypeDayTrip => 'Gita giornaliera';
 
   @override

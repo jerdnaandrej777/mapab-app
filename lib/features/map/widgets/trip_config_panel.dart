@@ -345,7 +345,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                     Icon(Icons.location_on, size: 16, color: colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
-                      'Start',
+                      context.l10n.start,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -756,7 +756,7 @@ class _CompactRadiusSlider extends StatelessWidget {
                 Icon(Icons.calendar_today, size: 16, color: colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
-                  'Reisedauer',
+                  context.l10n.travelDuration,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -772,7 +772,7 @@ class _CompactRadiusSlider extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '$currentDays ${currentDays == 1 ? "Tag" : "Tage"}',
+                context.l10n.formatDayCount(currentDays),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
@@ -785,7 +785,7 @@ class _CompactRadiusSlider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: Text(
-            _getDaysDescription(currentDays),
+            _getDaysDescription(context, currentDays),
             style: TextStyle(
               fontSize: 11,
               color: colorScheme.onSurfaceVariant,
@@ -864,7 +864,7 @@ class _CompactRadiusSlider extends StatelessWidget {
                 Icon(Icons.radar, size: 16, color: colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
-                  'Radius',
+                  context.l10n.radiusLabel,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -944,13 +944,13 @@ class _CompactRadiusSlider extends StatelessWidget {
     );
   }
 
-  String _getDaysDescription(int days) {
+  String _getDaysDescription(BuildContext context, int days) {
     final radiusKm = (days * TripConstants.kmPerDay).round();
-    if (days == 1) return 'Tagesausflug — ca. $radiusKm km';
-    if (days == 2) return 'Wochenend-Trip — ca. $radiusKm km';
-    if (days <= 4) return 'Kurzurlaub — ca. $radiusKm km';
-    if (days <= 7) return 'Wochenreise — ca. $radiusKm km';
-    return 'Epischer Euro Trip — ca. $radiusKm km';
+    if (days == 1) return context.l10n.tripDescDayTrip(radiusKm);
+    if (days == 2) return context.l10n.tripDescWeekend(radiusKm);
+    if (days <= 4) return context.l10n.tripDescShortVacation(radiusKm);
+    if (days <= 7) return context.l10n.tripDescWeekTrip(radiusKm);
+    return context.l10n.tripDescEpic(radiusKm);
   }
 }
 
@@ -1115,7 +1115,7 @@ class _CompactCategorySelector extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Fertig'),
+                    child: Text(context.l10n.done),
                   ),
                 ),
                 // Safe area padding
@@ -1145,7 +1145,7 @@ class _CompactCategorySelector extends StatelessWidget {
                 Icon(Icons.category, size: 18, color: colorScheme.primary),
                 const SizedBox(width: 10),
                 Text(
-                  'Kategorien',
+                  context.l10n.categoriesLabel,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -1156,8 +1156,8 @@ class _CompactCategorySelector extends StatelessWidget {
                 Expanded(
                   child: Text(
                     state.selectedCategories.isEmpty
-                        ? 'Alle'
-                        : '${state.selectedCategoryCount} ausgewählt',
+                        ? context.l10n.all
+                        : context.l10n.selectedCount(state.selectedCategoryCount),
                     style: TextStyle(
                       fontSize: 12,
                       color: colorScheme.onSurfaceVariant,
@@ -1236,7 +1236,7 @@ class _DestinationSheetContent extends StatelessWidget {
                 Icon(Icons.flag, size: 18, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Ziel (optional)',
+                  context.l10n.destinationOptional,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
@@ -1248,7 +1248,7 @@ class _DestinationSheetContent extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onClear,
                     icon: Icon(Icons.close, size: 16, color: colorScheme.error),
-                    label: Text('Entfernen', style: TextStyle(color: colorScheme.error, fontSize: 13)),
+                    label: Text(context.l10n.remove, style: TextStyle(color: colorScheme.error, fontSize: 13)),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.compact,
@@ -1274,7 +1274,7 @@ class _DestinationSheetContent extends StatelessWidget {
                 autofocus: true,
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Zielort eingeben...',
+                  hintText: context.l10n.enterDestination,
                   hintStyle: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
                   prefixIcon: Icon(Icons.search, size: 20, color: colorScheme.onSurfaceVariant),
                   suffixIcon: isSearching

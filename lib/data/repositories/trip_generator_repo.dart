@@ -200,7 +200,12 @@ class TripGeneratorRepository {
 
     // Tage: direkt übergeben oder aus Radius berechnen (Fallback)
     final effectiveDays = days ?? TripConstants.calculateDaysFromDistance(radiusKm);
-    debugPrint('[TripGenerator] Euro Trip: $effectiveDays Tage (${radiusKm}km Suchradius)${hasDestination ? ' (Ziel: $endAddress)' : ' (Rundreise)'}');
+    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    debugPrint('[TripGenerator] EURO TRIP START');
+    debugPrint('[TripGenerator] Tage: $effectiveDays, Radius: ${radiusKm}km');
+    debugPrint('[TripGenerator] Start: $startAddress (${startLocation.latitude}, ${startLocation.longitude})');
+    debugPrint('[TripGenerator] Modus: ${hasDestination ? 'A→B ($endAddress)' : 'Rundreise'}');
+    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
 
     // POIs pro Tag (max 9 wegen Google Maps Limit)
     final poisPerDay = min(
@@ -273,6 +278,7 @@ class TripGeneratorRepository {
     }
 
     // 2. Zufällige POIs auswählen
+    debugPrint('[TripGenerator] SCHRITT 2: POI-Auswahl ($totalPOIs aus ${availablePOIs.length})...');
     final selectedPOIs = _poiSelector.selectRandomPOIs(
       pois: availablePOIs,
       startLocation: startLocation,
@@ -280,12 +286,14 @@ class TripGeneratorRepository {
       preferredCategories: categories,
       maxPerCategory: 3, // Mehr Diversität bei längeren Trips
     );
+    debugPrint('[TripGenerator] SCHRITT 2 OK: ${selectedPOIs.length} POIs ausgewaehlt');
 
     if (selectedPOIs.isEmpty) {
       throw TripGenerationException('Keine passenden POIs gefunden');
     }
 
     // 3. Route optimieren (Richtungs-Optimierung bei A→B Trips)
+    debugPrint('[TripGenerator] SCHRITT 3: Route-Optimierung...');
     final List<POI> optimizedPOIs;
     if (hasDestination) {
       optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
@@ -293,17 +301,18 @@ class TripGeneratorRepository {
         startLocation: startLocation,
         endLocation: destinationLocation!,
       );
-      debugPrint('[TripGenerator] Directional optimization (A→B): ${optimizedPOIs.length} POIs');
+      debugPrint('[TripGenerator] SCHRITT 3 OK: Directional optimization (A→B): ${optimizedPOIs.length} POIs');
     } else {
       optimizedPOIs = _routeOptimizer.optimizeRoute(
         pois: selectedPOIs,
         startLocation: startLocation,
         returnToStart: true,
       );
+      debugPrint('[TripGenerator] SCHRITT 3 OK: Rundreise-Optimierung: ${optimizedPOIs.length} POIs');
     }
 
     // 4. Auf Tage aufteilen
-    debugPrint('[TripGenerator] Plane $effectiveDays Tage mit ${optimizedPOIs.length} POIs...');
+    debugPrint('[TripGenerator] SCHRITT 4: Tagesplanung ($effectiveDays Tage, ${optimizedPOIs.length} POIs)...');
     var tripDays = _dayPlanner.planDays(
       pois: optimizedPOIs,
       startLocation: startLocation,
@@ -353,18 +362,21 @@ class TripGeneratorRepository {
     }
 
     // 5. Hotels hinzufügen (optional)
+    debugPrint('[TripGenerator] SCHRITT 5: Hotel-Suche (${includeHotels && actualDays > 1 ? 'aktiv' : 'uebersprungen'})...');
     List<List<HotelSuggestion>> hotelSuggestions = [];
     if (includeHotels && actualDays > 1) {
       final overnightLocations = _dayPlanner.calculateOvernightLocations(
         tripDays: tripDays,
         startLocation: startLocation,
       );
+      debugPrint('[TripGenerator] ${overnightLocations.length} Uebernachtungsorte ermittelt');
 
       hotelSuggestions = await _hotelService.searchHotelsForMultipleLocations(
         locations: overnightLocations,
         radiusKm: 15,
         limitPerLocation: 3,
       );
+      debugPrint('[TripGenerator] Hotel-Suche abgeschlossen: ${hotelSuggestions.where((l) => l.isNotEmpty).length} Standorte mit Hotels');
 
       // Beste Hotels als Stops hinzufügen
       final hotelStops = hotelSuggestions
@@ -377,8 +389,10 @@ class TripGeneratorRepository {
         hotelStops: hotelStops,
       );
     }
+    debugPrint('[TripGenerator] SCHRITT 5 OK');
 
     // 6. Gesamtroute berechnen
+    debugPrint('[TripGenerator] SCHRITT 6: OSRM Route-Berechnung...');
     final allWaypoints = <LatLng>[];
     for (final day in tripDays) {
       for (final stop in day.stops) {
@@ -386,7 +400,7 @@ class TripGeneratorRepository {
       }
     }
 
-    debugPrint('[TripGenerator] Route berechnen mit ${allWaypoints.length} Waypoints...');
+    debugPrint('[TripGenerator] ${allWaypoints.length} Waypoints fuer OSRM...');
 
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
@@ -396,9 +410,10 @@ class TripGeneratorRepository {
       endAddress: endAddress,
     );
 
-    debugPrint('[TripGenerator] ✓ Route berechnet: ${route.distanceKm.toStringAsFixed(0)}km');
+    debugPrint('[TripGenerator] SCHRITT 6 OK: ${route.distanceKm.toStringAsFixed(0)}km, ${route.coordinates.length} Koordinaten');
 
     // 7. Trip erstellen
+    debugPrint('[TripGenerator] SCHRITT 7: Trip-Objekt erstellen...');
     final allStops = tripDays.expand((day) => day.stops).toList();
 
     final trip = Trip(
@@ -411,6 +426,11 @@ class TripGeneratorRepository {
       createdAt: DateTime.now(),
       preferredCategories: categories.map((c) => c.id).toList(),
     );
+
+    debugPrint('[TripGenerator] SCHRITT 7 OK: Trip "${trip.name}" mit ${allStops.length} Stops erstellt');
+    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    debugPrint('[TripGenerator] EURO TRIP ERFOLGREICH ABGESCHLOSSEN');
+    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
 
     return GeneratedTrip(
       trip: trip,
