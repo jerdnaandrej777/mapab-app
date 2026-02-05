@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.3 - Download</title>
+    <title>MapAB v1.10.4 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,11 +202,11 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.3 (Build 184)</div>
-        <span class="release-tag">Vollstaendige Lokalisierung</span>
+        <div class="version">Version 1.10.4 (Build 185)</div>
+        <span class="release-tag">Euro Trip Crash-Fix</span>
         <p class="subtitle">
-            Komplette App-Lokalisierung!<br>
-            Navigation, TTS, AI, Chat in 5 Sprachen.
+            Kritische Bugfixes!<br>
+            AI Euro Trip funktioniert jetzt stabil.
         </p>
 
         <div class="qr-container">
@@ -214,20 +214,19 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.3/app-release.apk" class="download-btn" download>
-            &#x1F4F1; APK herunterladen (118 MB)
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.4/app-release.apk" class="download-btn" download>
+            &#x1F4F1; APK herunterladen (117 MB)
         </a>
 
         <div class="features">
-            <h3>&#x1F389; Neu in v1.10.3:</h3>
+            <h3>&#x1F41B; Bugfixes in v1.10.4:</h3>
             <ul>
-                <li class="highlight">Navigation TTS in 5 Sprachen (DE/EN/FR/IT/ES)</li>
-                <li class="highlight">Wetter-Widgets komplett lokalisiert</li>
-                <li class="highlight">Trip-Modale mehrsprachig</li>
-                <li>AI Chat + Sprachbefehle lokalisiert</li>
-                <li>Voice Service: dynamische TTS/STT-Sprache</li>
-                <li>AI Trip Advisor lokalisiert</li>
-                <li>185+ neue ARB-Keys</li>
+                <li class="highlight">AI Euro Trip Crash behoben</li>
+                <li class="highlight">ConcurrentModificationException gefixt</li>
+                <li class="highlight">Debouncer Race Condition behoben</li>
+                <li>POI-Enrichment Thread-Safety</li>
+                <li>Stabilere Trip-Generierung</li>
+                <li>Keine Abstuerze mehr beim "Ueberrasch mich!"</li>
             </ul>
         </div>
 
@@ -258,7 +257,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.3/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.4/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

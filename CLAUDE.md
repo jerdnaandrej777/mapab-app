@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.3 - Vollstaendige Lokalisierung (Navigation, TTS, Voice, AI Chat, AI Advisor in 5 Sprachen) | Plattformen: Android, iOS, Desktop
+Version: 1.10.4 - AI Euro Trip Crash-Fix (ConcurrentModificationException + Debouncer Race Condition) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -482,6 +482,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.4.md` (AI Euro Trip Crash-Fix: ConcurrentModificationException in _flushPendingEnrichments() behoben durch Map-Kopie vor Iteration, Debouncer Race Condition in enrichPOIsBatch() behoben durch _enrichmentBatchActive Flag, Thread-Safety fuer POI-Enrichment)
 - `Dokumentation/CHANGELOG-v1.10.3.md` (Vollstaendige Lokalisierung: Navigation Instructions mit l10n-Parameter, Voice Service dynamische TTS/STT-Sprache + mehrsprachige Sprachbefehle, AI Chat komplett lokalisiert, AI Trip Advisor lokalisiert, AI Service language-Parameter, 100+ neue ARB-Keys in allen 5 Sprachen, Gallery DB-Fix public_trips)
 - `Dokumentation/CHANGELOG-v1.10.2.md` (MapScreen Lokalisierung: AI Tagestrip/Euro Trip Buttons, Trip-Config-Panel komplett lokalisiert, 13 neue ARB-Keys in allen 5 Sprachen)
 - `Dokumentation/CHANGELOG-v1.10.1.md` (Galerie-Bugfix: Tabellenname public_trips→trips in social_repo.dart, FilterChip/ChoiceChip Textfarben mit explizitem colorScheme.onPrimary/onSurface, Filter-Sheet Vollbild-Modus)

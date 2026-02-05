@@ -233,8 +233,12 @@ class POIStateNotifier extends _$POIStateNotifier {
   final Map<String, POI> _pendingEnrichments = {};
   Timer? _enrichmentDebouncer;
 
+  /// FIX v1.10.4: Flag um Callbacks nach Batch-Ende zu ignorieren
+  bool _enrichmentBatchActive = false;
+
   /// Reichert mehrere POIs in einem Batch an (OPTIMIERT v1.7.3, v1.10.2 Debouncing)
   /// Nutzt Wikipedia Multi-Title-Query für bis zu 50 POIs gleichzeitig
+  /// FIX v1.10.4: Race Conditions zwischen Debouncer und finalem Flush verhindern
   Future<void> enrichPOIsBatch(List<POI> pois) async {
     if (pois.isEmpty) return;
 
@@ -247,6 +251,13 @@ class POIStateNotifier extends _$POIStateNotifier {
 
     debugPrint('[POIState] Batch-Enrichment für ${unenrichedPOIs.length} POIs');
 
+    // FIX v1.10.4: Batch als aktiv markieren
+    _enrichmentBatchActive = true;
+
+    // Vorherigen Debouncer canceln (falls noch aktiv von vorherigem Batch)
+    _enrichmentDebouncer?.cancel();
+    _enrichmentDebouncer = null;
+
     // Markiere alle als "in Arbeit"
     final newEnrichingIds = {...state.enrichingPOIIds, ...unenrichedPOIs.map((p) => p.id)};
     state = state.copyWith(
@@ -258,22 +269,35 @@ class POIStateNotifier extends _$POIStateNotifier {
       final enrichmentService = ref.read(poiEnrichmentServiceProvider);
 
       // v1.10.2: Debounced Updates statt sofortiger State-Kopie bei jedem Callback
+      // FIX v1.10.4: Callback prüft ob Batch noch aktiv ist
       final enrichedPOIs = await enrichmentService.enrichPOIsBatch(
         unenrichedPOIs,
         onPartialResult: (partialResults) {
+          // FIX v1.10.4: Ignoriere Callbacks nach Batch-Ende
+          if (!_enrichmentBatchActive) return;
+
           // Sammle Ergebnisse statt sofort zu updaten
           _pendingEnrichments.addAll(partialResults);
 
           // Debounce: Nur alle 300ms ein State-Update
           _enrichmentDebouncer?.cancel();
           _enrichmentDebouncer = Timer(const Duration(milliseconds: 300), () {
-            _flushPendingEnrichments();
+            // FIX v1.10.4: Nochmal prüfen ob Batch noch aktiv
+            if (_enrichmentBatchActive) {
+              _flushPendingEnrichments();
+            }
           });
         },
       );
 
-      // Debouncer canceln und finale Ergebnisse flushen
+      // FIX v1.10.4: Batch beenden BEVOR finaler Flush
+      _enrichmentBatchActive = false;
+
+      // Debouncer canceln (verhindert doppelten Flush)
       _enrichmentDebouncer?.cancel();
+      _enrichmentDebouncer = null;
+
+      // Finale Ergebnisse hinzufügen und flushen
       _pendingEnrichments.addAll(enrichedPOIs);
       _flushPendingEnrichments();
 
@@ -288,8 +312,12 @@ class POIStateNotifier extends _$POIStateNotifier {
 
       debugPrint('[POIState] Batch-Enrichment abgeschlossen: ${enrichedPOIs.length} POIs aktualisiert');
     } catch (e) {
+      // FIX v1.10.4: Batch beenden bei Fehler
+      _enrichmentBatchActive = false;
+
       // Cleanup bei Fehler
       _enrichmentDebouncer?.cancel();
+      _enrichmentDebouncer = null;
       _pendingEnrichments.clear();
 
       // Loading State entfernen bei Fehler
@@ -304,13 +332,19 @@ class POIStateNotifier extends _$POIStateNotifier {
   }
 
   /// FIX v1.10.2: Flusht alle pending Enrichments in einem State-Update
+  /// FIX v1.10.4: ConcurrentModificationException verhindern durch Kopie vor Iteration
   void _flushPendingEnrichments() {
     if (_pendingEnrichments.isEmpty) return;
+
+    // FIX v1.10.4: Kopiere und leere die Map ZUERST um ConcurrentModificationException zu verhindern
+    // onPartialResult könnte sonst während der Iteration die Map modifizieren
+    final enrichmentsToProcess = Map<String, POI>.from(_pendingEnrichments);
+    _pendingEnrichments.clear();
 
     final currentPOIs = List<POI>.from(state.pois);
     final updatedIds = <String>{};
 
-    for (final entry in _pendingEnrichments.entries) {
+    for (final entry in enrichmentsToProcess.entries) {
       final index = currentPOIs.indexWhere((p) => p.id == entry.key);
       if (index != -1) {
         currentPOIs[index] = entry.value;
@@ -328,8 +362,7 @@ class POIStateNotifier extends _$POIStateNotifier {
       enrichingPOIIds: remainingIds,
     );
 
-    debugPrint('[POIState] Flushed ${_pendingEnrichments.length} enriched POIs');
-    _pendingEnrichments.clear();
+    debugPrint('[POIState] Flushed ${enrichmentsToProcess.length} enriched POIs');
   }
 
   /// Reichert einen einzelnen POI an (on-demand)
