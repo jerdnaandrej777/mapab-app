@@ -70,20 +70,34 @@ class SocialRepository {
   /// Laedt Featured Trips fuer die Startseite
   Future<List<PublicTrip>> loadFeaturedTrips({int limit = 5}) async {
     try {
-      final response = await _client
-          .from('trips')
-          .select('''
-            *,
-            user_profiles!inner(display_name, avatar_url)
-          ''')
-          .eq('is_featured', true)
-          .eq('is_hidden', false)
-          .order('created_at', ascending: false)
-          .limit(limit);
+      // Nutze search_public_trips mit featured-Filter statt direkter Query
+      // um FK-Probleme zwischen trips und user_profiles zu vermeiden
+      final response = await _client.rpc('search_public_trips', params: {
+        'p_query': null,
+        'p_tags': null,
+        'p_country_code': null,
+        'p_trip_type': null,
+        'p_sort_by': 'recent',
+        'p_limit': limit,
+        'p_offset': 0,
+      });
 
       final rows = response as List<dynamic>;
+      // Filter nur featured Trips (RPC unterstuetzt kein featured-Filter direkt)
+      final featuredRows = rows
+          .where((row) => (row as Map<String, dynamic>)['is_featured'] == true)
+          .toList();
+
+      if (featuredRows.isNotEmpty) {
+        return featuredRows
+            .map((row) => _parsePublicTripRow(row as Map<String, dynamic>))
+            .toList();
+      }
+
+      // Fallback: Wenn keine featured, nimm die neuesten
       return rows
-          .map((row) => _parsePublicTripRowWithProfile(row as Map<String, dynamic>))
+          .take(limit)
+          .map((row) => _parsePublicTripRow(row as Map<String, dynamic>))
           .toList();
     } catch (e) {
       debugPrint('[Social] Featured FEHLER: $e');

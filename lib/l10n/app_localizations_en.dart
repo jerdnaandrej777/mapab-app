@@ -2641,6 +2641,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galleryMapComingSoon => 'Map view coming soon';
 
   @override
+  String get galleryMapNoData => 'No route data available';
+
+  @override
+  String get galleryMapError => 'Error loading route';
+
+  @override
   String get galleryImportSuccess => 'Trip added to favorites';
 
   @override
@@ -2700,6 +2706,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishError => 'Publishing failed';
+
+  @override
+  String get tripPublish => 'Publish Trip';
+
+  @override
+  String get tripPublishDescription => 'Share in public gallery';
 
   @override
   String get publishEuroTrip => 'Euro Trip';

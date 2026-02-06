@@ -23,14 +23,16 @@ class InterpolatedPosition {
 /// Techniken:
 /// - Linear-Interpolation entlang der Route-Polyline zwischen GPS-Updates
 /// - Bearing-Smoothing mit Exponential Moving Average
+/// - Dead-Reckoning entlang der Route bei fehlenden GPS-Updates
 /// - Predictive Extension bei konstantem Speed
 /// - Low-Speed Bearing-Freeze (kein Drehen im Stand)
 class PositionInterpolator {
   // --- Konfiguration ---
   static const int _frameIntervalMs = 16; // ~60fps
-  static const double _bearingSmoothingFactor = 0.35; // 0=traege, 1=sofort
+  static const double _bearingSmoothingFactor = 0.25; // 0=traege, 1=sofort (smoother)
   static const double _bearingFreezeSpeedKmh = 2.0;
   static const double _routeBearingSpeedKmh = 5.0;
+  static const double _deadReckoningMaxMs = 2000.0; // Max Dead-Reckoning Zeit
 
   // --- State ---
   LatLng? _previousPosition;
@@ -70,13 +72,14 @@ class PositionInterpolator {
     // Update-Interval schaetzen (fuer Interpolation-Timing)
     if (_targetPosition != null) {
       final elapsed = now.difference(_lastGpsTime);
-      if (elapsed.inMilliseconds > 100) {
+      if (elapsed.inMilliseconds > 50) {
         // Exponential Smoothing des Intervals
+        // Schnellere Anpassung (0.5/0.5) für responsivere Interpolation
         _expectedUpdateInterval = Duration(
-          milliseconds: ((_expectedUpdateInterval.inMilliseconds * 0.6) +
-                  (elapsed.inMilliseconds * 0.4))
+          milliseconds: ((_expectedUpdateInterval.inMilliseconds * 0.5) +
+                  (elapsed.inMilliseconds * 0.5))
               .round()
-              .clamp(300, 3000),
+              .clamp(150, 2000), // Min 150ms statt 300ms für flüssigere Updates
         );
       }
     }
@@ -198,36 +201,88 @@ class PositionInterpolator {
 
     // Interpolation-Fortschritt berechnen
     final elapsed = DateTime.now().difference(_lastGpsTime);
+    final elapsedMs = elapsed.inMilliseconds;
     final totalDuration = _expectedUpdateInterval.inMilliseconds;
 
     if (totalDuration > 0) {
-      _interpolationProgress =
-          (elapsed.inMilliseconds / totalDuration).clamp(0.0, 1.2);
+      _interpolationProgress = elapsedMs / totalDuration;
     }
 
-    // Easing-Funktion: ease-out fuer natuerlichere Bewegung
-    final easedT = _easeOutCubic(_interpolationProgress.clamp(0.0, 1.0));
+    LatLng finalPos;
 
-    // Position interpolieren
-    final interpolatedPos = _lerpLatLng(
-      _previousPosition!,
-      _targetPosition!,
-      easedT,
-    );
+    if (_interpolationProgress <= 1.0) {
+      // Normale Interpolation zwischen vorheriger und Ziel-Position
+      final easedT = _easeOutCubic(_interpolationProgress.clamp(0.0, 1.0));
+      finalPos = _lerpLatLng(_previousPosition!, _targetPosition!, easedT);
+    } else if (_currentSpeedKmh > 3 && elapsedMs < _deadReckoningMaxMs) {
+      // Dead-Reckoning: Weiter entlang der Route bewegen
+      // wenn GPS-Update ausbleibt aber wir uns bewegen sollten
+      finalPos = _deadReckonAlongRoute(elapsedMs);
+    } else {
+      // Stillstand oder zu lange ohne GPS - am Ziel bleiben
+      finalPos = _targetPosition!;
+    }
 
-    // Bearing smoothen
+    // Bearing smoothen (etwas langsamer für flüssigere Rotation)
     _smoothedBearing = _smoothBearing(_smoothedBearing, _targetBearing);
-
-    // Predictive Extension: bei > 1.0 etwas ueber das Ziel hinaus
-    final finalPos = _interpolationProgress > 1.0 && _currentSpeedKmh > 5
-        ? _predictPosition(interpolatedPos, _smoothedBearing, _currentSpeedKmh)
-        : interpolatedPos;
 
     _controller.add(InterpolatedPosition(
       position: finalPos,
       bearing: _smoothedBearing,
       speedKmh: _currentSpeedKmh,
     ));
+  }
+
+  /// Dead-Reckoning: Position entlang der Route vorhersagen
+  /// wenn GPS-Updates ausbleiben aber Bewegung erwartet wird
+  LatLng _deadReckonAlongRoute(int elapsedMs) {
+    if (_routeCoords.isEmpty || _routeIndex >= _routeCoords.length - 1) {
+      // Kein Route-Kontext: einfache Bearing-basierte Vorhersage
+      return _predictPosition(_targetPosition!, _smoothedBearing, _currentSpeedKmh);
+    }
+
+    // Zeit seit letztem GPS-Update, die über die normale Interpolation hinausgeht
+    final extraMs = elapsedMs - _expectedUpdateInterval.inMilliseconds;
+    if (extraMs <= 0) return _targetPosition!;
+
+    // Wie weit sollten wir uns in der Extra-Zeit bewegt haben?
+    final speedMps = _currentSpeedKmh / 3.6; // m/s
+    final extraDistanceM = speedMps * (extraMs / 1000.0);
+
+    // Entlang der Route-Segmente vorwärts bewegen
+    return _moveAlongRouteFromIndex(
+      _targetPosition!,
+      _routeIndex,
+      extraDistanceM.clamp(0, 50), // Max 50m Dead-Reckoning
+    );
+  }
+
+  /// Bewegt einen Punkt entlang der Route-Koordinaten ab einem Index
+  LatLng _moveAlongRouteFromIndex(LatLng from, int startIndex, double distanceM) {
+    if (distanceM <= 0 || _routeCoords.isEmpty) return from;
+
+    var remaining = distanceM;
+    var currentPos = from;
+    var idx = startIndex;
+
+    while (remaining > 0 && idx < _routeCoords.length - 1) {
+      final segmentEnd = _routeCoords[idx + 1];
+      final segmentDist = _haversineDistance(currentPos, segmentEnd);
+
+      if (segmentDist <= remaining) {
+        // Ganzes Segment überspringen
+        remaining -= segmentDist;
+        currentPos = segmentEnd;
+        idx++;
+      } else {
+        // Teilweise entlang des Segments bewegen
+        final t = remaining / segmentDist;
+        currentPos = _lerpLatLng(currentPos, segmentEnd, t);
+        remaining = 0;
+      }
+    }
+
+    return currentPos;
   }
 
   /// Predictive Position: extrapoliert leicht voraus

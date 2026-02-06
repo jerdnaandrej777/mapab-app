@@ -19,6 +19,7 @@ import 'widgets/poi_rating_widget.dart';
 import 'widgets/poi_photo_gallery.dart';
 import 'widgets/review_card.dart';
 import 'widgets/poi_comments_section.dart';
+import 'widgets/upload_photo_sheet.dart';
 
 /// POI-Detail-Screen mit dynamischen Daten
 class POIDetailScreen extends ConsumerStatefulWidget {
@@ -801,9 +802,25 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        POIPhotoGallery(poiId: poi.id),
+        POIPhotoGallery(
+          poiId: poi.id,
+          onAddPhoto: () => _showUploadPhotoSheet(poi.id),
+        ),
       ],
     );
+  }
+
+  /// Zeigt das Upload-Sheet fuer POI-Fotos
+  Future<void> _showUploadPhotoSheet(String poiId) async {
+    final success = await UploadPhotoSheet.show(context, poiId);
+    if (success == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.photoSuccess),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   /// Bewertungs-Widget mit Sternen und "Bewerten"-Button

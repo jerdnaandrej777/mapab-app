@@ -26,6 +26,7 @@ import 'widgets/elevation_chart.dart';
 import 'widgets/trip_statistics_card.dart';
 import 'widgets/trip_stop_tile.dart';
 import 'widgets/trip_summary.dart';
+import '../social/widgets/publish_trip_sheet.dart';
 
 /// Trip-Planungs-Screen - zeigt nur berechnete Routen an
 class TripScreen extends ConsumerStatefulWidget {
@@ -295,6 +296,19 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     // In Favoriten speichern
     await ref.read(favoritesNotifierProvider.notifier).saveRoute(savedTrip);
+  }
+
+  /// Veröffentlicht einen Trip in der öffentlichen Galerie
+  Future<void> _publishTrip(BuildContext context, Trip trip) async {
+    final published = await PublishTripSheet.show(context, trip);
+    if (published && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.publishSuccess),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints
@@ -1202,6 +1216,38 @@ $mapsUrl
                 if (tripState.hasRoute) {
                   _shareRoute(context, tripState);
                 }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.public),
+              title: Text(context.l10n.tripPublish),
+              subtitle: Text(context.l10n.tripPublishDescription),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final tripState = ref.read(tripStateProvider);
+                final rtState = ref.read(randomTripNotifierProvider);
+
+                // Trip-Objekt erstellen
+                Trip trip;
+                if (rtState.step == RandomTripStep.preview ||
+                    rtState.step == RandomTripStep.confirmed) {
+                  // AI Trip
+                  trip = rtState.generatedTrip!.trip;
+                } else if (tripState.hasRoute) {
+                  // Normale Route
+                  trip = Trip(
+                    id: const Uuid().v4(),
+                    name: '${tripState.route!.startAddress} → ${tripState.route!.endAddress}',
+                    type: TripType.daytrip,
+                    route: tripState.route!,
+                    stops: tripState.stops.map((poi) => TripStop.fromPOI(poi)).toList(),
+                    createdAt: DateTime.now(),
+                  );
+                } else {
+                  return;
+                }
+
+                await _publishTrip(context, trip);
               },
             ),
             ListTile(

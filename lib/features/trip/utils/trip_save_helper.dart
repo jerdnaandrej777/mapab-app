@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
@@ -72,11 +71,8 @@ class TripSaveHelper {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.tripRouteSaved(result)),
-          duration: const Duration(seconds: 1),
-          action: SnackBarAction(
-            label: context.l10n.tripShowInFavorites,
-            onPressed: () => context.push('/favorites'),
-          ),
+          duration: const Duration(milliseconds: 500),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -149,11 +145,8 @@ class TripSaveHelper {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.tripRouteSaved(result)),
-          duration: const Duration(seconds: 1),
-          action: SnackBarAction(
-            label: context.l10n.tripShowInFavorites,
-            onPressed: () => context.push('/favorites'),
-          ),
+          duration: const Duration(milliseconds: 500),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -219,11 +212,8 @@ class TripSaveHelper {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.tripRouteSaved(result)),
-          duration: const Duration(seconds: 1),
-          action: SnackBarAction(
-            label: context.l10n.tripShowInFavorites,
-            onPressed: () => context.push('/favorites'),
-          ),
+          duration: const Duration(milliseconds: 500),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }

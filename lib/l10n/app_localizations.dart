@@ -4646,6 +4646,18 @@ abstract class AppLocalizations {
   /// **'Karten-Ansicht wird bald verfügbar'**
   String get galleryMapComingSoon;
 
+  /// No description provided for @galleryMapNoData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Route-Daten verfügbar'**
+  String get galleryMapNoData;
+
+  /// No description provided for @galleryMapError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Laden der Route'**
+  String get galleryMapError;
+
   /// No description provided for @galleryImportSuccess.
   ///
   /// In de, this message translates to:
@@ -4765,6 +4777,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Veröffentlichen fehlgeschlagen'**
   String get publishError;
+
+  /// No description provided for @tripPublish.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip veröffentlichen'**
+  String get tripPublish;
+
+  /// No description provided for @tripPublishDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'In der öffentlichen Galerie teilen'**
+  String get tripPublishDescription;
 
   /// No description provided for @publishEuroTrip.
   ///

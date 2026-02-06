@@ -800,6 +800,8 @@
   "galleryShowOnMap": "Show on map",
   "galleryShareComingSoon": "Sharing coming soon",
   "galleryMapComingSoon": "Map view coming soon",
+  "galleryMapNoData": "No route data available",
+  "galleryMapError": "Error loading route",
   "galleryImportSuccess": "Trip added to favorites",
   "galleryImportError": "Import failed",
   "galleryTripNotFound": "Trip not found",
@@ -821,6 +823,8 @@
   "publishPublishing": "Publishing...",
   "publishSuccess": "Trip published!",
   "publishError": "Publishing failed",
+  "tripPublish": "Publish Trip",
+  "tripPublishDescription": "Share in public gallery",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Day trip",
 

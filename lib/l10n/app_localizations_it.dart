@@ -2649,6 +2649,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get galleryMapComingSoon => 'Vista mappa in arrivo';
 
   @override
+  String get galleryMapNoData => 'Nessun dato del percorso disponibile';
+
+  @override
+  String get galleryMapError => 'Errore durante il caricamento del percorso';
+
+  @override
   String get galleryImportSuccess => 'Trip aggiunto ai preferiti';
 
   @override
@@ -2709,6 +2715,12 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get publishError => 'Pubblicazione fallita';
+
+  @override
+  String get tripPublish => 'Pubblica trip';
+
+  @override
+  String get tripPublishDescription => 'Condividi nella galleria pubblica';
 
   @override
   String get publishEuroTrip => 'Euro Trip';

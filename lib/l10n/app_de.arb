@@ -950,6 +950,8 @@
   "galleryShowOnMap": "Auf Karte",
   "galleryShareComingSoon": "Teilen wird bald verfügbar",
   "galleryMapComingSoon": "Karten-Ansicht wird bald verfügbar",
+  "galleryMapNoData": "Keine Route-Daten verfügbar",
+  "galleryMapError": "Fehler beim Laden der Route",
   "galleryImportSuccess": "Trip in Favoriten importiert",
   "galleryImportError": "Import fehlgeschlagen",
   "galleryTripNotFound": "Trip nicht gefunden",
@@ -972,6 +974,8 @@
   "publishPublishing": "Wird veröffentlicht...",
   "publishSuccess": "Trip veröffentlicht!",
   "publishError": "Veröffentlichen fehlgeschlagen",
+  "tripPublish": "Trip veröffentlichen",
+  "tripPublishDescription": "In der öffentlichen Galerie teilen",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Tagesausflug",
 

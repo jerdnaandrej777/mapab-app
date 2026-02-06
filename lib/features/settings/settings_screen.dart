@@ -104,7 +104,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsTile(
             icon: Icons.info_outline,
             title: context.l10n.settingsAppVersion,
-            subtitle: '1.9.28',
+            subtitle: '1.10.16',
             onTap: () {},
           ),
 
@@ -115,7 +115,7 @@ class SettingsScreen extends ConsumerWidget {
               showLicensePage(
                 context: context,
                 applicationName: context.l10n.appName,
-                applicationVersion: '1.9.28',
+                applicationVersion: '1.10.16',
               );
             },
           ),

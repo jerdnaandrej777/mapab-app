@@ -22,6 +22,7 @@ import '../utils/trip_save_helper.dart';
 import 'corridor_browser_sheet.dart';
 import 'day_mini_map.dart';
 import 'editable_poi_card.dart';
+import '../../social/widgets/publish_trip_sheet.dart';
 
 /// Vollbild-Overlay zum Bearbeiten von Trip-Tagen
 /// Zeigt DayTabSelector, Mini-Map, POI-Liste mit Edit-Actions
@@ -164,6 +165,28 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                   )
                 : const Icon(Icons.refresh),
             tooltip: context.l10n.dayEditorRegenerate,
+          ),
+          // Trip veröffentlichen Button
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () async {
+                final published = await PublishTripSheet.show(context, trip);
+                if (published && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.publishSuccess),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.public, size: 20),
+              label: Text(context.l10n.publishButton),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            ),
           ),
         ],
       ),

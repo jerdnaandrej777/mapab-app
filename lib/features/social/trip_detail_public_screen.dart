@@ -2,12 +2,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/l10n/l10n.dart';
+import '../../data/models/poi.dart';
 import '../../data/models/public_trip.dart';
+import '../../data/models/route.dart';
 import '../../data/providers/gallery_provider.dart';
-import '../../data/providers/favorites_provider.dart';
 import '../../shared/widgets/app_snackbar.dart';
+import '../map/providers/map_controller_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
+import '../trip/providers/trip_state_provider.dart';
 
 /// Detail-Ansicht fuer einen oeffentlichen Trip
 class TripDetailPublicScreen extends ConsumerStatefulWidget {
@@ -446,8 +450,73 @@ class _TripDetailPublicScreenState
   }
 
   void _showOnMap(PublicTrip trip) {
-    // TODO: Trip auf Karte anzeigen
-    AppSnackbar.showSuccess(context, context.l10n.galleryMapComingSoon);
+    final tripData = trip.tripData;
+    if (tripData == null) {
+      AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+      return;
+    }
+
+    try {
+      // Route-Daten extrahieren
+      final routeData = tripData['route'] as Map<String, dynamic>?;
+      if (routeData == null) {
+        AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+        return;
+      }
+
+      // Koordinaten parsen
+      final coordsList = routeData['coordinates'] as List<dynamic>? ?? [];
+      final coordinates = coordsList.map((c) {
+        final map = c as Map<String, dynamic>;
+        return LatLng(
+          (map['lat'] as num).toDouble(),
+          (map['lng'] as num).toDouble(),
+        );
+      }).toList();
+
+      if (coordinates.isEmpty) {
+        AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+        return;
+      }
+
+      // AppRoute erstellen
+      final route = AppRoute(
+        start: coordinates.first,
+        end: coordinates.last,
+        startAddress: trip.tripName,
+        endAddress: trip.tripName,
+        coordinates: coordinates,
+        distanceKm: trip.distanceKm ?? 0,
+        durationMinutes: ((trip.durationHours ?? 0) * 60).round(),
+      );
+
+      // Stops parsen
+      final stopsData = tripData['stops'] as List<dynamic>? ?? [];
+      final stops = stopsData.map((s) {
+        final map = s as Map<String, dynamic>;
+        return POI(
+          id: map['poiId'] as String? ?? 'stop-${map.hashCode}',
+          name: map['name'] as String? ?? 'Stop',
+          latitude: (map['latitude'] as num).toDouble(),
+          longitude: (map['longitude'] as num).toDouble(),
+          categoryId: map['category'] as String? ?? 'attraction',
+        );
+      }).toList();
+
+      // In tripStateProvider laden
+      ref.read(tripStateProvider.notifier).setRouteAndStops(route, stops);
+
+      // Flag setzen für Auto-Zoom
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+      debugPrint('[TripDetail] Route auf Karte geladen: ${route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
+
+      // Zur Karte navigieren
+      context.go('/');
+    } catch (e) {
+      debugPrint('[TripDetail] Fehler beim Anzeigen auf Karte: $e');
+      AppSnackbar.showError(context, context.l10n.galleryMapError);
+    }
   }
 
   String _formatDate(DateTime date) {

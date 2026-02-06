@@ -800,6 +800,8 @@
   "galleryShowOnMap": "Sulla mappa",
   "galleryShareComingSoon": "Condivisione in arrivo",
   "galleryMapComingSoon": "Vista mappa in arrivo",
+  "galleryMapNoData": "Nessun dato del percorso disponibile",
+  "galleryMapError": "Errore durante il caricamento del percorso",
   "galleryImportSuccess": "Trip aggiunto ai preferiti",
   "galleryImportError": "Importazione fallita",
   "galleryTripNotFound": "Trip non trovato",
@@ -821,6 +823,8 @@
   "publishPublishing": "Pubblicazione in corso...",
   "publishSuccess": "Trip pubblicato!",
   "publishError": "Pubblicazione fallita",
+  "tripPublish": "Pubblica trip",
+  "tripPublishDescription": "Condividi nella galleria pubblica",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Gita giornaliera",
 
