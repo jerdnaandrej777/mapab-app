@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/l10n/category_l10n.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/utils/location_helper.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../data/models/route.dart';
+import '../../../data/models/trip.dart';
 import '../../../data/providers/active_trip_provider.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -303,9 +305,8 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
   Widget build(BuildContext context) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    final tripHasRoute = ref.watch(
-      tripStateProvider.select((t) => t.hasRoute),
-    );
+    final tripState = ref.watch(tripStateProvider);
+    final tripHasRoute = tripState.hasRoute;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -582,36 +583,62 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
             notifier: notifier,
           ),
 
-          // Generate Button - prüft GPS wenn kein Startpunkt gesetzt
+          // Generate Button oder Navigation starten (wenn Route aus Favoriten geladen)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: state.isLoading ? null : _handleGenerateTrip,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('🎲', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 8),
-                    Text(
-                      context.l10n.mapSurpriseMe,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+              child: tripHasRoute
+                  // Navigation starten Button (wenn Route aus Favoriten geladen)
+                  ? FilledButton.icon(
+                      onPressed: () => context.push(
+                        '/navigation',
+                        extra: {
+                          'route': tripState.route,
+                          'stops': tripState.stops
+                              .asMap()
+                              .entries
+                              .map((e) => TripStop.fromPOI(e.value, order: e.key))
+                              .toList(),
+                        },
+                      ),
+                      icon: const Icon(Icons.navigation),
+                      label: Text(context.l10n.tripInfoStartNavigation),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    )
+                  // Überrasch mich! Button (wenn keine Route geladen)
+                  : ElevatedButton(
+                      onPressed: state.isLoading ? null : _handleGenerateTrip,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('🎲', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Text(
+                            context.l10n.mapSurpriseMe,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
 

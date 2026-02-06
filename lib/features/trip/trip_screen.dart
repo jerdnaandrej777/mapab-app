@@ -52,12 +52,28 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       appBar: AppBar(
         title: Text(_getTitle(context, tripState, randomTripState)),
         actions: [
-          // Speichern-Button (nur wenn Route vorhanden)
-          if (tripState.hasRoute)
-            IconButton(
-              icon: const Icon(Icons.bookmark_add),
-              tooltip: context.l10n.tripSaveRoute,
-              onPressed: () => _saveRoute(context, ref, tripState),
+          // Speichern-Button (normale Route oder AI Trip) - dominant
+          if (tripState.hasRoute ||
+              randomTripState.step == RandomTripStep.preview ||
+              randomTripState.step == RandomTripStep.confirmed)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: FilledButton.tonalIcon(
+                onPressed: () {
+                  if (randomTripState.step == RandomTripStep.preview ||
+                      randomTripState.step == RandomTripStep.confirmed) {
+                    _saveAITrip(context, ref, randomTripState);
+                  } else {
+                    _saveRoute(context, ref, tripState);
+                  }
+                },
+                icon: const Icon(Icons.bookmark_add, size: 18),
+                label: Text(context.l10n.save),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
             ),
           if (hasRoute || tripState.hasStops)
             IconButton(
@@ -220,19 +236,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     // In Favoriten speichern
     await ref.read(favoritesNotifierProvider.notifier).saveRoute(trip);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.tripRouteSaved(result)),
-          duration: const Duration(seconds: 1),
-          action: SnackBarAction(
-            label: context.l10n.tripShowInFavorites,
-            onPressed: () => context.push('/favorites'),
-          ),
-        ),
-      );
-    }
   }
 
   /// Speichert einen AI Trip in die Favoriten
@@ -292,19 +295,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     // In Favoriten speichern
     await ref.read(favoritesNotifierProvider.notifier).saveRoute(savedTrip);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.tripRouteSaved(result)),
-          duration: const Duration(seconds: 1),
-          action: SnackBarAction(
-            label: context.l10n.tripShowInFavorites,
-            onPressed: () => context.push('/favorites'),
-          ),
-        ),
-      );
-    }
   }
 
   /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints

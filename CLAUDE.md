@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung für Claude Code bei der Arbeit mit diesem Flutt
 ## Projektübersicht
 
 Flutter-basierte mobile App für interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.7 - Filter-Modal Fix (Galerie-Buttons sofort reaktiv) | Plattformen: Android, iOS, Desktop
+Version: 1.10.8 - Favoriten-Navigation & Speichern-UX (dominanter Button, Navigation starten bei geladener Route) | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -103,7 +103,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/map/widgets/route_weather_marker.dart` | Wetter-Marker auf Route mit Tap-Detail-Sheet (v1.7.12) |
 | `lib/features/poi/poi_list_screen.dart` | POI-Liste mit alle 15 Kategorien als Quick-Filter + konsistentes Chip-Feedback mit Schatten (v1.7.24) + Batch-Enrichment + AI-Trip-Stop-Integration (v1.7.8) - Referenz-Pattern für alle Kategorie-Chips (v1.7.26) + Wetter-Tipp Sortier-Chip + Wetter-Kontext-Banner bei schlechtem Wetter (v1.9.12) |
 | `lib/features/poi/poi_detail_screen.dart` | POI-Details + AI-Trip-Stop-Integration (v1.7.8) |
-| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) + Wetter-Badges auf Stop-Tiles + Wetter-Hint bei bad/danger Wetter (v1.9.12) + AppBar Speichern-Button fuer AI Trips (v1.10.6) |
+| `lib/features/trip/trip_screen.dart` | Route + Stops + Auf Karte anzeigen Button + Route/AI-Trip in Favoriten speichern (v1.7.10) + Trip-Abschluss-Dialog (v1.7.39) + Export-Snackbar entfernt + Google Maps Hinweis (v1.7.40) + Korridor-POI-Browser Button (v1.8.0) + Navigation starten Button in beiden Modi: normale Route + AI Trip Preview (v1.9.0) + Wetter-Badges auf Stop-Tiles + Wetter-Hint bei bad/danger Wetter (v1.9.12) + AppBar Speichern-Button fuer AI Trips (v1.10.6) + Dominanter FilledButton.tonalIcon Speichern-Button + Speichern-Snackbar entfernt (v1.10.8) |
 | `lib/features/navigation/navigation_screen.dart` | Vollbild-Navigation mit MapLibre GL 3D-Perspektive (Tilt 50°), Heading-basierter Bearing, GeoJSON Route-Rendering, Native Circle-Marker, Rerouting-Overlay (v1.9.0, v1.9.1: flutter_map → maplibre_gl, v1.9.3: nativer User-Position Circle statt Flutter Center-Widget, Pan-Gesten aktiviert) + mounted-Check in 60fps Interpolation-Callback (v1.9.22) + Vollstaendiges dispose() mit Provider-Cleanup, lokaler MapController-Capture gegen Race-Condition, _arrivalDialogShown Flag, context.mounted Guards in Dialogen (v1.9.23) + Route/POI-Updates nur bei tatsaechlicher Aenderung statt jedem build(), moveCamera statt animateCamera fuer 60fps ohne Animation-Stacking (v1.9.25) + Sprachbefehle via VoiceService: "wie lange noch", "wo bin ich", "naechster Stopp", "Navigation beenden" + partielle Spracherkennung-UI (v1.9.29) |
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden/Mikrofon Buttons (v1.9.0) + Sprachbefehl-Button mit aktiver Listening-Animation (v1.9.29) |
@@ -482,6 +482,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Änderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.8.md` (Favoriten-Navigation & Speichern-UX: Dominanter FilledButton.tonalIcon Speichern-Button, Snackbar-Meldung entfernt, Navigation starten Button bei geladener Route aus Favoriten statt Ueberrasch mich)
 - `Dokumentation/CHANGELOG-v1.10.7.md` (Filter-Modal Fix: Trip-Galerie Filter-Buttons reagieren sofort auf Auswahl, _FilterSheet holt State via ref.watch() statt als Parameter)
 - `Dokumentation/CHANGELOG-v1.10.6.md` (Route Speichern Button Fix: AppBar Button fuer AI Trips erweitert, Button wird jetzt auch bei RandomTripStep.preview und confirmed angezeigt, ruft _saveAITrip() statt _saveRoute() auf)
 - `Dokumentation/CHANGELOG-v1.10.5.md` (AI Euro Trip Crash-Fix Enrichment Safety: Fire-and-forget async mit runZonedGuarded abgesichert, Sub-Batching mit max 10 POIs pro Batch bei Euro Trips)
