@@ -295,7 +295,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
               hasDestination: state.hasDestination,
             ),
           ),
-        ),
+        );
       },
     ).then((_) {
       // Rebuild parent um Button-Text zu aktualisieren
@@ -1160,10 +1160,12 @@ class _CompactCategorySelector extends StatelessWidget {
                 SizedBox(height: MediaQuery.of(context).padding.bottom),
               ],
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ),
+  ),
+);
   }
 
   @override
