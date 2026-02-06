@@ -2149,7 +2149,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get travelDuration => 'Travel duration';
 
   @override
-  String get radiusLabel => 'Radius';
+  String get radiusLabel => 'Travel distance';
 
   @override
   String get categoriesLabel => 'Categories';
@@ -2718,6 +2718,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishDaytrip => 'Day trip';
+
+  @override
+  String get publishCoverImage => 'Cover Image';
+
+  @override
+  String get publishCoverImageHint => 'A title image for your trip (optional)';
+
+  @override
+  String get tripPhotos => 'Photos';
+
+  @override
+  String get tripNoPhotos => 'No photos uploaded yet';
+
+  @override
+  String get tripAddFirstPhoto => 'Add first photo';
+
+  @override
+  String get tripPhotoUpload => 'Upload trip photo';
 
   @override
   String get dayEditorDriveTime => 'Drive time';

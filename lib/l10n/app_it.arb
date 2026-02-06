@@ -670,7 +670,7 @@
   "mapModeAiDayTrip": "AI Gita",
   "mapModeAiEuroTrip": "AI Euro Trip",
   "travelDuration": "Durata del viaggio",
-  "radiusLabel": "Raggio",
+  "radiusLabel": "Distanza di viaggio",
   "categoriesLabel": "Categorie",
   "tripDescDayTrip": "Gita giornaliera — ca. {radius} km",
   "tripDescWeekend": "Fine settimana — ca. {radius} km",

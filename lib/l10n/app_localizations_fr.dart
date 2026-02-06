@@ -2169,7 +2169,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get travelDuration => 'Durée du voyage';
 
   @override
-  String get radiusLabel => 'Rayon';
+  String get radiusLabel => 'Distance de voyage';
 
   @override
   String get categoriesLabel => 'Catégories';
@@ -2738,6 +2738,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get publishDaytrip => 'Excursion';
+
+  @override
+  String get publishCoverImage => 'Image de couverture';
+
+  @override
+  String get publishCoverImageHint =>
+      'Une image de titre pour votre trip (optionnel)';
+
+  @override
+  String get tripPhotos => 'Photos';
+
+  @override
+  String get tripNoPhotos => 'Aucune photo téléchargée';
+
+  @override
+  String get tripAddFirstPhoto => 'Ajouter première photo';
+
+  @override
+  String get tripPhotoUpload => 'Télécharger photo du trip';
 
   @override
   String get dayEditorDriveTime => 'Temps de trajet';

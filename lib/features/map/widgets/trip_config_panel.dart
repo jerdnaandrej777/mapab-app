@@ -891,7 +891,7 @@ class _CompactRadiusSlider extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.radar, size: 16, color: colorScheme.primary),
+                Icon(Icons.straighten, size: 16, color: colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   context.l10n.radiusLabel,

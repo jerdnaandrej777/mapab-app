@@ -3911,7 +3911,7 @@ abstract class AppLocalizations {
   /// No description provided for @radiusLabel.
   ///
   /// In de, this message translates to:
-  /// **'Radius'**
+  /// **'Reiseentfernung'**
   String get radiusLabel;
 
   /// No description provided for @categoriesLabel.
@@ -4801,6 +4801,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Tagesausflug'**
   String get publishDaytrip;
+
+  /// No description provided for @publishCoverImage.
+  ///
+  /// In de, this message translates to:
+  /// **'Cover-Bild'**
+  String get publishCoverImage;
+
+  /// No description provided for @publishCoverImageHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein Titelbild für deinen Trip (optional)'**
+  String get publishCoverImageHint;
+
+  /// No description provided for @tripPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos'**
+  String get tripPhotos;
+
+  /// No description provided for @tripNoPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Fotos hochgeladen'**
+  String get tripNoPhotos;
+
+  /// No description provided for @tripAddFirstPhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Erstes Foto hinzufügen'**
+  String get tripAddFirstPhoto;
+
+  /// No description provided for @tripPhotoUpload.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip-Foto hochladen'**
+  String get tripPhotoUpload;
 
   /// No description provided for @dayEditorDriveTime.
   ///

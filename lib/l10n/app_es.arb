@@ -670,7 +670,7 @@
   "mapModeAiDayTrip": "AI Excursión",
   "mapModeAiEuroTrip": "AI Euro Trip",
   "travelDuration": "Duración del viaje",
-  "radiusLabel": "Radio",
+  "radiusLabel": "Distancia de viaje",
   "categoriesLabel": "Categorías",
   "tripDescDayTrip": "Excursión — aprox. {radius} km",
   "tripDescWeekend": "Fin de semana — aprox. {radius} km",
