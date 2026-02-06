@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -251,8 +252,9 @@ class _UploadTripPhotoSheetState extends ConsumerState<UploadTripPhotoSheet> {
         }
       }
     } catch (e) {
+      debugPrint('[TripPhotoUpload] Upload FEHLER: $e');
       if (mounted) {
-        AppSnackbar.showError(context, context.l10n.photoError);
+        AppSnackbar.showError(context, '${context.l10n.photoError}: $e');
       }
     } finally {
       if (mounted) {
