@@ -483,20 +483,23 @@ class _MapViewState extends ConsumerState<MapView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle Bar
-            Center(
-              child: Container(
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle Bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
@@ -504,11 +507,16 @@ class _MapViewState extends ConsumerState<MapView> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // POI Info Row
-            Row(
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // POI Info Row
+                      Row(
               children: [
                 // Icon
                 Container(
@@ -662,11 +670,13 @@ class _MapViewState extends ConsumerState<MapView> {
                   ),
                 ),
               ],
-            ),
-
-            // Safe Area padding
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

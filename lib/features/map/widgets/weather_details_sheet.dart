@@ -12,11 +12,12 @@ void showWeatherDetailsSheet(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
+      initialChildSize: 1.0,
+      minChildSize: 0.9,
+      maxChildSize: 1.0,
       builder: (context, scrollController) => WeatherDetailsSheet(
         weather: weather,
         locationName: locationName,

@@ -434,9 +434,9 @@ class _EntryDetailsSheet extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
+      initialChildSize: 1.0,
+      minChildSize: 0.9,
+      maxChildSize: 1.0,
       expand: false,
       builder: (context, scrollController) {
         return Container(

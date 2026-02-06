@@ -27,9 +27,15 @@ class SubmitReviewSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => SubmitReviewSheet(
-        poiId: poiId,
-        poiName: poiName,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
+        expand: false,
+        builder: (context, scrollController) => SubmitReviewSheet(
+          poiId: poiId,
+          poiName: poiName,
+        ),
       ),
     );
   }
@@ -76,11 +82,27 @@ class _SubmitReviewSheetState extends ConsumerState<SubmitReviewSheet> {
 
     // Nicht eingeloggt
     if (!authState.isAuthenticated) {
-      return Padding(
+      return Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const Icon(Icons.lock_outline, size: 48),
             const SizedBox(height: 16),
             Text(
@@ -98,7 +120,11 @@ class _SubmitReviewSheetState extends ConsumerState<SubmitReviewSheet> {
       );
     }
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
@@ -108,6 +134,18 @@ class _SubmitReviewSheetState extends ConsumerState<SubmitReviewSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             // Header
             Row(
               children: [

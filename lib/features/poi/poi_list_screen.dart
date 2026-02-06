@@ -645,6 +645,7 @@ class _POIListScreenState extends ConsumerState<POIListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => POIFiltersSheet(
         selectedCategories: poiState.selectedCategories,
         mustSeeOnly: poiState.mustSeeOnly,

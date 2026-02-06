@@ -16,8 +16,15 @@ class ShareTripSheet extends ConsumerWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ShareTripSheet(trip: trip),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
+        expand: false,
+        builder: (context, scrollController) => ShareTripSheet(trip: trip),
+      ),
     );
   }
 

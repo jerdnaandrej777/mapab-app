@@ -44,9 +44,9 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.9,
+      initialChildSize: 1.0,
+      minChildSize: 0.9,
+      maxChildSize: 1.0,
       expand: false,
       builder: (context, scrollController) {
         return Container(

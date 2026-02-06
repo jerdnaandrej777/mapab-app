@@ -24,6 +24,7 @@ class HotelDetailSheet extends StatelessWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => HotelDetailSheet(
         hotel: hotel,
@@ -35,9 +36,10 @@ class HotelDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
+      initialChildSize: 1.0,
+      minChildSize: 0.9,
+      maxChildSize: 1.0,
+      expand: false,
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(

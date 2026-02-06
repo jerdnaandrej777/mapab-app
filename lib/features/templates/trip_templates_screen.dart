@@ -96,6 +96,7 @@ class _TripTemplatesScreenState extends ConsumerState<TripTemplatesScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) => _TemplateDetailSheet(
         template: template,
         onStart: (days) {
@@ -275,9 +276,9 @@ class _TemplateDetailSheetState extends State<_TemplateDetailSheet> {
     final template = widget.template;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
+      initialChildSize: 1.0,
+      minChildSize: 0.9,
+      maxChildSize: 1.0,
       expand: false,
       builder: (context, scrollController) {
         return Container(

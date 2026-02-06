@@ -261,19 +261,21 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         final keyboardHeight = MediaQuery.of(ctx).viewInsets.bottom;
-        final screenHeight = MediaQuery.of(ctx).size.height;
-        final sheetHeight = screenHeight * 0.5;
 
-        return Padding(
-          padding: EdgeInsets.only(bottom: keyboardHeight),
-          child: SizedBox(
-            height: sheetHeight,
+        return DraggableScrollableSheet(
+          initialChildSize: 1.0,
+          minChildSize: 0.9,
+          maxChildSize: 1.0,
+          expand: false,
+          builder: (context, scrollController) => Padding(
+            padding: EdgeInsets.only(bottom: keyboardHeight),
             child: _DestinationSheetContent(
               destinationController: _destinationController,
               destinationFocusNode: _destinationFocusNode,
@@ -293,7 +295,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
               hasDestination: state.hasDestination,
             ),
           ),
-        );
+        ),
       },
     ).then((_) {
       // Rebuild parent um Button-Text zu aktualisieren
@@ -1001,20 +1003,28 @@ class _CompactCategorySelector extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       // FIX v1.7.27: Consumer wrappen damit ref.watch() im Modal funktioniert
-      builder: (context) => Consumer(
-        builder: (context, ref, child) {
-          final liveState = ref.watch(randomTripNotifierProvider);
-          final liveNotifier = ref.read(randomTripNotifierProvider.notifier);
-          return Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
+        expand: false,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, child) {
+            final liveState = ref.watch(randomTripNotifierProvider);
+            final liveNotifier = ref.read(randomTripNotifierProvider.notifier);
+            return Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Handle

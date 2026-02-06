@@ -21,10 +21,11 @@ class PublishTripSheet extends ConsumerStatefulWidget {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
         expand: false,
         builder: (context, scrollController) => PublishTripSheet(trip: trip),
       ),
@@ -240,8 +241,23 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
                   children: _availableTags.map((tag) {
                     final isSelected = _selectedTags.contains(tag);
                     return FilterChip(
-                      label: Text('#$tag'),
+                      label: Text(
+                        '#$tag',
+                        style: TextStyle(
+                          color: isSelected
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
+                      ),
                       selected: isSelected,
+                      selectedColor: colorScheme.primary,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      checkmarkColor: colorScheme.onPrimary,
+                      side: BorderSide(
+                        color: isSelected
+                            ? colorScheme.primary
+                            : colorScheme.outline.withValues(alpha: 0.5),
+                      ),
                       onSelected: (selected) {
                         setState(() {
                           if (selected) {
