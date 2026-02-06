@@ -1,10 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/supabase/supabase_config.dart';
 import '../models/public_trip.dart';
 import '../models/trip.dart';
+import '../models/trip_photo.dart';
 
 part 'social_repo.g.dart';
 
@@ -18,8 +24,13 @@ part 'social_repo.g.dart';
 /// - User-Profile verwalten
 class SocialRepository {
   final SupabaseClient _client;
+  static const _tripPhotosBucket = 'trip-photos';
+  static const _maxImageSize = 1920;
+  static const _imageQuality = 85;
 
   SocialRepository(this._client);
+
+  String? get _currentUserId => _client.auth.currentUser?.id;
 
   // ============================================
   // GALERIE-METHODEN
@@ -204,6 +215,7 @@ class SocialRepository {
     List<String>? tags,
     String? region,
     String? countryCode,
+    String? coverImagePath,
   }) async {
     try {
       // Trip zu JSON konvertieren
@@ -348,6 +360,199 @@ class SocialRepository {
       debugPrint('[Social] Profil aktualisieren FEHLER: $e');
       return null;
     }
+  }
+
+  // ============================================
+  // TRIP-FOTO-METHODEN
+  // ============================================
+
+  /// Laedt alle Fotos fuer einen Trip
+  Future<List<TripPhoto>> loadTripPhotos(String tripId, {int limit = 50, int offset = 0}) async {
+    debugPrint('[Social] Loading photos for Trip: $tripId');
+
+    try {
+      final response = await _client.rpc('get_trip_photos', params: {
+        'p_trip_id': tripId,
+        'p_limit': limit,
+        'p_offset': offset,
+      });
+
+      final photos = (response as List)
+          .map((row) => TripPhoto.fromJson(row as Map<String, dynamic>))
+          .toList();
+
+      debugPrint('[Social] Loaded ${photos.length} trip photos');
+      return photos;
+    } catch (e) {
+      debugPrint('[Social] Load trip photos FEHLER: $e');
+      return [];
+    }
+  }
+
+  /// Laedt ein Trip-Foto hoch
+  Future<TripPhoto?> uploadTripPhoto({
+    required String tripId,
+    required XFile imageFile,
+    String? caption,
+    int displayOrder = 0,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('Not authenticated');
+    }
+
+    debugPrint('[Social] Uploading photo for Trip: $tripId');
+
+    try {
+      // Bild komprimieren
+      final bytes = await _compressImage(imageFile);
+
+      // Unique path generieren
+      final fileId = const Uuid().v4();
+      final storagePath = '$_currentUserId/$tripId/$fileId.jpg';
+
+      // Upload zu Supabase Storage
+      await _client.storage.from(_tripPhotosBucket).uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: false,
+        ),
+      );
+
+      debugPrint('[Social] Uploaded to storage: $storagePath');
+
+      // Metadaten in DB speichern via RPC
+      final response = await _client.rpc('register_trip_photo', params: {
+        'p_trip_id': tripId,
+        'p_storage_path': storagePath,
+        'p_thumbnail_path': null,
+        'p_caption': caption,
+        'p_display_order': displayOrder,
+      });
+
+      debugPrint('[Social] Trip photo registered in DB');
+      return TripPhoto.fromJson(response as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('[Social] Trip photo upload FEHLER: $e');
+      rethrow;
+    }
+  }
+
+  /// Cover-Bild fuer Trip hochladen und setzen
+  Future<String?> uploadTripCoverImage({
+    required String tripId,
+    required XFile imageFile,
+  }) async {
+    if (_currentUserId == null) {
+      throw Exception('Not authenticated');
+    }
+
+    debugPrint('[Social] Uploading cover image for Trip: $tripId');
+
+    try {
+      // Bild komprimieren
+      final bytes = await _compressImage(imageFile);
+
+      // Unique path generieren
+      final fileId = const Uuid().v4();
+      final storagePath = '$_currentUserId/$tripId/cover_$fileId.jpg';
+
+      // Upload zu Supabase Storage
+      await _client.storage.from(_tripPhotosBucket).uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: false,
+        ),
+      );
+
+      debugPrint('[Social] Cover image uploaded: $storagePath');
+
+      // Cover-Pfad in DB setzen
+      final success = await _client.rpc('set_trip_cover_image', params: {
+        'p_trip_id': tripId,
+        'p_storage_path': storagePath,
+      });
+
+      if (success == true) {
+        debugPrint('[Social] Cover image set in DB');
+        return storagePath;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[Social] Cover image upload FEHLER: $e');
+      rethrow;
+    }
+  }
+
+  /// Loescht ein eigenes Trip-Foto
+  Future<bool> deleteTripPhoto(String photoId) async {
+    if (_currentUserId == null) {
+      throw Exception('Not authenticated');
+    }
+
+    debugPrint('[Social] Deleting trip photo: $photoId');
+
+    try {
+      // Hole Storage-Path
+      final photo = await _client
+          .from('trip_photos')
+          .select('storage_path, user_id')
+          .eq('id', photoId)
+          .single();
+
+      // Nur eigene Fotos loeschen
+      if (photo['user_id'] != _currentUserId) {
+        throw Exception('Not authorized to delete this photo');
+      }
+
+      // Aus Storage loeschen
+      await _client.storage.from(_tripPhotosBucket).remove([photo['storage_path']]);
+
+      // Aus DB loeschen via RPC
+      final result = await _client.rpc('delete_trip_photo', params: {
+        'p_photo_id': photoId,
+      });
+
+      debugPrint('[Social] Trip photo deleted');
+      return result as bool? ?? false;
+    } catch (e) {
+      debugPrint('[Social] Delete trip photo FEHLER: $e');
+      return false;
+    }
+  }
+
+  /// Komprimiert ein Bild auf max 1920px und 85% Qualitaet
+  Future<Uint8List> _compressImage(XFile imageFile) async {
+    final originalBytes = await imageFile.readAsBytes();
+
+    // Decode image
+    final image = img.decodeImage(originalBytes);
+    if (image == null) {
+      throw Exception('Could not decode image');
+    }
+
+    // Resize if necessary
+    img.Image resized;
+    if (image.width > _maxImageSize || image.height > _maxImageSize) {
+      if (image.width > image.height) {
+        resized = img.copyResize(image, width: _maxImageSize);
+      } else {
+        resized = img.copyResize(image, height: _maxImageSize);
+      }
+    } else {
+      resized = image;
+    }
+
+    // Encode as JPEG
+    return Uint8List.fromList(img.encodeJpg(resized, quality: _imageQuality));
+  }
+
+  /// Generiert die oeffentliche URL fuer ein Trip-Foto
+  String getTripPhotoUrl(String storagePath) {
+    return '${SupabaseConfig.supabaseUrl}/storage/v1/object/public/$_tripPhotosBucket/$storagePath';
   }
 
   // ============================================

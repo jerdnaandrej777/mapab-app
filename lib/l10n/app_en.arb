@@ -827,6 +827,12 @@
   "tripPublishDescription": "Share in public gallery",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Day trip",
+  "publishCoverImage": "Cover Image",
+  "publishCoverImageHint": "A title image for your trip (optional)",
+  "tripPhotos": "Photos",
+  "tripNoPhotos": "No photos uploaded yet",
+  "tripAddFirstPhoto": "Add first photo",
+  "tripPhotoUpload": "Upload trip photo",
 
   "dayEditorDriveTime": "Drive time",
   "dayEditorWeather": "Weather",

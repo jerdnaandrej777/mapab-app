@@ -827,6 +827,12 @@
   "tripPublishDescription": "Condividi nella galleria pubblica",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Gita giornaliera",
+  "publishCoverImage": "Immagine di copertina",
+  "publishCoverImageHint": "Un'immagine del titolo per il tuo trip (opzionale)",
+  "tripPhotos": "Foto",
+  "tripNoPhotos": "Nessuna foto caricata",
+  "tripAddFirstPhoto": "Aggiungi prima foto",
+  "tripPhotoUpload": "Carica foto del trip",
 
   "dayEditorDriveTime": "Tempo di guida",
   "dayEditorWeather": "Meteo",

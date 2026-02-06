@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/models/trip.dart';
@@ -41,9 +43,11 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   final List<String> _selectedTags = [];
   bool _isPublishing = false;
+  XFile? _coverImage;
 
   // Verfuegbare Tags
   static const _availableTags = [
@@ -138,6 +142,11 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // Cover-Bild
+                _buildCoverImageSection(colorScheme, textTheme),
+
+                const SizedBox(height: 24),
+
                 // Trip-Info
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -352,6 +361,7 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
     try {
       final repo = ref.read(socialRepositoryProvider);
 
+      // Erst Trip veroeffentlichen
       final publicTrip = await repo.publishTrip(
         trip: widget.trip,
         tripName: _nameController.text.trim(),
@@ -364,6 +374,14 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
       if (!mounted) return;
 
       if (publicTrip != null) {
+        // Cover-Bild hochladen falls ausgewaehlt
+        if (_coverImage != null) {
+          await repo.uploadTripCoverImage(
+            tripId: publicTrip.id,
+            imageFile: _coverImage!,
+          );
+        }
+
         // XP fuer Trip-Veroeffentlichung vergeben
         await ref.read(gamificationNotifierProvider.notifier).onTripPublished();
 
@@ -379,5 +397,162 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
       setState(() => _isPublishing = false);
       AppSnackbar.showError(context, '${context.l10n.publishError}: $e');
     }
+  }
+
+  /// Cover-Bild-Auswahl Section
+  Widget _buildCoverImageSection(ColorScheme colorScheme, TextTheme textTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.l10n.publishCoverImage,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          context.l10n.publishCoverImageHint,
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Bild-Vorschau oder Auswahl-Buttons
+        if (_coverImage != null)
+          _buildCoverImagePreview(colorScheme)
+        else
+          _buildCoverImagePicker(colorScheme),
+      ],
+    );
+  }
+
+  /// Cover-Bild-Vorschau mit Entfernen-Button
+  Widget _buildCoverImagePreview(ColorScheme colorScheme) {
+    return Stack(
+      children: [
+        Container(
+          height: 180,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: colorScheme.surfaceContainerHighest,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.file(
+            File(_coverImage!.path),
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton.filled(
+            onPressed: () => setState(() => _coverImage = null),
+            icon: const Icon(Icons.close),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black54,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Cover-Bild-Auswahl-Buttons
+  Widget _buildCoverImagePicker(ColorScheme colorScheme) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ImagePickerButton(
+            icon: Icons.camera_alt,
+            label: context.l10n.photoFromCamera,
+            onTap: () => _pickCoverImage(ImageSource.camera),
+            colorScheme: colorScheme,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _ImagePickerButton(
+            icon: Icons.photo_library,
+            label: context.l10n.photoFromGallery,
+            onTap: () => _pickCoverImage(ImageSource.gallery),
+            colorScheme: colorScheme,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Cover-Bild auswaehlen
+  Future<void> _pickCoverImage(ImageSource source) async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() => _coverImage = image);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, context.l10n.errorGeneric);
+      }
+    }
+  }
+}
+
+/// Button fuer Bildquelle-Auswahl
+class _ImagePickerButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final ColorScheme colorScheme;
+
+  const _ImagePickerButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

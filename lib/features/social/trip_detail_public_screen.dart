@@ -7,11 +7,13 @@ import '../../core/l10n/l10n.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/public_trip.dart';
 import '../../data/models/route.dart';
+import '../../data/providers/auth_provider.dart';
 import '../../data/providers/gallery_provider.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
 import '../trip/providers/trip_state_provider.dart';
+import 'widgets/trip_photo_gallery.dart';
 
 /// Detail-Ansicht fuer einen oeffentlichen Trip
 class TripDetailPublicScreen extends ConsumerStatefulWidget {
@@ -365,6 +367,12 @@ class _TripDetailPublicScreenState
                   ],
                 ),
 
+                // Foto-Galerie
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildPhotoGallery(trip),
+
                 // Kommentar-Sektion
                 const SizedBox(height: 24),
                 const Divider(),
@@ -380,6 +388,17 @@ class _TripDetailPublicScreenState
           child: SizedBox(height: 100),
         ),
       ],
+    );
+  }
+
+  /// Foto-Galerie mit Prüfung ob eigener Trip
+  Widget _buildPhotoGallery(PublicTrip trip) {
+    final authState = ref.watch(authNotifierProvider);
+    final isOwnTrip = authState.user?.id == trip.userId;
+
+    return TripPhotoGallery(
+      tripId: trip.id,
+      isOwnTrip: isOwnTrip,
     );
   }
 

@@ -978,6 +978,14 @@
   "tripPublishDescription": "In der öffentlichen Galerie teilen",
   "publishEuroTrip": "Euro Trip",
   "publishDaytrip": "Tagesausflug",
+  "publishCoverImage": "Cover-Bild",
+  "publishCoverImageHint": "Ein Titelbild für deinen Trip (optional)",
+
+  "@@_TRIP_PHOTOS": "--- Trip Fotos ---",
+  "tripPhotos": "Fotos",
+  "tripNoPhotos": "Noch keine Fotos hochgeladen",
+  "tripAddFirstPhoto": "Erstes Foto hinzufügen",
+  "tripPhotoUpload": "Trip-Foto hochladen",
 
   "@@_DAY_EDITOR_EXTRA": "--- DayEditor zusätzliche Keys ---",
   "dayEditorDriveTime": "Fahrzeit",
