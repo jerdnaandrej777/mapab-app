@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/journal_entry.dart';
 import '../services/journal_service.dart';
+import 'gamification_provider.dart';
 
 part 'journal_provider.g.dart';
 
@@ -253,6 +254,9 @@ class JournalNotifier extends _$JournalNotifier {
 
       if (entry != null) {
         await _refreshActiveJournal();
+
+        // XP fuer Foto-Eintrag vergeben
+        await ref.read(gamificationNotifierProvider.notifier).onJournalPhotoAdded();
       } else {
         state = state.copyWith(isLoading: false);
       }

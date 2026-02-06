@@ -10,10 +10,15 @@ import '../../core/utils/url_utils.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/route.dart';
 import '../../data/providers/favorites_provider.dart';
+import '../../data/providers/poi_social_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'providers/poi_state_provider.dart';
+import 'widgets/poi_rating_widget.dart';
+import 'widgets/poi_photo_gallery.dart';
+import 'widgets/review_card.dart';
+import 'widgets/poi_comments_section.dart';
 
 /// POI-Detail-Screen mit dynamischen Daten
 class POIDetailScreen extends ConsumerStatefulWidget {
@@ -124,6 +129,28 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
 
                   // Kontakt-Info
                   _buildContactSection(poi, theme, colorScheme),
+
+                  const SizedBox(height: 24),
+
+                  // === SOCIAL FEATURES ===
+
+                  // Benutzer-Fotos
+                  _buildSocialPhotosSection(poi, colorScheme),
+
+                  const SizedBox(height: 24),
+
+                  // Bewertungen
+                  _buildSocialRatingSection(poi, colorScheme),
+
+                  const SizedBox(height: 24),
+
+                  // Rezensionen
+                  _buildSocialReviewsSection(poi, colorScheme),
+
+                  const SizedBox(height: 24),
+
+                  // Kommentare
+                  _buildSocialCommentsSection(poi, colorScheme),
 
                   const SizedBox(height: 100), // Space für FAB
                 ],
@@ -747,5 +774,119 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
   /// GPS-Dialog anzeigen - nutzt zentralisierten LocationHelper (v1.9.29)
   Future<bool> _showGpsDialog() async {
     return LocationHelper.showGpsDialog(context);
+  }
+
+  // ============================================
+  // SOCIAL FEATURES SECTIONS
+  // ============================================
+
+  /// Benutzer-Fotos Sektion
+  Widget _buildSocialPhotosSection(POI poi, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.photo_library_outlined,
+                 size: 20, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              context.l10n.poiPhotos,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        POIPhotoGallery(poiId: poi.id),
+      ],
+    );
+  }
+
+  /// Bewertungs-Widget mit Sternen und "Bewerten"-Button
+  Widget _buildSocialRatingSection(POI poi, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.star_outline, size: 20, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              context.l10n.poiRatingLabel,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        POIRatingWidget(poiId: poi.id),
+      ],
+    );
+  }
+
+  /// Rezensionen-Liste
+  Widget _buildSocialReviewsSection(POI poi, ColorScheme colorScheme) {
+    final socialState = ref.watch(pOISocialNotifierProvider(poi.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.rate_review_outlined,
+                 size: 20, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              context.l10n.poiReviews,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ReviewsList(
+          poiId: poi.id,
+          reviews: socialState.reviews,
+          onHelpfulTap: (reviewId) {
+            ref.read(pOISocialNotifierProvider(poi.id).notifier).voteHelpful(reviewId);
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Kommentare-Sektion
+  Widget _buildSocialCommentsSection(POI poi, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.comment_outlined, size: 20, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              context.l10n.poiComments,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        POICommentsSection(poiId: poi.id),
+      ],
+    );
   }
 }

@@ -348,7 +348,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       debugPrint('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
 
       // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
-      _enrichGeneratedPOIs(result);
+      // FIX v1.10.5: Sicher aufrufen mit Zone-basierter Fehlerbehandlung
+      // Bei async ohne await werden Exceptions nicht vom try-catch gefangen!
+      _safeEnrichGeneratedPOIs(result);
     } on TripGenerationException catch (e, stackTrace) {
       debugPrint('[RandomTrip] TripGenerationException: ${e.message}');
       debugPrint('[RandomTrip] StackTrace: $stackTrace');
@@ -773,14 +775,32 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     ref.read(shouldFitToRouteProvider.notifier).state = true;
 
     // POIs enrichen für Foto-Anzeige
-    _enrichGeneratedPOIs(generatedTrip);
+    // FIX v1.10.5: Sicher aufrufen
+    _safeEnrichGeneratedPOIs(generatedTrip);
 
     debugPrint('[RandomTrip] Trip wiederhergestellt: Tag ${data.selectedDay}, '
         '${data.completedDays.length}/${data.trip.actualDays} Tage abgeschlossen');
   }
 
+  /// FIX v1.10.5: Sicherer Wrapper für Enrichment
+  /// Fängt alle Exceptions ab und verhindert App-Crashes
+  void _safeEnrichGeneratedPOIs(GeneratedTrip result) {
+    // Zone-basierte Fehlerbehandlung für async ohne await
+    runZonedGuarded(
+      () async {
+        await _enrichGeneratedPOIs(result);
+      },
+      (error, stackTrace) {
+        // Fehler loggen aber nicht crashen
+        debugPrint('[RandomTrip] Zone-Fehler beim Enrichment: $error');
+        debugPrint('[RandomTrip] Zone-StackTrace: $stackTrace');
+      },
+    );
+  }
+
   /// v1.6.9: Enriched die generierten POIs für Foto-Anzeige
   /// v1.10.2: FIX - Verwendet addPOIsBatch() statt Loop + await enrichPOIsBatch()
+  /// v1.10.5: FIX - Batch-Limit für Euro Trips mit vielen POIs
   /// Wird nach Trip-Generierung aufgerufen
   Future<void> _enrichGeneratedPOIs(GeneratedTrip result) async {
     try {
@@ -798,8 +818,29 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           .where((p) => p.imageUrl == null)
           .toList();
 
-      if (poisToEnrich.isNotEmpty) {
-        debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+      if (poisToEnrich.isEmpty) return;
+
+      debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+
+      // FIX v1.10.5: Bei Euro Trips mit vielen POIs in kleineren Sub-Batches enrichen
+      // Verhindert Überlastung und ConcurrentModificationException
+      const maxBatchSize = 10;
+      if (poisToEnrich.length > maxBatchSize) {
+        debugPrint('[RandomTrip] Euro Trip: Sub-Batching mit max $maxBatchSize POIs pro Batch');
+        for (var i = 0; i < poisToEnrich.length; i += maxBatchSize) {
+          final end = (i + maxBatchSize).clamp(0, poisToEnrich.length);
+          final subBatch = poisToEnrich.sublist(i, end);
+
+          debugPrint('[RandomTrip] Sub-Batch ${(i ~/ maxBatchSize) + 1}: ${subBatch.length} POIs');
+          await poiNotifier.enrichPOIsBatch(subBatch);
+
+          // Kurze Pause zwischen Sub-Batches für Stabilität
+          if (end < poisToEnrich.length) {
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+        }
+      } else {
+        // Tagestrip: Alle auf einmal (weniger als maxBatchSize POIs)
         await poiNotifier.enrichPOIsBatch(poisToEnrich);
       }
     } catch (e, stackTrace) {

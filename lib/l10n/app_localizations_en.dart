@@ -3054,6 +3054,108 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceCmdUnknown => 'Unknown';
 
   @override
+  String get voiceCmdRouteWeather => 'Weather on route';
+
+  @override
+  String get voiceCmdRecommend => 'Recommendation';
+
+  @override
+  String get voiceCmdOverview => 'Route overview';
+
+  @override
+  String get voiceCmdRemaining => 'Remaining stops';
+
+  @override
+  String get voiceCmdHelp => 'Help';
+
+  @override
+  String get voiceCmdNotAvailable =>
+      'This command is not available during navigation.';
+
+  @override
+  String get voiceGreeting1 => 'Ready for your trip?';
+
+  @override
+  String get voiceGreeting2 => 'How can I help you?';
+
+  @override
+  String get voiceGreeting3 => 'What would you like to know?';
+
+  @override
+  String get voiceGreeting4 => 'I\'m listening!';
+
+  @override
+  String get voiceGreeting5 => 'Ask me something!';
+
+  @override
+  String get voiceGreeting6 => 'Ready for your journey?';
+
+  @override
+  String get voiceGreeting7 => 'Your navigation assistant here!';
+
+  @override
+  String get voiceGreeting8 => 'Where to?';
+
+  @override
+  String get voiceUnknown1 =>
+      'Hmm, I didn\'t catch that. Try saying How long or Next stop.';
+
+  @override
+  String get voiceUnknown2 =>
+      'Oops! My navi brain didn\'t get that. Say Help for all commands!';
+
+  @override
+  String get voiceUnknown3 =>
+      'That was too philosophical for me. I\'m just a simple navigator!';
+
+  @override
+  String get voiceUnknown4 =>
+      'Huh? I\'m a navigator, not a mind reader! Ask me about the route or weather.';
+
+  @override
+  String get voiceUnknown5 =>
+      'Didn\'t understand that. Try Where am I? or What\'s nearby?';
+
+  @override
+  String get voiceUnknown6 =>
+      'Beep boop... Command not recognized! I understand things like How long?';
+
+  @override
+  String voiceWeatherOnRoute(String description, String temp) {
+    return 'The weather on your route: $description, $temp degrees.';
+  }
+
+  @override
+  String get voiceNoWeatherData =>
+      'Unfortunately, I don\'t have weather data for your route.';
+
+  @override
+  String voiceRecommendPOIs(String names) {
+    return 'I recommend: $names. Real highlights!';
+  }
+
+  @override
+  String get voiceNoRecommendations =>
+      'There are some interesting stops on your route!';
+
+  @override
+  String voiceRouteOverview(String distance, String stops) {
+    return 'Your route is $distance kilometers long with $stops stops.';
+  }
+
+  @override
+  String get voiceRemainingOne => 'Just one more stop to go!';
+
+  @override
+  String voiceRemainingMultiple(int count) {
+    return '$count more stops ahead.';
+  }
+
+  @override
+  String get voiceHelpText =>
+      'You can ask me: How long? Next stop? Where am I? What\'s the weather? Any recommendations? Or say End navigation.';
+
+  @override
   String voiceManeuverNow(String instruction) {
     return 'Now $instruction';
   }
@@ -3292,4 +3394,413 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripPreviewOvernight => 'Overnight stay';
+
+  @override
+  String get gamificationLevelUp => 'Level Up!';
+
+  @override
+  String gamificationNewLevel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String get gamificationContinue => 'Continue';
+
+  @override
+  String get gamificationAchievementUnlocked => 'Achievement unlocked!';
+
+  @override
+  String get gamificationAwesome => 'Awesome!';
+
+  @override
+  String gamificationXpEarned(int amount) {
+    return '+$amount XP';
+  }
+
+  @override
+  String get gamificationNextAchievements => 'Next achievements';
+
+  @override
+  String get gamificationAllAchievements => 'All achievements';
+
+  @override
+  String gamificationUnlockedCount(int count, int total) {
+    return '$count/$total unlocked';
+  }
+
+  @override
+  String get gamificationTripCreated => 'Trip created';
+
+  @override
+  String get gamificationTripPublished => 'Trip published';
+
+  @override
+  String get gamificationTripImported => 'Trip imported';
+
+  @override
+  String get gamificationPoiVisited => 'POI visited';
+
+  @override
+  String get gamificationPhotoAdded => 'Photo added';
+
+  @override
+  String get gamificationLikeReceived => 'Like received';
+
+  @override
+  String get poiRatingLabel => 'Rating';
+
+  @override
+  String get poiReviews => 'Reviews';
+
+  @override
+  String get poiPhotos => 'Photos';
+
+  @override
+  String get poiComments => 'Comments';
+
+  @override
+  String get poiNoReviews => 'No reviews yet';
+
+  @override
+  String get poiNoPhotos => 'No photos yet';
+
+  @override
+  String get poiNoComments => 'No comments yet';
+
+  @override
+  String get poiBeFirstReview => 'Be the first to review this place!';
+
+  @override
+  String get poiBeFirstPhoto => 'Be the first to share a photo!';
+
+  @override
+  String get poiBeFirstComment => 'Write the first comment!';
+
+  @override
+  String poiReviewCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews',
+      one: '1 review',
+      zero: 'No reviews',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poiPhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+      zero: 'No photos',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poiCommentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count comments',
+      one: '1 comment',
+      zero: 'No comments',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewSubmit => 'Submit review';
+
+  @override
+  String get reviewEdit => 'Edit review';
+
+  @override
+  String get reviewYourRating => 'Your rating';
+
+  @override
+  String get reviewWriteOptional => 'Write a review (optional)';
+
+  @override
+  String get reviewPlaceholder => 'Share your experience with others...';
+
+  @override
+  String get reviewVisitDate => 'Visit date';
+
+  @override
+  String get reviewVisitDateOptional => 'Visit date (optional)';
+
+  @override
+  String reviewVisitedOn(String date) {
+    return 'Visited on $date';
+  }
+
+  @override
+  String get reviewHelpful => 'Helpful';
+
+  @override
+  String reviewHelpfulCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people found this helpful',
+      one: '1 person found this helpful',
+      zero: 'Not yet rated',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewMarkedHelpful => 'Marked as helpful';
+
+  @override
+  String get reviewSuccess => 'Review saved!';
+
+  @override
+  String get reviewError => 'Error saving review';
+
+  @override
+  String get reviewDelete => 'Delete review';
+
+  @override
+  String get reviewDeleteConfirm =>
+      'Are you sure you want to delete your review?';
+
+  @override
+  String get reviewDeleteSuccess => 'Review deleted';
+
+  @override
+  String get reviewDeleteError => 'Error deleting review';
+
+  @override
+  String get reviewRatingRequired => 'Please select a star rating';
+
+  @override
+  String reviewAvgRating(String rating) {
+    return '$rating out of 5 stars';
+  }
+
+  @override
+  String get photoUpload => 'Upload photo';
+
+  @override
+  String get photoCaption => 'Caption';
+
+  @override
+  String get photoCaptionHint => 'Describe your photo (optional)';
+
+  @override
+  String get photoFromCamera => 'Camera';
+
+  @override
+  String get photoFromGallery => 'Gallery';
+
+  @override
+  String get photoUploading => 'Uploading photo...';
+
+  @override
+  String get photoSuccess => 'Photo uploaded!';
+
+  @override
+  String get photoError => 'Error uploading photo';
+
+  @override
+  String get photoDelete => 'Delete photo';
+
+  @override
+  String get photoDeleteConfirm =>
+      'Are you sure you want to delete this photo?';
+
+  @override
+  String get photoDeleteSuccess => 'Photo deleted';
+
+  @override
+  String get photoDeleteError => 'Error deleting photo';
+
+  @override
+  String photoBy(String author) {
+    return 'Photo by $author';
+  }
+
+  @override
+  String get commentAdd => 'Add comment';
+
+  @override
+  String get commentPlaceholder => 'Write a comment...';
+
+  @override
+  String get commentReply => 'Reply';
+
+  @override
+  String commentReplyTo(String author) {
+    return 'Reply to $author';
+  }
+
+  @override
+  String get commentDelete => 'Delete comment';
+
+  @override
+  String get commentDeleteConfirm =>
+      'Are you sure you want to delete this comment?';
+
+  @override
+  String get commentDeleteSuccess => 'Comment deleted';
+
+  @override
+  String get commentDeleteError => 'Error deleting comment';
+
+  @override
+  String commentShowReplies(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Show $count replies',
+      one: 'Show 1 reply',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get commentHideReplies => 'Hide replies';
+
+  @override
+  String get commentSuccess => 'Comment posted!';
+
+  @override
+  String get commentError => 'Error posting comment';
+
+  @override
+  String get commentEmpty => 'Please write a comment';
+
+  @override
+  String get adminDashboard => 'Admin Dashboard';
+
+  @override
+  String get adminNotifications => 'Notifications';
+
+  @override
+  String get adminModeration => 'Moderation';
+
+  @override
+  String get adminNewPhotos => 'New photos';
+
+  @override
+  String get adminNewReviews => 'New reviews';
+
+  @override
+  String get adminNewComments => 'New comments';
+
+  @override
+  String get adminFlaggedContent => 'Flagged content';
+
+  @override
+  String get adminDelete => 'Delete';
+
+  @override
+  String get adminDeleteConfirm =>
+      'Are you sure you want to delete this content?';
+
+  @override
+  String get adminDeleteSuccess => 'Content deleted';
+
+  @override
+  String get adminDeleteError => 'Error deleting';
+
+  @override
+  String get adminApprove => 'Approve';
+
+  @override
+  String get adminApproveSuccess => 'Content approved';
+
+  @override
+  String get adminApproveError => 'Error approving';
+
+  @override
+  String get adminMarkRead => 'Mark as read';
+
+  @override
+  String get adminMarkAllRead => 'Mark all as read';
+
+  @override
+  String get adminNoNotifications => 'No new notifications';
+
+  @override
+  String get adminNoFlagged => 'No flagged content';
+
+  @override
+  String get adminStats => 'Statistics';
+
+  @override
+  String adminUnreadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unread',
+      one: '1 unread',
+      zero: 'None unread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminFlaggedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count flagged',
+      one: '1 flagged',
+      zero: 'None flagged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminNotificationNewPhoto => 'New photo uploaded';
+
+  @override
+  String get adminNotificationNewReview => 'New review';
+
+  @override
+  String get adminNotificationNewComment => 'New comment';
+
+  @override
+  String get adminNotificationFlagged => 'Content flagged';
+
+  @override
+  String get socialLoginRequired => 'Please log in to use this feature';
+
+  @override
+  String get socialRatingRequired => 'Please select a rating';
+
+  @override
+  String get reportContent => 'Report content';
+
+  @override
+  String get reportSuccess =>
+      'Thank you! The content has been reported for review.';
+
+  @override
+  String get reportError => 'Error reporting content';
+
+  @override
+  String get reportReason => 'Reason for report';
+
+  @override
+  String get reportReasonHint =>
+      'Describe why this content should be reported...';
+
+  @override
+  String get anonymousUser => 'Anonymous';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get success => 'Success';
 }

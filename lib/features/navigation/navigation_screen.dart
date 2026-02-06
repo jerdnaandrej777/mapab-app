@@ -9,6 +9,7 @@ import '../../data/models/navigation_step.dart';
 import '../../data/models/route.dart' hide LatLngConverter;
 import '../../data/models/trip.dart';
 import '../../data/services/voice_service.dart';
+import '../map/providers/weather_provider.dart';
 import '../trip/utils/trip_save_helper.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/navigation_poi_discovery_provider.dart';
@@ -236,6 +237,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               currentStep: navState.currentStep,
               nextStep: navState.nextStep,
               distanceToNextStepMeters: navState.distanceToNextStepMeters,
+              onSave: _saveRoute,
             ),
           ),
 
@@ -360,10 +362,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               ),
             ),
 
-          // Sprachbefehl-Feedback (wenn Text erkannt wird)
+          // Sprachbefehl-Feedback (wenn Text erkannt wird) - oben unter dem Banner
           if (_partialVoiceText != null)
             Positioned(
-              bottom: 180,
+              top: 140,
               left: 16,
               right: 16,
               child: Container(
@@ -414,7 +416,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               onStop: _stopNavigation,
               onOverview: _toggleOverview,
               onVoiceCommand: _handleVoiceCommand,
-              onSave: () => _saveRoute(),
             ),
           ),
         ],
@@ -759,6 +760,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     // TTS kurz pausieren waehrend wir zuhoeren
     await voiceService.stopSpeaking();
 
+    // Zufaellige Begruessung sprechen (v1.10.11)
+    final greeting = voiceService.getRandomGreeting();
+    await voiceService.speak(greeting);
+
+    // Kurze Pause damit die Begruessung fertig gesprochen wird
+    await Future.delayed(const Duration(milliseconds: 1500));
+
     final result = await voiceService.listen(
       timeout: const Duration(seconds: 8),
       onPartialResult: (partial) {
@@ -874,11 +882,62 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       case VoiceCommand.addToTrip:
       case VoiceCommand.startNavigation:
         // Nicht relevant waehrend aktiver Navigation
-        await voiceService.speak('Dieser Befehl ist während der Navigation nicht verfügbar.');
+        await voiceService.speak(context.l10n.voiceCmdNotAvailable);
+
+      // === Neue erweiterte Befehle (v1.10.11) ===
+
+      case VoiceCommand.routeWeather:
+        // "Wie ist das Wetter auf meiner Route?"
+        final weatherState = ref.read(routeWeatherNotifierProvider);
+        if (weatherState.weatherPoints.isNotEmpty) {
+          final w = weatherState.weatherPoints.first.weather;
+          await voiceService.speak(
+            context.l10n.voiceWeatherOnRoute(w.description, w.temperature.round().toString()),
+          );
+        } else {
+          await voiceService.speak(context.l10n.voiceNoWeatherData);
+        }
+
+      case VoiceCommand.routeRecommendation:
+        // "Was kannst du mir empfehlen?"
+        final discoveryState = ref.read(navigationPOIDiscoveryNotifierProvider);
+        final mustSeePOIs = discoveryState.mustSeePOIs.take(2).toList();
+        if (mustSeePOIs.isNotEmpty) {
+          final names = mustSeePOIs.map((p) => p.name).join(' und ');
+          await voiceService.speak(context.l10n.voiceRecommendPOIs(names));
+        } else if (discoveryState.currentApproachingPOI != null) {
+          await voiceService.speak(
+            context.l10n.voiceRecommendPOIs(discoveryState.currentApproachingPOI!.name),
+          );
+        } else {
+          await voiceService.speak(context.l10n.voiceNoRecommendations);
+        }
+
+      case VoiceCommand.tripOverview:
+        // "Zeig mir meine Route"
+        final totalStops = widget.stops?.length ?? 0;
+        final distKm = widget.route.distanceKm;
+        await voiceService.speak(
+          context.l10n.voiceRouteOverview(distKm.toStringAsFixed(1), totalStops.toString()),
+        );
+
+      case VoiceCommand.remainingStops:
+        // "Wie viele Stopps noch?"
+        final remaining = navState.remainingStops.length;
+        if (remaining == 1) {
+          await voiceService.speak(context.l10n.voiceRemainingOne);
+        } else {
+          await voiceService.speak(context.l10n.voiceRemainingMultiple(remaining));
+        }
+
+      case VoiceCommand.helpCommands:
+        // "Hilfe" / "Was kannst du?"
+        await voiceService.speak(context.l10n.voiceHelpText);
 
       case VoiceCommand.unknown:
-        await voiceService.speak('Befehl nicht erkannt. '
-            'Sag zum Beispiel "Wie lange noch" oder "Nächster Stopp".');
+        // Humorvolle zufaellige Antwort (v1.10.11)
+        final response = voiceService.getUnknownCommandResponse();
+        await voiceService.speak(response);
     }
   }
 

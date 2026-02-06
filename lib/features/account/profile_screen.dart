@@ -2,16 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/widgets/gamification_overlay.dart';
+import '../../data/models/achievement.dart';
 import '../../data/providers/account_provider.dart';
+import '../../data/providers/admin_provider.dart';
 import '../../data/providers/auth_provider.dart';
+import '../../data/services/achievement_service.dart';
 
 /// Profil-Screen mit Account-Details und Statistiken
 /// Unterstützt sowohl Cloud-Auth (Supabase) als auch lokale Accounts
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Admin-Status initialisieren
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminNotifierProvider.notifier).initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -245,11 +263,34 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildCloudActionsSection(BuildContext context, WidgetRef ref, AppAuthState authState) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final adminState = ref.watch(adminNotifierProvider);
 
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
+          // Admin Dashboard Button (nur fuer Admins)
+          if (adminState.isAdmin) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.push('/admin'),
+                icon: Badge(
+                  isLabelVisible: adminState.unreadCount > 0,
+                  label: Text('${adminState.unreadCount}'),
+                  child: const Icon(Icons.admin_panel_settings),
+                ),
+                label: Text(context.l10n.adminDashboard),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: colorScheme.tertiary,
+                  foregroundColor: colorScheme.onTertiary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Logout
           SizedBox(
             width: double.infinity,
@@ -657,13 +698,25 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildAchievementsSection(BuildContext context, dynamic account) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final languageCode = Localizations.localeOf(context).languageCode;
+
+    // Freigeschaltete Achievements
+    final unlockedAchievements = Achievements.all
+        .where((a) => account.unlockedAchievements.contains(a.id))
+        .toList();
+
+    // Naechste Achievements (nicht freigeschaltet, sortiert nach Fortschritt)
+    final nextAchievements = AchievementService.getNextAchievements(
+      account: account,
+      limit: 3,
+    );
 
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -675,11 +728,19 @@ class ProfileScreen extends ConsumerWidget {
                   color: colorScheme.onSurface,
                 ),
               ),
-              Text(
-                '${account.unlockedAchievements.length}/21',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: colorScheme.onSurfaceVariant,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${account.unlockedAchievements.length}/${Achievements.all.length}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
                 ),
               ),
             ],
@@ -687,7 +748,62 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: 16),
 
-          if (account.unlockedAchievements.isEmpty)
+          // Freigeschaltete Achievements
+          if (unlockedAchievements.isNotEmpty) ...[
+            ...unlockedAchievements.take(3).map((achievement) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: AchievementCard(
+                  achievement: achievement,
+                  isUnlocked: true,
+                ),
+              );
+            }),
+            if (unlockedAchievements.length > 3)
+              Center(
+                child: TextButton(
+                  onPressed: () => _showAllAchievements(context, account),
+                  child: Text(context.l10n.gamificationAllAchievements),
+                ),
+              ),
+          ],
+
+          // Naechste Achievements (mit Fortschritt)
+          if (nextAchievements.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              context.l10n.gamificationNextAchievements,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...nextAchievements.map((achievement) {
+              final progress = AchievementService.getProgress(
+                achievement: achievement,
+                account: account,
+              );
+              final progressText = AchievementService.getProgressText(
+                achievement: achievement,
+                account: account,
+                languageCode: languageCode,
+              );
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: AchievementCard(
+                  achievement: achievement,
+                  isUnlocked: false,
+                  progress: progress,
+                  progressText: progressText,
+                ),
+              );
+            }),
+          ],
+
+          // Leere Anzeige wenn keine Achievements
+          if (unlockedAchievements.isEmpty && nextAchievements.isEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -706,20 +822,83 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: account.unlockedAchievements.map<Widget>((id) {
-                return Chip(
-                  label: Text(id),
-                  avatar: const Icon(Icons.emoji_events, size: 18),
-                  backgroundColor: colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.1),
-                );
-              }).toList(),
             ),
         ],
+      ),
+    );
+  }
+
+  void _showAllAchievements(BuildContext context, dynamic account) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final languageCode = Localizations.localeOf(context).languageCode;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                context.l10n.gamificationAllAchievements,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: Achievements.all.length,
+                itemBuilder: (context, index) {
+                  final achievement = Achievements.all[index];
+                  final isUnlocked = account.unlockedAchievements.contains(achievement.id);
+                  final progress = AchievementService.getProgress(
+                    achievement: achievement,
+                    account: account,
+                  );
+                  final progressText = AchievementService.getProgressText(
+                    achievement: achievement,
+                    account: account,
+                    languageCode: languageCode,
+                  );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AchievementCard(
+                      achievement: achievement,
+                      isUnlocked: isUnlocked,
+                      progress: isUnlocked ? 1.0 : progress,
+                      progressText: isUnlocked ? '' : progressText,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

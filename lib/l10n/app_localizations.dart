@@ -197,7 +197,7 @@ abstract class AppLocalizations {
   /// No description provided for @loading.
   ///
   /// In de, this message translates to:
-  /// **'Laden...'**
+  /// **'Lädt...'**
   String get loading;
 
   /// No description provided for @search.
@@ -5294,6 +5294,174 @@ abstract class AppLocalizations {
   /// **'Unbekannt'**
   String get voiceCmdUnknown;
 
+  /// No description provided for @voiceCmdRouteWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter auf Route'**
+  String get voiceCmdRouteWeather;
+
+  /// No description provided for @voiceCmdRecommend.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfehlung'**
+  String get voiceCmdRecommend;
+
+  /// No description provided for @voiceCmdOverview.
+  ///
+  /// In de, this message translates to:
+  /// **'Route Übersicht'**
+  String get voiceCmdOverview;
+
+  /// No description provided for @voiceCmdRemaining.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbleibende Stopps'**
+  String get voiceCmdRemaining;
+
+  /// No description provided for @voiceCmdHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe'**
+  String get voiceCmdHelp;
+
+  /// No description provided for @voiceCmdNotAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Befehl ist während der Navigation nicht verfügbar.'**
+  String get voiceCmdNotAvailable;
+
+  /// No description provided for @voiceGreeting1.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereit für deine Reise?'**
+  String get voiceGreeting1;
+
+  /// No description provided for @voiceGreeting2.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie kann ich dir helfen?'**
+  String get voiceGreeting2;
+
+  /// No description provided for @voiceGreeting3.
+  ///
+  /// In de, this message translates to:
+  /// **'Was möchtest du wissen?'**
+  String get voiceGreeting3;
+
+  /// No description provided for @voiceGreeting4.
+  ///
+  /// In de, this message translates to:
+  /// **'Ich höre!'**
+  String get voiceGreeting4;
+
+  /// No description provided for @voiceGreeting5.
+  ///
+  /// In de, this message translates to:
+  /// **'Frag mich was!'**
+  String get voiceGreeting5;
+
+  /// No description provided for @voiceGreeting6.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereit für deinen Trip?'**
+  String get voiceGreeting6;
+
+  /// No description provided for @voiceGreeting7.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Navi-Assistent hier!'**
+  String get voiceGreeting7;
+
+  /// No description provided for @voiceGreeting8.
+  ///
+  /// In de, this message translates to:
+  /// **'Wohin gehts?'**
+  String get voiceGreeting8;
+
+  /// No description provided for @voiceUnknown1.
+  ///
+  /// In de, this message translates to:
+  /// **'Hmm, das hab ich nicht verstanden. Versuch mal Wie lange noch? oder Nächster Stopp.'**
+  String get voiceUnknown1;
+
+  /// No description provided for @voiceUnknown2.
+  ///
+  /// In de, this message translates to:
+  /// **'Ups! Mein Navi-Gehirn hat das nicht gecheckt. Sag Hilfe für alle Befehle!'**
+  String get voiceUnknown2;
+
+  /// No description provided for @voiceUnknown3.
+  ///
+  /// In de, this message translates to:
+  /// **'Das war wohl zu philosophisch für mich. Ich bin nur ein einfaches Navi!'**
+  String get voiceUnknown3;
+
+  /// No description provided for @voiceUnknown4.
+  ///
+  /// In de, this message translates to:
+  /// **'Hä? Ich bin ein Navi, kein Gedankenleser! Frag mich nach der Route oder dem Wetter.'**
+  String get voiceUnknown4;
+
+  /// No description provided for @voiceUnknown5.
+  ///
+  /// In de, this message translates to:
+  /// **'Leider nicht verstanden. Probier Wo bin ich? oder Was ist in der Nähe?'**
+  String get voiceUnknown5;
+
+  /// No description provided for @voiceUnknown6.
+  ///
+  /// In de, this message translates to:
+  /// **'Beep boop... Befehl nicht erkannt! Ich verstehe z.B. Wie lange noch?'**
+  String get voiceUnknown6;
+
+  /// No description provided for @voiceWeatherOnRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Wetter auf deiner Route: {description}, {temp} Grad.'**
+  String voiceWeatherOnRoute(String description, String temp);
+
+  /// No description provided for @voiceNoWeatherData.
+  ///
+  /// In de, this message translates to:
+  /// **'Leider habe ich keine Wetterdaten für deine Route.'**
+  String get voiceNoWeatherData;
+
+  /// No description provided for @voiceRecommendPOIs.
+  ///
+  /// In de, this message translates to:
+  /// **'Ich empfehle dir: {names}. Echte Highlights!'**
+  String voiceRecommendPOIs(String names);
+
+  /// No description provided for @voiceNoRecommendations.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf deiner Route gibt es einige interessante Stopps!'**
+  String get voiceNoRecommendations;
+
+  /// No description provided for @voiceRouteOverview.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Route ist {distance} Kilometer lang mit {stops} Stopps.'**
+  String voiceRouteOverview(String distance, String stops);
+
+  /// No description provided for @voiceRemainingOne.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch ein Stopp bis zum Ziel!'**
+  String get voiceRemainingOne;
+
+  /// No description provided for @voiceRemainingMultiple.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch {count} Stopps vor dir.'**
+  String voiceRemainingMultiple(int count);
+
+  /// No description provided for @voiceHelpText.
+  ///
+  /// In de, this message translates to:
+  /// **'Du kannst mich fragen: Wie lange noch? Nächster Stopp? Wo bin ich? Wie ist das Wetter? Was empfiehlst du? Oder sag Navigation beenden.'**
+  String get voiceHelpText;
+
   /// No description provided for @voiceManeuverNow.
   ///
   /// In de, this message translates to:
@@ -5677,6 +5845,660 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Übernachtung'**
   String get tripPreviewOvernight;
+
+  /// No description provided for @gamificationLevelUp.
+  ///
+  /// In de, this message translates to:
+  /// **'Level Up!'**
+  String get gamificationLevelUp;
+
+  /// No description provided for @gamificationNewLevel.
+  ///
+  /// In de, this message translates to:
+  /// **'Level {level}'**
+  String gamificationNewLevel(int level);
+
+  /// No description provided for @gamificationContinue.
+  ///
+  /// In de, this message translates to:
+  /// **'Weiter'**
+  String get gamificationContinue;
+
+  /// No description provided for @gamificationAchievementUnlocked.
+  ///
+  /// In de, this message translates to:
+  /// **'Achievement freigeschaltet!'**
+  String get gamificationAchievementUnlocked;
+
+  /// No description provided for @gamificationAwesome.
+  ///
+  /// In de, this message translates to:
+  /// **'Großartig!'**
+  String get gamificationAwesome;
+
+  /// No description provided for @gamificationXpEarned.
+  ///
+  /// In de, this message translates to:
+  /// **'+{amount} XP'**
+  String gamificationXpEarned(int amount);
+
+  /// No description provided for @gamificationNextAchievements.
+  ///
+  /// In de, this message translates to:
+  /// **'Nächste Achievements'**
+  String get gamificationNextAchievements;
+
+  /// No description provided for @gamificationAllAchievements.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Achievements'**
+  String get gamificationAllAchievements;
+
+  /// No description provided for @gamificationUnlockedCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count}/{total} freigeschaltet'**
+  String gamificationUnlockedCount(int count, int total);
+
+  /// No description provided for @gamificationTripCreated.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip erstellt'**
+  String get gamificationTripCreated;
+
+  /// No description provided for @gamificationTripPublished.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip veröffentlicht'**
+  String get gamificationTripPublished;
+
+  /// No description provided for @gamificationTripImported.
+  ///
+  /// In de, this message translates to:
+  /// **'Trip importiert'**
+  String get gamificationTripImported;
+
+  /// No description provided for @gamificationPoiVisited.
+  ///
+  /// In de, this message translates to:
+  /// **'POI besucht'**
+  String get gamificationPoiVisited;
+
+  /// No description provided for @gamificationPhotoAdded.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto hinzugefügt'**
+  String get gamificationPhotoAdded;
+
+  /// No description provided for @gamificationLikeReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Like erhalten'**
+  String get gamificationLikeReceived;
+
+  /// No description provided for @poiRatingLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung'**
+  String get poiRatingLabel;
+
+  /// No description provided for @poiReviews.
+  ///
+  /// In de, this message translates to:
+  /// **'Rezensionen'**
+  String get poiReviews;
+
+  /// No description provided for @poiPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos'**
+  String get poiPhotos;
+
+  /// No description provided for @poiComments.
+  ///
+  /// In de, this message translates to:
+  /// **'Kommentare'**
+  String get poiComments;
+
+  /// No description provided for @poiNoReviews.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Bewertungen'**
+  String get poiNoReviews;
+
+  /// No description provided for @poiNoPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Fotos'**
+  String get poiNoPhotos;
+
+  /// No description provided for @poiNoComments.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Kommentare'**
+  String get poiNoComments;
+
+  /// No description provided for @poiBeFirstReview.
+  ///
+  /// In de, this message translates to:
+  /// **'Sei der Erste, der diesen Ort bewertet!'**
+  String get poiBeFirstReview;
+
+  /// No description provided for @poiBeFirstPhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Sei der Erste, der ein Foto teilt!'**
+  String get poiBeFirstPhoto;
+
+  /// No description provided for @poiBeFirstComment.
+  ///
+  /// In de, this message translates to:
+  /// **'Schreibe den ersten Kommentar!'**
+  String get poiBeFirstComment;
+
+  /// No description provided for @poiReviewCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Bewertungen} =1{1 Bewertung} other{{count} Bewertungen}}'**
+  String poiReviewCount(int count);
+
+  /// No description provided for @poiPhotoCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Fotos} =1{1 Foto} other{{count} Fotos}}'**
+  String poiPhotoCount(int count);
+
+  /// No description provided for @poiCommentCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Kommentare} =1{1 Kommentar} other{{count} Kommentare}}'**
+  String poiCommentCount(int count);
+
+  /// No description provided for @reviewSubmit.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung abgeben'**
+  String get reviewSubmit;
+
+  /// No description provided for @reviewEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung bearbeiten'**
+  String get reviewEdit;
+
+  /// No description provided for @reviewYourRating.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Bewertung'**
+  String get reviewYourRating;
+
+  /// No description provided for @reviewWriteOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Rezension schreiben (optional)'**
+  String get reviewWriteOptional;
+
+  /// No description provided for @reviewPlaceholder.
+  ///
+  /// In de, this message translates to:
+  /// **'Erzähle anderen von deiner Erfahrung...'**
+  String get reviewPlaceholder;
+
+  /// No description provided for @reviewVisitDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Besuchsdatum'**
+  String get reviewVisitDate;
+
+  /// No description provided for @reviewVisitDateOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Besuchsdatum (optional)'**
+  String get reviewVisitDateOptional;
+
+  /// No description provided for @reviewVisitedOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Besucht am {date}'**
+  String reviewVisitedOn(String date);
+
+  /// No description provided for @reviewHelpful.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfreich'**
+  String get reviewHelpful;
+
+  /// No description provided for @reviewHelpfulCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Noch nicht bewertet} =1{1 Person fand das hilfreich} other{{count} Personen fanden das hilfreich}}'**
+  String reviewHelpfulCount(int count);
+
+  /// No description provided for @reviewMarkedHelpful.
+  ///
+  /// In de, this message translates to:
+  /// **'Als hilfreich markiert'**
+  String get reviewMarkedHelpful;
+
+  /// No description provided for @reviewSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung gespeichert!'**
+  String get reviewSuccess;
+
+  /// No description provided for @reviewError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Speichern der Bewertung'**
+  String get reviewError;
+
+  /// No description provided for @reviewDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung löschen'**
+  String get reviewDelete;
+
+  /// No description provided for @reviewDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du deine Bewertung wirklich löschen?'**
+  String get reviewDeleteConfirm;
+
+  /// No description provided for @reviewDeleteSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewertung gelöscht'**
+  String get reviewDeleteSuccess;
+
+  /// No description provided for @reviewDeleteError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Löschen der Bewertung'**
+  String get reviewDeleteError;
+
+  /// No description provided for @reviewRatingRequired.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte wähle eine Sternebewertung'**
+  String get reviewRatingRequired;
+
+  /// No description provided for @reviewAvgRating.
+  ///
+  /// In de, this message translates to:
+  /// **'{rating} von 5 Sternen'**
+  String reviewAvgRating(String rating);
+
+  /// No description provided for @photoUpload.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto hochladen'**
+  String get photoUpload;
+
+  /// No description provided for @photoCaption.
+  ///
+  /// In de, this message translates to:
+  /// **'Bildunterschrift'**
+  String get photoCaption;
+
+  /// No description provided for @photoCaptionHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Beschreibe dein Foto (optional)'**
+  String get photoCaptionHint;
+
+  /// No description provided for @photoFromCamera.
+  ///
+  /// In de, this message translates to:
+  /// **'Kamera'**
+  String get photoFromCamera;
+
+  /// No description provided for @photoFromGallery.
+  ///
+  /// In de, this message translates to:
+  /// **'Galerie'**
+  String get photoFromGallery;
+
+  /// No description provided for @photoUploading.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto wird hochgeladen...'**
+  String get photoUploading;
+
+  /// No description provided for @photoSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto hochgeladen!'**
+  String get photoSuccess;
+
+  /// No description provided for @photoError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hochladen des Fotos'**
+  String get photoError;
+
+  /// No description provided for @photoDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto löschen'**
+  String get photoDelete;
+
+  /// No description provided for @photoDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du dieses Foto wirklich löschen?'**
+  String get photoDeleteConfirm;
+
+  /// No description provided for @photoDeleteSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto gelöscht'**
+  String get photoDeleteSuccess;
+
+  /// No description provided for @photoDeleteError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Löschen des Fotos'**
+  String get photoDeleteError;
+
+  /// No description provided for @photoBy.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto von {author}'**
+  String photoBy(String author);
+
+  /// No description provided for @commentAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Kommentar hinzufügen'**
+  String get commentAdd;
+
+  /// No description provided for @commentPlaceholder.
+  ///
+  /// In de, this message translates to:
+  /// **'Schreibe einen Kommentar...'**
+  String get commentPlaceholder;
+
+  /// No description provided for @commentReply.
+  ///
+  /// In de, this message translates to:
+  /// **'Antworten'**
+  String get commentReply;
+
+  /// No description provided for @commentReplyTo.
+  ///
+  /// In de, this message translates to:
+  /// **'Antwort auf {author}'**
+  String commentReplyTo(String author);
+
+  /// No description provided for @commentDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Kommentar löschen'**
+  String get commentDelete;
+
+  /// No description provided for @commentDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du diesen Kommentar wirklich löschen?'**
+  String get commentDeleteConfirm;
+
+  /// No description provided for @commentDeleteSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Kommentar gelöscht'**
+  String get commentDeleteSuccess;
+
+  /// No description provided for @commentDeleteError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Löschen des Kommentars'**
+  String get commentDeleteError;
+
+  /// No description provided for @commentShowReplies.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Antwort anzeigen} other{{count} Antworten anzeigen}}'**
+  String commentShowReplies(int count);
+
+  /// No description provided for @commentHideReplies.
+  ///
+  /// In de, this message translates to:
+  /// **'Antworten ausblenden'**
+  String get commentHideReplies;
+
+  /// No description provided for @commentSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Kommentar gepostet!'**
+  String get commentSuccess;
+
+  /// No description provided for @commentError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Posten des Kommentars'**
+  String get commentError;
+
+  /// No description provided for @commentEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte schreibe einen Kommentar'**
+  String get commentEmpty;
+
+  /// No description provided for @adminDashboard.
+  ///
+  /// In de, this message translates to:
+  /// **'Admin-Dashboard'**
+  String get adminDashboard;
+
+  /// No description provided for @adminNotifications.
+  ///
+  /// In de, this message translates to:
+  /// **'Benachrichtigungen'**
+  String get adminNotifications;
+
+  /// No description provided for @adminModeration.
+  ///
+  /// In de, this message translates to:
+  /// **'Moderation'**
+  String get adminModeration;
+
+  /// No description provided for @adminNewPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Fotos'**
+  String get adminNewPhotos;
+
+  /// No description provided for @adminNewReviews.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bewertungen'**
+  String get adminNewReviews;
+
+  /// No description provided for @adminNewComments.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Kommentare'**
+  String get adminNewComments;
+
+  /// No description provided for @adminFlaggedContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Gemeldete Inhalte'**
+  String get adminFlaggedContent;
+
+  /// No description provided for @adminDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen'**
+  String get adminDelete;
+
+  /// No description provided for @adminDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du diesen Inhalt wirklich löschen?'**
+  String get adminDeleteConfirm;
+
+  /// No description provided for @adminDeleteSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Inhalt gelöscht'**
+  String get adminDeleteSuccess;
+
+  /// No description provided for @adminDeleteError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Löschen'**
+  String get adminDeleteError;
+
+  /// No description provided for @adminApprove.
+  ///
+  /// In de, this message translates to:
+  /// **'Genehmigen'**
+  String get adminApprove;
+
+  /// No description provided for @adminApproveSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Inhalt genehmigt'**
+  String get adminApproveSuccess;
+
+  /// No description provided for @adminApproveError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Genehmigen'**
+  String get adminApproveError;
+
+  /// No description provided for @adminMarkRead.
+  ///
+  /// In de, this message translates to:
+  /// **'Als gelesen markieren'**
+  String get adminMarkRead;
+
+  /// No description provided for @adminMarkAllRead.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle als gelesen markieren'**
+  String get adminMarkAllRead;
+
+  /// No description provided for @adminNoNotifications.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine neuen Benachrichtigungen'**
+  String get adminNoNotifications;
+
+  /// No description provided for @adminNoFlagged.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine gemeldeten Inhalte'**
+  String get adminNoFlagged;
+
+  /// No description provided for @adminStats.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken'**
+  String get adminStats;
+
+  /// No description provided for @adminUnreadCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine ungelesenen} =1{1 ungelesen} other{{count} ungelesen}}'**
+  String adminUnreadCount(int count);
+
+  /// No description provided for @adminFlaggedCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine gemeldeten} =1{1 gemeldet} other{{count} gemeldet}}'**
+  String adminFlaggedCount(int count);
+
+  /// No description provided for @adminNotificationNewPhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Foto hochgeladen'**
+  String get adminNotificationNewPhoto;
+
+  /// No description provided for @adminNotificationNewReview.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bewertung'**
+  String get adminNotificationNewReview;
+
+  /// No description provided for @adminNotificationNewComment.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Kommentar'**
+  String get adminNotificationNewComment;
+
+  /// No description provided for @adminNotificationFlagged.
+  ///
+  /// In de, this message translates to:
+  /// **'Inhalt gemeldet'**
+  String get adminNotificationFlagged;
+
+  /// No description provided for @socialLoginRequired.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte melde dich an, um diese Funktion zu nutzen'**
+  String get socialLoginRequired;
+
+  /// No description provided for @socialRatingRequired.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte wähle eine Bewertung'**
+  String get socialRatingRequired;
+
+  /// No description provided for @reportContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Inhalt melden'**
+  String get reportContent;
+
+  /// No description provided for @reportSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Vielen Dank! Der Inhalt wurde zur Überprüfung gemeldet.'**
+  String get reportSuccess;
+
+  /// No description provided for @reportError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Melden des Inhalts'**
+  String get reportError;
+
+  /// No description provided for @reportReason.
+  ///
+  /// In de, this message translates to:
+  /// **'Grund der Meldung'**
+  String get reportReason;
+
+  /// No description provided for @reportReasonHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Beschreibe, warum dieser Inhalt gemeldet werden sollte...'**
+  String get reportReasonHint;
+
+  /// No description provided for @anonymousUser.
+  ///
+  /// In de, this message translates to:
+  /// **'Anonym'**
+  String get anonymousUser;
+
+  /// No description provided for @ok.
+  ///
+  /// In de, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @error.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
+  String get error;
+
+  /// No description provided for @success.
+  ///
+  /// In de, this message translates to:
+  /// **'Erfolg'**
+  String get success;
 }
 
 class _AppLocalizationsDelegate

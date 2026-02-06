@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,6 +20,12 @@ enum VoiceCommand {
   startNavigation,
   stopNavigation,
   readDescription,
+  // Neue erweiterte Befehle (v1.10.11)
+  routeWeather,
+  routeRecommendation,
+  tripOverview,
+  remainingStops,
+  helpCommands,
   unknown;
 
   /// Lokalisiertes Label fuer den Sprachbefehl
@@ -41,6 +49,16 @@ enum VoiceCommand {
         return l10n.voiceCmdStopNav;
       case VoiceCommand.readDescription:
         return l10n.voiceCmdDescribe;
+      case VoiceCommand.routeWeather:
+        return l10n.voiceCmdRouteWeather;
+      case VoiceCommand.routeRecommendation:
+        return l10n.voiceCmdRecommend;
+      case VoiceCommand.tripOverview:
+        return l10n.voiceCmdOverview;
+      case VoiceCommand.remainingStops:
+        return l10n.voiceCmdRemaining;
+      case VoiceCommand.helpCommands:
+        return l10n.voiceCmdHelp;
       case VoiceCommand.unknown:
         return l10n.voiceCmdUnknown;
     }
@@ -59,6 +77,12 @@ const _voiceKeywords = {
     'navStart': ['navigation', 'start', 'navigier'],
     'navStop': ['navigation', 'stopp', 'beend', 'anhalten'],
     'describe': ['vorlesen', 'beschreibung', 'erzähl'],
+    // Neue Keywords (v1.10.11)
+    'weather': ['wetter', 'regen', 'sonne', 'temperatur', 'grad'],
+    'recommend': ['empfehl', 'vorschlag', 'tipp', 'highlight', 'sehenswert'],
+    'overview': ['übersicht', 'zusammenfassung', 'route zeig', 'meine route'],
+    'remaining': ['noch', 'verbleibend', 'rest', 'übrig'],
+    'help': ['hilfe', 'was kannst', 'befehle', 'wie funktioniert', 'kommandos'],
   },
   'en': {
     'next': ['next', 'stop', 'continue'],
@@ -70,6 +94,12 @@ const _voiceKeywords = {
     'navStart': ['navigation', 'start', 'navigate'],
     'navStop': ['navigation', 'stop', 'end', 'halt'],
     'describe': ['read', 'description', 'tell'],
+    // New keywords (v1.10.11)
+    'weather': ['weather', 'rain', 'sun', 'temperature', 'degrees'],
+    'recommend': ['recommend', 'suggest', 'tip', 'highlight', 'worth seeing'],
+    'overview': ['overview', 'summary', 'show route', 'my route'],
+    'remaining': ['remaining', 'left', 'rest', 'how many'],
+    'help': ['help', 'what can you', 'commands', 'how does it work'],
   },
   'fr': {
     'next': ['prochain', 'arrêt', 'suivant'],
@@ -81,6 +111,12 @@ const _voiceKeywords = {
     'navStart': ['navigation', 'démarrer', 'naviguer'],
     'navStop': ['navigation', 'arrêter', 'terminer'],
     'describe': ['lire', 'description', 'raconter'],
+    // Nouveaux mots-clés (v1.10.11)
+    'weather': ['météo', 'pluie', 'soleil', 'température', 'degrés'],
+    'recommend': ['recommand', 'suggér', 'conseil', 'incontournable'],
+    'overview': ['aperçu', 'résumé', 'montre itinéraire', 'mon itinéraire'],
+    'remaining': ['restant', 'reste', 'combien'],
+    'help': ['aide', 'que peux-tu', 'commandes', 'comment ça marche'],
   },
   'it': {
     'next': ['prossimo', 'fermata', 'avanti'],
@@ -92,6 +128,12 @@ const _voiceKeywords = {
     'navStart': ['navigazione', 'inizia', 'naviga'],
     'navStop': ['navigazione', 'ferma', 'termina'],
     'describe': ['leggi', 'descrizione', 'racconta'],
+    // Nuove parole chiave (v1.10.11)
+    'weather': ['meteo', 'pioggia', 'sole', 'temperatura', 'gradi'],
+    'recommend': ['raccomand', 'sugger', 'consiglio', 'da vedere'],
+    'overview': ['panoramica', 'riepilogo', 'mostra percorso', 'mio percorso'],
+    'remaining': ['rimanent', 'manca', 'quanti'],
+    'help': ['aiuto', 'cosa puoi', 'comandi', 'come funziona'],
   },
   'es': {
     'next': ['siguiente', 'parada', 'continuar'],
@@ -103,6 +145,12 @@ const _voiceKeywords = {
     'navStart': ['navegación', 'iniciar', 'navegar'],
     'navStop': ['navegación', 'detener', 'terminar'],
     'describe': ['leer', 'descripción', 'contar'],
+    // Nuevas palabras clave (v1.10.11)
+    'weather': ['clima', 'tiempo', 'lluvia', 'sol', 'temperatura', 'grados'],
+    'recommend': ['recomiend', 'suger', 'consejo', 'destacado'],
+    'overview': ['resumen', 'muestra ruta', 'mi ruta'],
+    'remaining': ['quedan', 'faltan', 'restante', 'cuántos'],
+    'help': ['ayuda', 'qué puedes', 'comandos', 'cómo funciona'],
   },
 };
 
@@ -338,6 +386,33 @@ class VoiceService {
       return VoiceCommand.readDescription;
     }
 
+    // === Neue erweiterte Befehle (v1.10.11) ===
+
+    // Hilfe (VOR anderen pruefen, da 'was kannst' auch andere matchen koennte)
+    if (containsAny(keywords['help']!)) {
+      return VoiceCommand.helpCommands;
+    }
+
+    // Wetter auf Route
+    if (containsAny(keywords['weather']!)) {
+      return VoiceCommand.routeWeather;
+    }
+
+    // Empfehlungen
+    if (containsAny(keywords['recommend']!)) {
+      return VoiceCommand.routeRecommendation;
+    }
+
+    // Route-Uebersicht
+    if (containsAny(keywords['overview']!)) {
+      return VoiceCommand.tripOverview;
+    }
+
+    // Verbleibende Stopps
+    if (containsAny(keywords['remaining']!)) {
+      return VoiceCommand.remainingStops;
+    }
+
     return VoiceCommand.unknown;
   }
 
@@ -479,6 +554,36 @@ class VoiceService {
     } else {
       await speak(l10n.voiceArrived);
     }
+  }
+
+  // === Intelligente Sprachassistentin (v1.10.11) ===
+
+  /// Gibt eine zufaellige Begruessung zurueck (beim Aktivieren der Spracherkennung)
+  String getRandomGreeting() {
+    final greetings = [
+      l10n.voiceGreeting1,
+      l10n.voiceGreeting2,
+      l10n.voiceGreeting3,
+      l10n.voiceGreeting4,
+      l10n.voiceGreeting5,
+      l10n.voiceGreeting6,
+      l10n.voiceGreeting7,
+      l10n.voiceGreeting8,
+    ];
+    return greetings[Random().nextInt(greetings.length)];
+  }
+
+  /// Gibt eine humorvolle Antwort fuer unbekannte Befehle zurueck
+  String getUnknownCommandResponse() {
+    final responses = [
+      l10n.voiceUnknown1,
+      l10n.voiceUnknown2,
+      l10n.voiceUnknown3,
+      l10n.voiceUnknown4,
+      l10n.voiceUnknown5,
+      l10n.voiceUnknown6,
+    ];
+    return responses[Random().nextInt(responses.length)];
   }
 
   /// Prueft verfuegbare Sprachen

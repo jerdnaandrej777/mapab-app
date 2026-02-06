@@ -6,12 +6,14 @@ class ManeuverBanner extends StatelessWidget {
   final NavigationStep? currentStep;
   final NavigationStep? nextStep;
   final double distanceToNextStepMeters;
+  final VoidCallback? onSave;
 
   const ManeuverBanner({
     super.key,
     required this.currentStep,
     this.nextStep,
     required this.distanceToNextStepMeters,
+    this.onSave,
   });
 
   @override
@@ -80,6 +82,14 @@ class ManeuverBanner extends StatelessWidget {
                   ],
                 ),
               ),
+              // Speichern-Button rechts
+              if (onSave != null) ...[
+                const SizedBox(width: 12),
+                _SaveButton(
+                  onTap: onSave!,
+                  color: colorScheme.onPrimary,
+                ),
+              ],
             ],
           ),
         ),
@@ -171,5 +181,38 @@ class _ManeuverIcon extends StatelessWidget {
       case ManeuverModifier.none:
         return Icons.arrow_upward;
     }
+  }
+}
+
+/// Speichern-Button im Banner
+class _SaveButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final Color color;
+
+  const _SaveButton({
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.bookmark_add_outlined,
+            color: color,
+            size: 24,
+          ),
+        ),
+      ),
+    );
   }
 }

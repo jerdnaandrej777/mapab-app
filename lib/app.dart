@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/supabase/supabase_client.dart' show isAuthenticated, isSupabaseAvailable;
+import 'core/widgets/gamification_overlay.dart';
 import 'data/providers/settings_provider.dart';
 import 'features/map/map_screen.dart';
 import 'features/map/widgets/trip_mode_selector.dart';
@@ -29,6 +30,7 @@ import 'features/sharing/qr_scanner_screen.dart';
 import 'features/templates/trip_templates_screen.dart';
 import 'features/social/gallery_screen.dart';
 import 'features/social/trip_detail_public_screen.dart';
+import 'features/admin/admin_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -75,6 +77,13 @@ class TravelPlannerApp extends ConsumerWidget {
 
       // Router
       routerConfig: _router,
+
+      // Gamification Overlay für XP-Toasts und Achievement-Popups
+      builder: (context, child) {
+        return GamificationOverlay(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
@@ -262,6 +271,13 @@ final _router = GoRouter(
         final tripId = state.pathParameters['tripId']!;
         return TripDetailPublicScreen(tripId: tripId);
       },
+    ),
+
+    // Admin Dashboard
+    GoRoute(
+      path: '/admin',
+      name: 'admin',
+      builder: (context, state) => const AdminScreen(),
     ),
   ],
 

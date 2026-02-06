@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/models/trip.dart';
+import '../../../data/providers/gamification_provider.dart';
 import '../../../data/repositories/social_repo.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 
@@ -347,6 +348,10 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
       if (!mounted) return;
 
       if (publicTrip != null) {
+        // XP fuer Trip-Veroeffentlichung vergeben
+        await ref.read(gamificationNotifierProvider.notifier).onTripPublished();
+
+        if (!mounted) return;
         AppSnackbar.showSuccess(context, context.l10n.publishSuccess);
         Navigator.pop(context, true);
       } else {

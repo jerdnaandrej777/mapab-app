@@ -5,6 +5,7 @@ import '../../core/supabase/supabase_client.dart' show isAuthenticated;
 import '../models/poi.dart';
 import '../models/trip.dart';
 import '../services/sync_service.dart';
+import 'gamification_provider.dart';
 
 part 'favorites_provider.g.dart';
 
@@ -80,6 +81,9 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 
     state = AsyncValue.data(current.copyWith(savedRoutes: updated));
     debugPrint('[Favorites] Route gespeichert: ${trip.name}');
+
+    // XP fuer Trip-Erstellung vergeben
+    await ref.read(gamificationNotifierProvider.notifier).onTripCreated();
 
     // Cloud-Sync (wenn authentifiziert)
     if (isAuthenticated) {

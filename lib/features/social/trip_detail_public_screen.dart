@@ -7,6 +7,7 @@ import '../../data/models/public_trip.dart';
 import '../../data/providers/gallery_provider.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../shared/widgets/app_snackbar.dart';
+import '../poi/widgets/poi_comments_section.dart';
 
 /// Detail-Ansicht fuer einen oeffentlichen Trip
 class TripDetailPublicScreen extends ConsumerStatefulWidget {
@@ -359,6 +360,12 @@ class _TripDetailPublicScreenState
                     ),
                   ],
                 ),
+
+                // Kommentar-Sektion
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                TripCommentsSection(tripId: trip.id),
               ],
             ),
           ),

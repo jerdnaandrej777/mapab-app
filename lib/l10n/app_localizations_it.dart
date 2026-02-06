@@ -3066,6 +3066,109 @@ class AppLocalizationsIt extends AppLocalizations {
   String get voiceCmdUnknown => 'Sconosciuto';
 
   @override
+  String get voiceCmdRouteWeather => 'Meteo sul percorso';
+
+  @override
+  String get voiceCmdRecommend => 'Raccomandazione';
+
+  @override
+  String get voiceCmdOverview => 'Panoramica percorso';
+
+  @override
+  String get voiceCmdRemaining => 'Tappe rimanenti';
+
+  @override
+  String get voiceCmdHelp => 'Aiuto';
+
+  @override
+  String get voiceCmdNotAvailable =>
+      'Questo comando non è disponibile durante la navigazione.';
+
+  @override
+  String get voiceGreeting1 => 'Pronto per il tuo viaggio?';
+
+  @override
+  String get voiceGreeting2 => 'Come posso aiutarti?';
+
+  @override
+  String get voiceGreeting3 => 'Cosa vorresti sapere?';
+
+  @override
+  String get voiceGreeting4 => 'Ti ascolto!';
+
+  @override
+  String get voiceGreeting5 => 'Chiedimi qualcosa!';
+
+  @override
+  String get voiceGreeting6 => 'Pronto per il tuo percorso?';
+
+  @override
+  String get voiceGreeting7 => 'Il tuo assistente di navigazione!';
+
+  @override
+  String get voiceGreeting8 => 'Dove andiamo?';
+
+  @override
+  String get voiceUnknown1 =>
+      'Hmm, non ho capito. Prova a dire Quanto manca? o Prossima tappa.';
+
+  @override
+  String get voiceUnknown2 =>
+      'Ops! Il mio cervello da navigatore non ha capito. Di\' Aiuto per tutti i comandi!';
+
+  @override
+  String get voiceUnknown3 =>
+      'Troppo filosofico per me. Sono solo un semplice navigatore!';
+
+  @override
+  String get voiceUnknown4 =>
+      'Eh? Sono un navigatore, non un lettore del pensiero! Chiedimi del percorso o del meteo.';
+
+  @override
+  String get voiceUnknown5 =>
+      'Non ho capito. Prova Dove sono? o Cosa c\'è vicino?';
+
+  @override
+  String get voiceUnknown6 =>
+      'Beep boop... Comando non riconosciuto! Capisco cose come Quanto manca?';
+
+  @override
+  String voiceWeatherOnRoute(String description, String temp) {
+    return 'Il meteo sul tuo percorso: $description, $temp gradi.';
+  }
+
+  @override
+  String get voiceNoWeatherData =>
+      'Purtroppo non ho dati meteo per il tuo percorso.';
+
+  @override
+  String voiceRecommendPOIs(String names) {
+    return 'Ti consiglio: $names. Vere attrazioni imperdibili!';
+  }
+
+  @override
+  String get voiceNoRecommendations =>
+      'Ci sono delle tappe interessanti sul tuo percorso!';
+
+  @override
+  String voiceRouteOverview(String distance, String stops) {
+    return 'Il tuo percorso è lungo $distance chilometri con $stops tappe.';
+  }
+
+  @override
+  String get voiceRemainingOne =>
+      'Solo un\'altra tappa prima della destinazione!';
+
+  @override
+  String voiceRemainingMultiple(int count) {
+    return 'Ancora $count tappe davanti a te.';
+  }
+
+  @override
+  String get voiceHelpText =>
+      'Puoi chiedermi: Quanto manca? Prossima tappa? Dove sono? Com\'è il tempo? Raccomandazioni? O di\' Termina navigazione.';
+
+  @override
   String voiceManeuverNow(String instruction) {
     return 'Adesso $instruction';
   }
@@ -3303,4 +3406,410 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tripPreviewOvernight => 'Pernottamento';
+
+  @override
+  String get gamificationLevelUp => 'Livello aumentato!';
+
+  @override
+  String gamificationNewLevel(int level) {
+    return 'Livello $level';
+  }
+
+  @override
+  String get gamificationContinue => 'Continua';
+
+  @override
+  String get gamificationAchievementUnlocked => 'Achievement sbloccato!';
+
+  @override
+  String get gamificationAwesome => 'Fantastico!';
+
+  @override
+  String gamificationXpEarned(int amount) {
+    return '+$amount XP';
+  }
+
+  @override
+  String get gamificationNextAchievements => 'Prossimi achievement';
+
+  @override
+  String get gamificationAllAchievements => 'Tutti gli achievement';
+
+  @override
+  String gamificationUnlockedCount(int count, int total) {
+    return '$count/$total sbloccati';
+  }
+
+  @override
+  String get gamificationTripCreated => 'Viaggio creato';
+
+  @override
+  String get gamificationTripPublished => 'Viaggio pubblicato';
+
+  @override
+  String get gamificationTripImported => 'Viaggio importato';
+
+  @override
+  String get gamificationPoiVisited => 'POI visitato';
+
+  @override
+  String get gamificationPhotoAdded => 'Foto aggiunta';
+
+  @override
+  String get gamificationLikeReceived => 'Like ricevuto';
+
+  @override
+  String get poiRatingLabel => 'Valutazione';
+
+  @override
+  String get poiReviews => 'Recensioni';
+
+  @override
+  String get poiPhotos => 'Foto';
+
+  @override
+  String get poiComments => 'Commenti';
+
+  @override
+  String get poiNoReviews => 'Ancora nessuna recensione';
+
+  @override
+  String get poiNoPhotos => 'Ancora nessuna foto';
+
+  @override
+  String get poiNoComments => 'Ancora nessun commento';
+
+  @override
+  String get poiBeFirstReview => 'Sii il primo a recensire questo luogo!';
+
+  @override
+  String get poiBeFirstPhoto => 'Sii il primo a condividere una foto!';
+
+  @override
+  String get poiBeFirstComment => 'Scrivi il primo commento!';
+
+  @override
+  String poiReviewCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count recensioni',
+      one: '1 recensione',
+      zero: 'Nessuna recensione',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poiPhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count foto',
+      one: '1 foto',
+      zero: 'Nessuna foto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poiCommentCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count commenti',
+      one: '1 commento',
+      zero: 'Nessun commento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewSubmit => 'Invia recensione';
+
+  @override
+  String get reviewEdit => 'Modifica recensione';
+
+  @override
+  String get reviewYourRating => 'La tua valutazione';
+
+  @override
+  String get reviewWriteOptional => 'Scrivi una recensione (opzionale)';
+
+  @override
+  String get reviewPlaceholder =>
+      'Condividi la tua esperienza con gli altri...';
+
+  @override
+  String get reviewVisitDate => 'Data della visita';
+
+  @override
+  String get reviewVisitDateOptional => 'Data della visita (opzionale)';
+
+  @override
+  String reviewVisitedOn(String date) {
+    return 'Visitato il $date';
+  }
+
+  @override
+  String get reviewHelpful => 'Utile';
+
+  @override
+  String reviewHelpfulCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count persone hanno trovato utile',
+      one: '1 persona ha trovato utile',
+      zero: 'Non ancora valutato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewMarkedHelpful => 'Contrassegnato come utile';
+
+  @override
+  String get reviewSuccess => 'Recensione salvata!';
+
+  @override
+  String get reviewError => 'Errore nel salvataggio della recensione';
+
+  @override
+  String get reviewDelete => 'Elimina recensione';
+
+  @override
+  String get reviewDeleteConfirm => 'Vuoi davvero eliminare la tua recensione?';
+
+  @override
+  String get reviewDeleteSuccess => 'Recensione eliminata';
+
+  @override
+  String get reviewDeleteError => 'Errore nell\'eliminazione della recensione';
+
+  @override
+  String get reviewRatingRequired => 'Seleziona una valutazione';
+
+  @override
+  String reviewAvgRating(String rating) {
+    return '$rating su 5 stelle';
+  }
+
+  @override
+  String get photoUpload => 'Carica foto';
+
+  @override
+  String get photoCaption => 'Didascalia';
+
+  @override
+  String get photoCaptionHint => 'Descrivi la tua foto (opzionale)';
+
+  @override
+  String get photoFromCamera => 'Fotocamera';
+
+  @override
+  String get photoFromGallery => 'Galleria';
+
+  @override
+  String get photoUploading => 'Caricamento foto...';
+
+  @override
+  String get photoSuccess => 'Foto caricata!';
+
+  @override
+  String get photoError => 'Errore nel caricamento della foto';
+
+  @override
+  String get photoDelete => 'Elimina foto';
+
+  @override
+  String get photoDeleteConfirm => 'Vuoi davvero eliminare questa foto?';
+
+  @override
+  String get photoDeleteSuccess => 'Foto eliminata';
+
+  @override
+  String get photoDeleteError => 'Errore nell\'eliminazione della foto';
+
+  @override
+  String photoBy(String author) {
+    return 'Foto di $author';
+  }
+
+  @override
+  String get commentAdd => 'Aggiungi commento';
+
+  @override
+  String get commentPlaceholder => 'Scrivi un commento...';
+
+  @override
+  String get commentReply => 'Rispondi';
+
+  @override
+  String commentReplyTo(String author) {
+    return 'Risposta a $author';
+  }
+
+  @override
+  String get commentDelete => 'Elimina commento';
+
+  @override
+  String get commentDeleteConfirm => 'Vuoi davvero eliminare questo commento?';
+
+  @override
+  String get commentDeleteSuccess => 'Commento eliminato';
+
+  @override
+  String get commentDeleteError => 'Errore nell\'eliminazione del commento';
+
+  @override
+  String commentShowReplies(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mostra $count risposte',
+      one: 'Mostra 1 risposta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get commentHideReplies => 'Nascondi risposte';
+
+  @override
+  String get commentSuccess => 'Commento pubblicato!';
+
+  @override
+  String get commentError => 'Errore nella pubblicazione del commento';
+
+  @override
+  String get commentEmpty => 'Scrivi un commento';
+
+  @override
+  String get adminDashboard => 'Dashboard Admin';
+
+  @override
+  String get adminNotifications => 'Notifiche';
+
+  @override
+  String get adminModeration => 'Moderazione';
+
+  @override
+  String get adminNewPhotos => 'Nuove foto';
+
+  @override
+  String get adminNewReviews => 'Nuove recensioni';
+
+  @override
+  String get adminNewComments => 'Nuovi commenti';
+
+  @override
+  String get adminFlaggedContent => 'Contenuti segnalati';
+
+  @override
+  String get adminDelete => 'Elimina';
+
+  @override
+  String get adminDeleteConfirm => 'Vuoi davvero eliminare questo contenuto?';
+
+  @override
+  String get adminDeleteSuccess => 'Contenuto eliminato';
+
+  @override
+  String get adminDeleteError => 'Errore nell\'eliminazione';
+
+  @override
+  String get adminApprove => 'Approva';
+
+  @override
+  String get adminApproveSuccess => 'Contenuto approvato';
+
+  @override
+  String get adminApproveError => 'Errore nell\'approvazione';
+
+  @override
+  String get adminMarkRead => 'Segna come letto';
+
+  @override
+  String get adminMarkAllRead => 'Segna tutto come letto';
+
+  @override
+  String get adminNoNotifications => 'Nessuna nuova notifica';
+
+  @override
+  String get adminNoFlagged => 'Nessun contenuto segnalato';
+
+  @override
+  String get adminStats => 'Statistiche';
+
+  @override
+  String adminUnreadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count non letti',
+      one: '1 non letto',
+      zero: 'Nessuno non letto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminFlaggedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count segnalati',
+      one: '1 segnalato',
+      zero: 'Nessuno segnalato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminNotificationNewPhoto => 'Nuova foto caricata';
+
+  @override
+  String get adminNotificationNewReview => 'Nuova recensione';
+
+  @override
+  String get adminNotificationNewComment => 'Nuovo commento';
+
+  @override
+  String get adminNotificationFlagged => 'Contenuto segnalato';
+
+  @override
+  String get socialLoginRequired => 'Accedi per utilizzare questa funzione';
+
+  @override
+  String get socialRatingRequired => 'Seleziona una valutazione';
+
+  @override
+  String get reportContent => 'Segnala contenuto';
+
+  @override
+  String get reportSuccess =>
+      'Grazie! Il contenuto è stato segnalato per la revisione.';
+
+  @override
+  String get reportError => 'Errore nella segnalazione del contenuto';
+
+  @override
+  String get reportReason => 'Motivo della segnalazione';
+
+  @override
+  String get reportReasonHint =>
+      'Descrivi perché questo contenuto dovrebbe essere segnalato...';
+
+  @override
+  String get anonymousUser => 'Anonimo';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get error => 'Errore';
+
+  @override
+  String get success => 'Successo';
 }

@@ -12,7 +12,6 @@ class NavigationBottomBar extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onOverview;
   final VoidCallback? onVoiceCommand;
-  final VoidCallback? onSave;
 
   const NavigationBottomBar({
     super.key,
@@ -25,7 +24,6 @@ class NavigationBottomBar extends StatelessWidget {
     required this.onStop,
     required this.onOverview,
     this.onVoiceCommand,
-    this.onSave,
   });
 
   @override
@@ -92,10 +90,11 @@ class NavigationBottomBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Button-Zeile - Icon-Buttons links, Beenden-Button rechts
+              // Button-Zeile - alle quadratischen Icon-Buttons
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Mute/Unmute - nur Icon
+                  // Mute/Unmute
                   _IconActionButton(
                     icon: isMuted ? Icons.volume_off : Icons.volume_up,
                     tooltip: isMuted
@@ -104,9 +103,8 @@ class NavigationBottomBar extends StatelessWidget {
                     onTap: onToggleMute,
                     colorScheme: colorScheme,
                   ),
-                  const SizedBox(width: 8),
-                  // Sprachbefehl - nur Icon
-                  if (onVoiceCommand != null) ...[
+                  // Sprachbefehl
+                  if (onVoiceCommand != null)
                     _IconActionButton(
                       icon: isListening ? Icons.mic : Icons.mic_none,
                       tooltip: context.l10n.navVoice,
@@ -114,39 +112,20 @@ class NavigationBottomBar extends StatelessWidget {
                       colorScheme: colorScheme,
                       isActive: isListening,
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                  // Route speichern - nur Icon
-                  if (onSave != null) ...[
-                    _IconActionButton(
-                      icon: Icons.bookmark_add_outlined,
-                      tooltip: context.l10n.tripSaveRoute,
-                      onTap: onSave!,
-                      colorScheme: colorScheme,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  // Übersicht - nur Icon
+                  // Übersicht
                   _IconActionButton(
                     icon: Icons.map_outlined,
                     tooltip: context.l10n.navOverview,
                     onTap: onOverview,
                     colorScheme: colorScheme,
                   ),
-                  const SizedBox(width: 16),
-                  // Navigation beenden - prominent mit Text
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: onStop,
-                      icon: const Icon(Icons.close, size: 20),
-                      label: Text(context.l10n.navEnd),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colorScheme.error,
-                        foregroundColor: colorScheme.onError,
-                        minimumSize: const Size(0, 48),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                    ),
+                  // Navigation beenden - quadratisch rot
+                  _IconActionButton(
+                    icon: Icons.close,
+                    tooltip: context.l10n.navEnd,
+                    onTap: onStop,
+                    colorScheme: colorScheme,
+                    isError: true,
                   ),
                 ],
               ),
@@ -223,6 +202,7 @@ class _IconActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final ColorScheme colorScheme;
   final bool isActive;
+  final bool isError;
 
   const _IconActionButton({
     required this.icon,
@@ -230,14 +210,29 @@ class _IconActionButton extends StatelessWidget {
     required this.onTap,
     required this.colorScheme,
     this.isActive = false,
+    this.isError = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color bgColor;
+    final Color iconColor;
+
+    if (isError) {
+      bgColor = colorScheme.error;
+      iconColor = colorScheme.onError;
+    } else if (isActive) {
+      bgColor = colorScheme.primary;
+      iconColor = colorScheme.onPrimary;
+    } else {
+      bgColor = colorScheme.surfaceContainerHighest;
+      iconColor = colorScheme.onSurfaceVariant;
+    }
+
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: isActive ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -249,7 +244,7 @@ class _IconActionButton extends StatelessWidget {
             child: Icon(
               icon,
               size: 24,
-              color: isActive ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+              color: iconColor,
             ),
           ),
         ),
