@@ -157,29 +157,65 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     runSpacing: 8,
                     children: [
                       FilterChip(
-                        label: const Text('Must-See'),
+                        label: Text(
+                          'Must-See',
+                          style: TextStyle(
+                            color: poiState.mustSeeOnly
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                          ),
+                        ),
                         selected: poiState.mustSeeOnly,
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         onSelected: (_) => ref
                             .read(poiGalleryNotifierProvider.notifier)
                             .toggleMustSee(),
                       ),
                       ChoiceChip(
-                        label: const Text('Top bewertet'),
+                        label: Text(
+                          'Top bewertet',
+                          style: TextStyle(
+                            color: poiState.sortBy == 'top_rated'
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                          ),
+                        ),
                         selected: poiState.sortBy == 'top_rated',
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         onSelected: (_) => ref
                             .read(poiGalleryNotifierProvider.notifier)
                             .setSort('top_rated'),
                       ),
                       ChoiceChip(
-                        label: const Text('Neu'),
+                        label: Text(
+                          'Neu',
+                          style: TextStyle(
+                            color: poiState.sortBy == 'recent'
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                          ),
+                        ),
                         selected: poiState.sortBy == 'recent',
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         onSelected: (_) => ref
                             .read(poiGalleryNotifierProvider.notifier)
                             .setSort('recent'),
                       ),
                       ChoiceChip(
-                        label: const Text('Trending'),
+                        label: Text(
+                          'Trending',
+                          style: TextStyle(
+                            color: poiState.sortBy == 'trending'
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                          ),
+                        ),
                         selected: poiState.sortBy == 'trending',
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         onSelected: (_) => ref
                             .read(poiGalleryNotifierProvider.notifier)
                             .setSort('trending'),
@@ -193,8 +229,17 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       ].map((cat) {
                         final selected = poiState.categories.contains(cat);
                         return FilterChip(
-                          label: Text(cat),
+                          label: Text(
+                            cat,
+                            style: TextStyle(
+                              color: selected
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurface,
+                            ),
+                          ),
                           selected: selected,
+                          selectedColor: colorScheme.primary,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                           onSelected: (_) => ref
                               .read(poiGalleryNotifierProvider.notifier)
                               .toggleCategory(cat),

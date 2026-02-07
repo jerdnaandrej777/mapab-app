@@ -11,6 +11,7 @@ import '../../core/constants/trip_constants.dart';
 import '../../core/utils/geo_utils.dart';
 import '../../core/utils/scoring_utils.dart';
 import '../models/poi.dart';
+import '../models/route.dart';
 import '../models/trip.dart';
 import '../services/hotel_service.dart';
 import 'poi_repo.dart';
@@ -219,23 +220,77 @@ class TripGeneratorRepository {
       );
     }
 
-    // 5. Echte Route berechnen
-    final waypoints = constrainedPOIs.map((p) => p.location).toList();
-    final route = await _routingRepo.calculateFastRoute(
-      start: startLocation,
-      end: endLocation,
-      waypoints: waypoints,
-      startAddress: startAddress,
-      endAddress: endAddress,
-    );
+    // 5. Echte Route berechnen (robust mit Backoff bei unroutbaren POIs)
+    var routingPOIs = constrainedPOIs
+        .where((poi) => _isValidLatLng(poi.location))
+        .toList(growable: true);
+    if (routingPOIs.isEmpty) {
+      throw TripGenerationException(
+        'Keine gueltigen POI-Koordinaten fuer die Routenberechnung gefunden.',
+      );
+    }
+
+    AppRoute? route;
+    RoutingException? lastRoutingError;
+
+    while (routingPOIs.isNotEmpty) {
+      final optimizedForRouting = hasDestination
+          ? _routeOptimizer.optimizeDirectionalRoute(
+              pois: routingPOIs,
+              startLocation: startLocation,
+              endLocation: endLocation,
+            )
+          : _routeOptimizer.optimizeRoute(
+              pois: routingPOIs,
+              startLocation: startLocation,
+              returnToStart: true,
+            );
+
+      try {
+        route = await _routingRepo.calculateFastRoute(
+          start: startLocation,
+          end: endLocation,
+          waypoints: optimizedForRouting.map((p) => p.location).toList(),
+          startAddress: startAddress,
+          endAddress: endAddress,
+        );
+        routingPOIs = optimizedForRouting;
+        break;
+      } on RoutingException catch (e) {
+        lastRoutingError = e;
+        if (optimizedForRouting.length <= 1) {
+          break;
+        }
+
+        final removedPoi = _selectWorstPOIForRoutingBackoff(
+          pois: optimizedForRouting,
+          startLocation: startLocation,
+          endLocation: endLocation,
+        );
+        debugPrint(
+          '[TripGenerator] Tagestrip Routing-Backoff: entferne POI '
+          '"${removedPoi.name}" nach Routing-Fehler: ${e.message}',
+        );
+        routingPOIs = optimizedForRouting
+            .where((poi) => poi.id != removedPoi.id)
+            .toList();
+      }
+    }
+
+    if (route == null) {
+      throw TripGenerationException(
+        'Route konnte fuer die ausgewaehlten POIs nicht berechnet werden. '
+        'Bitte Radius/Kategorien anpassen.${lastRoutingError != null ? ' (${lastRoutingError.message})' : ''}',
+      );
+    }
 
     // 6. Trip erstellen
     final trip = Trip(
       id: _uuid.v4(),
-      name: _generateTripName(constrainedPOIs),
+      name: _generateTripName(routingPOIs),
       type: TripType.daytrip,
       route: route,
-      stops: constrainedPOIs.asMap().entries.map((entry) {
+      stops: routingPOIs.asMap().entries.map((entry) {
         return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
       }).toList(),
       days: 1,
@@ -246,7 +301,7 @@ class TripGeneratorRepository {
     return GeneratedTrip(
       trip: trip,
       availablePOIs: availablePOIs,
-      selectedPOIs: constrainedPOIs,
+      selectedPOIs: routingPOIs,
     );
   }
 
@@ -1663,6 +1718,34 @@ class TripGeneratorRepository {
         location.latitude <= 90 &&
         location.longitude >= -180 &&
         location.longitude <= 180;
+  }
+
+  POI _selectWorstPOIForRoutingBackoff({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required LatLng endLocation,
+  }) {
+    var worstPoi = pois.last;
+    var worstScore = double.negativeInfinity;
+
+    for (var i = 0; i < pois.length; i++) {
+      final current = pois[i];
+      final previous = i == 0 ? startLocation : pois[i - 1].location;
+      final next = i == pois.length - 1 ? endLocation : pois[i + 1].location;
+
+      final detourKm = GeoUtils.haversineDistance(previous, current.location) +
+          GeoUtils.haversineDistance(current.location, next) -
+          GeoUtils.haversineDistance(previous, next);
+      final scorePenalty = current.isMustSee ? 0.75 : 1.0;
+      final weightedDetour = detourKm * scorePenalty;
+
+      if (weightedDetour > worstScore) {
+        worstScore = weightedDetour;
+        worstPoi = current;
+      }
+    }
+
+    return worstPoi;
   }
 
   /// Generiert Trip-Namen basierend auf POIs
