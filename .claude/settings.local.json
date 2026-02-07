@@ -43,7 +43,23 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(build_release.bat)",
       "Bash(cmd.exe /c build_release.bat)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(curl:*)",
+      "Bash(git status:*)",
+      "Bash(supabase --version:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase migration:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "Bash(for file in \"lib/data/models/elevation.dart\" \"lib/data/models/traffic.dart\" \"lib/data/models/cost.dart\")",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(flutter test)",
+      "Bash(flutter gen-l10n:*)",
+      "Bash(ipconfig:*)",
+      "Bash(start \"\" \"C:\\\\Users\\\\Gejer\\\\Desktop\\\\Apps\\\\Mapab APP\\\\build\\\\app\\\\outputs\\\\flutter-apk\\\\qr-code.png\")",
+      "Bash(wc:*)",
+      "Bash(flutter clean:*)"
     ]
   }
 }

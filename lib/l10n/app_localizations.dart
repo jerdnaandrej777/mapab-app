@@ -5996,6 +5996,162 @@ abstract class AppLocalizations {
   /// **'Like erhalten'**
   String get gamificationLikeReceived;
 
+  /// No description provided for @leaderboardTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Rangliste'**
+  String get leaderboardTitle;
+
+  /// No description provided for @leaderboardSortXp.
+  ///
+  /// In de, this message translates to:
+  /// **'XP'**
+  String get leaderboardSortXp;
+
+  /// No description provided for @leaderboardSortKm.
+  ///
+  /// In de, this message translates to:
+  /// **'Kilometer'**
+  String get leaderboardSortKm;
+
+  /// No description provided for @leaderboardSortTrips.
+  ///
+  /// In de, this message translates to:
+  /// **'Trips'**
+  String get leaderboardSortTrips;
+
+  /// No description provided for @leaderboardSortLikes.
+  ///
+  /// In de, this message translates to:
+  /// **'Likes'**
+  String get leaderboardSortLikes;
+
+  /// No description provided for @leaderboardYourPosition.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Position'**
+  String get leaderboardYourPosition;
+
+  /// No description provided for @leaderboardEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Einträge'**
+  String get leaderboardEmpty;
+
+  /// No description provided for @leaderboardRank.
+  ///
+  /// In de, this message translates to:
+  /// **'Platz {rank}'**
+  String leaderboardRank(int rank);
+
+  /// No description provided for @refresh.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisieren'**
+  String get refresh;
+
+  /// No description provided for @challengesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Herausforderungen'**
+  String get challengesTitle;
+
+  /// No description provided for @challengesWeekly.
+  ///
+  /// In de, this message translates to:
+  /// **'Wöchentliche Challenges'**
+  String get challengesWeekly;
+
+  /// No description provided for @challengesCompleted.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgeschlossen'**
+  String get challengesCompleted;
+
+  /// No description provided for @challengesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Challenges werden jeden Montag freigeschaltet!'**
+  String get challengesEmpty;
+
+  /// No description provided for @challengesFeatured.
+  ///
+  /// In de, this message translates to:
+  /// **'HIGHLIGHT'**
+  String get challengesFeatured;
+
+  /// No description provided for @challengesCurrentStreak.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuelle Serie'**
+  String get challengesCurrentStreak;
+
+  /// No description provided for @challengesStreakDays.
+  ///
+  /// In de, this message translates to:
+  /// **'{days} Tage'**
+  String challengesStreakDays(int days);
+
+  /// No description provided for @challengesLongestStreak.
+  ///
+  /// In de, this message translates to:
+  /// **'Rekord: {days} Tage'**
+  String challengesLongestStreak(int days);
+
+  /// No description provided for @challengesVisitCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Besuche {count} {category}'**
+  String challengesVisitCategory(int count, String category);
+
+  /// No description provided for @challengesVisitCountry.
+  ///
+  /// In de, this message translates to:
+  /// **'Besuche einen POI in {country}'**
+  String challengesVisitCountry(String country);
+
+  /// No description provided for @challengesCompleteTrips.
+  ///
+  /// In de, this message translates to:
+  /// **'Schließe {count} Trips ab'**
+  String challengesCompleteTrips(int count);
+
+  /// No description provided for @challengesTakePhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Mache {count} Reisefotos'**
+  String challengesTakePhotos(int count);
+
+  /// No description provided for @challengesStreak.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Tage in Folge aktiv'**
+  String challengesStreak(int count);
+
+  /// No description provided for @challengesWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Besuche POI bei schlechtem Wetter'**
+  String get challengesWeather;
+
+  /// No description provided for @challengesShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Teile {count} Trips'**
+  String challengesShare(int count);
+
+  /// No description provided for @challengesDiscover.
+  ///
+  /// In de, this message translates to:
+  /// **'Entdecke {count} neue POIs'**
+  String challengesDiscover(int count);
+
+  /// No description provided for @challengesDistance.
+  ///
+  /// In de, this message translates to:
+  /// **'Reise {km} Kilometer'**
+  String challengesDistance(int km);
+
   /// No description provided for @poiRatingLabel.
   ///
   /// In de, this message translates to:
@@ -6559,6 +6715,54 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Erfolg'**
   String get success;
+
+  /// No description provided for @shareViaApp.
+  ///
+  /// In de, this message translates to:
+  /// **'Über App teilen'**
+  String get shareViaApp;
+
+  /// No description provided for @shareViaAppDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Teile diesen Trip mit Freunden'**
+  String get shareViaAppDesc;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Link kopieren'**
+  String get copyLink;
+
+  /// No description provided for @copyLinkDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopiere den Link in die Zwischenablage'**
+  String get copyLinkDesc;
+
+  /// No description provided for @showQrCode.
+  ///
+  /// In de, this message translates to:
+  /// **'QR-Code anzeigen'**
+  String get showQrCode;
+
+  /// No description provided for @showQrCodeDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Scannen zum Öffnen des Trips'**
+  String get showQrCodeDesc;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Link kopiert!'**
+  String get linkCopied;
+
+  /// No description provided for @qrCodeHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Scanne diesen Code mit der MapAB App'**
+  String get qrCodeHint;
 }
 
 class _AppLocalizationsDelegate

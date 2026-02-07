@@ -318,9 +318,11 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                 ),
               ),
 
-            // Bottom Padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 32),
+            // Bottom Padding - genug Platz fuer System-Navigation
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: MediaQuery.of(context).padding.bottom + 100,
+              ),
             ),
           ],
         ),

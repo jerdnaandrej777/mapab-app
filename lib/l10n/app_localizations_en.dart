@@ -3477,6 +3477,106 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gamificationLikeReceived => 'Like received';
 
   @override
+  String get leaderboardTitle => 'Leaderboard';
+
+  @override
+  String get leaderboardSortXp => 'XP';
+
+  @override
+  String get leaderboardSortKm => 'Kilometers';
+
+  @override
+  String get leaderboardSortTrips => 'Trips';
+
+  @override
+  String get leaderboardSortLikes => 'Likes';
+
+  @override
+  String get leaderboardYourPosition => 'Your Position';
+
+  @override
+  String get leaderboardEmpty => 'No entries yet';
+
+  @override
+  String leaderboardRank(int rank) {
+    return 'Rank $rank';
+  }
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get challengesTitle => 'Challenges';
+
+  @override
+  String get challengesWeekly => 'Weekly Challenges';
+
+  @override
+  String get challengesCompleted => 'Completed';
+
+  @override
+  String get challengesEmpty => 'New challenges unlock every Monday!';
+
+  @override
+  String get challengesFeatured => 'FEATURED';
+
+  @override
+  String get challengesCurrentStreak => 'Current Streak';
+
+  @override
+  String challengesStreakDays(int days) {
+    return '$days Days';
+  }
+
+  @override
+  String challengesLongestStreak(int days) {
+    return 'Record: $days days';
+  }
+
+  @override
+  String challengesVisitCategory(int count, String category) {
+    return 'Visit $count $category';
+  }
+
+  @override
+  String challengesVisitCountry(String country) {
+    return 'Visit a POI in $country';
+  }
+
+  @override
+  String challengesCompleteTrips(int count) {
+    return 'Complete $count trips';
+  }
+
+  @override
+  String challengesTakePhotos(int count) {
+    return 'Take $count travel photos';
+  }
+
+  @override
+  String challengesStreak(int count) {
+    return '$count days in a row active';
+  }
+
+  @override
+  String get challengesWeather => 'Visit POI in bad weather';
+
+  @override
+  String challengesShare(int count) {
+    return 'Share $count trips';
+  }
+
+  @override
+  String challengesDiscover(int count) {
+    return 'Discover $count new POIs';
+  }
+
+  @override
+  String challengesDistance(int km) {
+    return 'Travel $km kilometers';
+  }
+
+  @override
   String get poiRatingLabel => 'Rating';
 
   @override
@@ -3833,4 +3933,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get success => 'Success';
+
+  @override
+  String get shareViaApp => 'Share via app';
+
+  @override
+  String get shareViaAppDesc => 'Share this trip with friends';
+
+  @override
+  String get copyLink => 'Copy link';
+
+  @override
+  String get copyLinkDesc => 'Copy link to clipboard';
+
+  @override
+  String get showQrCode => 'Show QR code';
+
+  @override
+  String get showQrCodeDesc => 'Scan to open trip';
+
+  @override
+  String get linkCopied => 'Link copied!';
+
+  @override
+  String get qrCodeHint => 'Scan this code with the MapAB app';
 }

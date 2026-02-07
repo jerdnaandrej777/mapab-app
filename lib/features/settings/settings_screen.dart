@@ -23,7 +23,12 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          top: AppSpacing.md,
+          bottom: MediaQuery.of(context).padding.bottom + 100,
+        ),
         children: [
           // Erscheinungsbild Sektion
           _SectionHeader(title: context.l10n.settingsAppearance),

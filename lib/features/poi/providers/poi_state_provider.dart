@@ -12,6 +12,65 @@ import '../../../data/services/poi_enrichment_service.dart';
 part 'poi_state_provider.freezed.dart';
 part 'poi_state_provider.g.dart';
 
+/// OPTIMIERUNG v1.10.23: Cache-Key für Filter-Invalidierung
+/// Nur wenn sich diese Werte ändern, wird der Cache invalidiert
+class _FilterCacheKey {
+  final int poisLength;
+  final int poisHashCode;
+  final Set<POICategory> selectedCategories;
+  final bool mustSeeOnly;
+  final double maxDetourKm;
+  final String searchQuery;
+  final bool routeOnlyMode;
+  final bool indoorOnlyFilter;
+
+  const _FilterCacheKey({
+    required this.poisLength,
+    required this.poisHashCode,
+    required this.selectedCategories,
+    required this.mustSeeOnly,
+    required this.maxDetourKm,
+    required this.searchQuery,
+    required this.routeOnlyMode,
+    required this.indoorOnlyFilter,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _FilterCacheKey) return false;
+    return poisLength == other.poisLength &&
+        poisHashCode == other.poisHashCode &&
+        setEquals(selectedCategories, other.selectedCategories) &&
+        mustSeeOnly == other.mustSeeOnly &&
+        maxDetourKm == other.maxDetourKm &&
+        searchQuery == other.searchQuery &&
+        routeOnlyMode == other.routeOnlyMode &&
+        indoorOnlyFilter == other.indoorOnlyFilter;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        poisLength,
+        poisHashCode,
+        Object.hashAll(selectedCategories),
+        mustSeeOnly,
+        maxDetourKm,
+        searchQuery,
+        routeOnlyMode,
+        indoorOnlyFilter,
+      );
+}
+
+/// Helper für Set-Vergleich
+bool setEquals<T>(Set<T> a, Set<T> b) {
+  if (a.length != b.length) return false;
+  for (final item in a) {
+    if (!b.contains(item)) return false;
+  }
+  return true;
+}
+
 /// State für POI-Verwaltung
 @freezed
 class POIState with _$POIState {
@@ -149,9 +208,47 @@ class POIState with _$POIState {
 /// POI State Notifier mit keepAlive
 @Riverpod(keepAlive: true)
 class POIStateNotifier extends _$POIStateNotifier {
+  /// OPTIMIERUNG v1.10.23: Lazy-Cache für filteredPOIs
+  /// Verhindert O(n*m) Filterung bei jedem build()
+  List<POI>? _filteredPOIsCache;
+  _FilterCacheKey? _lastCacheKey;
+
   @override
   POIState build() {
     return const POIState();
+  }
+
+  /// OPTIMIERUNG v1.10.23: Gecachte gefilterte POIs
+  /// Cache wird nur invalidiert wenn sich Filter-relevante Felder ändern
+  List<POI> get cachedFilteredPOIs {
+    final currentKey = _FilterCacheKey(
+      poisLength: state.pois.length,
+      poisHashCode: state.pois.hashCode,
+      selectedCategories: state.selectedCategories,
+      mustSeeOnly: state.mustSeeOnly,
+      maxDetourKm: state.maxDetourKm,
+      searchQuery: state.searchQuery,
+      routeOnlyMode: state.routeOnlyMode,
+      indoorOnlyFilter: state.indoorOnlyFilter,
+    );
+
+    // Cache gültig? Dann zurückgeben
+    if (_lastCacheKey == currentKey && _filteredPOIsCache != null) {
+      return _filteredPOIsCache!;
+    }
+
+    // Cache invalidiert - neu berechnen
+    debugPrint('[POIState] Cache invalidiert, berechne filteredPOIs neu');
+    _filteredPOIsCache = state.filteredPOIs;
+    _lastCacheKey = currentKey;
+
+    return _filteredPOIsCache!;
+  }
+
+  /// Cache explizit invalidieren (z.B. nach POI-Updates)
+  void _invalidateFilterCache() {
+    _filteredPOIsCache = null;
+    _lastCacheKey = null;
   }
 
   /// Lädt POIs in einem Radius um einen Punkt
@@ -581,9 +678,13 @@ POI? selectedPOI(SelectedPOIRef ref) {
 }
 
 /// Provider für gefilterte POI-Liste
+/// OPTIMIERUNG v1.10.23: Nutzt gecachten Wert statt bei jedem build() neu zu berechnen
 @riverpod
 List<POI> filteredPOIs(FilteredPOIsRef ref) {
-  return ref.watch(pOIStateNotifierProvider).filteredPOIs;
+  // Triggert rebuild wenn sich State ändert
+  ref.watch(pOIStateNotifierProvider);
+  // Nutzt gecachten Wert aus dem Notifier
+  return ref.read(pOIStateNotifierProvider.notifier).cachedFilteredPOIs;
 }
 
 /// Provider für Lade-Status

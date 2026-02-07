@@ -256,12 +256,15 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     }
 
     // Step sofort auf generating setzen um Race Conditions zu verhindern
+    // v1.10.23: Fortschritts-Tracking starten
     state = state.copyWith(
       step: RandomTripStep.generating,
       isLoading: true,
       error: null,
       completedDays: {},
       selectedDay: 1,
+      generationPhase: GenerationPhase.calculatingRoute,
+      generationProgress: GenerationPhase.calculatingRoute.baseProgress,
     );
 
     // Wenn kein Startpunkt gesetzt ist, automatisch GPS-Standort abfragen
@@ -304,6 +307,12 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     try {
       GeneratedTrip result;
 
+      // v1.10.23: Phase 2 - POIs suchen
+      state = state.copyWith(
+        generationPhase: GenerationPhase.searchingPOIs,
+        generationProgress: GenerationPhase.searchingPOIs.baseProgress,
+      );
+
       // Aktuelles Wetter fuer Score-Gewichtung
       final locationWeather = ref.read(locationWeatherNotifierProvider);
       final currentWeather = locationWeather.hasWeather
@@ -322,6 +331,12 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           weatherCondition: currentWeather,
         );
       } else {
+        // v1.10.23: Phase 3 - AI-Ranking (bei Euro Trips komplexer)
+        state = state.copyWith(
+          generationPhase: GenerationPhase.rankingWithAI,
+          generationProgress: GenerationPhase.rankingWithAI.baseProgress,
+        );
+
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
         debugPrint('[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: $startAddr${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
         result = await _tripGenerator.generateEuroTrip(
@@ -339,18 +354,28 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       }
 
       debugPrint('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
+
+      // v1.10.23: Phase 4 - Bilder laden
       state = state.copyWith(
-        generatedTrip: result,
-        hotelSuggestions: result.hotelSuggestions ?? [],
-        step: RandomTripStep.preview,
-        isLoading: false,
+        generationPhase: GenerationPhase.enrichingImages,
+        generationProgress: GenerationPhase.enrichingImages.baseProgress,
       );
-      debugPrint('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
 
       // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
       // FIX v1.10.5: Sicher aufrufen mit Zone-basierter Fehlerbehandlung
       // Bei async ohne await werden Exceptions nicht vom try-catch gefangen!
       _safeEnrichGeneratedPOIs(result);
+
+      // v1.10.23: Phase 5 - Abgeschlossen
+      state = state.copyWith(
+        generatedTrip: result,
+        hotelSuggestions: result.hotelSuggestions ?? [],
+        step: RandomTripStep.preview,
+        isLoading: false,
+        generationPhase: GenerationPhase.complete,
+        generationProgress: GenerationPhase.complete.baseProgress,
+      );
+      debugPrint('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
     } on TripGenerationException catch (e, stackTrace) {
       debugPrint('[RandomTrip] TripGenerationException: ${e.message}');
       debugPrint('[RandomTrip] StackTrace: $stackTrace');
@@ -358,6 +383,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         step: RandomTripStep.config,
         isLoading: false,
         error: e.message,
+        generationPhase: GenerationPhase.idle,
+        generationProgress: 0.0,
       );
     } catch (e, stackTrace) {
       debugPrint('[RandomTrip] UNERWARTETER FEHLER: $e');
@@ -367,6 +394,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         step: RandomTripStep.config,
         isLoading: false,
         error: 'Trip-Generierung fehlgeschlagen: $e',
+        generationPhase: GenerationPhase.idle,
+        generationProgress: 0.0,
       );
     } finally {
       // Lock immer zuruecksetzen, egal ob Erfolg oder Fehler

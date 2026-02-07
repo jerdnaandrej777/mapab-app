@@ -29,10 +29,10 @@ class InterpolatedPosition {
 class PositionInterpolator {
   // --- Konfiguration ---
   static const int _frameIntervalMs = 16; // ~60fps
-  static const double _bearingSmoothingFactor = 0.25; // 0=traege, 1=sofort (smoother)
   static const double _bearingFreezeSpeedKmh = 2.0;
   static const double _routeBearingSpeedKmh = 5.0;
-  static const double _deadReckoningMaxMs = 2000.0; // Max Dead-Reckoning Zeit
+  static const double _deadReckoningMaxMs = 2500.0; // Max Dead-Reckoning Zeit (erhoet fuer fluessigere Bewegung)
+  static const double _deadReckoningMaxMeters = 80.0; // Max Dead-Reckoning Distanz
 
   // --- State ---
   LatLng? _previousPosition;
@@ -73,13 +73,14 @@ class PositionInterpolator {
     if (_targetPosition != null) {
       final elapsed = now.difference(_lastGpsTime);
       if (elapsed.inMilliseconds > 50) {
-        // Exponential Smoothing des Intervals
-        // Schnellere Anpassung (0.5/0.5) für responsivere Interpolation
+        // Adaptives Exponential Smoothing des Intervals
+        // Bei hoeherer Geschwindigkeit: schnellere Anpassung fuer fluessigere Bewegung
+        final adaptiveRatio = _currentSpeedKmh > 30 ? 0.7 : 0.5;
         _expectedUpdateInterval = Duration(
-          milliseconds: ((_expectedUpdateInterval.inMilliseconds * 0.5) +
-                  (elapsed.inMilliseconds * 0.5))
+          milliseconds: ((_expectedUpdateInterval.inMilliseconds * (1 - adaptiveRatio)) +
+                  (elapsed.inMilliseconds * adaptiveRatio))
               .round()
-              .clamp(150, 2000), // Min 150ms statt 300ms für flüssigere Updates
+              .clamp(100, 2000), // Min 100ms fuer noch fluessigere Updates
         );
       }
     }
@@ -159,6 +160,14 @@ class PositionInterpolator {
     return gpsHeading;
   }
 
+  /// Adaptiver Smoothing-Faktor basierend auf Geschwindigkeit
+  /// Bei hoher Geschwindigkeit: schnellere Reaktion auf Kurven
+  double _getAdaptiveSmoothingFactor() {
+    if (_currentSpeedKmh < 20) return 0.20; // Niedrig: stabiler, weniger Zittern
+    if (_currentSpeedKmh < 60) return 0.30; // Normal: guter Kompromiss
+    return 0.40; // Schnell: sehr responsiv fuer Autobahnkurven
+  }
+
   /// Smooth Bearing mit korrektem 360/0 Wraparound
   double _smoothBearing(double current, double target) {
     // Kuerzesten Winkel zwischen current und target finden
@@ -172,8 +181,9 @@ class PositionInterpolator {
       diff += 360;
     }
 
-    // Exponential Moving Average
-    final smoothed = current + diff * _bearingSmoothingFactor;
+    // Adaptiver Exponential Moving Average (geschwindigkeitsabhaengig)
+    final smoothingFactor = _getAdaptiveSmoothingFactor();
+    final smoothed = current + diff * smoothingFactor;
 
     // Normalisieren auf 0-360
     return (smoothed % 360 + 360) % 360;
@@ -214,6 +224,18 @@ class PositionInterpolator {
       // Normale Interpolation zwischen vorheriger und Ziel-Position
       final easedT = _easeOutCubic(_interpolationProgress.clamp(0.0, 1.0));
       finalPos = _lerpLatLng(_previousPosition!, _targetPosition!, easedT);
+
+      // Predictive Extension: Bei hohem Fortschritt leicht vorausschauen
+      // fuer sanftere Uebergaenge zum naechsten GPS-Update
+      if (_interpolationProgress > 0.8 && _currentSpeedKmh > 10 && _routeCoords.isNotEmpty) {
+        final predictedPos = _moveAlongRouteFromIndex(
+          finalPos,
+          _routeIndex,
+          (_currentSpeedKmh / 3.6) * 0.05, // ~50ms voraus
+        );
+        // Sanftes Blending mit der vorausgesagten Position
+        finalPos = _lerpLatLng(finalPos, predictedPos, 0.3);
+      }
     } else if (_currentSpeedKmh > 3 && elapsedMs < _deadReckoningMaxMs) {
       // Dead-Reckoning: Weiter entlang der Route bewegen
       // wenn GPS-Update ausbleibt aber wir uns bewegen sollten
@@ -223,7 +245,7 @@ class PositionInterpolator {
       finalPos = _targetPosition!;
     }
 
-    // Bearing smoothen (etwas langsamer für flüssigere Rotation)
+    // Bearing smoothen (adaptiv basierend auf Geschwindigkeit)
     _smoothedBearing = _smoothBearing(_smoothedBearing, _targetBearing);
 
     _controller.add(InterpolatedPosition(
@@ -253,7 +275,7 @@ class PositionInterpolator {
     return _moveAlongRouteFromIndex(
       _targetPosition!,
       _routeIndex,
-      extraDistanceM.clamp(0, 50), // Max 50m Dead-Reckoning
+      extraDistanceM.clamp(0, _deadReckoningMaxMeters), // Max 80m Dead-Reckoning
     );
   }
 

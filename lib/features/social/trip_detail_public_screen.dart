@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,6 +10,7 @@ import '../../data/models/public_trip.dart';
 import '../../data/models/route.dart';
 import '../../data/providers/auth_provider.dart';
 import '../../data/providers/gallery_provider.dart';
+import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
@@ -445,9 +447,169 @@ class _TripDetailPublicScreenState
     );
   }
 
+  /// v1.10.23: Zeigt Share-Optionen für den Trip
   void _shareTrip(PublicTrip trip) {
-    // TODO: Implement sharing
-    AppSnackbar.showSuccess(context, context.l10n.galleryShareComingSoon);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.4,
+        minChildSize: 0.3,
+        maxChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) {
+          final colorScheme = Theme.of(context).colorScheme;
+          return Container(
+            padding: const EdgeInsets.all(16),
+            child: ListView(
+              controller: scrollController,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Titel
+                Text(
+                  context.l10n.galleryShare,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+
+                // Share-Optionen
+                ListTile(
+                  leading: Icon(Icons.share_outlined, color: colorScheme.primary),
+                  title: Text(context.l10n.shareViaApp),
+                  subtitle: Text(context.l10n.shareViaAppDesc),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await sharePublicTrip(
+                      tripId: trip.id,
+                      tripName: trip.name,
+                      description: trip.description,
+                      stopCount: trip.stopCount,
+                      distanceKm: trip.distanceKm,
+                    );
+                  },
+                ),
+
+                ListTile(
+                  leading: Icon(Icons.link_outlined, color: colorScheme.primary),
+                  title: Text(context.l10n.copyLink),
+                  subtitle: Text(context.l10n.copyLinkDesc),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await copyPublicTripLink(trip.id);
+                    if (mounted) {
+                      AppSnackbar.showSuccess(context, context.l10n.linkCopied);
+                    }
+                  },
+                ),
+
+                ListTile(
+                  leading: Icon(Icons.qr_code_outlined, color: colorScheme.primary),
+                  title: Text(context.l10n.showQrCode),
+                  subtitle: Text(context.l10n.showQrCodeDesc),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showQRCode(trip);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// v1.10.23: Zeigt QR-Code für den Trip
+  void _showQRCode(PublicTrip trip) {
+    final qrData = generatePublicTripQRData(trip.id);
+    showDialog(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          title: Text(trip.name, textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.qr_code_2,
+                        size: 120,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'QR-Code',
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.l10n.qrCodeHint,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                qrData,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.primary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: qrData));
+                Navigator.pop(context);
+                AppSnackbar.showSuccess(context, context.l10n.linkCopied);
+              },
+              child: Text(context.l10n.copyLink),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.l10n.close),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _openAuthorProfile(String userId) {

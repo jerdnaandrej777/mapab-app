@@ -31,6 +31,8 @@ import 'features/templates/trip_templates_screen.dart';
 import 'features/social/gallery_screen.dart';
 import 'features/social/trip_detail_public_screen.dart';
 import 'features/admin/admin_screen.dart';
+import 'features/leaderboard/leaderboard_screen.dart';
+import 'features/challenges/challenges_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -278,6 +280,20 @@ final _router = GoRouter(
       path: '/admin',
       name: 'admin',
       builder: (context, state) => const AdminScreen(),
+    ),
+
+    // Leaderboard (Rangliste)
+    GoRoute(
+      path: '/leaderboard',
+      name: 'leaderboard',
+      builder: (context, state) => const LeaderboardScreen(),
+    ),
+
+    // Challenges (Herausforderungen)
+    GoRoute(
+      path: '/challenges',
+      name: 'challenges',
+      builder: (context, state) => const ChallengesScreen(),
     ),
   ],
 

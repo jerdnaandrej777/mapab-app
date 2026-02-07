@@ -61,6 +61,12 @@ class RandomTripState with _$RandomTripState {
     /// POI-ID die gerade geladen wird (für individuelle Loading-Anzeigen)
     String? loadingPOIId,
 
+    /// v1.10.23: Aktuelle Generierungs-Phase (für Fortschrittsanzeige)
+    @Default(GenerationPhase.idle) GenerationPhase generationPhase,
+
+    /// v1.10.23: Generierungs-Fortschritt (0.0 - 1.0)
+    @Default(0.0) double generationProgress,
+
     /// Fehler-Nachricht
     String? error,
 
@@ -155,15 +161,114 @@ enum RandomTripStep {
 /// Trip-Modus
 enum RandomTripMode {
   /// AI Tagesausflug (1 Tag)
-  daytrip('AI Tagesausflug', '🤖'),
+  daytrip('AI Tagesausflug', '\u{1F916}'),
 
   /// AI Euro Trip (mehrere Tage)
-  eurotrip('AI Euro Trip', '✈️');
+  eurotrip('AI Euro Trip', '\u{2708}\u{FE0F}');
 
   final String label;
   final String icon;
 
   const RandomTripMode(this.label, this.icon);
+}
+
+/// v1.10.23: Generierungs-Phasen für Fortschrittsanzeige
+enum GenerationPhase {
+  /// Nicht aktiv
+  idle('\u{23F8}\u{FE0F}', 0.0),
+
+  /// Route wird berechnet (OSRM)
+  calculatingRoute('\u{1F5FA}\u{FE0F}', 0.15),
+
+  /// POIs werden gesucht (Supabase/Wikipedia/Overpass)
+  searchingPOIs('\u{1F50D}', 0.40),
+
+  /// POIs werden mit AI bewertet
+  rankingWithAI('\u{1F916}', 0.70),
+
+  /// Bilder werden geladen (Wikimedia)
+  enrichingImages('\u{1F5BC}\u{FE0F}', 0.90),
+
+  /// Abgeschlossen
+  complete('\u{2705}', 1.0);
+
+  final String emoji;
+  final double baseProgress;
+
+  const GenerationPhase(this.emoji, this.baseProgress);
+
+  /// Lokalisierte Beschreibung
+  String getLocalizedMessage(String languageCode) {
+    switch (this) {
+      case GenerationPhase.idle:
+        return '';
+      case GenerationPhase.calculatingRoute:
+        switch (languageCode) {
+          case 'en':
+            return 'Calculating route...';
+          case 'fr':
+            return 'Calcul de l\'itinéraire...';
+          case 'it':
+            return 'Calcolo del percorso...';
+          case 'es':
+            return 'Calculando ruta...';
+          default:
+            return 'Berechne Route...';
+        }
+      case GenerationPhase.searchingPOIs:
+        switch (languageCode) {
+          case 'en':
+            return 'Searching points of interest...';
+          case 'fr':
+            return 'Recherche de points d\'intérêt...';
+          case 'it':
+            return 'Ricerca punti di interesse...';
+          case 'es':
+            return 'Buscando puntos de interés...';
+          default:
+            return 'Suche Sehenswürdigkeiten...';
+        }
+      case GenerationPhase.rankingWithAI:
+        switch (languageCode) {
+          case 'en':
+            return 'AI is optimizing your trip...';
+          case 'fr':
+            return 'L\'IA optimise votre voyage...';
+          case 'it':
+            return 'L\'IA sta ottimizzando il viaggio...';
+          case 'es':
+            return 'La IA optimiza tu viaje...';
+          default:
+            return 'AI optimiert deinen Trip...';
+        }
+      case GenerationPhase.enrichingImages:
+        switch (languageCode) {
+          case 'en':
+            return 'Loading images...';
+          case 'fr':
+            return 'Chargement des images...';
+          case 'it':
+            return 'Caricamento immagini...';
+          case 'es':
+            return 'Cargando imágenes...';
+          default:
+            return 'Lade Bilder...';
+        }
+      case GenerationPhase.complete:
+        switch (languageCode) {
+          case 'en':
+            return 'Done!';
+          case 'fr':
+            return 'Terminé!';
+          case 'it':
+            return 'Completato!';
+          case 'es':
+            return 'Listo!';
+          default:
+            return 'Fertig!';
+        }
+    }
+  }
 }
 
 /// Konfiguration für Trip-Generierung

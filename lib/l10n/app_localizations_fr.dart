@@ -3501,6 +3501,106 @@ class AppLocalizationsFr extends AppLocalizations {
   String get gamificationLikeReceived => 'Like reçu';
 
   @override
+  String get leaderboardTitle => 'Classement';
+
+  @override
+  String get leaderboardSortXp => 'XP';
+
+  @override
+  String get leaderboardSortKm => 'Kilomètres';
+
+  @override
+  String get leaderboardSortTrips => 'Voyages';
+
+  @override
+  String get leaderboardSortLikes => 'Likes';
+
+  @override
+  String get leaderboardYourPosition => 'Votre position';
+
+  @override
+  String get leaderboardEmpty => 'Pas encore d\'entrées';
+
+  @override
+  String leaderboardRank(int rank) {
+    return 'Rang $rank';
+  }
+
+  @override
+  String get refresh => 'Actualiser';
+
+  @override
+  String get challengesTitle => 'Défis';
+
+  @override
+  String get challengesWeekly => 'Défis hebdomadaires';
+
+  @override
+  String get challengesCompleted => 'Terminés';
+
+  @override
+  String get challengesEmpty => 'Nouveaux défis débloqués chaque lundi !';
+
+  @override
+  String get challengesFeatured => 'EN VEDETTE';
+
+  @override
+  String get challengesCurrentStreak => 'Série actuelle';
+
+  @override
+  String challengesStreakDays(int days) {
+    return '$days Jours';
+  }
+
+  @override
+  String challengesLongestStreak(int days) {
+    return 'Record : $days jours';
+  }
+
+  @override
+  String challengesVisitCategory(int count, String category) {
+    return 'Visitez $count $category';
+  }
+
+  @override
+  String challengesVisitCountry(String country) {
+    return 'Visitez un POI en $country';
+  }
+
+  @override
+  String challengesCompleteTrips(int count) {
+    return 'Terminez $count voyages';
+  }
+
+  @override
+  String challengesTakePhotos(int count) {
+    return 'Prenez $count photos de voyage';
+  }
+
+  @override
+  String challengesStreak(int count) {
+    return '$count jours d\'affilée actif';
+  }
+
+  @override
+  String get challengesWeather => 'Visitez un POI par mauvais temps';
+
+  @override
+  String challengesShare(int count) {
+    return 'Partagez $count voyages';
+  }
+
+  @override
+  String challengesDiscover(int count) {
+    return 'Découvrez $count nouveaux POIs';
+  }
+
+  @override
+  String challengesDistance(int km) {
+    return 'Parcourez $km kilomètres';
+  }
+
+  @override
   String get poiRatingLabel => 'Évaluation';
 
   @override
@@ -3859,4 +3959,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get success => 'Succès';
+
+  @override
+  String get shareViaApp => 'Partager via l\'app';
+
+  @override
+  String get shareViaAppDesc => 'Partagez ce voyage avec vos amis';
+
+  @override
+  String get copyLink => 'Copier le lien';
+
+  @override
+  String get copyLinkDesc => 'Copier le lien dans le presse-papiers';
+
+  @override
+  String get showQrCode => 'Afficher le code QR';
+
+  @override
+  String get showQrCodeDesc => 'Scannez pour ouvrir le voyage';
+
+  @override
+  String get linkCopied => 'Lien copié!';
+
+  @override
+  String get qrCodeHint => 'Scannez ce code avec l\'app MapAB';
 }

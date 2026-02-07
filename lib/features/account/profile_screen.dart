@@ -646,6 +646,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
           ),
+
+          const SizedBox(height: 16),
+
+          // Leaderboard & Challenges Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/leaderboard'),
+                  icon: const Icon(Icons.leaderboard),
+                  label: Text(context.l10n.leaderboardTitle),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/challenges'),
+                  icon: const Icon(Icons.emoji_events),
+                  label: Text(context.l10n.challengesTitle),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -199,6 +199,44 @@ class SharingService {
   }
 }
 
+/// v1.10.23: Share für öffentliche Trips aus der Galerie
+/// Nutzt trip_id für Deep Link statt Base64-kodierte Daten
+Future<void> sharePublicTrip({
+  required String tripId,
+  required String tripName,
+  String? description,
+  int? stopCount,
+  double? distanceKm,
+}) async {
+  final link = 'https://mapab.app/trip/$tripId';
+
+  final buffer = StringBuffer();
+  buffer.writeln('\u{1F5FA}\u{FE0F} $tripName');
+  if (description != null && description.isNotEmpty) {
+    buffer.writeln('');
+    buffer.writeln(description);
+  }
+  buffer.writeln('');
+  if (stopCount != null && distanceKm != null) {
+    buffer.writeln('\u{1F4CD} $stopCount Stopps \u{00B7} ${distanceKm.toStringAsFixed(0)} km');
+  }
+  buffer.writeln('');
+  buffer.writeln(link);
+
+  await Share.share(buffer.toString(), subject: 'MapAB Trip: $tripName');
+}
+
+/// v1.10.23: Kopiert Deep Link für öffentlichen Trip
+Future<void> copyPublicTripLink(String tripId) async {
+  final link = 'https://mapab.app/trip/$tripId';
+  await Clipboard.setData(ClipboardData(text: link));
+}
+
+/// v1.10.23: Generiert QR-Daten für öffentlichen Trip (kurze URL)
+String generatePublicTripQRData(String tripId) {
+  return 'https://mapab.app/trip/$tripId';
+}
+
 /// Sharing Service Provider
 @riverpod
 SharingService sharingService(SharingServiceRef ref) {

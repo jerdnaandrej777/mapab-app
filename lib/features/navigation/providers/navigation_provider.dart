@@ -171,7 +171,7 @@ class _NavThresholds {
   static const double poiApproachMeters = 500;
   static const double poiReachedMeters = 80;
   static const int rerouteDebounceMs = 5000;
-  static const int gpsDistanceFilter = 2; // Meter (reduziert fuer fluessigere Interpolation)
+  static const int gpsDistanceFilter = 1; // Meter (haeufigere Updates fuer fluessigere Bewegung)
 }
 
 /// Navigation Provider - Kernlogik für Turn-by-Turn Navigation

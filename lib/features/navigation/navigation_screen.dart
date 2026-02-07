@@ -278,15 +278,40 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               ),
             ),
 
+          // POI-Annaeherungs-Card (Trip-Stops)
+          // Positioniert ueber der BottomBar (~150px) mit 40px Abstand
+          if (navState.nextPOIStop != null &&
+              navState.distanceToNextPOIMeters < 500 &&
+              navState.status == NavigationStatus.arrivedAtWaypoint)
+            Positioned(
+              bottom: 190,
+              left: 16,
+              right: 16,
+              child: POIApproachCard(
+                stop: navState.nextPOIStop!,
+                distanceMeters: navState.distanceToNextPOIMeters,
+                onVisited: () {
+                  ref
+                      .read(navigationNotifierProvider.notifier)
+                      .markStopVisited(navState.nextPOIStop!.poiId);
+                },
+                onSkip: () {
+                  ref
+                      .read(navigationNotifierProvider.notifier)
+                      .markStopVisited(navState.nextPOIStop!.poiId);
+                },
+              ),
+            ),
+
           // Must-See POI Discovery Card (ueber POI-Approach-Card)
           if (discoveryState.currentApproachingPOI != null &&
               discoveryState.distanceToApproachingPOI != null)
             Positioned(
               bottom: navState.status == NavigationStatus.arrivedAtWaypoint
-                  ? 240 // ueber der POI-Approach-Card
-                  : 160,
-              left: 0,
-              right: 0,
+                  ? 300 // ueber der POI-Approach-Card (190 + ~100 Card-Hoehe + 10 Abstand)
+                  : 190, // alleine ueber der BottomBar
+              left: 16,
+              right: 16,
               child: MustSeePOICard(
                 poi: discoveryState.currentApproachingPOI!,
                 distanceMeters: discoveryState.distanceToApproachingPOI!,
@@ -312,30 +337,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
                       .read(navigationPOIDiscoveryNotifierProvider.notifier)
                       .dismissPOI(
                           discoveryState.currentApproachingPOI!.id);
-                },
-              ),
-            ),
-
-          // POI-Annaeherungs-Card (Trip-Stops)
-          if (navState.nextPOIStop != null &&
-              navState.distanceToNextPOIMeters < 500 &&
-              navState.status == NavigationStatus.arrivedAtWaypoint)
-            Positioned(
-              bottom: 160,
-              left: 0,
-              right: 0,
-              child: POIApproachCard(
-                stop: navState.nextPOIStop!,
-                distanceMeters: navState.distanceToNextPOIMeters,
-                onVisited: () {
-                  ref
-                      .read(navigationNotifierProvider.notifier)
-                      .markStopVisited(navState.nextPOIStop!.poiId);
-                },
-                onSkip: () {
-                  ref
-                      .read(navigationNotifierProvider.notifier)
-                      .markStopVisited(navState.nextPOIStop!.poiId);
                 },
               ),
             ),
