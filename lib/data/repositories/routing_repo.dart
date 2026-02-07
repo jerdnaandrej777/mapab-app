@@ -4,17 +4,19 @@ import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:travel_planner/l10n/app_localizations.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/geo_utils.dart';
 import '../../core/utils/navigation_instruction_generator.dart';
 import '../models/navigation_step.dart';
 import '../models/route.dart';
 
 part 'routing_repo.g.dart';
 
-/// Repository für Routenberechnung via OSRM und OpenRouteService
-/// Übernommen von MapAB js/services/routing.js und routing-ors.js
+/// Repository fÃ¼r Routenberechnung via OSRM und OpenRouteService
+/// Ãœbernommen von MapAB js/services/routing.js und routing-ors.js
 class RoutingRepository {
   final Dio _dio;
   final String? _orsApiKey;
+  static const int _maxWaypointCount = 90;
 
   RoutingRepository({
     Dio? dio,
@@ -30,54 +32,205 @@ class RoutingRepository {
     required String startAddress,
     required String endAddress,
   }) async {
-    // Koordinaten für OSRM vorbereiten (lng,lat Format)
-    final coords = <String>[];
-    coords.add('${start.longitude},${start.latitude}');
-
-    if (waypoints != null) {
-      for (final wp in waypoints) {
-        coords.add('${wp.longitude},${wp.latitude}');
-      }
-    }
-
-    coords.add('${end.longitude},${end.latitude}');
-
-    final url =
-        '${ApiEndpoints.osrmRoute}/${coords.join(';')}?overview=full&geometries=geojson';
+    final sanitizedWaypoints = _sanitizeWaypoints(
+      start: start,
+      end: end,
+      waypoints: waypoints ?? const [],
+    );
+    final limitedWaypoints = sanitizedWaypoints.length > _maxWaypointCount
+        ? _downsampleWaypoints(sanitizedWaypoints, _maxWaypointCount)
+        : sanitizedWaypoints;
 
     try {
-      final response = await _dio.get(url);
-
-      if (response.data['code'] != 'Ok') {
-        throw RoutingException(
-            'OSRM Fehler: ${response.data['message'] ?? 'Unbekannt'}');
-      }
-
-      final route = response.data['routes'][0];
-      final geometry = route['geometry'];
-      final coordinates = (geometry['coordinates'] as List)
-          .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
-          .toList();
-
-      return AppRoute(
+      return await _requestFastRoute(
         start: start,
         end: end,
         startAddress: startAddress,
         endAddress: endAddress,
-        coordinates: coordinates,
-        distanceKm: route['distance'] / 1000,
-        durationMinutes: (route['duration'] / 60).round(),
-        type: RouteType.fast,
-        waypoints: waypoints ?? [],
-        calculatedAt: DateTime.now(),
+        waypoints: limitedWaypoints,
       );
     } on DioException catch (e) {
-      throw RoutingException('Routenberechnung fehlgeschlagen: ${e.message}');
+      if (e.response?.statusCode == 400 && limitedWaypoints.isNotEmpty) {
+        debugPrint(
+          '[Routing] OSRM 400 mit ${limitedWaypoints.length} Waypoints. '
+          'Fallback auf segmentweise Berechnung.',
+        );
+        try {
+          return await _calculateFastRouteBySegments(
+            start: start,
+            end: end,
+            waypoints: limitedWaypoints,
+            startAddress: startAddress,
+            endAddress: endAddress,
+          );
+        } on DioException catch (segmentError) {
+          throw RoutingException(
+            'Routenberechnung fehlgeschlagen (segmentierter Fallback): '
+            '${_extractDioError(segmentError)}',
+          );
+        }
+      }
+
+      throw RoutingException(
+        'Routenberechnung fehlgeschlagen: ${_extractDioError(e)}',
+      );
     }
   }
 
+  Future<AppRoute> _requestFastRoute({
+    required LatLng start,
+    required LatLng end,
+    required List<LatLng> waypoints,
+    required String startAddress,
+    required String endAddress,
+  }) async {
+    final coords = <String>[
+      '${start.longitude},${start.latitude}',
+      ...waypoints.map((wp) => '${wp.longitude},${wp.latitude}'),
+      '${end.longitude},${end.latitude}',
+    ];
+
+    final url =
+        '${ApiEndpoints.osrmRoute}/${coords.join(';')}?overview=full&geometries=geojson';
+
+    final response = await _dio.get(url);
+
+    if (response.data['code'] != 'Ok') {
+      throw RoutingException(
+        'OSRM Fehler: ${response.data['message'] ?? 'Unbekannt'}',
+      );
+    }
+
+    final route = response.data['routes'][0];
+    final geometry = route['geometry'];
+    final coordinates = (geometry['coordinates'] as List)
+        .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+        .toList();
+
+    return AppRoute(
+      start: start,
+      end: end,
+      startAddress: startAddress,
+      endAddress: endAddress,
+      coordinates: coordinates,
+      distanceKm: route['distance'] / 1000,
+      durationMinutes: (route['duration'] / 60).round(),
+      type: RouteType.fast,
+      waypoints: waypoints,
+      calculatedAt: DateTime.now(),
+    );
+  }
+
+  Future<AppRoute> _calculateFastRouteBySegments({
+    required LatLng start,
+    required LatLng end,
+    required List<LatLng> waypoints,
+    required String startAddress,
+    required String endAddress,
+  }) async {
+    final points = <LatLng>[start, ...waypoints, end];
+    final mergedCoordinates = <LatLng>[];
+    var totalDistanceKm = 0.0;
+    var totalDurationMinutes = 0;
+
+    for (var i = 0; i < points.length - 1; i++) {
+      final leg = await _requestFastRoute(
+        start: points[i],
+        end: points[i + 1],
+        waypoints: const [],
+        startAddress: '',
+        endAddress: '',
+      );
+
+      if (mergedCoordinates.isEmpty) {
+        mergedCoordinates.addAll(leg.coordinates);
+      } else {
+        mergedCoordinates.addAll(leg.coordinates.skip(1));
+      }
+
+      totalDistanceKm += leg.distanceKm;
+      totalDurationMinutes += leg.durationMinutes;
+    }
+
+    return AppRoute(
+      start: start,
+      end: end,
+      startAddress: startAddress,
+      endAddress: endAddress,
+      coordinates: mergedCoordinates,
+      distanceKm: totalDistanceKm,
+      durationMinutes: totalDurationMinutes,
+      type: RouteType.fast,
+      waypoints: waypoints,
+      calculatedAt: DateTime.now(),
+    );
+  }
+
+  List<LatLng> _sanitizeWaypoints({
+    required LatLng start,
+    required LatLng end,
+    required List<LatLng> waypoints,
+  }) {
+    final cleaned = <LatLng>[];
+    LatLng previous = start;
+
+    for (final wp in waypoints) {
+      if (!_isValidLatLng(wp)) continue;
+      if (_isNearSamePoint(previous, wp)) continue;
+      if (_isNearSamePoint(end, wp)) continue;
+      cleaned.add(wp);
+      previous = wp;
+    }
+
+    return cleaned;
+  }
+
+  List<LatLng> _downsampleWaypoints(List<LatLng> waypoints, int maxCount) {
+    if (waypoints.length <= maxCount) return waypoints;
+    if (maxCount <= 1) return [waypoints.first];
+
+    final reduced = <LatLng>[];
+    final step = (waypoints.length - 1) / (maxCount - 1);
+    for (int i = 0; i < maxCount; i++) {
+      final index = (i * step).round().clamp(0, waypoints.length - 1);
+      reduced.add(waypoints[index]);
+    }
+    return reduced;
+  }
+
+  bool _isValidLatLng(LatLng point) {
+    return point.latitude.isFinite &&
+        point.longitude.isFinite &&
+        point.latitude >= -90 &&
+        point.latitude <= 90 &&
+        point.longitude >= -180 &&
+        point.longitude <= 180;
+  }
+
+  bool _isNearSamePoint(LatLng a, LatLng b, {double thresholdKm = 0.05}) {
+    return GeoUtils.haversineDistance(a, b) <= thresholdKm;
+  }
+
+  String _extractDioError(DioException e) {
+    final status = e.response?.statusCode;
+    final data = e.response?.data;
+    String? serverMessage;
+
+    if (data is Map<String, dynamic>) {
+      serverMessage = data['message']?.toString() ?? data['error']?.toString();
+    } else if (data is String && data.trim().isNotEmpty) {
+      serverMessage = data;
+    }
+
+    return [
+      if (status != null) 'HTTP $status',
+      if (serverMessage != null && serverMessage.isNotEmpty) serverMessage,
+      if (e.message != null && e.message!.isNotEmpty) e.message!,
+    ].join(' - ');
+  }
+
   /// Berechnet Navigationsroute via OSRM mit Abbiegehinweisen
-  /// Gibt NavigationRoute mit Steps und Manövern zurück
+  /// Gibt NavigationRoute mit Steps und ManÃ¶vern zurÃ¼ck
   Future<NavigationRoute> calculateNavigationRoute({
     required LatLng start,
     required LatLng end,
@@ -86,7 +239,7 @@ class RoutingRepository {
     required String endAddress,
     required AppLocalizations l10n,
   }) async {
-    // Koordinaten für OSRM vorbereiten (lng,lat Format)
+    // Koordinaten fÃ¼r OSRM vorbereiten (lng,lat Format)
     final coords = <String>[];
     coords.add('${start.longitude},${start.latitude}');
 
@@ -98,8 +251,7 @@ class RoutingRepository {
 
     coords.add('${end.longitude},${end.latitude}');
 
-    final url =
-        '${ApiEndpoints.osrmRoute}/${coords.join(';')}'
+    final url = '${ApiEndpoints.osrmRoute}/${coords.join(';')}'
         '?overview=full&geometries=geojson&steps=true&annotations=distance,duration';
 
     try {
@@ -137,10 +289,10 @@ class RoutingRepository {
                 .toList();
           }
 
-          final type = ManeuverType.fromOsrm(
-              maneuver['type']?.toString() ?? 'unknown');
-          final modifier = ManeuverModifier.fromOsrm(
-              maneuver['modifier']?.toString());
+          final type =
+              ManeuverType.fromOsrm(maneuver['type']?.toString() ?? 'unknown');
+          final modifier =
+              ManeuverModifier.fromOsrm(maneuver['modifier']?.toString());
           final streetName = stepData['name']?.toString() ?? '';
           final roundaboutExit = maneuver['exit'] as int?;
 
@@ -163,10 +315,8 @@ class RoutingRepository {
             durationSeconds: (stepData['duration'] as num?)?.toDouble() ?? 0,
             streetName: streetName,
             instruction: instruction,
-            bearingBefore:
-                (maneuver['bearing_before'] as num?)?.toInt() ?? 0,
-            bearingAfter:
-                (maneuver['bearing_after'] as num?)?.toInt() ?? 0,
+            bearingBefore: (maneuver['bearing_before'] as num?)?.toInt() ?? 0,
+            bearingAfter: (maneuver['bearing_after'] as num?)?.toInt() ?? 0,
             geometry: stepCoords,
             roundaboutExit: roundaboutExit,
           ));
@@ -201,13 +351,12 @@ class RoutingRepository {
         legs: legs,
       );
     } on DioException catch (e) {
-      throw RoutingException(
-          'Navigationsroute fehlgeschlagen: ${e.message}');
+      throw RoutingException('Navigationsroute fehlgeschlagen: ${e.message}');
     }
   }
 
   /// Berechnet landschaftliche Route via OpenRouteService
-  /// Vermeidet Autobahnen für schönere Strecken
+  /// Vermeidet Autobahnen fÃ¼r schÃ¶nere Strecken
   Future<AppRoute> calculateScenicRoute({
     required LatLng start,
     required LatLng end,
@@ -216,12 +365,11 @@ class RoutingRepository {
     required String endAddress,
   }) async {
     if (_orsApiKey == null || _orsApiKey!.isEmpty) {
-      throw RoutingException(
-          'OpenRouteService API-Key nicht konfiguriert. '
+      throw RoutingException('OpenRouteService API-Key nicht konfiguriert. '
           'Registrieren Sie sich kostenlos unter https://openrouteservice.org');
     }
 
-    // Koordinaten für ORS vorbereiten
+    // Koordinaten fÃ¼r ORS vorbereiten
     final coords = <List<double>>[];
     coords.add([start.longitude, start.latitude]);
 
@@ -283,7 +431,7 @@ class RoutingRepository {
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw RoutingException('ORS API-Key ungültig oder Limit erreicht');
+        throw RoutingException('ORS API-Key ungÃ¼ltig oder Limit erreicht');
       }
       throw RoutingException('Scenic-Route fehlgeschlagen: ${e.message}');
     }
@@ -371,7 +519,7 @@ class RoutingException implements Exception {
   String toString() => 'RoutingException: $message';
 }
 
-/// Riverpod Provider für RoutingRepository
+/// Riverpod Provider fÃ¼r RoutingRepository
 @riverpod
 RoutingRepository routingRepository(RoutingRepositoryRef ref) {
   // ORS API-Key wird via --dart-define=ORS_API_KEY=... bereitgestellt

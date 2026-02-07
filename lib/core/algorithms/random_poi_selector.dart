@@ -28,6 +28,7 @@ class RandomPOISelector {
     LatLng? tripEndLocation,
     double? remainingTripBudgetKm,
     LatLng? currentAnchorLocation,
+    List<LatLng>? progressRouteCoordinates,
   }) {
     if (pois.isEmpty || count <= 0) return [];
 
@@ -46,6 +47,7 @@ class RandomPOISelector {
         tripEndLocation: tripEndLocation,
         remainingTripBudgetKm: remainingTripBudgetKm,
         currentAnchorLocation: currentAnchorLocation,
+        progressRouteCoordinates: progressRouteCoordinates,
       );
     }
 
@@ -100,6 +102,7 @@ class RandomPOISelector {
     LatLng? tripEndLocation,
     double? remainingTripBudgetKm,
     LatLng? currentAnchorLocation,
+    List<LatLng>? progressRouteCoordinates,
   }) {
     final selected = <POI>[];
     final categoryCount = <String, int>{};
@@ -107,6 +110,10 @@ class RandomPOISelector {
 
     var anchor = currentAnchorLocation ?? startLocation;
     var remainingBudget = remainingTripBudgetKm ?? double.infinity;
+    var anchorProgress = (progressRouteCoordinates != null &&
+            progressRouteCoordinates.length >= 2)
+        ? GeoUtils.calculateRoutePosition(anchor, progressRouteCoordinates)
+        : 0.0;
 
     while (selected.length < count) {
       final remainingPicks = count - selected.length;
@@ -127,6 +134,27 @@ class RandomPOISelector {
           final distanceToEnd =
               GeoUtils.haversineDistance(poi.location, tripEndLocation);
           if (distanceToEnd > remainingSteps * maxSegmentKm) {
+            continue;
+          }
+        }
+
+        if (progressRouteCoordinates != null &&
+            progressRouteCoordinates.length >= 2) {
+          final candidateProgress = GeoUtils.calculateRoutePosition(
+            poi.location,
+            progressRouteCoordinates,
+          );
+          if (candidateProgress < anchorProgress - 0.01) {
+            continue;
+          }
+        }
+
+        if (tripEndLocation != null && progressRouteCoordinates != null) {
+          final anchorToEnd =
+              GeoUtils.haversineDistance(anchor, tripEndLocation);
+          final candidateToEnd =
+              GeoUtils.haversineDistance(poi.location, tripEndLocation);
+          if (candidateToEnd > anchorToEnd + 0.5) {
             continue;
           }
         }
@@ -157,6 +185,13 @@ class RandomPOISelector {
       final segmentKm = GeoUtils.haversineDistance(anchor, picked.location);
       remainingBudget -= segmentKm;
       anchor = picked.location;
+      if (progressRouteCoordinates != null &&
+          progressRouteCoordinates.length >= 2) {
+        anchorProgress = GeoUtils.calculateRoutePosition(
+          picked.location,
+          progressRouteCoordinates,
+        );
+      }
     }
 
     return selected;

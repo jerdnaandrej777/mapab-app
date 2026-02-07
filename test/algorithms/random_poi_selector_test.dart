@@ -89,5 +89,44 @@ void main() {
 
       expect(totalKm, lessThanOrEqualTo(150.0));
     });
+
+    test('does not move backwards on direct route progress', () {
+      final selector = RandomPOISelector(random: Random(23));
+      const start = LatLng(0, 0);
+      const end = LatLng(0, 3.0);
+      final directRoute = const [
+        LatLng(0, 0),
+        LatLng(0, 1),
+        LatLng(0, 2),
+        LatLng(0, 3),
+      ];
+
+      final pois = [
+        createPOI(id: 'forward-1', latitude: 0, longitude: 0.8, score: 60),
+        createPOI(id: 'forward-2', latitude: 0, longitude: 1.8, score: 58),
+        createPOI(id: 'forward-3', latitude: 0, longitude: 2.6, score: 57),
+        createPOI(id: 'backward', latitude: 0, longitude: -0.7, score: 99),
+      ];
+
+      final selected = selector.selectRandomPOIs(
+        pois: pois,
+        startLocation: start,
+        count: 3,
+        maxSegmentKm: 180,
+        tripEndLocation: end,
+        currentAnchorLocation: start,
+        progressRouteCoordinates: directRoute,
+      );
+
+      expect(selected.map((p) => p.id), isNot(contains('backward')));
+
+      var previousProgress = 0.0;
+      for (final poi in selected) {
+        final progress =
+            GeoUtils.calculateRoutePosition(poi.location, directRoute);
+        expect(progress, greaterThanOrEqualTo(previousProgress - 1e-6));
+        previousProgress = progress;
+      }
+    });
   });
 }

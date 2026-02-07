@@ -254,6 +254,20 @@ class TripGeneratorRepository {
 
     final categoryIds =
         categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
+    List<LatLng>? progressRouteCoordinates;
+    if (hasDestination) {
+      try {
+        final directRoute = await _routingRepo.calculateFastRoute(
+          start: startLocation,
+          end: endLocation,
+          startAddress: startAddress,
+          endAddress: endAddress,
+        );
+        progressRouteCoordinates = directRoute.coordinates;
+      } catch (_) {
+        progressRouteCoordinates = [startLocation, endLocation];
+      }
+    }
 
     List<POI> availablePOIs = await _loadPOIsForEuroTrip(
       startLocation: startLocation,
@@ -302,6 +316,7 @@ class TripGeneratorRepository {
       targetDays: envelope.effectiveDays,
       envelope: envelope,
       preferredCategories: categories,
+      progressRouteCoordinates: progressRouteCoordinates,
     );
 
     if (planningResult == null || !planningResult.isValid) {
@@ -316,6 +331,7 @@ class TripGeneratorRepository {
         requestedRadiusKm: radiusKm,
         preferredCategories: categories,
         startDays: envelope.effectiveDays,
+        progressRouteCoordinates: progressRouteCoordinates,
       );
     }
 
@@ -573,6 +589,7 @@ class TripGeneratorRepository {
     required int targetDays,
     required _TripFeasibilityEnvelope envelope,
     required List<POICategory> preferredCategories,
+    required List<LatLng>? progressRouteCoordinates,
   }) {
     final poisPerDay = min(
       DayPlanner.estimatePoisPerDay(),
@@ -610,6 +627,7 @@ class TripGeneratorRepository {
         tripEndLocation: endLocation,
         remainingTripBudgetKm: envelope.totalBudgetKm * budgetFactor,
         currentAnchorLocation: startLocation,
+        progressRouteCoordinates: progressRouteCoordinates,
       );
       if (selectedPOIs.isEmpty) {
         debugPrint('[TripGenerator] Versuch $attempt: keine selektierten POIs');
@@ -677,6 +695,7 @@ class TripGeneratorRepository {
     required double requestedRadiusKm,
     required List<POICategory> preferredCategories,
     required int startDays,
+    required List<LatLng>? progressRouteCoordinates,
   }) {
     final triedEffectiveDays = <int>{};
     _EuroTripPlanningResult? lastInvalid;
@@ -702,6 +721,7 @@ class TripGeneratorRepository {
         targetDays: envelope.effectiveDays,
         envelope: envelope,
         preferredCategories: preferredCategories,
+        progressRouteCoordinates: progressRouteCoordinates,
       );
       if (result == null) continue;
       if (result.isValid) {
@@ -1555,12 +1575,42 @@ class TripGeneratorRepository {
         '[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) → NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
 
     // 3. POIs in der Box laden
-    return await _poiRepo.loadPOIsInBounds(
+    final poisInBounds = await _poiRepo.loadPOIsInBounds(
       bounds: bounds,
       categoryFilter: categoryFilter,
       includeWikipedia: includeWikipedia,
       includeOverpass: includeOverpass,
     );
+
+    if (poisInBounds.isEmpty) return poisInBounds;
+
+    // 4. Harte Korridor-Filterung entlang der direkten Route
+    // Verhindert Bounding-Box-Ausreißer weit weg von der eigentlichen Route.
+    final filtered = poisInBounds.where((poi) {
+      if (!_isValidLatLng(poi.location)) return false;
+      final closest = GeoUtils.findClosestPointOnRoute(
+          poi.location, directRoute.coordinates);
+      if (closest.distance > bufferKm) return false;
+      final progress = GeoUtils.calculateRoutePosition(
+          poi.location, directRoute.coordinates);
+      return progress >= -0.02 && progress <= 1.02;
+    }).toList();
+
+    debugPrint(
+      '[TripGenerator] Korridor-Filter: ${poisInBounds.length} -> ${filtered.length} '
+      '(max Detour ${bufferKm.toStringAsFixed(0)}km)',
+    );
+
+    return filtered;
+  }
+
+  bool _isValidLatLng(LatLng location) {
+    return location.latitude.isFinite &&
+        location.longitude.isFinite &&
+        location.latitude >= -90 &&
+        location.latitude <= 90 &&
+        location.longitude >= -180 &&
+        location.longitude <= 180;
   }
 
   /// Generiert Trip-Namen basierend auf POIs

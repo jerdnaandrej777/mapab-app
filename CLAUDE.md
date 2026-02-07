@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.26 - EuroTrip Stability Rollout | Plattformen: Android, iOS, Desktop
+Version: 1.10.27 - EuroTrip Routing Stability | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -496,6 +496,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.27.md` (EuroTrip Routing-Stabilisierung: OSRM-400 Fallback via segmentierte Berechnung, direkter Korridor-Filter statt Bounding-Box-Ausreißer, Vorwärts-POI-Progress ohne Rücksprung, Waypoint-Sanitizing/Downsampling)
 - `Dokumentation/CHANGELOG-v1.10.26.md` (EuroTrip Stabilitaet: 700-km-gekoppelte POI-Selektion, segment-sichere Kandidatenwahl, Auto-Tagesreduktion statt Abbruch, Release-Rollout mit neuer APK/QR-Links)
 - `Dokumentation/CHANGELOG-v1.10.24.md` (AI Tagestrip Fix: Reiseentfernung wird als echtes Distanzlimit erzwungen; Tagestrip-Radius bleibt beim Moduswechsel erhalten statt Reset auf 100km; 2 Regression-Tests fuer RouteOptimizer)
 - `Dokumentation/CHANGELOG-v1.10.25.md` (AI Euro Trip Stabilisierung: 700-km-Hardlimit pro Tag, korrekte Tagesuebergabe Tag N -> Tag N+1, Hotel-Engine mit 20-km-Radius und Rich-Details inkl. Booking-Datum)
