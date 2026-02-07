@@ -11,6 +11,7 @@ import '../../core/constants/trip_constants.dart';
 import '../../core/utils/geo_utils.dart';
 import '../../core/utils/scoring_utils.dart';
 import '../models/poi.dart';
+import '../models/route.dart';
 import '../models/trip.dart';
 import '../services/hotel_service.dart';
 import 'poi_repo.dart';
@@ -66,6 +67,14 @@ class TripGeneratorRepository {
     final hasDestination = destinationLocation != null;
     final endLocation = destinationLocation ?? startLocation;
     final endAddress = destinationAddress ?? startAddress;
+    final maxRouteDistanceKm = radiusKm;
+
+    // Tagestrip-Filter steht für maximale Reisedistanz, nicht für maximale Luftlinie.
+    // Rundreisen laden deshalb POIs nur im halben Radius, sonst wird das Distanzziel
+    // fast immer überschritten (Hin- und Rückweg).
+    final poiSearchRadiusKm = hasDestination
+        ? radiusKm
+        : (radiusKm / 2).clamp(15.0, radiusKm);
 
     // 1. POIs laden — Korridor oder Radius
     final categoryIds = categories.isNotEmpty
@@ -84,7 +93,7 @@ class TripGeneratorRepository {
     } else {
       availablePOIs = await _poiRepo.loadPOIsInRadius(
         center: startLocation,
-        radiusKm: radiusKm,
+        radiusKm: poiSearchRadiusKm,
         categoryFilter: categoryIds,
       );
     }
@@ -96,7 +105,31 @@ class TripGeneratorRepository {
       throw TripGenerationException(
         hasDestination
             ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
-            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden',
+            : 'Keine POIs im Umkreis von ${poiSearchRadiusKm.toStringAsFixed(0)}km gefunden',
+      );
+    }
+
+    // Vorfilter: POIs, die mit hoher Wahrscheinlichkeit niemals ins Distanzbudget passen,
+    // direkt entfernen. Das reduziert Fehlversuche und macht die Tagestrip-Distanz stabil.
+    final geo = const Distance();
+    if (hasDestination) {
+      availablePOIs = availablePOIs.where((poi) {
+        final startToPoi = geo.as(LengthUnit.Kilometer, startLocation, poi.location);
+        final poiToEnd = geo.as(LengthUnit.Kilometer, poi.location, endLocation);
+        return (startToPoi + poiToEnd) <= maxRouteDistanceKm;
+      }).toList();
+    } else {
+      final maxLegKm = maxRouteDistanceKm / 2;
+      availablePOIs = availablePOIs.where((poi) {
+        final startToPoi = geo.as(LengthUnit.Kilometer, startLocation, poi.location);
+        return startToPoi <= maxLegKm;
+      }).toList();
+    }
+
+    if (availablePOIs.isEmpty) {
+      throw TripGenerationException(
+        'Keine POIs innerhalb der gewählten Reiseentfernung (${maxRouteDistanceKm.toStringAsFixed(0)} km) gefunden. '
+        'Bitte Reiseentfernung erhöhen oder einen anderen Startpunkt wählen.',
       );
     }
 
@@ -114,52 +147,100 @@ class TripGeneratorRepository {
       }).toList();
     }
 
-    // 2. Zufällige POIs auswählen
-    final selectedPOIs = _poiSelector.selectRandomPOIs(
-      pois: availablePOIs,
-      startLocation: startLocation,
-      count: poiCount,
-      preferredCategories: categories,
-    );
+    // 2-4. POIs auswählen + Route berechnen, bis Distanzlimit erreicht ist
+    // Robust gegen Zufall: pro POI-Anzahl mehrere Versuche mit unterschiedlicher Reihenfolge.
+    final initialPoiCount = poiCount.clamp(1, 8);
+    final maxAttemptsPerCount = 4;
 
-    if (selectedPOIs.isEmpty) {
+    AppRoute? bestRoute;
+    List<POI> bestOptimizedPOIs = const [];
+
+    for (int currentPoiCount = initialPoiCount; currentPoiCount >= 1; currentPoiCount--) {
+      for (int attempt = 0; attempt < maxAttemptsPerCount; attempt++) {
+        // Deterministisch variieren: Reihenfolge rotieren statt reinen Zufall zu hoffen.
+        final rotatedPool = <POI>[];
+        if (availablePOIs.isNotEmpty) {
+          final offset = attempt % availablePOIs.length;
+          rotatedPool
+            ..addAll(availablePOIs.skip(offset))
+            ..addAll(availablePOIs.take(offset));
+        }
+
+        final selectedPOIs = _poiSelector.selectRandomPOIs(
+          pois: rotatedPool,
+          startLocation: startLocation,
+          count: currentPoiCount,
+          preferredCategories: categories,
+        );
+
+        if (selectedPOIs.isEmpty) {
+          continue;
+        }
+
+        final List<POI> optimizedPOIs;
+        if (hasDestination) {
+          optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
+            pois: selectedPOIs,
+            startLocation: startLocation,
+            endLocation: destinationLocation!,
+          );
+        } else {
+          optimizedPOIs = _routeOptimizer.optimizeRoute(
+            pois: selectedPOIs,
+            startLocation: startLocation,
+            returnToStart: true,
+          );
+        }
+
+        final waypoints = optimizedPOIs.map((p) => p.location).toList();
+        final route = await _routingRepo.calculateFastRoute(
+          start: startLocation,
+          end: endLocation,
+          waypoints: waypoints,
+          startAddress: startAddress,
+          endAddress: endAddress,
+        );
+
+        if (bestRoute == null || route.distanceKm < bestRoute.distanceKm) {
+          bestRoute = route;
+          bestOptimizedPOIs = optimizedPOIs;
+        }
+
+        if (route.distanceKm <= maxRouteDistanceKm) {
+          bestRoute = route;
+          bestOptimizedPOIs = optimizedPOIs;
+          break;
+        }
+      }
+
+      if (bestRoute != null && bestRoute.distanceKm <= maxRouteDistanceKm) {
+        break;
+      }
+
+      debugPrint(
+        '[TripGenerator] Tagestrip Distanz über Limit, reduziere POIs: $currentPoiCount → ${currentPoiCount - 1}',
+      );
+    }
+
+    if (bestRoute == null || bestOptimizedPOIs.isEmpty) {
       throw TripGenerationException('Keine passenden POIs gefunden');
     }
 
-    // 3. Route optimieren
-    final List<POI> optimizedPOIs;
-    if (hasDestination) {
-      // Richtungs-Optimierung: POIs vorwaerts entlang Start → Ziel
-      optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
-        pois: selectedPOIs,
-        startLocation: startLocation,
-        endLocation: destinationLocation!,
-      );
-    } else {
-      optimizedPOIs = _routeOptimizer.optimizeRoute(
-        pois: selectedPOIs,
-        startLocation: startLocation,
-        returnToStart: true,
+    if (bestRoute.distanceKm > maxRouteDistanceKm) {
+      throw TripGenerationException(
+        'Die gewählte Reiseentfernung von ${maxRouteDistanceKm.toStringAsFixed(0)} km konnte nicht eingehalten werden. '
+        'Kürzeste gefundene Route: ${bestRoute.distanceKm.toStringAsFixed(0)} km. '
+        'Bitte Radius erhöhen oder Zielpunkt näher wählen.',
       );
     }
-
-    // 4. Echte Route berechnen
-    final waypoints = optimizedPOIs.map((p) => p.location).toList();
-    final route = await _routingRepo.calculateFastRoute(
-      start: startLocation,
-      end: endLocation,
-      waypoints: waypoints,
-      startAddress: startAddress,
-      endAddress: endAddress,
-    );
 
     // 5. Trip erstellen
     final trip = Trip(
       id: _uuid.v4(),
-      name: _generateTripName(optimizedPOIs),
+      name: _generateTripName(bestOptimizedPOIs),
       type: TripType.daytrip,
-      route: route,
-      stops: optimizedPOIs.asMap().entries.map((entry) {
+      route: bestRoute,
+      stops: bestOptimizedPOIs.asMap().entries.map((entry) {
         return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
       }).toList(),
       days: 1,
@@ -170,7 +251,7 @@ class TripGeneratorRepository {
     return GeneratedTrip(
       trip: trip,
       availablePOIs: availablePOIs,
-      selectedPOIs: optimizedPOIs,
+      selectedPOIs: bestOptimizedPOIs,
     );
   }
 

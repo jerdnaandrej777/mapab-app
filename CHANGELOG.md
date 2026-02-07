@@ -7,6 +7,18 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.23] - 2026-02-08
+
+### Behoben
+
+- **AI Tagestrip respektiert Reiseentfernung als hartes Limit**
+  - Der im UI gewählte km-Wert wird jetzt als maximale Routenlänge behandelt
+  - POIs werden vorab auf Distanz-Budget geprüft (Rundreise und A→B)
+  - Mehrere Generierungsversuche pro POI-Anzahl reduzieren Zufallsausreißer
+  - Klare Fehlermeldung, wenn keine Route innerhalb des Limits möglich ist
+- **Datei**: `lib/data/repositories/trip_generator_repo.dart`
+- **Details**: [Dokumentation/CHANGELOG-v1.10.23.md](Dokumentation/CHANGELOG-v1.10.23.md)
+
 ## [1.7.19] - 2026-01-31
 
 ### UI-Verbesserungen
