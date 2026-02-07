@@ -224,61 +224,45 @@ class TripGeneratorRepository {
     final endLocation = destinationLocation ?? startLocation;
     final endAddress = destinationAddress ?? startAddress;
 
-    final effectiveDays =
+    final requestedDays =
         days ?? TripConstants.calculateDaysFromDistance(radiusKm);
+    final envelope = _computeTripFeasibilityEnvelope(
+      startLocation: startLocation,
+      endLocation: endLocation,
+      requestedRadiusKm: radiusKm,
+      requestedDays: requestedDays,
+      hasDestination: hasDestination,
+    );
     debugPrint(
         '[TripGenerator] ===============================================');
     debugPrint('[TripGenerator] EURO TRIP START');
-    debugPrint('[TripGenerator] Tage: $effectiveDays, Radius: ${radiusKm}km');
+    debugPrint(
+        '[TripGenerator] Tage angefragt: $requestedDays, genutzt: ${envelope.effectiveDays}');
+    debugPrint(
+        '[TripGenerator] Radius angefragt: ${radiusKm.toStringAsFixed(0)}km, '
+        'effektiv: ${envelope.effectiveRadiusKm.toStringAsFixed(0)}km');
     debugPrint(
         '[TripGenerator] Start: $startAddress (${startLocation.latitude}, ${startLocation.longitude})');
     debugPrint(
         '[TripGenerator] Modus: ${hasDestination ? 'A->B ($endAddress)' : 'Rundreise'}');
     debugPrint(
+        '[TripGenerator] Tagesbudget: ${envelope.maxDayHaversineKm.toStringAsFixed(0)}km Haversine '
+        '(~${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Display), '
+        'Gesamtbudget: ${envelope.totalBudgetKm.toStringAsFixed(0)}km');
+    debugPrint(
         '[TripGenerator] ===============================================');
-
-    final poisPerDay = min(
-      DayPlanner.estimatePoisPerDay(),
-      TripConstants.maxPoisPerDay,
-    );
-    final totalPOIs = effectiveDays * poisPerDay;
-    debugPrint('[TripGenerator] POIs: $poisPerDay pro Tag, $totalPOIs gesamt');
 
     final categoryIds =
         categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
 
-    List<POI> availablePOIs;
-    if (hasDestination) {
-      debugPrint(
-          '[TripGenerator] Euro Trip Korridor-Modus: $startAddress -> $endAddress, ${radiusKm}km Breite');
-      availablePOIs = await _loadPOIsAlongCorridor(
-        start: startLocation,
-        end: destinationLocation!,
-        bufferKm: radiusKm,
-        categoryFilter: categoryIds,
-      ).timeout(
-        const Duration(seconds: 45),
-        onTimeout: () {
-          debugPrint(
-              '[TripGenerator] [WARN] Korridor POI-Laden Timeout nach 45s');
-          return <POI>[];
-        },
-      );
-    } else {
-      availablePOIs = await _poiRepo
-          .loadPOIsInRadius(
-        center: startLocation,
-        radiusKm: radiusKm,
-        categoryFilter: categoryIds,
-      )
-          .timeout(
-        const Duration(seconds: 45),
-        onTimeout: () {
-          debugPrint('[TripGenerator] [WARN] POI-Laden Timeout nach 45s');
-          return <POI>[];
-        },
-      );
-    }
+    List<POI> availablePOIs = await _loadPOIsForEuroTrip(
+      startLocation: startLocation,
+      endLocation: endLocation,
+      hasDestination: hasDestination,
+      requestedRadiusKm: radiusKm,
+      categoryIds: categoryIds,
+      envelope: envelope,
+    );
 
     debugPrint('[TripGenerator] ${availablePOIs.length} POIs gefunden');
 
@@ -289,7 +273,7 @@ class TripGeneratorRepository {
       throw TripGenerationException(
         hasDestination
             ? 'Keine POIs entlang der Route $startAddress -> $endAddress gefunden'
-            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
+            : 'Keine POIs im Umkreis von ${envelope.effectiveRadiusKm.round()}km gefunden. '
                 'Versuche einen anderen Startpunkt oder kleineren Radius.',
       );
     }
@@ -308,80 +292,53 @@ class TripGeneratorRepository {
     }
 
     debugPrint(
-        '[TripGenerator] SCHRITT 2-4: Auswahl + Optimierung + Tagesplanung ($effectiveDays Tage, max $totalPOIs POIs)...');
-    List<POI> selectedPOIs = const [];
-    List<POI> optimizedPOIs = const [];
-    List<TripDay> tripDays = const [];
-    var actualDays = effectiveDays;
-    List<DayLimitViolation> lastViolations = const [];
+        '[TripGenerator] SCHRITT 2-4: Constraint-Auswahl + Optimierung + Tagesplanung (${envelope.effectiveDays} Tage)...');
+    var planningResult = _attemptConstrainedEuroTripPlan(
+      availablePOIs: availablePOIs,
+      startLocation: startLocation,
+      endLocation: endLocation,
+      hasDestination: hasDestination,
+      requestedDays: requestedDays,
+      targetDays: envelope.effectiveDays,
+      envelope: envelope,
+      preferredCategories: categories,
+    );
 
-    const maxPlanningAttempts = 6;
-    for (int attempt = 1; attempt <= maxPlanningAttempts; attempt++) {
-      selectedPOIs = _poiSelector.selectRandomPOIs(
-        pois: availablePOIs,
-        startLocation: startLocation,
-        count: totalPOIs,
-        preferredCategories: categories,
-        maxPerCategory: 3,
-      );
-      if (selectedPOIs.isEmpty) {
-        continue;
-      }
-
-      if (hasDestination) {
-        optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
-          pois: selectedPOIs,
-          startLocation: startLocation,
-          endLocation: destinationLocation!,
-        );
-      } else {
-        optimizedPOIs = _routeOptimizer.optimizeRoute(
-          pois: selectedPOIs,
-          startLocation: startLocation,
-          returnToStart: true,
-        );
-      }
-
-      tripDays = _dayPlanner.planDays(
-        pois: optimizedPOIs,
-        startLocation: startLocation,
-        days: effectiveDays,
-        returnToStart: !hasDestination,
-        endLocation: hasDestination ? endLocation : null,
-      );
-      actualDays = tripDays.length;
-
-      lastViolations = _dayPlanner.validateDayLimits(
-        tripDays: tripDays,
-        tripStart: startLocation,
-        returnToStart: !hasDestination,
-        tripEnd: hasDestination ? endLocation : null,
-      );
-      if (lastViolations.isEmpty) {
-        debugPrint(
-            '[TripGenerator] SCHRITT 2-4 OK (Versuch $attempt): ${optimizedPOIs.length} POIs, $actualDays Tage');
-        break;
-      }
-
+    if (planningResult == null || !planningResult.isValid) {
       debugPrint(
-          '[TripGenerator] Versuch $attempt: ${lastViolations.length} Tageslimit-Verletzungen erkannt');
-      for (final violation in lastViolations) {
-        debugPrint(
-            '[TripGenerator]   Tag ${violation.dayNumber}: ~${violation.displayKm.toStringAsFixed(0)}km (Grund: ${violation.reason})');
-      }
-    }
-
-    if (selectedPOIs.isEmpty || optimizedPOIs.isEmpty || tripDays.isEmpty) {
-      throw TripGenerationException('Keine passenden POIs gefunden');
-    }
-
-    if (lastViolations.isNotEmpty) {
-      final first = lastViolations.first;
-      throw TripGenerationException(
-        'Tageslimit (700km) kann mit den verfuegbaren POIs nicht eingehalten werden. '
-        'Problematisch: Tag ${first.dayNumber} (~${first.displayKm.toStringAsFixed(0)}km).',
+          '[TripGenerator] Kein valider Plan mit ${envelope.effectiveDays} Tagen. Starte Auto-Reduktion...');
+      planningResult = _buildTripWithAutoDayReduction(
+        availablePOIs: availablePOIs,
+        startLocation: startLocation,
+        endLocation: endLocation,
+        hasDestination: hasDestination,
+        requestedDays: requestedDays,
+        requestedRadiusKm: radiusKm,
+        preferredCategories: categories,
+        startDays: envelope.effectiveDays,
       );
     }
+
+    if (planningResult == null ||
+        planningResult.selectedPOIs.isEmpty ||
+        planningResult.optimizedPOIs.isEmpty ||
+        planningResult.tripDays.isEmpty ||
+        planningResult.violations.isNotEmpty) {
+      final first = planningResult?.violations.firstOrNull;
+      final attemptedDays = planningResult?.usedDays ?? envelope.effectiveDays;
+      throw TripGenerationException(
+        first == null
+            ? 'Keine stabilen POIs fuer eine berechenbare Route gefunden. '
+                'Angefragt: $requestedDays Tage, geprueft bis $attemptedDays Tage.'
+            : 'Tageslimit (700km) kann auch nach Auto-Reduktion nicht eingehalten werden. '
+                'Angefragt: $requestedDays Tage, geprueft bis $attemptedDays Tage, '
+                'problematisch: Tag ${first.dayNumber} (~${first.displayKm.toStringAsFixed(0)}km).',
+      );
+    }
+
+    var tripDays = planningResult.tripDays;
+    final optimizedPOIs = planningResult.optimizedPOIs;
+    final actualDays = tripDays.length;
 
     debugPrint(
         '[TripGenerator] SCHRITT 5: Hotel-Suche (${includeHotels && actualDays > 1 ? 'aktiv' : 'uebersprungen'})...');
@@ -481,6 +438,337 @@ class TripGeneratorRepository {
       tripDays: tripDays,
       hotelSuggestions: hotelSuggestions,
     );
+  }
+
+  _TripFeasibilityEnvelope _computeTripFeasibilityEnvelope({
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required double requestedRadiusKm,
+    required int requestedDays,
+    required bool hasDestination,
+  }) {
+    final maxDayHaversineKm = TripConstants.maxHaversineKmForDisplay;
+    final normalizedRequestedDays = requestedDays.clamp(
+      TripConstants.minDays,
+      TripConstants.maxDays,
+    );
+    final directDistanceKm =
+        GeoUtils.haversineDistance(startLocation, endLocation);
+
+    var effectiveDays = normalizedRequestedDays;
+    if (hasDestination) {
+      final minDaysForDirect = (directDistanceKm / maxDayHaversineKm)
+          .ceil()
+          .clamp(TripConstants.minDays, TripConstants.maxDays);
+      effectiveDays = max(effectiveDays, minDaysForDirect);
+    }
+
+    final totalBudgetKm = effectiveDays * maxDayHaversineKm;
+    final requestedRadius = requestedRadiusKm.clamp(10.0, 12000.0);
+
+    late final double effectiveRadiusKm;
+    if (hasDestination) {
+      final detourBudgetKm = max(0.0, totalBudgetKm - directDistanceKm);
+      final corridorBudgetKm = max(50.0, detourBudgetKm / 2);
+      effectiveRadiusKm = min(requestedRadius, corridorBudgetKm);
+    } else {
+      effectiveRadiusKm = min(requestedRadius, totalBudgetKm / 2);
+    }
+
+    return _TripFeasibilityEnvelope(
+      requestedDays: normalizedRequestedDays,
+      effectiveDays: effectiveDays,
+      requestedRadiusKm: requestedRadius,
+      effectiveRadiusKm: max(10.0, effectiveRadiusKm),
+      maxDayHaversineKm: maxDayHaversineKm,
+      totalBudgetKm: totalBudgetKm,
+      directDistanceKm: directDistanceKm,
+      hasDestination: hasDestination,
+    );
+  }
+
+  Future<List<POI>> _loadPOIsForEuroTrip({
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+    required double requestedRadiusKm,
+    required List<String>? categoryIds,
+    required _TripFeasibilityEnvelope envelope,
+  }) async {
+    List<POI> availablePOIs;
+    if (hasDestination) {
+      availablePOIs = await _loadPOIsAlongCorridor(
+        start: startLocation,
+        end: endLocation,
+        bufferKm: envelope.effectiveRadiusKm,
+        categoryFilter: categoryIds,
+      ).timeout(
+        const Duration(seconds: 45),
+        onTimeout: () {
+          debugPrint(
+              '[TripGenerator] [WARN] Korridor POI-Laden Timeout nach 45s');
+          return <POI>[];
+        },
+      );
+    } else {
+      availablePOIs = await _poiRepo
+          .loadPOIsInRadius(
+        center: startLocation,
+        radiusKm: envelope.effectiveRadiusKm,
+        categoryFilter: categoryIds,
+      )
+          .timeout(
+        const Duration(seconds: 45),
+        onTimeout: () {
+          debugPrint('[TripGenerator] [WARN] POI-Laden Timeout nach 45s');
+          return <POI>[];
+        },
+      );
+    }
+
+    if (availablePOIs.isNotEmpty) {
+      return availablePOIs;
+    }
+
+    debugPrint(
+        '[TripGenerator] Kein POI-Treffer im Constraint-Radius. Starte curated-only Rettungslauf...');
+    if (hasDestination) {
+      final rescueBufferKm =
+          max(envelope.effectiveRadiusKm, max(requestedRadiusKm, 150.0));
+      return _loadPOIsAlongCorridor(
+        start: startLocation,
+        end: endLocation,
+        bufferKm: rescueBufferKm,
+        categoryFilter: categoryIds,
+        includeWikipedia: false,
+        includeOverpass: false,
+      ).timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => <POI>[],
+      );
+    }
+
+    final rescueRadiusKm = max(envelope.effectiveRadiusKm,
+        max(requestedRadiusKm, envelope.totalBudgetKm));
+    return _poiRepo
+        .loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: rescueRadiusKm,
+          categoryFilter: categoryIds,
+          includeWikipedia: false,
+          includeOverpass: false,
+        )
+        .timeout(
+          const Duration(seconds: 45),
+          onTimeout: () => <POI>[],
+        );
+  }
+
+  _EuroTripPlanningResult? _attemptConstrainedEuroTripPlan({
+    required List<POI> availablePOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+    required int requestedDays,
+    required int targetDays,
+    required _TripFeasibilityEnvelope envelope,
+    required List<POICategory> preferredCategories,
+  }) {
+    final poisPerDay = min(
+      DayPlanner.estimatePoisPerDay(),
+      TripConstants.maxPoisPerDay,
+    );
+    final desiredPoiCount = max(targetDays, targetDays * poisPerDay);
+    _EuroTripPlanningResult? lastInvalid;
+
+    const maxPlanningAttempts = 6;
+    for (int attempt = 1; attempt <= maxPlanningAttempts; attempt++) {
+      final budgetFactor = _globalBudgetFactorForAttempt(attempt);
+      final constrainedPool = _filterFeasiblePOIsByGlobalBudget(
+        pois: availablePOIs,
+        startLocation: startLocation,
+        endLocation: endLocation,
+        totalBudgetKm: envelope.totalBudgetKm,
+        isRoundTrip: !hasDestination,
+        budgetFactor: budgetFactor,
+      );
+      if (constrainedPool.isEmpty) {
+        debugPrint('[TripGenerator] Versuch $attempt: kein machbarer POI-Pool');
+        continue;
+      }
+
+      final maxSegmentKm =
+          envelope.maxDayHaversineKm * _maxSegmentFactorForAttempt(attempt);
+      final selectionCount = min(desiredPoiCount, constrainedPool.length);
+      final selectedPOIs = _poiSelector.selectRandomPOIs(
+        pois: constrainedPool,
+        startLocation: startLocation,
+        count: selectionCount,
+        preferredCategories: preferredCategories,
+        maxPerCategory: 3,
+        maxSegmentKm: maxSegmentKm,
+        tripEndLocation: endLocation,
+        remainingTripBudgetKm: envelope.totalBudgetKm * budgetFactor,
+        currentAnchorLocation: startLocation,
+      );
+      if (selectedPOIs.isEmpty) {
+        debugPrint('[TripGenerator] Versuch $attempt: keine selektierten POIs');
+        continue;
+      }
+
+      final optimizedPOIs = hasDestination
+          ? _routeOptimizer.optimizeDirectionalRoute(
+              pois: selectedPOIs,
+              startLocation: startLocation,
+              endLocation: endLocation,
+            )
+          : _routeOptimizer.optimizeRoute(
+              pois: selectedPOIs,
+              startLocation: startLocation,
+              returnToStart: true,
+            );
+
+      final tripDays = _dayPlanner.planDays(
+        pois: optimizedPOIs,
+        startLocation: startLocation,
+        days: targetDays,
+        returnToStart: !hasDestination,
+        endLocation: hasDestination ? endLocation : null,
+      );
+      final violations = _dayPlanner.validateDayLimits(
+        tripDays: tripDays,
+        tripStart: startLocation,
+        returnToStart: !hasDestination,
+        tripEnd: hasDestination ? endLocation : null,
+      );
+
+      final result = _EuroTripPlanningResult(
+        requestedDays: requestedDays,
+        usedDays: targetDays,
+        selectedPOIs: selectedPOIs,
+        optimizedPOIs: optimizedPOIs,
+        tripDays: tripDays,
+        violations: violations,
+      );
+      if (result.isValid) {
+        debugPrint(
+            '[TripGenerator] SCHRITT 2-4 OK (Versuch $attempt): ${optimizedPOIs.length} POIs, ${tripDays.length} Tage');
+        return result;
+      }
+
+      debugPrint(
+          '[TripGenerator] Versuch $attempt: ${violations.length} Tageslimit-Verletzungen erkannt');
+      for (final violation in violations) {
+        debugPrint(
+            '[TripGenerator]   Tag ${violation.dayNumber}: ~${violation.displayKm.toStringAsFixed(0)}km (Grund: ${violation.reason})');
+      }
+      lastInvalid = result;
+    }
+
+    return lastInvalid;
+  }
+
+  _EuroTripPlanningResult? _buildTripWithAutoDayReduction({
+    required List<POI> availablePOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+    required int requestedDays,
+    required double requestedRadiusKm,
+    required List<POICategory> preferredCategories,
+    required int startDays,
+  }) {
+    final triedEffectiveDays = <int>{};
+    _EuroTripPlanningResult? lastInvalid;
+
+    for (int candidateDays = startDays; candidateDays >= 1; candidateDays--) {
+      final envelope = _computeTripFeasibilityEnvelope(
+        startLocation: startLocation,
+        endLocation: endLocation,
+        requestedRadiusKm: requestedRadiusKm,
+        requestedDays: candidateDays,
+        hasDestination: hasDestination,
+      );
+      if (!triedEffectiveDays.add(envelope.effectiveDays)) {
+        continue;
+      }
+
+      final result = _attemptConstrainedEuroTripPlan(
+        availablePOIs: availablePOIs,
+        startLocation: startLocation,
+        endLocation: endLocation,
+        hasDestination: hasDestination,
+        requestedDays: requestedDays,
+        targetDays: envelope.effectiveDays,
+        envelope: envelope,
+        preferredCategories: preferredCategories,
+      );
+      if (result == null) continue;
+      if (result.isValid) {
+        debugPrint(
+            '[TripGenerator] Auto-Reduktion erfolgreich: ${result.usedDays} Tage');
+        return result;
+      }
+      lastInvalid = result;
+    }
+
+    return lastInvalid;
+  }
+
+  double _globalBudgetFactorForAttempt(int attempt) {
+    if (attempt <= 2) return 0.90;
+    if (attempt <= 4) return 0.98;
+    return 1.00;
+  }
+
+  double _maxSegmentFactorForAttempt(int attempt) {
+    if (attempt <= 2) return 0.75;
+    if (attempt <= 4) return 0.90;
+    return 1.00;
+  }
+
+  List<POI> _filterFeasiblePOIsByGlobalBudget({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required double totalBudgetKm,
+    required bool isRoundTrip,
+    required double budgetFactor,
+  }) {
+    final allowedBudgetKm = totalBudgetKm * budgetFactor;
+    final maxOutboundRoundtripKm = totalBudgetKm / 2;
+    final scored = <({POI poi, double lowerBoundKm, double startDistanceKm})>[];
+
+    for (final poi in pois) {
+      final startDistanceKm =
+          GeoUtils.haversineDistance(startLocation, poi.location);
+      if (isRoundTrip && startDistanceKm > maxOutboundRoundtripKm) {
+        continue;
+      }
+
+      final endDistanceKm =
+          GeoUtils.haversineDistance(poi.location, endLocation);
+      final lowerBoundKm = startDistanceKm + endDistanceKm;
+      if (lowerBoundKm > allowedBudgetKm) {
+        continue;
+      }
+
+      scored.add((
+        poi: poi,
+        lowerBoundKm: lowerBoundKm,
+        startDistanceKm: startDistanceKm,
+      ));
+    }
+
+    scored.sort((a, b) {
+      final byBound = a.lowerBoundKm.compareTo(b.lowerBoundKm);
+      if (byBound != 0) return byBound;
+      final byStart = a.startDistanceKm.compareTo(b.startDistanceKm);
+      if (byStart != 0) return byStart;
+      return b.poi.score.compareTo(a.poi.score);
+    });
+
+    return scored.map((entry) => entry.poi).toList();
   }
 
   /// Entfernt einen einzelnen POI aus dem Trip
@@ -728,7 +1016,7 @@ class TripGeneratorRepository {
         : startLocation;
 
     // Max Segment = halbe Tagesbudget (ein Segment soll nicht den ganzen Tag verbrauchen)
-    final maxSegmentKm = TripConstants.maxKmPerDay / 2;
+    const maxSegmentKm = TripConstants.maxKmPerDay / 2;
 
     final triedPOIIds = <String>{poiIdToReroll};
     const maxRetries = 3;
@@ -1057,7 +1345,7 @@ class TripGeneratorRepository {
       nextLocation = currentTrip.trip.route.end;
     }
 
-    final maxSegmentKm = TripConstants.maxKmPerDay / 2;
+    const maxSegmentKm = TripConstants.maxKmPerDay / 2;
     final triedPOIIds = <String>{poiIdToReroll};
     const maxRetries = 3;
 
@@ -1245,6 +1533,8 @@ class TripGeneratorRepository {
     required LatLng end,
     required double bufferKm,
     List<String>? categoryFilter,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
   }) async {
     // 1. Direct-Route berechnen (für genaue Korridor-Box)
     debugPrint('[TripGenerator] Berechne Direct-Route für Korridor...');
@@ -1268,6 +1558,8 @@ class TripGeneratorRepository {
     return await _poiRepo.loadPOIsInBounds(
       bounds: bounds,
       categoryFilter: categoryFilter,
+      includeWikipedia: includeWikipedia,
+      includeOverpass: includeOverpass,
     );
   }
 
@@ -1299,6 +1591,52 @@ class TripGeneratorRepository {
 
     return '${days.length}-Tage-Trip: ${highlights.join(' → ')}';
   }
+}
+
+class _TripFeasibilityEnvelope {
+  final int requestedDays;
+  final int effectiveDays;
+  final double requestedRadiusKm;
+  final double effectiveRadiusKm;
+  final double maxDayHaversineKm;
+  final double totalBudgetKm;
+  final double directDistanceKm;
+  final bool hasDestination;
+
+  const _TripFeasibilityEnvelope({
+    required this.requestedDays,
+    required this.effectiveDays,
+    required this.requestedRadiusKm,
+    required this.effectiveRadiusKm,
+    required this.maxDayHaversineKm,
+    required this.totalBudgetKm,
+    required this.directDistanceKm,
+    required this.hasDestination,
+  });
+}
+
+class _EuroTripPlanningResult {
+  final int requestedDays;
+  final int usedDays;
+  final List<POI> selectedPOIs;
+  final List<POI> optimizedPOIs;
+  final List<TripDay> tripDays;
+  final List<DayLimitViolation> violations;
+
+  const _EuroTripPlanningResult({
+    required this.requestedDays,
+    required this.usedDays,
+    required this.selectedPOIs,
+    required this.optimizedPOIs,
+    required this.tripDays,
+    required this.violations,
+  });
+
+  bool get isValid =>
+      selectedPOIs.isNotEmpty &&
+      optimizedPOIs.isNotEmpty &&
+      tripDays.isNotEmpty &&
+      violations.isEmpty;
 }
 
 /// Ergebnis der Trip-Generierung

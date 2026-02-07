@@ -24,8 +24,30 @@ class RandomPOISelector {
     required int count,
     List<POICategory> preferredCategories = const [],
     int maxPerCategory = 2,
+    double? maxSegmentKm,
+    LatLng? tripEndLocation,
+    double? remainingTripBudgetKm,
+    LatLng? currentAnchorLocation,
   }) {
     if (pois.isEmpty || count <= 0) return [];
+
+    final useConstrainedMode = maxSegmentKm != null ||
+        tripEndLocation != null ||
+        remainingTripBudgetKm != null ||
+        currentAnchorLocation != null;
+    if (useConstrainedMode) {
+      return _selectConstrainedRandomPOIs(
+        pois: pois,
+        startLocation: startLocation,
+        count: count,
+        preferredCategories: preferredCategories,
+        maxPerCategory: maxPerCategory,
+        maxSegmentKm: maxSegmentKm,
+        tripEndLocation: tripEndLocation,
+        remainingTripBudgetKm: remainingTripBudgetKm,
+        currentAnchorLocation: currentAnchorLocation,
+      );
+    }
 
     // POIs mit Gewichtung versehen
     final weightedPOIs = pois.map((poi) {
@@ -63,6 +85,78 @@ class RandomPOISelector {
       // Aus Pool entfernen (O(n) via indexOf statt O(n) removeWhere)
       final idx = pool.indexOf(selectedPOI);
       if (idx >= 0) pool.removeAt(idx);
+    }
+
+    return selected;
+  }
+
+  List<POI> _selectConstrainedRandomPOIs({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required int count,
+    required List<POICategory> preferredCategories,
+    required int maxPerCategory,
+    double? maxSegmentKm,
+    LatLng? tripEndLocation,
+    double? remainingTripBudgetKm,
+    LatLng? currentAnchorLocation,
+  }) {
+    final selected = <POI>[];
+    final categoryCount = <String, int>{};
+    final usedIds = <String>{};
+
+    var anchor = currentAnchorLocation ?? startLocation;
+    var remainingBudget = remainingTripBudgetKm ?? double.infinity;
+
+    while (selected.length < count) {
+      final remainingPicks = count - selected.length;
+      final candidates = <POI>[];
+
+      for (final poi in pois) {
+        if (usedIds.contains(poi.id)) continue;
+
+        final catCount = categoryCount[poi.categoryId] ?? 0;
+        if (catCount >= maxPerCategory) continue;
+
+        final segmentKm = GeoUtils.haversineDistance(anchor, poi.location);
+        if (maxSegmentKm != null && segmentKm > maxSegmentKm) continue;
+        if (segmentKm > remainingBudget) continue;
+
+        if (tripEndLocation != null && maxSegmentKm != null) {
+          final remainingSteps = max(1, remainingPicks);
+          final distanceToEnd =
+              GeoUtils.haversineDistance(poi.location, tripEndLocation);
+          if (distanceToEnd > remainingSteps * maxSegmentKm) {
+            continue;
+          }
+        }
+
+        candidates.add(poi);
+      }
+
+      if (candidates.isEmpty) break;
+
+      final weighted = candidates.map((poi) {
+        final weight = _calculateWeight(
+          poi: poi,
+          startLocation: anchor,
+          preferredCategories: preferredCategories,
+        );
+        return _WeightedPOI(poi: poi, weight: weight);
+      }).toList();
+
+      final selectedWeighted = _weightedRandomSelect(weighted);
+      if (selectedWeighted == null) break;
+
+      final picked = selectedWeighted.poi;
+      selected.add(picked);
+      usedIds.add(picked.id);
+      categoryCount[picked.categoryId] =
+          (categoryCount[picked.categoryId] ?? 0) + 1;
+
+      final segmentKm = GeoUtils.haversineDistance(anchor, picked.location);
+      remainingBudget -= segmentKm;
+      anchor = picked.location;
     }
 
     return selected;
@@ -127,7 +221,7 @@ class RandomPOISelector {
     if (pool.isEmpty) return null;
 
     // Gesamtgewicht berechnen
-    double totalWeight = pool.fold(0, (sum, wp) => sum + wp.weight);
+    final totalWeight = pool.fold(0.0, (sum, wp) => sum + wp.weight);
 
     if (totalWeight <= 0) {
       // Fallback: zufällige Auswahl
@@ -135,7 +229,7 @@ class RandomPOISelector {
     }
 
     // Zufälliger Wert zwischen 0 und Gesamtgewicht
-    double randomValue = _random.nextDouble() * totalWeight;
+    final randomValue = _random.nextDouble() * totalWeight;
 
     // POI auswählen
     double cumulative = 0;
@@ -179,7 +273,8 @@ class RandomPOISelector {
     if (available.isEmpty) return null;
 
     // Distanz-Filter: nur POIs in akzeptabler Entfernung zu Nachbarn
-    if (maxSegmentKm != null && (previousLocation != null || nextLocation != null)) {
+    if (maxSegmentKm != null &&
+        (previousLocation != null || nextLocation != null)) {
       final distanceFiltered = available.where((p) {
         if (previousLocation != null) {
           final dist = GeoUtils.haversineDistance(previousLocation, p.location);

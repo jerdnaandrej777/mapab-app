@@ -82,7 +82,8 @@ class RadiusSlider extends ConsumerWidget {
             value: currentDays.toDouble(),
             min: TripConstants.euroTripMinDays.toDouble(),
             max: TripConstants.euroTripMaxDays.toDouble(),
-            divisions: TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
+            divisions:
+                TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
             onChanged: (value) => notifier.setEuroTripDays(value.round()),
           ),
         ),
@@ -194,11 +195,19 @@ class RadiusSlider extends ConsumerWidget {
 
   String _getDaysDescription(int days) {
     final radiusKm = (days * TripConstants.kmPerDay).round();
-    if (days == 1) return 'Tagesausflug — ca. $radiusKm km';
-    if (days == 2) return 'Wochenend-Trip — ca. $radiusKm km';
-    if (days <= 4) return 'Kurzurlaub — ca. $radiusKm km';
-    if (days <= 7) return 'Wochenreise — ca. $radiusKm km';
-    return 'Epischer Euro Trip — ca. $radiusKm km';
+    if (days == 1) {
+      return 'POI-Suchraum bis $radiusKm km, Tagesroute bleibt <=700 km';
+    }
+    if (days == 2) {
+      return 'Wochenend-Trip: Suchraum bis $radiusKm km, max. 700 km/Tag';
+    }
+    if (days <= 4) {
+      return 'Kurzurlaub: Suchraum bis $radiusKm km, Route auf 700 km/Tag begrenzt';
+    }
+    if (days <= 7) {
+      return 'Wochenreise: Suchraum bis $radiusKm km, Tageslimit 700 km';
+    }
+    return 'Euro Trip: Suchraum bis $radiusKm km, Hardlimit 700 km/Tag';
   }
 }
 
@@ -218,9 +227,7 @@ class _QuickSelectButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
-      color: isSelected
-          ? colorScheme.primaryContainer
-          : Colors.transparent,
+      color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -240,7 +247,9 @@ class _QuickSelectButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+              color: isSelected
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
         ),
