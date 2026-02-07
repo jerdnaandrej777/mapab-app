@@ -480,7 +480,7 @@ class _TripDetailPublicScreenState
 
                 // Titel
                 Text(
-                  context.l10n.galleryShare,
+                  context.l10n.shareViaApp,
                   style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -495,7 +495,7 @@ class _TripDetailPublicScreenState
                     Navigator.pop(context);
                     await sharePublicTrip(
                       tripId: trip.id,
-                      tripName: trip.name,
+                      tripName: trip.tripName,
                       description: trip.description,
                       stopCount: trip.stopCount,
                       distanceKm: trip.distanceKm,
@@ -541,7 +541,7 @@ class _TripDetailPublicScreenState
       builder: (context) {
         final colorScheme = Theme.of(context).colorScheme;
         return AlertDialog(
-          title: Text(trip.name, textAlign: TextAlign.center),
+          title: Text(trip.tripName, textAlign: TextAlign.center),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

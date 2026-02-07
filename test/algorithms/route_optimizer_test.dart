@@ -123,5 +123,49 @@ void main() {
       expect(resultReturn, hasLength(2));
       expect(resultNoReturn, hasLength(2));
     });
+
+    test('trimRouteToMaxDistance kuerzt Route auf Distanzlimit', () {
+      final pois = [
+        createPOI(
+          id: 'wien',
+          latitude: vienna.latitude,
+          longitude: vienna.longitude,
+        ),
+        createPOI(
+          id: 'rom',
+          latitude: rome.latitude,
+          longitude: rome.longitude,
+        ),
+      ];
+
+      final trimmed = optimizer.trimRouteToMaxDistance(
+        pois: pois,
+        startLocation: munich,
+        maxDistanceKm: 250,
+        returnToStart: true,
+      );
+
+      expect(trimmed, hasLength(0));
+    });
+
+    test('trimRouteToMaxDistance behaelt POIs wenn Limit passt', () {
+      final pois = [
+        createPOI(
+          id: 'salzburg',
+          latitude: salzburg.latitude,
+          longitude: salzburg.longitude,
+        ),
+      ];
+
+      final trimmed = optimizer.trimRouteToMaxDistance(
+        pois: pois,
+        startLocation: munich,
+        maxDistanceKm: 300,
+        returnToStart: true,
+      );
+
+      expect(trimmed, hasLength(1));
+      expect(trimmed.first.id, 'salzburg');
+    });
   });
 }

@@ -7,6 +7,27 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.24] - 2026-02-07
+
+### AI Tagestrip Fixes
+
+#### Behoben
+- **Reiseentfernung (km) wird jetzt als echtes Distanzlimit angewendet**
+  - Bisher wurde `radiusKm` beim Tagestrip primär als Suchradius genutzt.
+  - Die finale Route wird jetzt zusätzlich auf das eingestellte Distanzlimit begrenzt.
+- **Tagestrip-Radius bleibt beim Moduswechsel erhalten**
+  - Beim Wechsel zwischen `AI Tagestrip` und `AI Euro Trip` wird der gewählte Tagestrip-Wert nicht mehr auf 100 km zurückgesetzt.
+
+#### Technisch
+- `lib/data/repositories/trip_generator_repo.dart`
+  - Distanz-Begrenzung per `trimRouteToMaxDistance(...)` in `generateDayTrip(...)`.
+- `lib/features/random_trip/providers/random_trip_provider.dart`
+  - Persistenter Tagestrip-Radius (`_lastDayTripRadiusKm`) statt Hard-Reset.
+- `test/algorithms/route_optimizer_test.dart`
+  - Regression-Tests für Distanz-Trim ergänzt.
+
+---
+
 ## [1.7.19] - 2026-01-31
 
 ### UI-Verbesserungen

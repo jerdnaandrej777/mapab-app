@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.22 - Download</title>
+    <title>MapAB v1.10.24 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,11 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.22 (Build 205)</div>
-        <span class="release-tag">Leaderboard & Challenges</span>
+        <div class="version">Version 1.10.24 (Build 207)</div>
+        <span class="release-tag">AI Tagestrip Distanz-Fix</span>
         <p class="subtitle">
-            Neues Gamification-System mit Rangliste<br>
-            und wÃ¶chentlichen Herausforderungen.
+            Fix fÃ¼r AI Tagestrip: eingestellte<br>Reiseentfernung wird korrekt Ã¼bernommen.
         </p>
 
         <div class="qr-container">
@@ -214,32 +213,32 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.22/app-release.apk" class="download-btn" download>
-            &#x1F4F1; APK herunterladen (~121 MB)
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.24/app-release.apk" class="download-btn" download>
+            &#x1F4F1; APK herunterladen (~105 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.22:</h3>
+            <h3>&#x2728; Neu in v1.10.24:</h3>
             <ul>
-                <li class="highlight">Leaderboard mit 4 Sortieroptionen</li>
-                <li class="highlight">WÃ¶chentliche Challenges (9 Typen)</li>
-                <li>Streak-System mit Tages-Serie</li>
-                <li>XP-Belohnungen bis 2000 XP</li>
-                <li>Wochen-Bonus +300 XP</li>
+                <li class="highlight">AI Tagestrip respektiert max. Reiseentfernung</li>
+                <li class="highlight">Kein 100-km-Reset mehr beim Moduswechsel</li>
+                <li>Stabilerer Datenfluss: Slider -> State -> Generierung</li>
+                <li>Klare Fehlermeldung bei zu kleinem Distanzlimit</li>
+                <li>Regression-Tests fÃ¼r Distanz-Trim hinzugefÃ¼gt</li>
             </ul>
         </div>
 
         <div class="stats">
             <div class="stat">
-                <div class="stat-value">9</div>
-                <div class="stat-label">Challenge-Typen</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">Fix-Bereiche</div>
             </div>
             <div class="stat">
                 <div class="stat-value">5</div>
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">206</div>
+                <div class="stat-value">207</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -256,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.22/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.24/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
@@ -267,6 +266,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 

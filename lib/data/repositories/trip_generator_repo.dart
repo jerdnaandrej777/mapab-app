@@ -68,13 +68,13 @@ class TripGeneratorRepository {
     final endAddress = destinationAddress ?? startAddress;
 
     // 1. POIs laden — Korridor oder Radius
-    final categoryIds = categories.isNotEmpty
-        ? categories.map((c) => c.id).toList()
-        : null;
+    final categoryIds =
+        categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
 
     List<POI> availablePOIs;
     if (hasDestination) {
-      debugPrint('[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
+      debugPrint(
+          '[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
       availablePOIs = await _loadPOIsAlongCorridor(
         start: startLocation,
         end: destinationLocation!,
@@ -90,7 +90,8 @@ class TripGeneratorRepository {
     }
 
     // v1.9.13: Hotels sind fuer Tagesausfluege nicht relevant
-    availablePOIs = availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+    availablePOIs =
+        availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
@@ -143,8 +144,32 @@ class TripGeneratorRepository {
       );
     }
 
-    // 4. Echte Route berechnen
-    final waypoints = optimizedPOIs.map((p) => p.location).toList();
+    // 4. Radius als harte Distanzgrenze fuer Tagestrip anwenden.
+    // Vorher wurde radiusKm nur fuer die POI-Suche genutzt.
+    final constrainedPOIs = _routeOptimizer.trimRouteToMaxDistance(
+      pois: optimizedPOIs,
+      startLocation: startLocation,
+      maxDistanceKm: radiusKm,
+      returnToStart: !hasDestination,
+    );
+
+    if (constrainedPOIs.isEmpty) {
+      throw TripGenerationException(
+        'Keine Route innerhalb von ${radiusKm.round()}km moeglich. '
+        'Bitte Distanz erhoehen oder Start/Ziel anpassen.',
+      );
+    }
+
+    if (constrainedPOIs.length < optimizedPOIs.length) {
+      debugPrint(
+        '[TripGenerator] Tagestrip auf Distanzlimit gekuerzt: '
+        '${optimizedPOIs.length} -> ${constrainedPOIs.length} POIs '
+        '(max ${radiusKm.toStringAsFixed(0)}km)',
+      );
+    }
+
+    // 5. Echte Route berechnen
+    final waypoints = constrainedPOIs.map((p) => p.location).toList();
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
       end: endLocation,
@@ -153,13 +178,13 @@ class TripGeneratorRepository {
       endAddress: endAddress,
     );
 
-    // 5. Trip erstellen
+    // 6. Trip erstellen
     final trip = Trip(
       id: _uuid.v4(),
-      name: _generateTripName(optimizedPOIs),
+      name: _generateTripName(constrainedPOIs),
       type: TripType.daytrip,
       route: route,
-      stops: optimizedPOIs.asMap().entries.map((entry) {
+      stops: constrainedPOIs.asMap().entries.map((entry) {
         return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
       }).toList(),
       days: 1,
@@ -170,7 +195,7 @@ class TripGeneratorRepository {
     return GeneratedTrip(
       trip: trip,
       availablePOIs: availablePOIs,
-      selectedPOIs: optimizedPOIs,
+      selectedPOIs: constrainedPOIs,
     );
   }
 
@@ -199,13 +224,18 @@ class TripGeneratorRepository {
     final endAddress = destinationAddress ?? startAddress;
 
     // Tage: direkt übergeben oder aus Radius berechnen (Fallback)
-    final effectiveDays = days ?? TripConstants.calculateDaysFromDistance(radiusKm);
-    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    final effectiveDays =
+        days ?? TripConstants.calculateDaysFromDistance(radiusKm);
+    debugPrint(
+        '[TripGenerator] ═══════════════════════════════════════════════');
     debugPrint('[TripGenerator] EURO TRIP START');
     debugPrint('[TripGenerator] Tage: $effectiveDays, Radius: ${radiusKm}km');
-    debugPrint('[TripGenerator] Start: $startAddress (${startLocation.latitude}, ${startLocation.longitude})');
-    debugPrint('[TripGenerator] Modus: ${hasDestination ? 'A→B ($endAddress)' : 'Rundreise'}');
-    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    debugPrint(
+        '[TripGenerator] Start: $startAddress (${startLocation.latitude}, ${startLocation.longitude})');
+    debugPrint(
+        '[TripGenerator] Modus: ${hasDestination ? 'A→B ($endAddress)' : 'Rundreise'}');
+    debugPrint(
+        '[TripGenerator] ═══════════════════════════════════════════════');
 
     // POIs pro Tag (max 9 wegen Google Maps Limit)
     final poisPerDay = min(
@@ -216,13 +246,13 @@ class TripGeneratorRepository {
     debugPrint('[TripGenerator] POIs: $poisPerDay pro Tag, $totalPOIs gesamt');
 
     // 1. POIs laden — Korridor oder Radius
-    final categoryIds = categories.isNotEmpty
-        ? categories.map((c) => c.id).toList()
-        : null;
+    final categoryIds =
+        categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
 
     List<POI> availablePOIs;
     if (hasDestination) {
-      debugPrint('[TripGenerator] Euro Trip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
+      debugPrint(
+          '[TripGenerator] Euro Trip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
       availablePOIs = await _loadPOIsAlongCorridor(
         start: startLocation,
         end: destinationLocation!,
@@ -236,11 +266,13 @@ class TripGeneratorRepository {
         },
       );
     } else {
-      availablePOIs = await _poiRepo.loadPOIsInRadius(
+      availablePOIs = await _poiRepo
+          .loadPOIsInRadius(
         center: startLocation,
         radiusKm: radiusKm,
         categoryFilter: categoryIds,
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 45),
         onTimeout: () {
           debugPrint('[TripGenerator] ⚠️ POI-Laden Timeout nach 45s');
@@ -252,14 +284,15 @@ class TripGeneratorRepository {
     debugPrint('[TripGenerator] ${availablePOIs.length} POIs gefunden');
 
     // v1.9.13: Hotels werden separat als Uebernachtungsstops behandelt, nicht als Sightseeing-POIs
-    availablePOIs = availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+    availablePOIs =
+        availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
         hasDestination
             ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
             : 'Keine POIs im Umkreis von ${radiusKm}km gefunden. '
-              'Versuche einen anderen Startpunkt oder kleineren Radius.',
+                'Versuche einen anderen Startpunkt oder kleineren Radius.',
       );
     }
 
@@ -278,7 +311,8 @@ class TripGeneratorRepository {
     }
 
     // 2. Zufällige POIs auswählen
-    debugPrint('[TripGenerator] SCHRITT 2: POI-Auswahl ($totalPOIs aus ${availablePOIs.length})...');
+    debugPrint(
+        '[TripGenerator] SCHRITT 2: POI-Auswahl ($totalPOIs aus ${availablePOIs.length})...');
     final selectedPOIs = _poiSelector.selectRandomPOIs(
       pois: availablePOIs,
       startLocation: startLocation,
@@ -286,7 +320,8 @@ class TripGeneratorRepository {
       preferredCategories: categories,
       maxPerCategory: 3, // Mehr Diversität bei längeren Trips
     );
-    debugPrint('[TripGenerator] SCHRITT 2 OK: ${selectedPOIs.length} POIs ausgewaehlt');
+    debugPrint(
+        '[TripGenerator] SCHRITT 2 OK: ${selectedPOIs.length} POIs ausgewaehlt');
 
     if (selectedPOIs.isEmpty) {
       throw TripGenerationException('Keine passenden POIs gefunden');
@@ -301,18 +336,21 @@ class TripGeneratorRepository {
         startLocation: startLocation,
         endLocation: destinationLocation!,
       );
-      debugPrint('[TripGenerator] SCHRITT 3 OK: Directional optimization (A→B): ${optimizedPOIs.length} POIs');
+      debugPrint(
+          '[TripGenerator] SCHRITT 3 OK: Directional optimization (A→B): ${optimizedPOIs.length} POIs');
     } else {
       optimizedPOIs = _routeOptimizer.optimizeRoute(
         pois: selectedPOIs,
         startLocation: startLocation,
         returnToStart: true,
       );
-      debugPrint('[TripGenerator] SCHRITT 3 OK: Rundreise-Optimierung: ${optimizedPOIs.length} POIs');
+      debugPrint(
+          '[TripGenerator] SCHRITT 3 OK: Rundreise-Optimierung: ${optimizedPOIs.length} POIs');
     }
 
     // 4. Auf Tage aufteilen
-    debugPrint('[TripGenerator] SCHRITT 4: Tagesplanung ($effectiveDays Tage, ${optimizedPOIs.length} POIs)...');
+    debugPrint(
+        '[TripGenerator] SCHRITT 4: Tagesplanung ($effectiveDays Tage, ${optimizedPOIs.length} POIs)...');
     var tripDays = _dayPlanner.planDays(
       pois: optimizedPOIs,
       startLocation: startLocation,
@@ -322,9 +360,11 @@ class TripGeneratorRepository {
     // Tatsaechliche Tagesanzahl kann von angefragter abweichen (distanzbasiert)
     var actualDays = tripDays.length;
     if (actualDays != effectiveDays) {
-      debugPrint('[TripGenerator] Tagesanzahl angepasst: $effectiveDays angefragt → $actualDays optimal');
+      debugPrint(
+          '[TripGenerator] Tagesanzahl angepasst: $effectiveDays angefragt → $actualDays optimal');
     }
-    debugPrint('[TripGenerator] TripDays: $actualDays, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
+    debugPrint(
+        '[TripGenerator] TripDays: $actualDays, Stops gesamt: ${tripDays.fold(0, (sum, d) => sum + d.stops.length)}');
 
     // Post-Validierung: Kein Tag darf 700km Display-Distanz ueberschreiten
     // Wiederhole planDays mit mehr Tagen bis alle unter dem Limit sind (max 3 Versuche)
@@ -334,9 +374,11 @@ class TripGeneratorRepository {
       bool anyOverLimit = false;
       for (final day in tripDays) {
         if (day.distanceKm != null) {
-          final displayKm = day.distanceKm! * TripConstants.haversineToDisplayFactor;
+          final displayKm =
+              day.distanceKm! * TripConstants.haversineToDisplayFactor;
           if (displayKm > TripConstants.maxDisplayKmPerDay) {
-            debugPrint('[TripGenerator] Post-Validierung Versuch $resplitAttempt: Tag ${day.dayNumber} = ~${displayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km → Re-Split');
+            debugPrint(
+                '[TripGenerator] Post-Validierung Versuch $resplitAttempt: Tag ${day.dayNumber} = ~${displayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km → Re-Split');
             anyOverLimit = true;
             break;
           }
@@ -347,7 +389,8 @@ class TripGeneratorRepository {
       // Nicht mehr Tage hinzufuegen als erlaubt (verhindert Endlosschleife)
       final newDays = (actualDays + 1).clamp(effectiveDays, maxAllowedDays);
       if (newDays == actualDays) {
-        debugPrint('[TripGenerator] Post-Validierung: Max-Tage-Cap ($maxAllowedDays) erreicht, keine weitere Verbesserung moeglich');
+        debugPrint(
+            '[TripGenerator] Post-Validierung: Max-Tage-Cap ($maxAllowedDays) erreicht, keine weitere Verbesserung moeglich');
         break;
       }
 
@@ -358,25 +401,29 @@ class TripGeneratorRepository {
         returnToStart: !hasDestination,
       );
       actualDays = tripDays.length;
-      debugPrint('[TripGenerator] Re-Split Versuch $resplitAttempt: $actualDays Tage nach erneutem planDays()');
+      debugPrint(
+          '[TripGenerator] Re-Split Versuch $resplitAttempt: $actualDays Tage nach erneutem planDays()');
     }
 
     // 5. Hotels hinzufügen (optional)
-    debugPrint('[TripGenerator] SCHRITT 5: Hotel-Suche (${includeHotels && actualDays > 1 ? 'aktiv' : 'uebersprungen'})...');
+    debugPrint(
+        '[TripGenerator] SCHRITT 5: Hotel-Suche (${includeHotels && actualDays > 1 ? 'aktiv' : 'uebersprungen'})...');
     List<List<HotelSuggestion>> hotelSuggestions = [];
     if (includeHotels && actualDays > 1) {
       final overnightLocations = _dayPlanner.calculateOvernightLocations(
         tripDays: tripDays,
         startLocation: startLocation,
       );
-      debugPrint('[TripGenerator] ${overnightLocations.length} Uebernachtungsorte ermittelt');
+      debugPrint(
+          '[TripGenerator] ${overnightLocations.length} Uebernachtungsorte ermittelt');
 
       hotelSuggestions = await _hotelService.searchHotelsForMultipleLocations(
         locations: overnightLocations,
         radiusKm: 15,
         limitPerLocation: 3,
       );
-      debugPrint('[TripGenerator] Hotel-Suche abgeschlossen: ${hotelSuggestions.where((l) => l.isNotEmpty).length} Standorte mit Hotels');
+      debugPrint(
+          '[TripGenerator] Hotel-Suche abgeschlossen: ${hotelSuggestions.where((l) => l.isNotEmpty).length} Standorte mit Hotels');
 
       // Beste Hotels als Stops hinzufügen
       final hotelStops = hotelSuggestions
@@ -410,7 +457,8 @@ class TripGeneratorRepository {
       endAddress: endAddress,
     );
 
-    debugPrint('[TripGenerator] SCHRITT 6 OK: ${route.distanceKm.toStringAsFixed(0)}km, ${route.coordinates.length} Koordinaten');
+    debugPrint(
+        '[TripGenerator] SCHRITT 6 OK: ${route.distanceKm.toStringAsFixed(0)}km, ${route.coordinates.length} Koordinaten');
 
     // 7. Trip erstellen
     debugPrint('[TripGenerator] SCHRITT 7: Trip-Objekt erstellen...');
@@ -427,10 +475,13 @@ class TripGeneratorRepository {
       preferredCategories: categories.map((c) => c.id).toList(),
     );
 
-    debugPrint('[TripGenerator] SCHRITT 7 OK: Trip "${trip.name}" mit ${allStops.length} Stops erstellt');
-    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    debugPrint(
+        '[TripGenerator] SCHRITT 7 OK: Trip "${trip.name}" mit ${allStops.length} Stops erstellt');
+    debugPrint(
+        '[TripGenerator] ═══════════════════════════════════════════════');
     debugPrint('[TripGenerator] EURO TRIP ERFOLGREICH ABGESCHLOSSEN');
-    debugPrint('[TripGenerator] ═══════════════════════════════════════════════');
+    debugPrint(
+        '[TripGenerator] ═══════════════════════════════════════════════');
 
     return GeneratedTrip(
       trip: trip,
@@ -467,9 +518,8 @@ class TripGeneratorRepository {
 
     // Single-Day: Globale Re-Optimierung (bestehendes Verhalten)
     // POI aus der Liste entfernen
-    final newSelectedPOIs = currentTrip.selectedPOIs
-        .where((p) => p.id != poiIdToRemove)
-        .toList();
+    final newSelectedPOIs =
+        currentTrip.selectedPOIs.where((p) => p.id != poiIdToRemove).toList();
 
     // Route neu optimieren
     final optimizedPOIs = _routeOptimizer.optimizeRoute(
@@ -587,8 +637,8 @@ class TripGeneratorRepository {
     required String startAddress,
     List<POICategory> categories = const [],
   }) async {
-    final poiToReplace = currentTrip.selectedPOIs
-        .firstWhere((p) => p.id == poiIdToReroll);
+    final poiToReplace =
+        currentTrip.selectedPOIs.firstWhere((p) => p.id == poiIdToReroll);
 
     // Multi-Day: Nur den betroffenen Tag modifizieren, andere Tage beibehalten
     if (currentTrip.trip.actualDays > 1) {
@@ -640,7 +690,8 @@ class TripGeneratorRepository {
 
       if (newPOI == null) {
         if (lastResult != null) {
-          debugPrint('[TripGenerator] Reroll: Keine weiteren POIs verfuegbar, nutze letztes Ergebnis');
+          debugPrint(
+              '[TripGenerator] Reroll: Keine weiteren POIs verfuegbar, nutze letztes Ergebnis');
           return lastResult;
         }
         throw TripGenerationException('Kein alternativer POI verfügbar');
@@ -708,7 +759,8 @@ class TripGeneratorRepository {
           final displayKm = updatedTrip.getDistanceForDay(d);
           if (displayKm > TripConstants.maxDisplayKmPerDay) {
             anyDayOverLimit = true;
-            debugPrint('[TripGenerator] Reroll Versuch $attempt: Tag $d = ${displayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+            debugPrint(
+                '[TripGenerator] Reroll Versuch $attempt: Tag $d = ${displayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
             break;
           }
         }
@@ -716,7 +768,8 @@ class TripGeneratorRepository {
         lastResult = result;
 
         if (!anyDayOverLimit) {
-          debugPrint('[TripGenerator] Reroll Versuch $attempt: Alle Tage unter ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+          debugPrint(
+              '[TripGenerator] Reroll Versuch $attempt: Alle Tage unter ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
           return result;
         }
 
@@ -729,9 +782,11 @@ class TripGeneratorRepository {
     }
 
     // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
-    debugPrint('[TripGenerator] WARNING: ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit nach $maxRetries Versuchen nicht erreicht');
+    debugPrint(
+        '[TripGenerator] WARNING: ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit nach $maxRetries Versuchen nicht erreicht');
     if (lastResult != null) return lastResult;
-    throw TripGenerationException('Kein alternativer POI gefunden, der das Tageslimit einhaelt');
+    throw TripGenerationException(
+        'Kein alternativer POI gefunden, der das Tageslimit einhaelt');
   }
 
   // ===== Multi-Day: Tag-beschraenkte POI-Bearbeitung =====
@@ -811,12 +866,12 @@ class TripGeneratorRepository {
       );
     }
 
-    debugPrint('[TripGenerator] RemovePOI Tag $targetDay: Entferne ${stopToRemove.name}');
+    debugPrint(
+        '[TripGenerator] RemovePOI Tag $targetDay: Entferne ${stopToRemove.name}');
 
     // Andere Tage unverändert beibehalten
-    final otherDaysStops = currentTrip.trip.stops
-        .where((s) => s.day != targetDay)
-        .toList();
+    final otherDaysStops =
+        currentTrip.trip.stops.where((s) => s.day != targetDay).toList();
 
     // Modifizierter Tag: POI entfernen und Reihenfolge neu optimieren
     final modifiedDayPOIs = dayStops
@@ -824,7 +879,8 @@ class TripGeneratorRepository {
         .map((s) => s.toPOI())
         .toList();
 
-    final dayStart = _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
+    final dayStart =
+        _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
 
     final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
       pois: modifiedDayPOIs,
@@ -840,7 +896,8 @@ class TripGeneratorRepository {
       );
     }).toList();
 
-    debugPrint('[TripGenerator] RemovePOI Tag $targetDay: ${newDayStops.length} Stops verbleibend');
+    debugPrint(
+        '[TripGenerator] RemovePOI Tag $targetDay: ${newDayStops.length} Stops verbleibend');
 
     // Alle Stops zusammenfuehren und Route neu berechnen
     final result = await _rebuildRouteForDayEdit(
@@ -853,7 +910,8 @@ class TripGeneratorRepository {
     // Post-Validierung: Display-Distanz des modifizierten Tages prüfen
     final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
     if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
-      debugPrint('[TripGenerator] ⚠️ WARNING: RemovePOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+      debugPrint(
+          '[TripGenerator] ⚠️ WARNING: RemovePOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
     }
 
     return result;
@@ -871,15 +929,14 @@ class TripGeneratorRepository {
     final trip = currentTrip.trip;
 
     // Alle Stops anderer Tage beibehalten
-    final otherDaysStops = trip.stops
-        .where((s) => s.day != targetDay)
-        .toList();
+    final otherDaysStops = trip.stops.where((s) => s.day != targetDay).toList();
 
     // Aktuelle Stops des Zieltages
     final dayStops = trip.getStopsForDay(targetDay);
     final dayStart = _getDayStartLocation(trip, targetDay, startLocation);
 
-    debugPrint('[TripGenerator] AddPOI Tag $targetDay: Fuege ${newPOI.name} hinzu');
+    debugPrint(
+        '[TripGenerator] AddPOI Tag $targetDay: Fuege ${newPOI.name} hinzu');
 
     // Alle Day-POIs inkl. neuem POI
     final allDayPOIs = [
@@ -902,7 +959,8 @@ class TripGeneratorRepository {
       );
     }).toList();
 
-    debugPrint('[TripGenerator] AddPOI Tag $targetDay: ${newDayStops.length} Stops total');
+    debugPrint(
+        '[TripGenerator] AddPOI Tag $targetDay: ${newDayStops.length} Stops total');
 
     // Alle Stops zusammenfuehren und Route neu berechnen
     final result = await _rebuildRouteForDayEdit(
@@ -915,7 +973,8 @@ class TripGeneratorRepository {
     // Post-Validierung: Bei >700km Display-Distanz den POI ablehnen
     final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
     if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
-      debugPrint('[TripGenerator] REJECTED: AddPOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+      debugPrint(
+          '[TripGenerator] REJECTED: AddPOI Tag $targetDay = ~${dayDisplayKm.toStringAsFixed(0)}km Display > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
       throw TripGenerationException(
         'Tag $targetDay wuerde ~${dayDisplayKm.toStringAsFixed(0)}km ueberschreiten (max ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km)',
       );
@@ -940,15 +999,16 @@ class TripGeneratorRepository {
     );
     final targetDay = stopToReroll.day;
     final dayStops = currentTrip.trip.getStopsForDay(targetDay);
-    final dayStart = _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
+    final dayStart =
+        _getDayStartLocation(currentTrip.trip, targetDay, startLocation);
 
-    debugPrint('[TripGenerator] RerollPOI Tag $targetDay: Ersetze ${poiToReplace.name}');
+    debugPrint(
+        '[TripGenerator] RerollPOI Tag $targetDay: Ersetze ${poiToReplace.name}');
 
     // Nachbar-Positionen innerhalb des Tages (nicht global)
     final dayStopIndex = dayStops.indexWhere((s) => s.poiId == poiIdToReroll);
-    final previousLocation = dayStopIndex > 0
-        ? dayStops[dayStopIndex - 1].location
-        : dayStart;
+    final previousLocation =
+        dayStopIndex > 0 ? dayStops[dayStopIndex - 1].location : dayStart;
 
     LatLng nextLocation;
     if (dayStopIndex < dayStops.length - 1) {
@@ -956,9 +1016,8 @@ class TripGeneratorRepository {
     } else if (targetDay < currentTrip.trip.actualDays) {
       // Letzter Stop des Tages: Richtung naechster Tag
       final nextDayStops = currentTrip.trip.getStopsForDay(targetDay + 1);
-      nextLocation = nextDayStops.isNotEmpty
-          ? nextDayStops.first.location
-          : startLocation;
+      nextLocation =
+          nextDayStops.isNotEmpty ? nextDayStops.first.location : startLocation;
     } else {
       // Letzter Stop des letzten Tages: Richtung Start (Rueckreise)
       nextLocation = startLocation;
@@ -970,9 +1029,8 @@ class TripGeneratorRepository {
     const maxRetries = 3;
 
     // Andere Tage unverändert beibehalten
-    final otherDaysStops = currentTrip.trip.stops
-        .where((s) => s.day != targetDay)
-        .toList();
+    final otherDaysStops =
+        currentTrip.trip.stops.where((s) => s.day != targetDay).toList();
 
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       // Verfuegbare POIs filtern (bereits probierte ausschliessen)
@@ -994,7 +1052,8 @@ class TripGeneratorRepository {
 
       if (newPOI == null) {
         if (lastResult != null) {
-          debugPrint('[TripGenerator] Reroll Tag $targetDay: Keine weiteren POIs, nutze letztes Ergebnis');
+          debugPrint(
+              '[TripGenerator] Reroll Tag $targetDay: Keine weiteren POIs, nutze letztes Ergebnis');
           return lastResult;
         }
         throw TripGenerationException('Kein alternativer POI verfügbar');
@@ -1033,19 +1092,23 @@ class TripGeneratorRepository {
       // Tages-Distanz validieren
       final dayDisplayKm = result.trip.getDistanceForDay(targetDay);
       if (dayDisplayKm > TripConstants.maxDisplayKmPerDay) {
-        debugPrint('[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
+        debugPrint(
+            '[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit');
         lastResult = result;
         continue;
       }
 
-      debugPrint('[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km OK');
+      debugPrint(
+          '[TripGenerator] Reroll Tag $targetDay Versuch $attempt: ${dayDisplayKm.toStringAsFixed(0)}km OK');
       return result;
     }
 
     // Alle Versuche fehlgeschlagen: bestes Ergebnis zurueckgeben
-    debugPrint('[TripGenerator] WARNING: Distanz-Limit nach $maxRetries Versuchen nicht erreicht (Tag $targetDay)');
+    debugPrint(
+        '[TripGenerator] WARNING: Distanz-Limit nach $maxRetries Versuchen nicht erreicht (Tag $targetDay)');
     if (lastResult != null) return lastResult;
-    throw TripGenerationException('Kein alternativer POI gefunden, der das Tageslimit einhaelt');
+    throw TripGenerationException(
+        'Kein alternativer POI gefunden, der das Tageslimit einhaelt');
   }
 
   /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)
@@ -1071,7 +1134,8 @@ class TripGeneratorRepository {
       bufferKm,
     );
 
-    debugPrint('[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) → NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
+    debugPrint(
+        '[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) → NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
 
     // 3. POIs in der Box laden
     return await _poiRepo.loadPOIsInBounds(
@@ -1131,7 +1195,8 @@ class GeneratedTrip {
 
   /// Hat Hotel-Vorschläge
   bool get hasHotelSuggestions =>
-      hotelSuggestions != null && hotelSuggestions!.any((list) => list.isNotEmpty);
+      hotelSuggestions != null &&
+      hotelSuggestions!.any((list) => list.isNotEmpty);
 }
 
 /// Trip-Generierungs-Fehler
@@ -1145,6 +1210,7 @@ class TripGenerationException implements Exception {
 
 /// Riverpod Provider für TripGeneratorRepository
 @riverpod
-TripGeneratorRepository tripGeneratorRepository(TripGeneratorRepositoryRef ref) {
+TripGeneratorRepository tripGeneratorRepository(
+    TripGeneratorRepositoryRef ref) {
   return TripGeneratorRepository();
 }

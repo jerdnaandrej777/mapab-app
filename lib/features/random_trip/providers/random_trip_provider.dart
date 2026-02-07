@@ -32,6 +32,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Atomares Lock um Race Conditions bei Doppel-Klick zu verhindern
   bool _isGenerating = false;
 
+  /// Letzter explizit gewaehlter Radius fuer Tagestrips.
+  /// Verhindert, dass beim Moduswechsel immer wieder auf 100km resetet wird.
+  double _lastDayTripRadiusKm = 100;
+
   @override
   RandomTripState build() {
     _tripGenerator = ref.watch(tripGeneratorRepositoryProvider);
@@ -41,20 +45,22 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Setzt den Trip-Modus (Tagesausflug/Euro Trip)
   void setMode(RandomTripMode mode) {
-    final days = mode == RandomTripMode.daytrip
-        ? 1
-        : TripConstants.euroTripDefaultDays;
+    final days =
+        mode == RandomTripMode.daytrip ? 1 : TripConstants.euroTripDefaultDays;
+    final nextRadius = mode == RandomTripMode.daytrip
+        ? _lastDayTripRadiusKm
+        : TripConstants.calculateRadiusFromDays(days);
+
     state = state.copyWith(
       mode: mode,
       days: days,
-      radiusKm: mode == RandomTripMode.daytrip
-          ? 100
-          : TripConstants.calculateRadiusFromDays(days),
+      radiusKm: nextRadius,
     );
   }
 
   /// Setzt den Radius (für Tagestrip)
   void setRadius(double radiusKm) {
+    _lastDayTripRadiusKm = radiusKm;
     state = state.copyWith(radiusKm: radiusKm);
   }
 
@@ -118,7 +124,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           ...POICategory.weatherResilientCategories,
           POICategory.city, // Staedte haben Ueberdachungen
         ];
-        debugPrint('[RandomTrip] Schlechtes Wetter - wetter-resistente Kategorien');
+        debugPrint(
+            '[RandomTrip] Schlechtes Wetter - wetter-resistente Kategorien');
         break;
 
       case WeatherCondition.mixed:
@@ -154,9 +161,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Setzt Wetter-Kategorien zurück auf Default (alle außer Hotel)
   void resetWeatherCategories() {
     state = state.copyWith(
-      selectedCategories: POICategory.values
-          .where((c) => c != POICategory.hotel)
-          .toList(),
+      selectedCategories:
+          POICategory.values.where((c) => c != POICategory.hotel).toList(),
       weatherCategoriesApplied: false,
     );
     debugPrint('[RandomTrip] Wetter-Kategorien zurückgesetzt');
@@ -209,7 +215,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       // Adresse ermitteln
       final result = await _geocodingRepo.reverseGeocode(location);
-      final address = result?.shortName ?? result?.displayName ?? 'Mein Standort';
+      final address =
+          result?.shortName ?? result?.displayName ?? 'Mein Standort';
 
       state = state.copyWith(
         startLocation: location,
@@ -221,7 +228,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       debugPrint('[RandomTrip] GPS-Timeout');
       state = state.copyWith(
         isLoading: false,
-        error: 'GPS-Standort konnte nicht rechtzeitig ermittelt werden. Bitte versuche es erneut oder gib eine Adresse ein.',
+        error:
+            'GPS-Standort konnte nicht rechtzeitig ermittelt werden. Bitte versuche es erneut oder gib eine Adresse ein.',
       );
     } catch (e) {
       debugPrint('[RandomTrip] GPS-Fehler: $e');
@@ -243,14 +251,16 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   Future<void> generateTrip() async {
     // Atomares Lock - pruefen UND setzen in einem Schritt (vor jeglichem State-Zugriff)
     if (_isGenerating) {
-      debugPrint('[RandomTrip] Trip-Generierung laeuft bereits (Lock), ignoriere');
+      debugPrint(
+          '[RandomTrip] Trip-Generierung laeuft bereits (Lock), ignoriere');
       return;
     }
     _isGenerating = true;
 
     // Zusaetzlicher State-Check als Backup
     if (state.step == RandomTripStep.generating) {
-      debugPrint('[RandomTrip] Trip-Generierung laeuft bereits (State), ignoriere');
+      debugPrint(
+          '[RandomTrip] Trip-Generierung laeuft bereits (State), ignoriere');
       _isGenerating = false;
       return;
     }
@@ -315,9 +325,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       // Aktuelles Wetter fuer Score-Gewichtung
       final locationWeather = ref.read(locationWeatherNotifierProvider);
-      final currentWeather = locationWeather.hasWeather
-          ? locationWeather.condition
-          : null;
+      final currentWeather =
+          locationWeather.hasWeather ? locationWeather.condition : null;
 
       if (state.mode == RandomTripMode.daytrip) {
         result = await _tripGenerator.generateDayTrip(
@@ -338,7 +347,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         );
 
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
-        debugPrint('[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: $startAddr${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
+        debugPrint(
+            '[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: $startAddr${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
         result = await _tripGenerator.generateEuroTrip(
           startLocation: startLoc,
           startAddress: startAddr,
@@ -350,7 +360,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           destinationAddress: state.destinationAddress,
           weatherCondition: currentWeather,
         );
-        debugPrint('[RandomTrip] Euro Trip generiert! ${state.days} Tage, POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
+        debugPrint(
+            '[RandomTrip] Euro Trip generiert! ${state.days} Tage, POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
       }
 
       debugPrint('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
@@ -375,7 +386,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         generationPhase: GenerationPhase.complete,
         generationProgress: GenerationPhase.complete.baseProgress,
       );
-      debugPrint('[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
+      debugPrint(
+          '[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
     } on TripGenerationException catch (e, stackTrace) {
       debugPrint('[RandomTrip] TripGenerationException: ${e.message}');
       debugPrint('[RandomTrip] StackTrace: $stackTrace');
@@ -539,7 +551,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         _persistActiveTrip();
       }
 
-      debugPrint('[RandomTrip] POI "${poi.name}" zu Tag $dayNumber hinzugefuegt');
+      debugPrint(
+          '[RandomTrip] POI "${poi.name}" zu Tag $dayNumber hinzugefuegt');
       return true;
     } catch (e) {
       debugPrint('[RandomTrip] Fehler beim Hinzufuegen zu Tag $dayNumber: $e');
@@ -652,16 +665,20 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     if (routeCoords.isNotEmpty) {
       final tripDays = generatedTrip.trip.actualDays;
       if (tripDays > 1) {
-        ref.read(routeWeatherNotifierProvider.notifier)
+        ref
+            .read(routeWeatherNotifierProvider.notifier)
             .loadWeatherForRouteWithForecast(
               routeCoords,
               forecastDays: tripDays.clamp(2, 7),
             );
-        debugPrint('[RandomTrip] Routen-Wetter mit ${tripDays.clamp(2, 7)}-Tage-Forecast geladen');
+        debugPrint(
+            '[RandomTrip] Routen-Wetter mit ${tripDays.clamp(2, 7)}-Tage-Forecast geladen');
       } else {
-        ref.read(routeWeatherNotifierProvider.notifier)
+        ref
+            .read(routeWeatherNotifierProvider.notifier)
             .loadWeatherForRoute(routeCoords);
-        debugPrint('[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
+        debugPrint(
+            '[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
       }
     }
   }
@@ -740,19 +757,19 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
     try {
       await ref.read(activeTripServiceProvider).saveTrip(
-        trip: generatedTrip.trip,
-        completedDays: state.completedDays,
-        selectedDay: state.selectedDay,
-        selectedPOIs: generatedTrip.selectedPOIs,
-        availablePOIs: generatedTrip.availablePOIs,
-        startLocation: state.startLocation,
-        startAddress: state.startAddress,
-        mode: state.mode,
-        days: state.days,
-        radiusKm: state.radiusKm,
-        destinationLocation: state.destinationLocation,
-        destinationAddress: state.destinationAddress,
-      );
+            trip: generatedTrip.trip,
+            completedDays: state.completedDays,
+            selectedDay: state.selectedDay,
+            selectedPOIs: generatedTrip.selectedPOIs,
+            availablePOIs: generatedTrip.availablePOIs,
+            startLocation: state.startLocation,
+            startAddress: state.startAddress,
+            mode: state.mode,
+            days: state.days,
+            radiusKm: state.radiusKm,
+            destinationLocation: state.destinationLocation,
+            destinationAddress: state.destinationAddress,
+          );
       try {
         ref.read(activeTripNotifierProvider.notifier).refresh();
       } catch (e) {
@@ -789,6 +806,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       isLoading: false,
       error: null,
     );
+
+    if (data.mode == RandomTripMode.daytrip) {
+      _lastDayTripRadiusKm = data.radiusKm;
+    }
 
     // Bestehende Routen-Daten aufräumen
     final routePlannerNotifier = ref.read(routePlannerProvider.notifier);
@@ -843,24 +864,26 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       // v1.7.9: Batch-Enrichment statt Einzel-Calls (7x schneller)
       // v1.10.2: Jetzt awaited um Race Conditions zu verhindern
-      final poisToEnrich = result.selectedPOIs
-          .where((p) => p.imageUrl == null)
-          .toList();
+      final poisToEnrich =
+          result.selectedPOIs.where((p) => p.imageUrl == null).toList();
 
       if (poisToEnrich.isEmpty) return;
 
-      debugPrint('[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
+      debugPrint(
+          '[RandomTrip] Batch-Enrichment für ${poisToEnrich.length} POIs');
 
       // FIX v1.10.5: Bei Euro Trips mit vielen POIs in kleineren Sub-Batches enrichen
       // Verhindert Überlastung und ConcurrentModificationException
       const maxBatchSize = 10;
       if (poisToEnrich.length > maxBatchSize) {
-        debugPrint('[RandomTrip] Euro Trip: Sub-Batching mit max $maxBatchSize POIs pro Batch');
+        debugPrint(
+            '[RandomTrip] Euro Trip: Sub-Batching mit max $maxBatchSize POIs pro Batch');
         for (var i = 0; i < poisToEnrich.length; i += maxBatchSize) {
           final end = (i + maxBatchSize).clamp(0, poisToEnrich.length);
           final subBatch = poisToEnrich.sublist(i, end);
 
-          debugPrint('[RandomTrip] Sub-Batch ${(i ~/ maxBatchSize) + 1}: ${subBatch.length} POIs');
+          debugPrint(
+              '[RandomTrip] Sub-Batch ${(i ~/ maxBatchSize) + 1}: ${subBatch.length} POIs');
           await poiNotifier.enrichPOIsBatch(subBatch);
 
           // Kurze Pause zwischen Sub-Batches für Stabilität
