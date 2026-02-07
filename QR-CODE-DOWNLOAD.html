@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.27 - Download</title>
+    <title>MapAB v1.10.28 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,7 +202,7 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.27 (Build 210)</div>
+        <div class="version">Version 1.10.28 (Build 211)</div>
         <span class="release-tag">AI Euro Trip Stabilitaets-Update</span>
         <p class="subtitle">
             Fixes fuer AI Euro Trip: 700-km-Hardlimit,<br>korrekte Tagesuebergabe und bessere Hotelvorschlaege.
@@ -213,18 +213,18 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.27/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.28/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~124 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.27:</h3>
+            <h3>&#x2728; Neu in v1.10.28:</h3>
             <ul>
-                <li class="highlight">OSRM-400 Routing-Fallback auf segmentweise Berechnung</li>
-                <li class="highlight">POIs bleiben auf direkter Start-Ziel-Route (kein Rueckwaerts-Umweg)</li>
-                <li>Harter Korridor-Filter entlang der direkten Route</li>
-                <li>Waypoint-Sanitizing + Downsampling fuer stabile Routing-Requests</li>
-                <li>Sporadische 400er werden robust abgefangen statt Trip-Abbruch</li>
+                <li class="highlight">Day-Editor Header: Route neu generieren entfernt</li>
+                <li class="highlight">Footer klappt beim Scrollen der POI-Liste automatisch ein/aus</li>
+                <li>Mehr Platz fuer POI-Liste waehrend Scroll-Interaktion</li>
+                <li>Moderne Animationen fuer Footer-Transition (Slide/Fade/Size)</li>
+                <li>UX-Flow im Day-Editor fuer mobile Nutzung optimiert</li>
             </ul>
         </div>
 
@@ -238,7 +238,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">210</div>
+                <div class="stat-value">211</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.27/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.28/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
@@ -266,5 +266,6 @@
     </script>
 </body>
 </html>
+
 
 

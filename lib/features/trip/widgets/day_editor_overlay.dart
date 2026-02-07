@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:async';
 import '../../../core/constants/categories.dart';
 import '../../../core/utils/url_utils.dart';
 import '../../../core/constants/trip_constants.dart';
@@ -37,6 +39,28 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   bool _weatherBannerDismissed = false;
   bool _isCorridorBrowserActive = false;
   int _lastAutoTriggeredDay = -1;
+  bool _isFooterCollapsed = false;
+  Timer? _footerExpandTimer;
+
+  void _collapseFooterWhileScrolling() {
+    _footerExpandTimer?.cancel();
+    if (_isFooterCollapsed) return;
+    setState(() => _isFooterCollapsed = true);
+  }
+
+  void _expandFooterAfterScroll() {
+    _footerExpandTimer?.cancel();
+    _footerExpandTimer = Timer(const Duration(milliseconds: 220), () {
+      if (!mounted || !_isFooterCollapsed) return;
+      setState(() => _isFooterCollapsed = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _footerExpandTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,18 +166,6 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
             icon: const Icon(Icons.bookmark_add_outlined),
             tooltip: context.l10n.tripSaveRoute,
           ),
-          // Neu generieren
-          IconButton(
-            onPressed: state.isLoading ? null : () => notifier.regenerateTrip(),
-            icon: state.isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            tooltip: context.l10n.dayEditorRegenerate,
-          ),
           // Trip veröffentlichen Button
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -250,17 +262,56 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
             )
           else
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  // AI Wetter-Banner
-                  if (!_weatherBannerDismissed)
-                    AISuggestionBanner(
-                      dayWeather: dayWeather,
-                      outdoorCount: outdoorCount,
-                      totalCount: stopsForDay.length,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollUpdateNotification) {
+                    final delta = notification.scrollDelta ?? 0;
+                    if (delta.abs() > 0.2) {
+                      _collapseFooterWhileScrolling();
+                    }
+                  } else if (notification is UserScrollNotification) {
+                    if (notification.direction == ScrollDirection.idle) {
+                      _expandFooterAfterScroll();
+                    } else {
+                      _collapseFooterWhileScrolling();
+                    }
+                  } else if (notification is ScrollEndNotification) {
+                    _expandFooterAfterScroll();
+                  }
+                  return false;
+                },
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    // AI Wetter-Banner
+                    if (!_weatherBannerDismissed)
+                      AISuggestionBanner(
+                        dayWeather: dayWeather,
+                        outdoorCount: outdoorCount,
+                        totalCount: stopsForDay.length,
+                        dayNumber: selectedDay,
+                        onSuggestAlternatives: () {
+                          ref
+                              .read(aITripAdvisorNotifierProvider.notifier)
+                              .loadSmartRecommendations(
+                                day: selectedDay,
+                                trip: trip,
+                                route: trip.route,
+                                routeWeather: routeWeather,
+                                existingStopIds:
+                                    trip.stops.map((s) => s.poiId).toSet(),
+                              );
+                        },
+                        onDismiss: () {
+                          setState(() => _weatherBannerDismissed = true);
+                        },
+                      ),
+
+                    // AI-Vorschlaege / Empfehlungen-Button
+                    _AISuggestionsSection(
                       dayNumber: selectedDay,
-                      onSuggestAlternatives: () {
+                      trip: trip,
+                      onLoadRecommendations: () {
                         ref
                             .read(aITripAdvisorNotifierProvider.notifier)
                             .loadSmartRecommendations(
@@ -272,82 +323,66 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                                   trip.stops.map((s) => s.poiId).toSet(),
                             );
                       },
-                      onDismiss: () {
-                        setState(() => _weatherBannerDismissed = true);
-                      },
                     ),
+                    const SizedBox(height: 4),
 
-                  // AI-Vorschlaege / Empfehlungen-Button
-                  _AISuggestionsSection(
-                    dayNumber: selectedDay,
-                    trip: trip,
-                    onLoadRecommendations: () {
-                      ref
-                          .read(aITripAdvisorNotifierProvider.notifier)
-                          .loadSmartRecommendations(
-                            day: selectedDay,
-                            trip: trip,
-                            route: trip.route,
-                            routeWeather: routeWeather,
-                            existingStopIds:
-                                trip.stops.map((s) => s.poiId).toSet(),
-                          );
-                    },
-                  ),
-                  const SizedBox(height: 4),
+                    // POI-Liste
+                    ...stopsForDay.asMap().entries.map((entry) {
+                      final stop = entry.value;
+                      final poiFromState = poiState.pois
+                          .where((p) => p.id == stop.poiId)
+                          .firstOrNull;
 
-                  // POI-Liste
-                  ...stopsForDay.asMap().entries.map((entry) {
-                    final stop = entry.value;
-                    final poiFromState = poiState.pois
-                        .where((p) => p.id == stop.poiId)
-                        .firstOrNull;
+                      return EditablePOICard(
+                        stop: stop,
+                        poiFromState: poiFromState,
+                        isLoading: state.loadingPOIId == stop.poiId,
+                        canDelete: state.canRemovePOI,
+                        onReroll: () => notifier.rerollPOI(stop.poiId),
+                        onDelete: () => notifier.removePOI(stop.poiId),
+                        dayWeather: dayWeather,
+                      );
+                    }),
 
-                    return EditablePOICard(
-                      stop: stop,
-                      poiFromState: poiFromState,
-                      isLoading: state.loadingPOIId == stop.poiId,
-                      canDelete: state.canRemovePOI,
-                      onReroll: () => notifier.rerollPOI(stop.poiId),
-                      onDelete: () => notifier.removePOI(stop.poiId),
-                      dayWeather: dayWeather,
-                    );
-                  }),
+                    const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
-
-                  // Hinweis Google Maps
-                  if (stopsForDay.length > TripConstants.maxPoisPerDay)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3),
+                    // Hinweis Google Maps
+                    if (stopsForDay.length > TripConstants.maxPoisPerDay)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: 0.3),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.warning_amber,
-                              color: Colors.orange, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              context.l10n.dayEditorMaxStops(
-                                  TripConstants.maxPoisPerDay),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange.shade800,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber,
+                                color: Colors.orange, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                context.l10n.dayEditorMaxStops(
+                                    TripConstants.maxPoisPerDay),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                  const SizedBox(height: 160), // Platz fuer Bottom Buttons
-                ],
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      height: _isFooterCollapsed ? 16 : 160,
+                    ), // Platz fuer Bottom Buttons (dynamisch)
+                  ],
+                ),
               ),
             ),
         ],
@@ -361,6 +396,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               startLocation: startLocation,
               startAddress: state.startAddress ?? '',
               isCompleted: state.isDayCompleted(selectedDay),
+              isCollapsed: _isFooterCollapsed,
               onOpenCorridorBrowser: () {
                 setState(() => _isCorridorBrowserActive = true);
               },
@@ -905,6 +941,7 @@ class _BottomActions extends ConsumerWidget {
   final LatLng startLocation;
   final String startAddress;
   final bool isCompleted;
+  final bool isCollapsed;
   final VoidCallback onOpenCorridorBrowser;
 
   const _BottomActions({
@@ -913,6 +950,7 @@ class _BottomActions extends ConsumerWidget {
     required this.startLocation,
     required this.startAddress,
     required this.isCompleted,
+    required this.isCollapsed,
     required this.onOpenCorridorBrowser,
   });
 
@@ -920,8 +958,8 @@ class _BottomActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
+    final fullContent = Container(
+      key: const ValueKey('footer-expanded'),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         boxShadow: [
@@ -1019,6 +1057,61 @@ class _BottomActions extends ConsumerWidget {
           ),
         ),
       ),
+    );
+
+    final collapsedContent = Container(
+      key: const ValueKey('footer-collapsed'),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          child: Center(
+            child: Container(
+              width: 56,
+              height: 6,
+              decoration: BoxDecoration(
+                color: colorScheme.onSurface.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      reverseDuration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.12),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: slide,
+            child: SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: isCollapsed ? collapsedContent : fullContent,
     );
   }
 
