@@ -90,6 +90,9 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final isMultiDay = trip.actualDays > 1;
     final selectedDay = state.selectedDay;
     final stopsForDay = trip.getStopsForDay(selectedDay);
+    final bottomSafeArea = MediaQuery.of(context).viewPadding.bottom;
+    final footerSpacerHeight =
+        _isFooterCollapsed ? 16.0 + bottomSafeArea : 220.0 + bottomSafeArea;
     final startLocation = state.startLocation;
     if (startLocation == null) {
       return Scaffold(
@@ -281,7 +284,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                   return false;
                 },
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   children: [
                     // AI Wetter-Banner
                     if (!_weatherBannerDismissed)
@@ -379,8 +382,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
-                      height: _isFooterCollapsed ? 8 : 160,
-                    ), // Platz fuer Bottom Buttons (dynamisch)
+                      height: footerSpacerHeight,
+                    ), // Platz fuer Bottom Buttons + SafeArea (dynamisch)
                   ],
                 ),
               ),

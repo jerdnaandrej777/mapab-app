@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung f√ºr Claude Code bei der Arbeit mit diesem Flutt
 ## Projekt√ºbersicht
 
 Flutter-basierte mobile App f√ºr interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.29 - EuroTrip Weather Sync + Favorites Map Badges | Plattformen: Android, iOS, Desktop
+Version: 1.10.30 - Full Route Map + Progress UX + Day Editor Fixes | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -496,7 +496,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische √Ñnderungen finden sich in:
-- `Dokumentation/CHANGELOG-v1.10.29.md` (Day-Editor Modal UX: Header-Refresh entfernt, Footer klappt bei POI-Scroll ein und bei Scroll-Ende wieder aus, moderne Animationen fuer mobile Bedienung)
+- `Dokumentation/CHANGELOG-v1.10.30.md` (Day-Editor Modal UX: Header-Refresh entfernt, Footer klappt bei POI-Scroll ein und bei Scroll-Ende wieder aus, moderne Animationen fuer mobile Bedienung)
 - `Dokumentation/CHANGELOG-v1.10.27.md` (EuroTrip Routing-Stabilisierung: OSRM-400 Fallback via segmentierte Berechnung, direkter Korridor-Filter statt Bounding-Box-Ausreiﬂer, Vorw‰rts-POI-Progress ohne R¸cksprung, Waypoint-Sanitizing/Downsampling)
 - `Dokumentation/CHANGELOG-v1.10.26.md` (EuroTrip Stabilitaet: 700-km-gekoppelte POI-Selektion, segment-sichere Kandidatenwahl, Auto-Tagesreduktion statt Abbruch, Release-Rollout mit neuer APK/QR-Links)
 - `Dokumentation/CHANGELOG-v1.10.24.md` (AI Tagestrip Fix: Reiseentfernung wird als echtes Distanzlimit erzwungen; Tagestrip-Radius bleibt beim Moduswechsel erhalten statt Reset auf 100km; 2 Regression-Tests fuer RouteOptimizer)

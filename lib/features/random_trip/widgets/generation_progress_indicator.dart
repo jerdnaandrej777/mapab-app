@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/random_trip_provider.dart';
@@ -94,6 +96,13 @@ class GenerationProgressIndicator extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+
+            const SizedBox(height: 10),
+
+            _FunLoadingTicker(
+              key: ValueKey(phase),
+              phase: phase,
+            ),
           ],
         ),
       ),
@@ -156,6 +165,109 @@ class GenerationProgressIndicator extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FunLoadingTicker extends StatefulWidget {
+  final GenerationPhase phase;
+
+  const _FunLoadingTicker({
+    super.key,
+    required this.phase,
+  });
+
+  @override
+  State<_FunLoadingTicker> createState() => _FunLoadingTickerState();
+}
+
+class _FunLoadingTickerState extends State<_FunLoadingTicker> {
+  Timer? _timer;
+  int _index = 0;
+
+  List<String> get _messages {
+    switch (widget.phase) {
+      case GenerationPhase.calculatingRoute:
+        return const [
+          'Route wird intelligent berechnet...',
+          'Schnellste Fahrstrecke wird gesucht...',
+          'Tagesgrenzen werden geprüft...',
+        ];
+      case GenerationPhase.searchingPOIs:
+        return const [
+          'Spannende POIs werden gesammelt...',
+          'Highlights in Reichweite werden priorisiert...',
+          'Verfügbare Orte werden gefiltert...',
+        ];
+      case GenerationPhase.rankingWithAI:
+        return const [
+          'AI sortiert die besten Zwischenstopps...',
+          'Route wird mit POIs sinnvoll kombiniert...',
+          'Reihenfolge wird für dich optimiert...',
+        ];
+      case GenerationPhase.enrichingImages:
+        return const [
+          'Bilder und Details werden ergänzt...',
+          'Infos für die Vorschau werden aufbereitet...',
+          'Fast fertig...',
+        ];
+      case GenerationPhase.complete:
+        return const ['Trip ist bereit.'];
+      case GenerationPhase.idle:
+        return const ['Bereit.'];
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startTicker();
+  }
+
+  void _startTicker() {
+    final messages = _messages;
+    if (messages.length <= 1) return;
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted) return;
+      setState(() {
+        _index = (_index + 1) % messages.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final messages = _messages;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.2),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: Text(
+        messages[_index],
+        key: ValueKey('${widget.phase.name}-$_index'),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12,
+          color: colorScheme.onSurfaceVariant,
+          fontStyle: FontStyle.italic,
+        ),
       ),
     );
   }

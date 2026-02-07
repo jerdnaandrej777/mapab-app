@@ -6,6 +6,7 @@ import 'providers/random_trip_provider.dart';
 import 'providers/random_trip_state.dart';
 import 'widgets/category_selector.dart';
 import 'widgets/days_selector.dart';
+import 'widgets/generation_progress_indicator.dart';
 import 'widgets/hotel_suggestion_card.dart';
 import 'widgets/radius_slider.dart';
 import 'widgets/start_location_picker.dart';
@@ -114,9 +115,8 @@ class _ConfigView extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: state.canGenerate
-                    ? () => notifier.generateTrip()
-                    : null,
+                onPressed:
+                    state.canGenerate ? () => notifier.generateTrip() : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -224,40 +224,7 @@ class _GeneratingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 60,
-            height: 60,
-            child: CircularProgressIndicator(
-              strokeWidth: 4,
-              valueColor: AlwaysStoppedAnimation(AppTheme.primaryColor),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '🎲',
-            style: TextStyle(fontSize: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Trip wird generiert...',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'POIs laden, Route optimieren, Hotels suchen',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const GenerationProgressIndicator();
   }
 }
 
@@ -280,14 +247,13 @@ class _PreviewView extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Hotel-Vorschlage (fur Mehrtages-Trips)
-                if (state.isMultiDay &&
-                    state.hotelSuggestions.isNotEmpty) ...[
+                if (state.isMultiDay && state.hotelSuggestions.isNotEmpty) ...[
                   HotelSuggestionsSection(
                     suggestionsByDay: state.hotelSuggestions,
                     selectedHotels: state.selectedHotels,
                     onSelect: notifier.selectHotel,
-                    tripStartDate:
-                        state.tripStartDate ?? state.generatedTrip?.trip.startDate,
+                    tripStartDate: state.tripStartDate ??
+                        state.generatedTrip?.trip.startDate,
                     radiusKm: 20,
                   ),
                 ],

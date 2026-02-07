@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../random_trip/widgets/generation_progress_indicator.dart';
 import '../../random_trip/providers/random_trip_state.dart';
 
 /// Loading-Anzeige während Trip generiert wird
@@ -8,57 +9,7 @@ class GeneratingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation(colorScheme.primary),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '🎲',
-            style: TextStyle(fontSize: 32),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            context.l10n.tripInfoGenerating,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.tripInfoLoadingPois,
-            style: TextStyle(
-              fontSize: 13,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const GenerationProgressIndicator(compact: true);
   }
 }
 
@@ -127,7 +78,9 @@ class TripInfoBar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isEuroTrip ? context.l10n.tripInfoAiEuroTrip : context.l10n.tripInfoAiDayTrip,
+                        isEuroTrip
+                            ? context.l10n.tripInfoAiEuroTrip
+                            : context.l10n.tripInfoAiDayTrip,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,

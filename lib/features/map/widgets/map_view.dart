@@ -199,44 +199,9 @@ class _MapViewState extends ConsumerState<MapView> {
     final isMultiDay = aiTrip != null && aiTrip.actualDays > 1;
     final selectedDay = randomTripState.selectedDay;
 
-    // Bei Mehrtages-Trips: Nur POIs des ausgewählten Tages anzeigen
-    List<POI> aiTripPOIs;
-    List<LatLng> aiRouteCoordinates;
-    if (isMultiDay && fullAIRoute != null) {
-      final stopsForDay = aiTrip.getStopsForDay(selectedDay);
-      final dayPOIIds = stopsForDay.map((s) => s.poiId).toSet();
-      aiTripPOIs =
-          allAITripPOIs.where((p) => dayPOIIds.contains(p.id)).toList();
-
-      // Route-Segment für den ausgewählten Tag extrahieren
-      if (stopsForDay.isNotEmpty) {
-        LatLng segStart;
-        LatLng segEnd;
-        if (selectedDay == 1) {
-          segStart = fullAIRoute.start;
-        } else {
-          final prevDayStops = aiTrip.getStopsForDay(selectedDay - 1);
-          segStart = prevDayStops.isNotEmpty
-              ? prevDayStops.last.location
-              : stopsForDay.first.location;
-        }
-        if (selectedDay == aiTrip.actualDays) {
-          segEnd = fullAIRoute.end;
-        } else {
-          segEnd = stopsForDay.last.location;
-        }
-        aiRouteCoordinates = _extractRouteSegment(
-          fullAIRoute.coordinates,
-          segStart,
-          segEnd,
-        );
-      } else {
-        aiRouteCoordinates = fullAIRoute.coordinates;
-      }
-    } else {
-      aiTripPOIs = allAITripPOIs;
-      aiRouteCoordinates = fullAIRoute?.coordinates ?? [];
-    }
+    // Auf der Hauptkarte immer die komplette AI-Route anzeigen (nicht tagesweise)
+    final aiTripPOIs = allAITripPOIs;
+    final aiRouteCoordinates = fullAIRoute?.coordinates ?? [];
 
     // Wetter-Zustand für POI-Marker-Badges
     final weatherCondition =
@@ -272,7 +237,7 @@ class _MapViewState extends ConsumerState<MapView> {
             polylines: [
               Polyline(
                 // AI Trip Preview hat Priorität, dann TripState, dann RoutePlanner
-                // Bei Mehrtages-Trips: Nur Segment des ausgewählten Tages
+                // Auf der Hauptkarte immer die komplette Route
                 // v1.10.2: Downsampling für lange Routen (ANR-Fix)
                 points: _downsampleCoordinates(
                   (isAITripPreview && aiRouteCoordinates.isNotEmpty)
@@ -346,12 +311,21 @@ class _MapViewState extends ConsumerState<MapView> {
             markers: aiTripPOIs.asMap().entries.map((entry) {
               final index = entry.key;
               final poi = entry.value;
-              // Tages-Wetter fuer Multi-Day-Trips
+              // Wetter pro Stop-Tag fuer Multi-Day-Trips
               WeatherCondition? markerWeather;
               if (isMultiDay && routeWeather.hasForecast) {
+                int stopDay = selectedDay;
+                for (int day = 1; day <= aiTrip!.actualDays; day++) {
+                  final isStopInDay =
+                      aiTrip.getStopsForDay(day).any((s) => s.poiId == poi.id);
+                  if (isStopInDay) {
+                    stopDay = day;
+                    break;
+                  }
+                }
                 final forecastPerDay =
-                    routeWeather.getForecastPerDay(aiTrip!.actualDays);
-                markerWeather = forecastPerDay[selectedDay];
+                    routeWeather.getForecastPerDay(aiTrip.actualDays);
+                markerWeather = forecastPerDay[stopDay];
               } else {
                 markerWeather = weatherCondition;
               }
@@ -372,20 +346,12 @@ class _MapViewState extends ConsumerState<MapView> {
           ),
 
         // Start-Marker (für normale Route oder AI Trip)
-        // Bei Mehrtages-Trips: Start des ausgewählten Tages anzeigen
         if (routePlanner.startLocation != null ||
             (isAITripPreview && randomTripState.startLocation != null))
           MarkerLayer(
             markers: [
               Marker(
                 point: () {
-                  if (isAITripPreview && isMultiDay && selectedDay > 1) {
-                    // Ab Tag 2: Letzter Stop des Vortages als Start
-                    final prevDayStops =
-                        aiTrip!.getStopsForDay(selectedDay - 1);
-                    if (prevDayStops.isNotEmpty)
-                      return prevDayStops.last.location;
-                  }
                   if (isAITripPreview &&
                       randomTripState.startLocation != null) {
                     return randomTripState.startLocation!;
@@ -432,42 +398,6 @@ class _MapViewState extends ConsumerState<MapView> {
           ),
       ],
     );
-  }
-
-  /// Extrahiert das Polyline-Segment zwischen zwei Punkten
-  List<LatLng> _extractRouteSegment(
-    List<LatLng> fullCoordinates,
-    LatLng startPoint,
-    LatLng endPoint,
-  ) {
-    if (fullCoordinates.isEmpty) return fullCoordinates;
-
-    int startIdx = _findNearestIndex(fullCoordinates, startPoint);
-    int endIdx = _findNearestIndex(fullCoordinates, endPoint);
-
-    if (startIdx > endIdx) {
-      final temp = startIdx;
-      startIdx = endIdx;
-      endIdx = temp;
-    }
-
-    return fullCoordinates.sublist(
-        startIdx, (endIdx + 1).clamp(0, fullCoordinates.length));
-  }
-
-  int _findNearestIndex(List<LatLng> coords, LatLng target) {
-    int bestIdx = 0;
-    double bestDist = double.infinity;
-    for (int i = 0; i < coords.length; i++) {
-      final dLat = coords[i].latitude - target.latitude;
-      final dLng = coords[i].longitude - target.longitude;
-      final dist = dLat * dLat + dLng * dLng;
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = i;
-      }
-    }
-    return bestIdx;
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng point) {
