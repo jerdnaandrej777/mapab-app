@@ -14,6 +14,7 @@ import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
+import '../poi/widgets/poi_photo_actions.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/trip_photo_gallery.dart';
 
@@ -55,9 +56,8 @@ class _TripDetailPublicScreenState
               : state.trip != null
                   ? _buildContent(state.trip!, colorScheme, textTheme)
                   : const SizedBox(),
-      bottomNavigationBar: state.trip != null
-          ? _buildBottomBar(state.trip!, colorScheme)
-          : null,
+      bottomNavigationBar:
+          state.trip != null ? _buildBottomBar(state.trip!, colorScheme) : null,
     );
   }
 
@@ -109,7 +109,8 @@ class _TripDetailPublicScreenState
                     child: Icon(
                       Icons.map_outlined,
                       size: 64,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                   ),
                 // Gradient Overlay
@@ -181,7 +182,8 @@ class _TripDetailPublicScreenState
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star, size: 16, color: Colors.black87),
+                            const Icon(Icons.star,
+                                size: 16, color: Colors.black87),
                             const SizedBox(width: 4),
                             Text(
                               context.l10n.galleryFeatured,
@@ -239,7 +241,9 @@ class _TripDetailPublicScreenState
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    trip.isEuroTrip ? context.l10n.publishEuroTrip : context.l10n.publishDaytrip,
+                    trip.isEuroTrip
+                        ? context.l10n.publishEuroTrip
+                        : context.l10n.publishDaytrip,
                     style: textTheme.labelMedium?.copyWith(
                       color: colorScheme.onPrimaryContainer,
                       fontWeight: FontWeight.w500,
@@ -248,7 +252,8 @@ class _TripDetailPublicScreenState
                 ),
 
                 // Beschreibung
-                if (trip.description != null && trip.description!.isNotEmpty) ...[
+                if (trip.description != null &&
+                    trip.description!.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
                     trip.description!,
@@ -373,6 +378,11 @@ class _TripDetailPublicScreenState
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
+                _buildPoiPreviewSection(trip),
+
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
                 _buildPhotoGallery(trip),
 
                 // Kommentar-Sektion
@@ -401,6 +411,96 @@ class _TripDetailPublicScreenState
     return TripPhotoGallery(
       tripId: trip.id,
       isOwnTrip: isOwnTrip,
+    );
+  }
+
+  Widget _buildPoiPreviewSection(PublicTrip trip) {
+    final tripData = trip.tripData;
+    final dynamicStops = (tripData?['stops'] as List<dynamic>?) ?? const [];
+    if (dynamicStops.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final stops = dynamicStops
+        .whereType<Map<String, dynamic>>()
+        .where((s) => (s['categoryId'] ?? s['category_id']) != 'hotel')
+        .toList();
+    if (stops.isEmpty) return const SizedBox.shrink();
+
+    final byCategory = <String, List<Map<String, dynamic>>>{};
+    for (final stop in stops) {
+      final category =
+          (stop['categoryId'] ?? stop['category_id'] ?? 'attraction')
+              .toString();
+      byCategory.putIfAbsent(category, () => []).add(stop);
+    }
+
+    final mustSee = stops
+        .where((s) => (s['isMustSee'] ?? s['is_must_see']) == true)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'POI-Vorschau',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Nach Kategorien organisiert',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (mustSee.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Must-See',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ...mustSee.take(3).map(_buildPoiMiniTile),
+        ],
+        const SizedBox(height: 12),
+        ...byCategory.entries.map((entry) {
+          return ExpansionTile(
+            title: Text('${entry.key} (${entry.value.length})'),
+            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            children: entry.value.take(6).map(_buildPoiMiniTile).toList(),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPoiMiniTile(Map<String, dynamic> stop) {
+    final poiId = (stop['poiId'] ?? stop['poi_id'])?.toString();
+    final name = (stop['name'] ?? 'POI').toString();
+    final category =
+        (stop['categoryId'] ?? stop['category_id'] ?? '').toString();
+    final score = (stop['score'] as num?)?.toDouble();
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.place_outlined),
+      title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        score != null ? '$category • ⭐ ${score.toStringAsFixed(1)}' : category,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: poiId == null
+          ? null
+          : SizedBox(
+              width: 92,
+              child: POIPhotoActions(
+                poiId: poiId,
+                compact: true,
+              ),
+            ),
+      onTap: poiId == null ? null : () => context.push('/poi/$poiId'),
     );
   }
 
@@ -471,7 +571,8 @@ class _TripDetailPublicScreenState
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -488,7 +589,8 @@ class _TripDetailPublicScreenState
 
                 // Share-Optionen
                 ListTile(
-                  leading: Icon(Icons.share_outlined, color: colorScheme.primary),
+                  leading:
+                      Icon(Icons.share_outlined, color: colorScheme.primary),
                   title: Text(context.l10n.shareViaApp),
                   subtitle: Text(context.l10n.shareViaAppDesc),
                   onTap: () async {
@@ -504,7 +606,8 @@ class _TripDetailPublicScreenState
                 ),
 
                 ListTile(
-                  leading: Icon(Icons.link_outlined, color: colorScheme.primary),
+                  leading:
+                      Icon(Icons.link_outlined, color: colorScheme.primary),
                   title: Text(context.l10n.copyLink),
                   subtitle: Text(context.l10n.copyLinkDesc),
                   onTap: () async {
@@ -517,7 +620,8 @@ class _TripDetailPublicScreenState
                 ),
 
                 ListTile(
-                  leading: Icon(Icons.qr_code_outlined, color: colorScheme.primary),
+                  leading:
+                      Icon(Icons.qr_code_outlined, color: colorScheme.primary),
                   title: Text(context.l10n.showQrCode),
                   subtitle: Text(context.l10n.showQrCodeDesc),
                   onTap: () {
@@ -690,7 +794,8 @@ class _TripDetailPublicScreenState
       // Flag setzen für Auto-Zoom
       ref.read(shouldFitToRouteProvider.notifier).state = true;
 
-      debugPrint('[TripDetail] Route auf Karte geladen: ${route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
+      debugPrint(
+          '[TripDetail] Route auf Karte geladen: ${route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
 
       // Zur Karte navigieren
       context.go('/');

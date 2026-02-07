@@ -146,7 +146,6 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
       case WeatherCondition.good:
       case WeatherCondition.unknown:
-      default:
         // Outdoor bevorzugt bei gutem Wetter
         recommended = [
           POICategory.nature,
@@ -183,6 +182,17 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     state = state.copyWith(
       startLocation: location,
       startAddress: address,
+      useGPS: false,
+      error: null,
+    );
+  }
+
+  /// Loescht manuellen/GPS-Startpunkt komplett.
+  /// Danach greift beim Generieren der GPS-Fallback.
+  void clearStartLocation() {
+    state = state.copyWith(
+      startLocation: null,
+      startAddress: null,
       useGPS: false,
       error: null,
     );

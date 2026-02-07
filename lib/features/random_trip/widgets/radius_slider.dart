@@ -112,7 +112,7 @@ class RadiusSlider extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     const minRadius = 30.0;
-    const maxRadius = 300.0;
+    const maxRadius = 500.0;
     final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
 
     return Column(
@@ -189,8 +189,9 @@ class RadiusSlider extends ConsumerWidget {
     if (radius <= 50) return 'Kurzer Ausflug in der Nähe';
     if (radius <= 100) return 'Idealer Tagesausflug';
     if (radius <= 150) return 'Ausgedehnter Tagesausflug';
-    if (radius <= 200) return 'Langer Tagesausflug mit viel Fahrzeit';
-    return 'Sehr weiter Tagesausflug';
+    if (radius <= 300) return 'Langer Tagesausflug mit viel Fahrzeit';
+    if (radius <= 400) return 'Sehr weiter Tagesausflug';
+    return 'Maximaler Suchraum (Route wird trotzdem hart begrenzt)';
   }
 
   String _getDaysDescription(int days) {

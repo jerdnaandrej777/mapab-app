@@ -49,8 +49,9 @@ void main() {
   });
 
   group('TripConstants - Quick-Select Werte', () {
-    test('Tagesausflug Quick-Select hat 4 Werte', () {
-      expect(TripConstants.dayTripQuickSelectRadii.length, 4);
+    test('Tagesausflug Quick-Select hat 5 Werte', () {
+      expect(TripConstants.dayTripQuickSelectRadii.length, 5);
+      expect(TripConstants.dayTripQuickSelectRadii.contains(500), isTrue);
     });
 
     test('Euro Trip Quick-Select hat 4 Werte', () {

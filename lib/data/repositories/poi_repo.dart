@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' show cos, sqrt, min, max, pi;
+import 'dart:math' show cos, min, max;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +35,10 @@ class POIRepository {
   final POICacheService? _cacheService;
   final SupabasePOIRepository? _supabaseRepo;
 
-  POIRepository({Dio? dio, POICacheService? cacheService, SupabasePOIRepository? supabaseRepo})
+  POIRepository(
+      {Dio? dio,
+      POICacheService? cacheService,
+      SupabasePOIRepository? supabaseRepo})
       : _dio = dio ?? ApiConfig.createDio(profile: DioProfile.overpass),
         _cacheService = cacheService,
         _supabaseRepo = supabaseRepo;
@@ -51,20 +54,24 @@ class POIRepository {
     bool includeWikipedia = true,
     bool includeOverpass = true,
     bool useCache = true,
+    bool isFallbackAttempt = false,
   }) async {
+    final normalizedCategoryFilter = _normalizeCategoryFilter(categoryFilter);
     // 1. Hive Region Cache (7 Tage) → schnellster Zugriff
     if (useCache && _cacheService != null) {
-      final regionKey = _cacheService!.createRegionKey(
+      final regionKey = _cacheService.createRegionKey(
         center.latitude,
         center.longitude,
         radiusKm,
       );
-      final cachedPOIs = await _cacheService!.getCachedPOIs(regionKey);
+      final cachedPOIs = await _cacheService.getCachedPOIs(regionKey);
       if (cachedPOIs != null && cachedPOIs.isNotEmpty) {
-        debugPrint('[POI] Cache-Treffer: ${cachedPOIs.length} POIs für Region $regionKey');
-        if (categoryFilter != null && categoryFilter.isNotEmpty) {
+        debugPrint(
+            '[POI] Cache-Treffer: ${cachedPOIs.length} POIs für Region $regionKey');
+        if (normalizedCategoryFilter != null &&
+            normalizedCategoryFilter.isNotEmpty) {
           return cachedPOIs
-              .where((poi) => categoryFilter.contains(poi.categoryId))
+              .where((poi) => normalizedCategoryFilter.contains(poi.categoryId))
               .toList();
         }
         return cachedPOIs;
@@ -74,33 +81,36 @@ class POIRepository {
     // 2. Supabase PostGIS Query (schnell, ~100ms)
     if (_supabaseRepo != null) {
       try {
-        final supabasePOIs = await _supabaseRepo!.loadPOIsInRadius(
+        final supabasePOIs = await _supabaseRepo.loadPOIsInRadius(
           latitude: center.latitude,
           longitude: center.longitude,
           radiusKm: radiusKm,
-          categoryFilter: categoryFilter,
+          categoryFilter: normalizedCategoryFilter,
           minScore: minimumPOIScore,
         );
 
         if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
-          debugPrint('[POI-Supabase] Genuegend POIs (${supabasePOIs.length}), ueberspringe Client-APIs');
+          debugPrint(
+              '[POI-Supabase] Genuegend POIs (${supabasePOIs.length}), ueberspringe Client-APIs');
 
           // Im Hive-Cache speichern (vor Kategorie-Filter: Supabase liefert bereits gefiltert)
           if (useCache && _cacheService != null) {
-            final regionKey = _cacheService!.createRegionKey(
+            final regionKey = _cacheService.createRegionKey(
               center.latitude,
               center.longitude,
               radiusKm,
             );
-            _cacheService!.cachePOIs(supabasePOIs, regionKey);
+            _cacheService.cachePOIs(supabasePOIs, regionKey);
           }
 
           return supabasePOIs;
         }
 
-        debugPrint('[POI-Fallback] Supabase: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
+        debugPrint(
+            '[POI-Fallback] Supabase: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
       } catch (e) {
-        debugPrint('[POI-Fallback] Supabase-Fehler: $e, starte Client-Fallback');
+        debugPrint(
+            '[POI-Fallback] Supabase-Fehler: $e, starte Client-Fallback');
       }
     }
 
@@ -146,12 +156,12 @@ class POIRepository {
 
     // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
     // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
-    final timedFutures = futures.map((f) =>
-      f.timeout(const Duration(seconds: 12), onTimeout: () {
-        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
-        return <POI>[];
-      })
-    ).toList();
+    final timedFutures = futures
+        .map((f) => f.timeout(const Duration(seconds: 12), onTimeout: () {
+              debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+              return <POI>[];
+            }))
+        .toList();
 
     final results = await Future.wait(timedFutures)
         .timeout(const Duration(seconds: 20), onTimeout: () {
@@ -172,13 +182,16 @@ class POIRepository {
 
     if (sourceErrors.isNotEmpty) {
       if (sourceErrors.length == sourceCount) {
-        debugPrint('[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
+        debugPrint(
+            '[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
       } else {
-        debugPrint('[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
+        debugPrint(
+            '[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
       }
     }
 
-    debugPrint('[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
+    debugPrint(
+        '[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
 
     // Nach Distanz filtern (exakt im Radius)
     final distanceFiltered = allPOIs.where((poi) {
@@ -186,32 +199,58 @@ class POIRepository {
       return distance <= radiusKm;
     }).toList();
 
-    final qualityFiltered = distanceFiltered.where((poi) => poi.score >= minimumPOIScore).toList();
-    debugPrint('[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
+    final qualityFiltered =
+        distanceFiltered.where((poi) => poi.score >= minimumPOIScore).toList();
+    debugPrint(
+        '[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
 
     // Im Cache speichern (vor Kategorie-Filter)
     if (useCache && _cacheService != null && qualityFiltered.isNotEmpty) {
-      final regionKey = _cacheService!.createRegionKey(
+      final regionKey = _cacheService.createRegionKey(
         center.latitude,
         center.longitude,
         radiusKm,
       );
-      _cacheService!.cachePOIs(qualityFiltered, regionKey);
+      _cacheService.cachePOIs(qualityFiltered, regionKey);
     }
 
     // 4. Fire-and-forget Upload zu Supabase (Crowdsourced)
     if (_supabaseRepo != null && qualityFiltered.isNotEmpty) {
-      unawaited(_supabaseRepo!.uploadEnrichedPOIsBatch(qualityFiltered).catchError((e) {
+      unawaited(_supabaseRepo
+          .uploadEnrichedPOIsBatch(qualityFiltered)
+          .catchError((e) {
         debugPrint('[POI-Upload] Fire-and-forget Fehler: $e');
       }));
     }
 
     // Nach Kategorien filtern (falls angegeben)
     var result = qualityFiltered;
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
+    if (normalizedCategoryFilter != null &&
+        normalizedCategoryFilter.isNotEmpty) {
       result = qualityFiltered
-          .where((poi) => categoryFilter.contains(poi.categoryId))
+          .where((poi) => normalizedCategoryFilter.contains(poi.categoryId))
           .toList();
+    }
+
+    if (result.isEmpty &&
+        !isFallbackAttempt &&
+        normalizedCategoryFilter != null &&
+        normalizedCategoryFilter.isNotEmpty) {
+      final expanded = _expandCategoryFilter(normalizedCategoryFilter);
+      if (expanded.length > normalizedCategoryFilter.length) {
+        debugPrint(
+            '[POI] Kategorie-Fallback aktiv: ${normalizedCategoryFilter.join(",")} -> ${expanded.join(",")}');
+        return loadPOIsInRadius(
+          center: center,
+          radiusKm: radiusKm,
+          categoryFilter: expanded,
+          includeCurated: includeCurated,
+          includeWikipedia: includeWikipedia,
+          includeOverpass: includeOverpass,
+          useCache: false,
+          isFallbackAttempt: true,
+        );
+      }
     }
 
     debugPrint('[POI] Gesamt nach Filter: ${result.length}');
@@ -227,27 +266,32 @@ class POIRepository {
     bool includeWikipedia = true,
     bool includeOverpass = true,
     int maxResults = 200,
+    bool isFallbackAttempt = false,
   }) async {
+    final normalizedCategoryFilter = _normalizeCategoryFilter(categoryFilter);
     // 1. Supabase PostGIS Query (schnell)
     if (_supabaseRepo != null) {
       try {
-        final supabasePOIs = await _supabaseRepo!.loadPOIsInBounds(
+        final supabasePOIs = await _supabaseRepo.loadPOIsInBounds(
           swLat: bounds.southwest.latitude,
           swLng: bounds.southwest.longitude,
           neLat: bounds.northeast.latitude,
           neLng: bounds.northeast.longitude,
-          categoryFilter: categoryFilter,
+          categoryFilter: normalizedCategoryFilter,
           minScore: minimumPOIScore,
         );
 
         if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
-          debugPrint('[POI-Supabase] Bounds: ${supabasePOIs.length} POIs, ueberspringe Client-APIs');
+          debugPrint(
+              '[POI-Supabase] Bounds: ${supabasePOIs.length} POIs, ueberspringe Client-APIs');
           return supabasePOIs;
         }
 
-        debugPrint('[POI-Fallback] Supabase Bounds: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
+        debugPrint(
+            '[POI-Fallback] Supabase Bounds: nur ${supabasePOIs.length} POIs, starte Client-Fallback');
       } catch (e) {
-        debugPrint('[POI-Fallback] Supabase Bounds-Fehler: $e, starte Client-Fallback');
+        debugPrint(
+            '[POI-Fallback] Supabase Bounds-Fehler: $e, starte Client-Fallback');
       }
     }
 
@@ -276,7 +320,8 @@ class POIRepository {
         (bounds.southwest.latitude + bounds.northeast.latitude) / 2,
         (bounds.southwest.longitude + bounds.northeast.longitude) / 2,
       );
-      final radiusKm = GeoUtils.haversineDistance(bounds.southwest, bounds.northeast) / 2;
+      final radiusKm =
+          GeoUtils.haversineDistance(bounds.southwest, bounds.northeast) / 2;
       futures.add(_loadWikipediaPOIsInRadius(center, radiusKm).catchError((e) {
         sourceErrors.add('Wikipedia: $e');
         return <POI>[];
@@ -293,12 +338,12 @@ class POIRepository {
 
     // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
     // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
-    final timedFutures = futures.map((f) =>
-      f.timeout(const Duration(seconds: 12), onTimeout: () {
-        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
-        return <POI>[];
-      })
-    ).toList();
+    final timedFutures = futures
+        .map((f) => f.timeout(const Duration(seconds: 12), onTimeout: () {
+              debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+              return <POI>[];
+            }))
+        .toList();
 
     final results = await Future.wait(timedFutures)
         .timeout(const Duration(seconds: 20), onTimeout: () {
@@ -318,31 +363,55 @@ class POIRepository {
     stopwatch.stop();
 
     if (sourceErrors.isNotEmpty) {
-      debugPrint('[POI] ⚠️ Korridor-Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
+      debugPrint(
+          '[POI] ⚠️ Korridor-Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
     }
 
-    debugPrint('[POI] Korridor geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs');
+    debugPrint(
+        '[POI] Korridor geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs');
 
-    final qualityFiltered = allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
+    final qualityFiltered =
+        allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
 
     // Result-Limit: Verhindert POI-Explosion bei grossen Bounding-Boxes
     if (qualityFiltered.length > maxResults) {
       qualityFiltered.sort((a, b) => b.score.compareTo(a.score));
       qualityFiltered.removeRange(maxResults, qualityFiltered.length);
-      debugPrint('[POI] Result-Limit: ${allPOIs.length} → $maxResults POIs (max)');
+      debugPrint(
+          '[POI] Result-Limit: ${allPOIs.length} → $maxResults POIs (max)');
     }
 
     // Fire-and-forget Upload zu Supabase
     if (_supabaseRepo != null && qualityFiltered.isNotEmpty) {
-      unawaited(_supabaseRepo!.uploadEnrichedPOIsBatch(qualityFiltered).catchError((e) {
+      unawaited(_supabaseRepo
+          .uploadEnrichedPOIsBatch(qualityFiltered)
+          .catchError((e) {
         debugPrint('[POI-Upload] Fire-and-forget Bounds-Fehler: $e');
       }));
     }
 
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      return qualityFiltered
-          .where((poi) => categoryFilter.contains(poi.categoryId))
+    if (normalizedCategoryFilter != null &&
+        normalizedCategoryFilter.isNotEmpty) {
+      final filtered = qualityFiltered
+          .where((poi) => normalizedCategoryFilter.contains(poi.categoryId))
           .toList();
+      if (filtered.isEmpty && !isFallbackAttempt) {
+        final expanded = _expandCategoryFilter(normalizedCategoryFilter);
+        if (expanded.length > normalizedCategoryFilter.length) {
+          debugPrint(
+              '[POI] Bounds-Kategorie-Fallback: ${normalizedCategoryFilter.join(",")} -> ${expanded.join(",")}');
+          return loadPOIsInBounds(
+            bounds: bounds,
+            categoryFilter: expanded,
+            includeCurated: includeCurated,
+            includeWikipedia: includeWikipedia,
+            includeOverpass: includeOverpass,
+            maxResults: maxResults,
+            isFallbackAttempt: true,
+          );
+        }
+      }
+      return filtered;
     }
 
     return qualityFiltered;
@@ -362,8 +431,10 @@ class POIRepository {
     final lngDelta = radiusKm / lngDegreeKm;
 
     return (
-      southwest: LatLng(center.latitude - latDelta, center.longitude - lngDelta),
-      northeast: LatLng(center.latitude + latDelta, center.longitude + lngDelta),
+      southwest:
+          LatLng(center.latitude - latDelta, center.longitude - lngDelta),
+      northeast:
+          LatLng(center.latitude + latDelta, center.longitude + lngDelta),
     );
   }
 
@@ -389,14 +460,16 @@ class POIRepository {
     final gridSize = max((radiusKm * 2 / maxCellsPerSide), 15.0);
     final cellsPerSide = min((radiusKm * 2 / gridSize).ceil(), maxCellsPerSide);
 
-    debugPrint('[POI] Wikipedia Grid: ${cellsPerSide}x$cellsPerSide Zellen, ${gridSize.toStringAsFixed(0)}km pro Zelle');
+    debugPrint(
+        '[POI] Wikipedia Grid: ${cellsPerSide}x$cellsPerSide Zellen, ${gridSize.toStringAsFixed(0)}km pro Zelle');
 
     // Grid-Punkte sammeln
     final gridPoints = <LatLng>[];
     for (int i = 0; i < cellsPerSide; i++) {
       for (int j = 0; j < cellsPerSide; j++) {
         final offsetLat = (i - cellsPerSide / 2) * gridSize / 111.0;
-        final offsetLng = (j - cellsPerSide / 2) * gridSize /
+        final offsetLng = (j - cellsPerSide / 2) *
+            gridSize /
             (111.0 * cos(center.latitude * pi / 180));
         final gridCenter = LatLng(
           center.latitude + offsetLat,
@@ -412,13 +485,15 @@ class POIRepository {
     // Wikipedia Geosearch erlaubt ~200 Requests/Minute
     // 3 parallel + 300ms Delay = ~180 req/min (sicher unter Limit)
     const batchSize = 3;
-    for (int b = 0; b < gridPoints.length && allPOIs.length < 200; b += batchSize) {
-      final batch = gridPoints.sublist(b, min(b + batchSize, gridPoints.length));
+    for (int b = 0;
+        b < gridPoints.length && allPOIs.length < 200;
+        b += batchSize) {
+      final batch =
+          gridPoints.sublist(b, min(b + batchSize, gridPoints.length));
       final results = await Future.wait(
         batch.map((point) => _loadWikipediaPOIsAtPoint(point, 10000)
             .timeout(const Duration(seconds: 8), onTimeout: () => <POI>[])
-            .catchError((_) => <POI>[])
-        ),
+            .catchError((_) => <POI>[])),
       );
       for (final pois in results) {
         for (final poi in pois) {
@@ -524,12 +599,12 @@ class POIRepository {
 
     // Individuelle Timeouts pro Quelle - verhindert dass ein haengender
     // Service (z.B. Overpass 504) bereits fertige Ergebnisse verwirft
-    final timedFutures = futures.map((f) =>
-      f.timeout(const Duration(seconds: 12), onTimeout: () {
-        debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
-        return <POI>[];
-      })
-    ).toList();
+    final timedFutures = futures
+        .map((f) => f.timeout(const Duration(seconds: 12), onTimeout: () {
+              debugPrint('[POI] ⚠️ Einzelne Quelle Timeout nach 12s');
+              return <POI>[];
+            }))
+        .toList();
 
     final results = await Future.wait(timedFutures)
         .timeout(const Duration(seconds: 20), onTimeout: () {
@@ -552,17 +627,22 @@ class POIRepository {
     // FIX v1.3.8: Warnung bei teilweisen/vollständigen Fehlern
     if (sourceErrors.isNotEmpty) {
       if (sourceErrors.length == sourceCount) {
-        debugPrint('[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
+        debugPrint(
+            '[POI] ⚠️ ALLE Quellen fehlgeschlagen: ${sourceErrors.join(", ")}');
       } else {
-        debugPrint('[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
+        debugPrint(
+            '[POI] ⚠️ Teilweise Fehler (${sourceErrors.length}/$sourceCount): ${sourceErrors.join(", ")}');
       }
     }
 
-    debugPrint('[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
+    debugPrint(
+        '[POI] Parallel geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs von ${sourceCount - sourceErrors.length}/$sourceCount Quellen');
 
     // v1.3.9: Qualitätsfilter - nur POIs mit >= 3.5 Sternen (Score >= 70)
-    final qualityFiltered = allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
-    debugPrint('[POI] Qualitätsfilter: ${allPOIs.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
+    final qualityFiltered =
+        allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
+    debugPrint(
+        '[POI] Qualitätsfilter: ${allPOIs.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
 
     // Routen-bezogene Daten berechnen
     return _calculateRouteData(qualityFiltered, route);
@@ -597,7 +677,8 @@ class POIRepository {
     );
 
     // Radius berechnen (max 10km für Wikipedia API)
-    final radius = GeoUtils.haversineDistance(bounds.southwest, bounds.northeast) / 2;
+    final radius =
+        GeoUtils.haversineDistance(bounds.southwest, bounds.northeast) / 2;
     final clampedRadius = radius.clamp(1.0, 10.0) * 1000; // In Metern
 
     try {
@@ -629,7 +710,8 @@ class POIRepository {
   ) async {
     // Overpass QL Query für touristische POIs
     // ERWEITERT v1.7.23: Seen, Strände, Hotels, Restaurants, Aktivitäten, Zoos, Inseln
-    final bbox = '${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude}';
+    final bbox =
+        '${bounds.southwest.latitude},${bounds.southwest.longitude},${bounds.northeast.latitude},${bounds.northeast.longitude}';
     final query = '''
 [out:json][timeout:25];
 (
@@ -736,7 +818,8 @@ out center;
   }
 
   /// Berechnet den effektiven Score
-  double _calculateEffectiveScore(POI poi, double detourKm, double routePosition) {
+  double _calculateEffectiveScore(
+      POI poi, double detourKm, double routePosition) {
     double score = poi.score.toDouble();
 
     // Umweg-Abzug
@@ -756,7 +839,8 @@ out center;
   }
 
   /// Prüft ob ein Punkt in den Bounds liegt
-  bool _isInBounds(LatLng point, ({LatLng southwest, LatLng northeast}) bounds) {
+  bool _isInBounds(
+      LatLng point, ({LatLng southwest, LatLng northeast}) bounds) {
     return point.latitude >= bounds.southwest.latitude &&
         point.latitude <= bounds.northeast.latitude &&
         point.longitude >= bounds.southwest.longitude &&
@@ -770,7 +854,8 @@ out center;
       name: data['n'] ?? data['name'] ?? 'Unbekannt',
       latitude: (data['lat'] as num).toDouble(),
       longitude: (data['lng'] as num).toDouble(),
-      categoryId: data['c'] ?? data['category'] ?? 'attraction',
+      categoryId: _canonicalCategoryId(
+          (data['c'] ?? data['category'] ?? 'attraction').toString()),
       score: data['r'] ?? data['score'] ?? 50,
       imageUrl: data['img'],
       description: data['desc'],
@@ -787,7 +872,7 @@ out center;
       name: title,
       latitude: (data['lat'] as num).toDouble(),
       longitude: (data['lon'] as num).toDouble(),
-      categoryId: _inferCategoryFromTitle(title),
+      categoryId: _canonicalCategoryId(_inferCategoryFromTitle(title)),
       score: _inferScoreFromTitle(title),
       hasWikipedia: true,
       wikipediaTitle: title,
@@ -804,18 +889,139 @@ out center;
     // v1.7.9: activity, hotel, restaurant Keywords hinzugefuegt
     // v1.9.13: city/coast Keywords erweitert, "see" → Suffix-Check (false-positive Fix)
     const patterns = <String, (List<String>, int)>{
-      'museum': (['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'], 100),
-      'castle': (['schloss', 'burg', 'festung', 'castle', 'fortress', 'palast', 'palace', 'residenz'], 90),
-      'activity': (['zoo', 'tierpark', 'aquarium', 'freizeitpark', 'theme park', 'therme', 'thermalbad', 'schwimmbad', 'stadion', 'arena', 'erlebnispark', 'kletterpark'], 85),
-      'church': (['kirche', 'dom', 'kathedrale', 'kloster', 'abtei', 'chapel', 'church', 'cathedral', 'abbey', 'münster', 'basilika'], 85),
-      'nature': (['nationalpark', 'naturpark', 'naturschutz', 'biosphäre', 'national park', 'nature reserve', 'wasserfall', 'waterfall'], 80),
-      'lake': (['lake', 'teich', 'pond', 'stausee', 'reservoir', 'talsperre', 'weiher'], 75),
-      'viewpoint': (['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'gipfel', 'peak'], 70),
+      'museum': (
+        ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibition'],
+        100
+      ),
+      'castle': (
+        [
+          'schloss',
+          'burg',
+          'festung',
+          'castle',
+          'fortress',
+          'palast',
+          'palace',
+          'residenz'
+        ],
+        90
+      ),
+      'activity': (
+        [
+          'zoo',
+          'tierpark',
+          'aquarium',
+          'freizeitpark',
+          'theme park',
+          'therme',
+          'thermalbad',
+          'schwimmbad',
+          'stadion',
+          'arena',
+          'erlebnispark',
+          'kletterpark'
+        ],
+        85
+      ),
+      'church': (
+        [
+          'kirche',
+          'dom',
+          'kathedrale',
+          'kloster',
+          'abtei',
+          'chapel',
+          'church',
+          'cathedral',
+          'abbey',
+          'münster',
+          'basilika'
+        ],
+        85
+      ),
+      'nature': (
+        [
+          'nationalpark',
+          'naturpark',
+          'naturschutz',
+          'biosphäre',
+          'national park',
+          'nature reserve',
+          'wasserfall',
+          'waterfall'
+        ],
+        80
+      ),
+      'lake': (
+        [
+          'lake',
+          'teich',
+          'pond',
+          'stausee',
+          'reservoir',
+          'talsperre',
+          'weiher'
+        ],
+        75
+      ),
+      'viewpoint': (
+        ['aussichtspunkt', 'viewpoint', 'aussichtsturm', 'gipfel', 'peak'],
+        70
+      ),
       'park': (['park', 'garten', 'garden', 'botanical'], 65),
-      'monument': (['denkmal', 'monument', 'memorial', 'gedenkstätte', 'mahnmal', 'statue', 'ruine', 'ruins'], 60),
-      'city': (['altstadt', 'old town', 'marktplatz', 'market square', 'rathaus', 'town hall', 'stadt', 'city', 'zentrum', 'innenstadt', 'downtown'], 55),
-      'coast': (['strand', 'beach', 'küste', 'coast', 'insel', 'island', 'hafen', 'harbor', 'port', 'bucht', 'bay', 'fjord', 'marina', 'ufer', 'pier'], 50),
-      'hotel': (['hotel', 'gasthof', 'pension', 'herberge', 'jugendherberge'], 40),
+      'monument': (
+        [
+          'denkmal',
+          'monument',
+          'memorial',
+          'gedenkstätte',
+          'mahnmal',
+          'statue',
+          'ruine',
+          'ruins'
+        ],
+        60
+      ),
+      'city': (
+        [
+          'altstadt',
+          'old town',
+          'marktplatz',
+          'market square',
+          'rathaus',
+          'town hall',
+          'stadt',
+          'city',
+          'zentrum',
+          'innenstadt',
+          'downtown'
+        ],
+        55
+      ),
+      'coast': (
+        [
+          'strand',
+          'beach',
+          'küste',
+          'coast',
+          'insel',
+          'island',
+          'hafen',
+          'harbor',
+          'port',
+          'bucht',
+          'bay',
+          'fjord',
+          'marina',
+          'ufer',
+          'pier'
+        ],
+        50
+      ),
+      'hotel': (
+        ['hotel', 'gasthof', 'pension', 'herberge', 'jugendherberge'],
+        40
+      ),
       'restaurant': (['restaurant', 'brauhaus', 'wirtshaus', 'biergarten'], 40),
     };
 
@@ -829,11 +1035,13 @@ out center;
         final position = lowerTitle.indexOf(keyword);
         if (position != -1) {
           // Score = Priorität + Bonus für frühere Position im Titel
-          final positionBonus = ((title.length - position) / title.length * 20).round();
+          final positionBonus =
+              ((title.length - position) / title.length * 20).round();
           final score = priority + positionBonus;
 
           // Beste Kategorie auswählen (höchster Score, bei Gleichstand frühere Position)
-          if (score > bestScore || (score == bestScore && position < bestPosition)) {
+          if (score > bestScore ||
+              (score == bestScore && position < bestPosition)) {
             bestScore = score;
             bestCategory = entry.key;
             bestPosition = position;
@@ -854,7 +1062,14 @@ out center;
 
     // v1.9.13: Deutsche Stadt-Suffixe erkennen (nur wenn nichts Besseres gefunden)
     if (bestCategory == null) {
-      const citySuffixes = ['stadt', 'furt', 'heim', 'hausen', 'haven', 'hafen'];
+      const citySuffixes = [
+        'stadt',
+        'furt',
+        'heim',
+        'hausen',
+        'haven',
+        'hafen'
+      ];
       for (final suffix in citySuffixes) {
         if (lowerTitle.endsWith(suffix)) {
           bestCategory = 'city';
@@ -872,13 +1087,31 @@ out center;
 
     // Bekannte Keywords für hochwertige Sehenswürdigkeiten
     const highScoreKeywords = [
-      'schloss', 'castle', 'dom', 'cathedral', 'nationalpark', 'unesco',
-      'welterbe', 'heritage', 'museum', 'altstadt', 'old town'
+      'schloss',
+      'castle',
+      'dom',
+      'cathedral',
+      'nationalpark',
+      'unesco',
+      'welterbe',
+      'heritage',
+      'museum',
+      'altstadt',
+      'old town'
     ];
 
     const mediumScoreKeywords = [
-      'burg', 'kirche', 'church', 'kloster', 'abbey', 'park', 'garten',
-      'denkmal', 'monument', 'turm', 'tower'
+      'burg',
+      'kirche',
+      'church',
+      'kloster',
+      'abbey',
+      'park',
+      'garten',
+      'denkmal',
+      'monument',
+      'turm',
+      'tower'
     ];
 
     for (final keyword in highScoreKeywords) {
@@ -931,29 +1164,35 @@ out center;
       category = 'viewpoint';
     } else if (tags['tourism'] == 'museum') {
       category = 'museum';
-    } else if (tags['historic'] == 'monument' || tags['historic'] == 'memorial') {
+    } else if (tags['historic'] == 'monument' ||
+        tags['historic'] == 'memorial') {
       category = 'monument';
     } else if (tags['historic'] == 'ruins') {
       category = 'monument';
-    } else if (tags['historic'] == 'church' || tags['amenity'] == 'place_of_worship') {
+    } else if (tags['historic'] == 'church' ||
+        tags['amenity'] == 'place_of_worship') {
       category = 'church';
     } else if (tags['natural'] == 'waterfall') {
       category = 'nature';
     } else if (tags['leisure'] == 'park' || tags['leisure'] == 'garden') {
       category = 'park';
     } else if (tags['natural'] == 'water' &&
-               (tags['water'] == 'lake' || tags['water'] == 'reservoir')) {
+        (tags['water'] == 'lake' || tags['water'] == 'reservoir')) {
       category = 'lake';
-    } else if (tags['natural'] == 'beach' || tags['leisure'] == 'beach_resort' ||
-               tags['place'] == 'island' || tags['natural'] == 'bay' ||
-               tags['leisure'] == 'marina') {
+    } else if (tags['natural'] == 'beach' ||
+        tags['leisure'] == 'beach_resort' ||
+        tags['place'] == 'island' ||
+        tags['natural'] == 'bay' ||
+        tags['leisure'] == 'marina') {
       category = 'coast';
     } else if (tags['tourism'] == 'hotel') {
       category = 'hotel';
     } else if (tags['amenity'] == 'restaurant') {
       category = 'restaurant';
-    } else if (tags['tourism'] == 'theme_park' || tags['tourism'] == 'zoo' ||
-               tags['leisure'] == 'water_park' || tags['leisure'] == 'swimming_area') {
+    } else if (tags['tourism'] == 'theme_park' ||
+        tags['tourism'] == 'zoo' ||
+        tags['leisure'] == 'water_park' ||
+        tags['leisure'] == 'swimming_area') {
       category = 'activity';
     }
 
@@ -965,7 +1204,9 @@ out center;
 
     // Bild-URL aus OSM-Tags ableiten (v1.7.9: URL-Validierung)
     String? imageUrl;
-    if (osmImageTag != null && (osmImageTag.startsWith('http://') || osmImageTag.startsWith('https://'))) {
+    if (osmImageTag != null &&
+        (osmImageTag.startsWith('http://') ||
+            osmImageTag.startsWith('https://'))) {
       imageUrl = osmImageTag;
     }
     if (imageUrl == null && wikimediaCommonsTag != null) {
@@ -1005,7 +1246,7 @@ out center;
       name: tags['name'] ?? 'Unbekannt',
       latitude: lat,
       longitude: lng,
-      categoryId: category,
+      categoryId: _canonicalCategoryId(category),
       score: score,
       website: tags['website'],
       phone: tags['phone'],
@@ -1014,9 +1255,79 @@ out center;
       wikidataId: wikidataTag,
       wikipediaTitle: wpTitle,
       hasWikipedia: wpTitle != null,
-      hasWikidataData: tags['website'] != null || tags['phone'] != null || wikidataTag != null,
+      hasWikidataData: tags['website'] != null ||
+          tags['phone'] != null ||
+          wikidataTag != null,
       tags: poiTags,
     );
+  }
+
+  List<String>? _normalizeCategoryFilter(List<String>? categoryFilter) {
+    if (categoryFilter == null || categoryFilter.isEmpty) return null;
+    final normalized = categoryFilter
+        .map((c) => _canonicalCategoryId(c))
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  List<String> _expandCategoryFilter(List<String> categories) {
+    final expanded = <String>{...categories};
+    const semanticGroups = <String, List<String>>{
+      'castle': ['monument', 'church', 'museum'],
+      'nature': ['park', 'viewpoint', 'lake'],
+      'museum': ['monument', 'church', 'city'],
+      'viewpoint': ['nature', 'park', 'monument'],
+      'lake': ['nature', 'coast', 'park'],
+      'coast': ['lake', 'nature', 'city'],
+      'park': ['nature', 'viewpoint', 'lake'],
+      'city': ['attraction', 'museum', 'monument'],
+      'activity': ['park', 'city', 'attraction'],
+      'unesco': ['museum', 'monument', 'castle'],
+      'church': ['monument', 'museum', 'city'],
+      'monument': ['church', 'museum', 'city'],
+      'attraction': ['city', 'activity', 'monument'],
+    };
+    for (final category in categories) {
+      expanded.addAll(semanticGroups[category] ?? const []);
+    }
+    return expanded.toList();
+  }
+
+  String _canonicalCategoryId(String raw) {
+    final input = raw.trim().toLowerCase();
+    if (input.isEmpty) return '';
+    const alias = <String, String>{
+      'parks': 'park',
+      'nationalpark': 'park',
+      'nationalparks': 'park',
+      'natur': 'nature',
+      'naturpark': 'nature',
+      'seen': 'lake',
+      'beach': 'coast',
+      'strände': 'coast',
+      'strande': 'coast',
+      'küste': 'coast',
+      'kueste': 'coast',
+      'aussicht': 'viewpoint',
+      'aussichtspunkt': 'viewpoint',
+      'stadt': 'city',
+      'staedte': 'city',
+      'städte': 'city',
+      'kirchen': 'church',
+      'schloss': 'castle',
+      'schlösser': 'castle',
+      'schloesser': 'castle',
+      'burgen': 'castle',
+      'denkmal': 'monument',
+      'attraktion': 'attraction',
+      'attraktionen': 'attraction',
+      'restaurants': 'restaurant',
+      'hotels': 'hotel',
+      'unesco-welterbe': 'unesco',
+    };
+    return alias[input] ?? input;
   }
 }
 

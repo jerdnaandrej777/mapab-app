@@ -40,7 +40,7 @@ class TripConstants {
   static const int euroTripDefaultDays = 3;
 
   /// Quick-Select Werte für Tagesausflug Radius (in km)
-  static const List<double> dayTripQuickSelectRadii = [50, 100, 200, 300];
+  static const List<double> dayTripQuickSelectRadii = [50, 100, 200, 300, 500];
 
   /// Minimale Fahrdistanz pro Tag in km (Haversine)
   /// Entspricht ca. 200km echte Fahrtstrecke (Faktor ~1.3)

@@ -68,8 +68,9 @@ class TripGeneratorRepository {
     final endAddress = destinationAddress ?? startAddress;
 
     // 1. POIs laden — Korridor oder Radius
-    final categoryIds =
-        categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
+    final categoryIds = _normalizeCategoryIds(
+      categories.isNotEmpty ? categories.map((c) => c.id).toList() : null,
+    );
 
     List<POI> availablePOIs;
     if (hasDestination) {
@@ -77,7 +78,7 @@ class TripGeneratorRepository {
           '[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
       availablePOIs = await _loadPOIsAlongCorridor(
         start: startLocation,
-        end: destinationLocation!,
+        end: endLocation,
         bufferKm: radiusKm,
         categoryFilter: categoryIds,
       );
@@ -89,15 +90,65 @@ class TripGeneratorRepository {
       );
     }
 
+    if (availablePOIs.isEmpty &&
+        categoryIds != null &&
+        categoryIds.isNotEmpty) {
+      final expandedCategories = _expandCategoryIds(categoryIds);
+      if (expandedCategories.length > categoryIds.length) {
+        debugPrint(
+            '[TripGenerator] Kategorie-Fallback Daytrip: ${categoryIds.join(",")} -> ${expandedCategories.join(",")}');
+        if (hasDestination) {
+          availablePOIs = await _loadPOIsAlongCorridor(
+            start: startLocation,
+            end: endLocation,
+            bufferKm: radiusKm,
+            categoryFilter: expandedCategories,
+          );
+        } else {
+          availablePOIs = await _poiRepo.loadPOIsInRadius(
+            center: startLocation,
+            radiusKm: radiusKm,
+            categoryFilter: expandedCategories,
+          );
+        }
+      }
+    }
+
+    if (availablePOIs.isEmpty) {
+      debugPrint(
+          '[TripGenerator] Starte curated-only Fallback fuer Tagestrip...');
+      if (hasDestination) {
+        availablePOIs = await _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: radiusKm,
+          categoryFilter: categoryIds,
+          includeWikipedia: false,
+          includeOverpass: false,
+        );
+      } else {
+        availablePOIs = await _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: radiusKm,
+          categoryFilter: categoryIds,
+          includeWikipedia: false,
+          includeOverpass: false,
+        );
+      }
+    }
+
     // v1.9.13: Hotels sind fuer Tagesausfluege nicht relevant
     availablePOIs =
         availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
 
     if (availablePOIs.isEmpty) {
+      final categoryHint = categoryIds != null && categoryIds.isNotEmpty
+          ? ' (aktuelle Kategorie-Filter evtl. zu eng)'
+          : '';
       throw TripGenerationException(
         hasDestination
             ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
-            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden',
+            : 'Keine POIs im Umkreis von ${radiusKm}km gefunden$categoryHint',
       );
     }
 
@@ -134,7 +185,7 @@ class TripGeneratorRepository {
       optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
         pois: selectedPOIs,
         startLocation: startLocation,
-        endLocation: destinationLocation!,
+        endLocation: endLocation,
       );
     } else {
       optimizedPOIs = _routeOptimizer.optimizeRoute(
@@ -252,8 +303,9 @@ class TripGeneratorRepository {
     debugPrint(
         '[TripGenerator] ===============================================');
 
-    final categoryIds =
-        categories.isNotEmpty ? categories.map((c) => c.id).toList() : null;
+    final categoryIds = _normalizeCategoryIds(
+      categories.isNotEmpty ? categories.map((c) => c.id).toList() : null,
+    );
     List<LatLng>? progressRouteCoordinates;
     if (hasDestination) {
       try {
@@ -1640,6 +1692,53 @@ class TripGeneratorRepository {
     if (highlights.isEmpty) return 'Euro Trip ${days.length} Tage';
 
     return '${days.length}-Tage-Trip: ${highlights.join(' → ')}';
+  }
+
+  List<String>? _normalizeCategoryIds(List<String>? categoryIds) {
+    if (categoryIds == null || categoryIds.isEmpty) return null;
+    const alias = <String, String>{
+      'parks': 'park',
+      'natur': 'nature',
+      'seen': 'lake',
+      'strand': 'coast',
+      'aussicht': 'viewpoint',
+      'stadt': 'city',
+      'schloss': 'castle',
+      'burgen': 'castle',
+      'kirchen': 'church',
+      'denkmal': 'monument',
+      'attraktionen': 'attraction',
+    };
+    final normalized = categoryIds
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .map((e) => alias[e] ?? e)
+        .toSet()
+        .toList();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  List<String> _expandCategoryIds(List<String> categories) {
+    const semanticGroups = <String, List<String>>{
+      'castle': ['monument', 'church', 'museum'],
+      'nature': ['park', 'viewpoint', 'lake'],
+      'museum': ['monument', 'church', 'city'],
+      'viewpoint': ['nature', 'park', 'monument'],
+      'lake': ['nature', 'coast', 'park'],
+      'coast': ['lake', 'nature', 'city'],
+      'park': ['nature', 'viewpoint', 'lake'],
+      'city': ['attraction', 'museum', 'monument'],
+      'activity': ['park', 'city', 'attraction'],
+      'unesco': ['museum', 'monument', 'castle'],
+      'church': ['monument', 'museum', 'city'],
+      'monument': ['church', 'museum', 'city'],
+      'attraction': ['city', 'activity', 'monument'],
+    };
+    final expanded = <String>{...categories};
+    for (final cat in categories) {
+      expanded.addAll(semanticGroups[cat] ?? const []);
+    }
+    return expanded.toList();
   }
 }
 

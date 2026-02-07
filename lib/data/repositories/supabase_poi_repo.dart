@@ -31,28 +31,32 @@ class SupabasePOIRepository {
     int limit = 200,
   }) async {
     final stopwatch = Stopwatch()..start();
+    final normalizedCategoryFilter = _normalizeCategoryFilter(categoryFilter);
 
     try {
       final response = await _client.rpc('search_pois_in_radius', params: {
         'p_lat': latitude,
         'p_lng': longitude,
         'p_radius_km': radiusKm,
-        'p_category_ids': categoryFilter,
+        'p_category_ids': normalizedCategoryFilter,
         'p_min_score': minScore,
         'p_limit': limit,
       });
 
       final rows = response as List<dynamic>;
-      final pois = rows.map((row) => _parsePOIRow(row as Map<String, dynamic>)).toList();
+      final pois =
+          rows.map((row) => _parsePOIRow(row as Map<String, dynamic>)).toList();
 
       stopwatch.stop();
-      debugPrint('[POI-Supabase] Radius-Query: ${pois.length} POIs in ${stopwatch.elapsedMilliseconds}ms '
+      debugPrint(
+          '[POI-Supabase] Radius-Query: ${pois.length} POIs in ${stopwatch.elapsedMilliseconds}ms '
           '(lat=$latitude, lng=$longitude, r=${radiusKm}km)');
 
       return pois;
     } catch (e) {
       stopwatch.stop();
-      debugPrint('[POI-Supabase] Radius-Query FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
+      debugPrint(
+          '[POI-Supabase] Radius-Query FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
       rethrow;
     }
   }
@@ -69,6 +73,7 @@ class SupabasePOIRepository {
     int limit = 200,
   }) async {
     final stopwatch = Stopwatch()..start();
+    final normalizedCategoryFilter = _normalizeCategoryFilter(categoryFilter);
 
     try {
       final response = await _client.rpc('search_pois_in_bounds', params: {
@@ -76,23 +81,55 @@ class SupabasePOIRepository {
         'p_sw_lng': swLng,
         'p_ne_lat': neLat,
         'p_ne_lng': neLng,
-        'p_category_ids': categoryFilter,
+        'p_category_ids': normalizedCategoryFilter,
         'p_min_score': minScore,
         'p_limit': limit,
       });
 
       final rows = response as List<dynamic>;
-      final pois = rows.map((row) => _parsePOIRow(row as Map<String, dynamic>)).toList();
+      final pois =
+          rows.map((row) => _parsePOIRow(row as Map<String, dynamic>)).toList();
 
       stopwatch.stop();
-      debugPrint('[POI-Supabase] Bounds-Query: ${pois.length} POIs in ${stopwatch.elapsedMilliseconds}ms');
+      debugPrint(
+          '[POI-Supabase] Bounds-Query: ${pois.length} POIs in ${stopwatch.elapsedMilliseconds}ms');
 
       return pois;
     } catch (e) {
       stopwatch.stop();
-      debugPrint('[POI-Supabase] Bounds-Query FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
+      debugPrint(
+          '[POI-Supabase] Bounds-Query FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
       rethrow;
     }
+  }
+
+  List<String>? _normalizeCategoryFilter(List<String>? categoryFilter) {
+    if (categoryFilter == null || categoryFilter.isEmpty) return null;
+    const alias = <String, String>{
+      'parks': 'park',
+      'nationalpark': 'park',
+      'natur': 'nature',
+      'seen': 'lake',
+      'strand': 'coast',
+      'kueste': 'coast',
+      'küste': 'coast',
+      'aussicht': 'viewpoint',
+      'stadt': 'city',
+      'schloss': 'castle',
+      'burgen': 'castle',
+      'kirchen': 'church',
+      'denkmal': 'monument',
+      'attraktionen': 'attraction',
+      'hotels': 'hotel',
+      'restaurants': 'restaurant',
+    };
+    final normalized = categoryFilter
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .map((e) => alias[e] ?? e)
+        .toSet()
+        .toList();
+    return normalized.isEmpty ? null : normalized;
   }
 
   // ============================================
@@ -130,7 +167,8 @@ class SupabasePOIRepository {
       }
 
       active++;
-      final future = _client.rpc('upsert_poi', params: _poiToRpcParams(poi)).then((_) {
+      final future =
+          _client.rpc('upsert_poi', params: _poiToRpcParams(poi)).then((_) {
         success++;
       }).catchError((e) {
         errors++;
@@ -146,7 +184,8 @@ class SupabasePOIRepository {
     await Future.wait(futures);
 
     stopwatch.stop();
-    debugPrint('[POI-Upload] Batch fertig: $success OK, $errors Fehler in ${stopwatch.elapsedMilliseconds}ms');
+    debugPrint(
+        '[POI-Upload] Batch fertig: $success OK, $errors Fehler in ${stopwatch.elapsedMilliseconds}ms');
   }
 
   // ============================================

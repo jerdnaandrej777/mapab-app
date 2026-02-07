@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../models/public_poi_post.dart';
 import '../models/public_trip.dart';
 import '../models/trip.dart';
 import '../models/trip_photo.dart';
@@ -53,9 +54,8 @@ class SocialRepository {
         'p_query': query,
         'p_tags': tags,
         'p_country_code': countryCode,
-        'p_trip_type': tripType == GalleryTripTypeFilter.all
-            ? null
-            : tripType?.name,
+        'p_trip_type':
+            tripType == GalleryTripTypeFilter.all ? null : tripType?.name,
         'p_sort_by': sortBy.name,
         'p_limit': limit,
         'p_offset': offset,
@@ -73,8 +73,92 @@ class SocialRepository {
       return trips;
     } catch (e) {
       stopwatch.stop();
-      debugPrint('[Social] Galerie FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
+      debugPrint(
+          '[Social] Galerie FEHLER (${stopwatch.elapsedMilliseconds}ms): $e');
       rethrow;
+    }
+  }
+
+  // ============================================
+  // POI-GALERIE-METHODEN
+  // ============================================
+
+  Future<List<PublicPoiPost>> searchPublicPOIs({
+    String? query,
+    List<String>? categories,
+    bool? mustSeeOnly,
+    String sortBy = 'trending',
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await _client.rpc('search_public_pois', params: {
+        'p_query': query,
+        'p_categories': categories,
+        'p_must_see_only': mustSeeOnly,
+        'p_sort_by': sortBy,
+        'p_limit': limit,
+        'p_offset': offset,
+      });
+
+      final rows = response as List<dynamic>;
+      return rows
+          .map((row) => _parsePublicPoiRow(row as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[Social] POI-Galerie FEHLER: $e');
+      return const [];
+    }
+  }
+
+  Future<PublicPoiPost?> getPublicPOI(String postId) async {
+    try {
+      final response = await _client.rpc('get_public_poi', params: {
+        'p_post_id': postId,
+      });
+      final rows = response as List<dynamic>;
+      if (rows.isEmpty) return null;
+      return _parsePublicPoiRow(rows.first as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('[Social] Public-POI-Detail FEHLER: $e');
+      return null;
+    }
+  }
+
+  Future<bool> likePOIPost(String postId) async {
+    try {
+      final result = await _client.rpc('like_poi_post', params: {
+        'p_post_id': postId,
+      });
+      return result as bool? ?? false;
+    } catch (e) {
+      debugPrint('[Social] POI Like FEHLER: $e');
+      return false;
+    }
+  }
+
+  Future<bool> unlikePOIPost(String postId) async {
+    try {
+      final result = await _client.rpc('unlike_poi_post', params: {
+        'p_post_id': postId,
+      });
+      return result as bool? ?? false;
+    } catch (e) {
+      debugPrint('[Social] POI Unlike FEHLER: $e');
+      return false;
+    }
+  }
+
+  Future<int?> votePOI(String postId, {required int voteValue}) async {
+    try {
+      final result = await _client.rpc('vote_poi', params: {
+        'p_post_id': postId,
+        'p_vote': voteValue.clamp(-1, 1),
+      });
+      return result as int?;
+    } catch (e) {
+      debugPrint('[Social] POI Vote FEHLER: $e');
+      return null;
     }
   }
 
@@ -137,7 +221,8 @@ class SocialRepository {
   }
 
   /// Laedt Trips eines bestimmten Users
-  Future<List<PublicTrip>> loadUserTrips(String userId, {int limit = 20}) async {
+  Future<List<PublicTrip>> loadUserTrips(String userId,
+      {int limit = 20}) async {
     try {
       final response = await _client
           .from('trips')
@@ -262,10 +347,7 @@ class SocialRepository {
   /// Eigenen Trip loeschen
   Future<bool> deletePublishedTrip(String tripId) async {
     try {
-      await _client
-          .from('trips')
-          .delete()
-          .eq('id', tripId);
+      await _client.from('trips').delete().eq('id', tripId);
       debugPrint('[Social] Trip geloescht: $tripId');
       return true;
     } catch (e) {
@@ -367,7 +449,8 @@ class SocialRepository {
   // ============================================
 
   /// Laedt alle Fotos fuer einen Trip
-  Future<List<TripPhoto>> loadTripPhotos(String tripId, {int limit = 50, int offset = 0}) async {
+  Future<List<TripPhoto>> loadTripPhotos(String tripId,
+      {int limit = 50, int offset = 0}) async {
     debugPrint('[Social] Loading photos for Trip: $tripId');
 
     try {
@@ -412,13 +495,13 @@ class SocialRepository {
 
       // Upload zu Supabase Storage
       await _client.storage.from(_tripPhotosBucket).uploadBinary(
-        storagePath,
-        bytes,
-        fileOptions: const FileOptions(
-          contentType: 'image/jpeg',
-          upsert: false,
-        ),
-      );
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
 
       debugPrint('[Social] Uploaded to storage: $storagePath');
 
@@ -460,13 +543,13 @@ class SocialRepository {
 
       // Upload zu Supabase Storage
       await _client.storage.from(_tripPhotosBucket).uploadBinary(
-        storagePath,
-        bytes,
-        fileOptions: const FileOptions(
-          contentType: 'image/jpeg',
-          upsert: false,
-        ),
-      );
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
 
       debugPrint('[Social] Cover image uploaded: $storagePath');
 
@@ -509,7 +592,9 @@ class SocialRepository {
       }
 
       // Aus Storage loeschen
-      await _client.storage.from(_tripPhotosBucket).remove([photo['storage_path']]);
+      await _client.storage
+          .from(_tripPhotosBucket)
+          .remove([photo['storage_path']]);
 
       // Aus DB loeschen via RPC
       final result = await _client.rpc('delete_trip_photo', params: {
@@ -638,6 +723,10 @@ class SocialRepository {
       totalLikesReceived: row['total_likes_received'] as int? ?? 0,
       createdAt: DateTime.parse(row['created_at'] as String),
     );
+  }
+
+  PublicPoiPost _parsePublicPoiRow(Map<String, dynamic> row) {
+    return PublicPoiPost.fromJson(row);
   }
 
   Map<String, dynamic> _tripToJson(Trip trip) {

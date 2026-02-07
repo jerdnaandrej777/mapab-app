@@ -37,73 +37,83 @@ class GenerationProgressIndicator extends ConsumerWidget {
       return _buildCompact(context, colorScheme, phase, progress, message);
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animierter Fortschrittsring
-            _AnimatedProgressRing(
-              progress: progress,
-              phase: phase,
-              colorScheme: colorScheme,
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: colorScheme.surface,
+      child: Center(
+        child: Container(
+          width: 420,
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: colorScheme.primary.withValues(alpha: 0.25),
             ),
-
-            const SizedBox(height: 24),
-
-            // Phasen-Emoji und Nachricht
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  phase.emoji,
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    message,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _DominantLoadingCluster(
+                progress: progress,
+                phase: phase,
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    phase.emoji,
+                    style: const TextStyle(fontSize: 24),
                   ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 10,
+                  backgroundColor: colorScheme.primary.withValues(alpha: 0.18),
+                  valueColor: AlwaysStoppedAnimation(colorScheme.primary),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Linearer Fortschrittsbalken
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation(colorScheme.primary),
               ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Prozent-Anzeige
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 10),
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-
-            const SizedBox(height: 10),
-
-            _FunLoadingTicker(
-              key: ValueKey(phase),
-              phase: phase,
-            ),
-          ],
+              const SizedBox(height: 10),
+              _FunLoadingTicker(
+                key: ValueKey(phase),
+                phase: phase,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -119,8 +129,9 @@ class GenerationProgressIndicator extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
@@ -287,6 +298,140 @@ class _AnimatedProgressRing extends StatefulWidget {
 
   @override
   State<_AnimatedProgressRing> createState() => _AnimatedProgressRingState();
+}
+
+class _DominantLoadingCluster extends StatefulWidget {
+  const _DominantLoadingCluster({
+    required this.progress,
+    required this.phase,
+    required this.colorScheme,
+  });
+
+  final double progress;
+  final GenerationPhase phase;
+  final ColorScheme colorScheme;
+
+  @override
+  State<_DominantLoadingCluster> createState() =>
+      _DominantLoadingClusterState();
+}
+
+class _DominantLoadingClusterState extends State<_DominantLoadingCluster>
+    with TickerProviderStateMixin {
+  late final AnimationController _clockController;
+  late final AnimationController _diceController;
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _clockController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+    _diceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _clockController.dispose();
+    _diceController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.colorScheme;
+    return SizedBox(
+      height: 170,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          _AnimatedProgressRing(
+            progress: widget.progress,
+            phase: widget.phase,
+            colorScheme: cs,
+          ),
+          Positioned(
+            left: 22,
+            top: 30,
+            child: AnimatedBuilder(
+              animation: _clockController,
+              builder: (context, _) {
+                return Transform.rotate(
+                  angle: _clockController.value * 6.28,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.schedule_rounded,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 48,
+            child: AnimatedBuilder(
+              animation: _diceController,
+              builder: (context, _) {
+                final t = (_diceController.value - 0.5) * 0.24;
+                return Transform.rotate(
+                  angle: t,
+                  child: Transform.translate(
+                    offset: Offset(0, -8 * _diceController.value),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: cs.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.casino_rounded,
+                        color: cs.onTertiaryContainer,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            bottom: 4,
+            child: AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, _) {
+                return Opacity(
+                  opacity: 0.55 + (_pulseController.value * 0.45),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: cs.primary,
+                    size: 24 + (_pulseController.value * 8),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AnimatedProgressRingState extends State<_AnimatedProgressRing>

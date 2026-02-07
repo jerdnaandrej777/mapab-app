@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/algorithms/route_optimizer.dart';
@@ -17,6 +16,7 @@ import '../map/providers/weather_provider.dart';
 import '../poi/providers/poi_state_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
+import '../random_trip/widgets/generation_progress_indicator.dart';
 import '../random_trip/widgets/trip_preview_card.dart';
 import '../random_trip/widgets/hotel_suggestion_card.dart';
 import 'providers/elevation_provider.dart';
@@ -154,42 +154,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   /// Generierungs-Ansicht (Loading)
-  Widget _buildGeneratingView(BuildContext context, ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 60,
-            height: 60,
-            child: CircularProgressIndicator(
-              strokeWidth: 4,
-              valueColor: AlwaysStoppedAnimation(colorScheme.primary),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '🎲',
-            style: TextStyle(fontSize: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.tripInfoGenerating,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.l10n.tripGeneratingDescription,
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildGeneratingView(BuildContext context, ColorScheme colorScheme) =>
+      const GenerationProgressIndicator();
 
   Future<void> _saveRoute(
       BuildContext context, WidgetRef ref, TripStateData tripState) async {

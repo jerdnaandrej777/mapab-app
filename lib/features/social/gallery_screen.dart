@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
+import '../../data/models/public_poi_post.dart';
+import '../../data/providers/poi_gallery_provider.dart';
 import '../../data/models/public_trip.dart';
 import '../../data/providers/gallery_provider.dart';
 import 'widgets/public_trip_card.dart';
@@ -17,6 +19,7 @@ class GalleryScreen extends ConsumerStatefulWidget {
 class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
+  int _selectedFeed = 0; // 0 = trips, 1 = pois
 
   @override
   void initState() {
@@ -25,6 +28,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     // Initial laden
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(galleryNotifierProvider.notifier).loadGallery();
+      ref.read(poiGalleryNotifierProvider.notifier).load();
     });
 
     // Infinite Scroll
@@ -41,13 +45,18 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(galleryNotifierProvider.notifier).loadMore();
+      if (_selectedFeed == 0) {
+        ref.read(galleryNotifierProvider.notifier).loadMore();
+      } else {
+        ref.read(poiGalleryNotifierProvider.notifier).loadMore();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(galleryNotifierProvider);
+    final poiState = ref.watch(poiGalleryNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -55,23 +64,52 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         title: Text(context.l10n.galleryTitle),
         actions: [
           // Filter-Button
-          IconButton(
-            icon: Badge(
-              isLabelVisible: state.hasActiveFilters,
-              child: const Icon(Icons.filter_list),
+          if (_selectedFeed == 0)
+            IconButton(
+              icon: Badge(
+                isLabelVisible: state.hasActiveFilters,
+                child: const Icon(Icons.filter_list),
+              ),
+              onPressed: () => _showFilterSheet(context, state),
+              tooltip: context.l10n.galleryFilter,
             ),
-            onPressed: () => _showFilterSheet(context, state),
-            tooltip: context.l10n.galleryFilter,
-          ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(galleryNotifierProvider.notifier).loadGallery();
+          if (_selectedFeed == 0) {
+            await ref.read(galleryNotifierProvider.notifier).loadGallery();
+          } else {
+            await ref.read(poiGalleryNotifierProvider.notifier).load();
+          }
         },
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment<int>(
+                      value: 0,
+                      label: Text('Trips'),
+                      icon: Icon(Icons.route),
+                    ),
+                    ButtonSegment<int>(
+                      value: 1,
+                      label: Text('POIs'),
+                      icon: Icon(Icons.place),
+                    ),
+                  ],
+                  selected: {_selectedFeed},
+                  onSelectionChanged: (value) {
+                    if (value.isEmpty) return;
+                    setState(() => _selectedFeed = value.first);
+                  },
+                ),
+              ),
+            ),
             // Suchleiste
             SliverToBoxAdapter(
               child: Padding(
@@ -99,14 +137,78 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     fillColor: colorScheme.surfaceContainerHighest,
                   ),
                   onSubmitted: (query) {
-                    ref.read(galleryNotifierProvider.notifier).search(query);
+                    if (_selectedFeed == 0) {
+                      ref.read(galleryNotifierProvider.notifier).search(query);
+                    } else {
+                      ref.read(poiGalleryNotifierProvider.notifier).setSearch(
+                          query.trim().isEmpty ? null : query.trim());
+                    }
                   },
                 ),
               ),
             ),
 
+            if (_selectedFeed == 1)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilterChip(
+                        label: const Text('Must-See'),
+                        selected: poiState.mustSeeOnly,
+                        onSelected: (_) => ref
+                            .read(poiGalleryNotifierProvider.notifier)
+                            .toggleMustSee(),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Top bewertet'),
+                        selected: poiState.sortBy == 'top_rated',
+                        onSelected: (_) => ref
+                            .read(poiGalleryNotifierProvider.notifier)
+                            .setSort('top_rated'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Neu'),
+                        selected: poiState.sortBy == 'recent',
+                        onSelected: (_) => ref
+                            .read(poiGalleryNotifierProvider.notifier)
+                            .setSort('recent'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Trending'),
+                        selected: poiState.sortBy == 'trending',
+                        onSelected: (_) => ref
+                            .read(poiGalleryNotifierProvider.notifier)
+                            .setSort('trending'),
+                      ),
+                      ...const [
+                        'nature',
+                        'museum',
+                        'viewpoint',
+                        'city',
+                        'attraction',
+                      ].map((cat) {
+                        final selected = poiState.categories.contains(cat);
+                        return FilterChip(
+                          label: Text(cat),
+                          selected: selected,
+                          onSelected: (_) => ref
+                              .read(poiGalleryNotifierProvider.notifier)
+                              .toggleCategory(cat),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+
             // Featured Section
-            if (state.featuredTrips.isNotEmpty && !state.hasActiveFilters) ...[
+            if (_selectedFeed == 0 &&
+                state.featuredTrips.isNotEmpty &&
+                !state.hasActiveFilters) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -116,9 +218,10 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       const SizedBox(width: 8),
                       Text(
                         context.l10n.galleryFeatured,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
@@ -148,81 +251,92 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
             ],
 
             // Sortierung Chips
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Text(
-                      context.l10n.galleryAllTrips,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Spacer(),
-                    // Sortierung Dropdown
-                    DropdownButton<GallerySortBy>(
-                      value: state.sortBy,
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.sort, size: 20),
-                      items: GallerySortBy.values.map((sort) {
-                        return DropdownMenuItem(
-                          value: sort,
-                          child: Text(sort.label),
-                        );
-                      }).toList(),
-                      onChanged: (sort) {
-                        if (sort != null) {
-                          ref
-                              .read(galleryNotifierProvider.notifier)
-                              .setSortBy(sort);
-                        }
-                      },
-                    ),
-                  ],
+            if (_selectedFeed == 0)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        context.l10n.galleryAllTrips,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      const Spacer(),
+                      // Sortierung Dropdown
+                      DropdownButton<GallerySortBy>(
+                        value: state.sortBy,
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.sort, size: 20),
+                        items: GallerySortBy.values.map((sort) {
+                          return DropdownMenuItem(
+                            value: sort,
+                            child: Text(sort.label),
+                          );
+                        }).toList(),
+                        onChanged: (sort) {
+                          if (sort != null) {
+                            ref
+                                .read(galleryNotifierProvider.notifier)
+                                .setSortBy(sort);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // Trip-Typ Filter Chips
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Wrap(
-                  spacing: 8,
-                  children: GalleryTripTypeFilter.values.map((filter) {
-                    final isSelected = state.tripTypeFilter == filter;
-                    return FilterChip(
-                      label: Text(
-                        filter.label,
-                        style: TextStyle(
-                          color: isSelected
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurface,
+            if (_selectedFeed == 0)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Wrap(
+                    spacing: 8,
+                    children: GalleryTripTypeFilter.values.map((filter) {
+                      final isSelected = state.tripTypeFilter == filter;
+                      return FilterChip(
+                        label: Text(
+                          filter.label,
+                          style: TextStyle(
+                            color: isSelected
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: colorScheme.primary,
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      onSelected: (_) {
-                        ref
-                            .read(galleryNotifierProvider.notifier)
-                            .setTripTypeFilter(filter);
-                      },
-                    );
-                  }).toList(),
+                        selected: isSelected,
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        onSelected: (_) {
+                          ref
+                              .read(galleryNotifierProvider.notifier)
+                              .setTripTypeFilter(filter);
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
-            ),
 
             // Loading
-            if (state.isLoading && state.trips.isEmpty)
+            if (_selectedFeed == 0 && state.isLoading && state.trips.isEmpty)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_selectedFeed == 1 &&
+                poiState.isLoading &&
+                poiState.items.isEmpty)
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               ),
 
             // Error
-            if (state.error != null && state.trips.isEmpty)
+            if (_selectedFeed == 0 &&
+                state.error != null &&
+                state.trips.isEmpty)
               SliverFillRemaining(
                 child: Center(
                   child: Column(
@@ -238,7 +352,35 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: () {
-                          ref.read(galleryNotifierProvider.notifier).loadGallery();
+                          ref
+                              .read(galleryNotifierProvider.notifier)
+                              .loadGallery();
+                        },
+                        child: Text(context.l10n.galleryRetry),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_selectedFeed == 1 &&
+                poiState.error != null &&
+                poiState.items.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(poiState.error!),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () {
+                          ref.read(poiGalleryNotifierProvider.notifier).load();
                         },
                         child: Text(context.l10n.galleryRetry),
                       ),
@@ -248,7 +390,10 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
               ),
 
             // Keine Ergebnisse
-            if (!state.isLoading && state.trips.isEmpty && state.error == null)
+            if (_selectedFeed == 0 &&
+                !state.isLoading &&
+                state.trips.isEmpty &&
+                state.error == null)
               SliverFillRemaining(
                 child: Center(
                   child: Column(
@@ -279,9 +424,32 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   ),
                 ),
               ),
+            if (_selectedFeed == 1 &&
+                !poiState.isLoading &&
+                poiState.items.isEmpty &&
+                poiState.error == null)
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 48,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Keine POIs gefunden',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             // Trip Grid
-            if (state.trips.isNotEmpty)
+            if (_selectedFeed == 0 && state.trips.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverGrid(
@@ -308,9 +476,38 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   ),
                 ),
               ),
+            if (_selectedFeed == 1 && poiState.items.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final post = poiState.items[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _PublicPoiCard(
+                          post: post,
+                          onLike: () => ref
+                              .read(poiGalleryNotifierProvider.notifier)
+                              .toggleLike(post.id),
+                          onVoteUp: () => ref
+                              .read(poiGalleryNotifierProvider.notifier)
+                              .vote(post.id, 1),
+                          onVoteDown: () => ref
+                              .read(poiGalleryNotifierProvider.notifier)
+                              .vote(post.id, -1),
+                          onOpen: () => context.push('/poi/${post.poiId}'),
+                        ),
+                      );
+                    },
+                    childCount: poiState.items.length,
+                  ),
+                ),
+              ),
 
             // Loading More Indicator
-            if (state.isLoadingMore)
+            if ((_selectedFeed == 0 && state.isLoadingMore) ||
+                (_selectedFeed == 1 && poiState.isLoadingMore))
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -496,7 +693,9 @@ class _FilterSheet extends ConsumerWidget {
                       selectedColor: colorScheme.primary,
                       backgroundColor: colorScheme.surfaceContainerHighest,
                       onSelected: (_) {
-                        ref.read(galleryNotifierProvider.notifier).toggleTag(tag);
+                        ref
+                            .read(galleryNotifierProvider.notifier)
+                            .toggleTag(tag);
                       },
                     );
                   }).toList(),
@@ -549,6 +748,140 @@ class _FilterSheet extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PublicPoiCard extends StatelessWidget {
+  const _PublicPoiCard({
+    required this.post,
+    required this.onLike,
+    required this.onVoteUp,
+    required this.onVoteDown,
+    required this.onOpen,
+  });
+
+  final PublicPoiPost post;
+  final VoidCallback onLike;
+  final VoidCallback onVoteUp;
+  final VoidCallback onVoteDown;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      post.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (post.isMustSee)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'Must-See',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (post.content != null && post.content!.isNotEmpty)
+                Text(
+                  post.content!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
+                ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  _chip('⭐ ${post.ratingAvg?.toStringAsFixed(1) ?? '-'}'),
+                  _chip('🗳 ${post.voteScore}'),
+                  _chip('💬 ${post.commentCount}'),
+                  _chip('📷 ${post.photoCount}'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    post.authorName ?? 'Community',
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: onVoteDown,
+                    icon: const Icon(Icons.arrow_downward_rounded),
+                  ),
+                  Text(
+                    '${post.voteScore}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  IconButton(
+                    onPressed: onVoteUp,
+                    icon: const Icon(Icons.arrow_upward_rounded),
+                  ),
+                  IconButton(
+                    onPressed: onLike,
+                    icon: Icon(
+                      post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                      color: post.isLikedByMe ? Colors.red : null,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -12,7 +12,8 @@ class StartLocationPicker extends ConsumerStatefulWidget {
   const StartLocationPicker({super.key});
 
   @override
-  ConsumerState<StartLocationPicker> createState() => _StartLocationPickerState();
+  ConsumerState<StartLocationPicker> createState() =>
+      _StartLocationPickerState();
 }
 
 class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
@@ -64,7 +65,8 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
 
   void _selectSuggestion(GeocodingResult result) {
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    notifier.setStartLocation(result.location, result.shortName ?? result.displayName);
+    notifier.setStartLocation(
+        result.location, result.shortName ?? result.displayName);
     _controller.text = result.shortName ?? result.displayName;
     setState(() => _suggestions = []);
     _focusNode.unfocus();
@@ -88,8 +90,8 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
         Text(
           context.l10n.startLocationLabel,
           style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -128,11 +130,13 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                               onPressed: () {
                                 _controller.clear();
                                 setState(() => _suggestions = []);
+                                notifier.clearStartLocation();
                               },
                             )
                           : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
                 onChanged: _onSearchChanged,
               ),
@@ -142,45 +146,54 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                 Container(
                   decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
+                      top: BorderSide(
+                          color: colorScheme.outline.withValues(alpha: 0.3)),
                     ),
                   ),
                   child: Column(
-                    children: _suggestions.map<Widget>((result) => InkWell(
-                      onTap: () => _selectSuggestion(result),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Icon(Icons.location_on, size: 20, color: colorScheme.primary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    result.shortName ?? result.displayName,
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (result.shortName != null)
-                                    Text(
-                                      result.displayName,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colorScheme.onSurfaceVariant,
+                    children: _suggestions
+                        .map<Widget>((result) => InkWell(
+                              onTap: () => _selectSuggestion(result),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_on,
+                                        size: 20, color: colorScheme.primary),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            result.shortName ??
+                                                result.displayName,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w500),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (result.shortName != null)
+                                            Text(
+                                              result.displayName,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                        ],
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )).toList(),
+                            ))
+                        .toList(),
                   ),
                 ),
             ],
@@ -205,7 +218,8 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
             decoration: BoxDecoration(
               color: colorScheme.errorContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -214,7 +228,8 @@ class _StartLocationPickerState extends ConsumerState<StartLocationPicker> {
                 Expanded(
                   child: Text(
                     state.error!,
-                    style: TextStyle(color: colorScheme.onErrorContainer, fontSize: 13),
+                    style: TextStyle(
+                        color: colorScheme.onErrorContainer, fontSize: 13),
                   ),
                 ),
                 IconButton(
@@ -255,9 +270,7 @@ class _GpsButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : Colors.transparent,
+          color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
@@ -281,14 +294,18 @@ class _GpsButton extends StatelessWidget {
               Icon(
                 Icons.my_location,
                 size: 18,
-                color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
             const SizedBox(width: 8),
             Text(
               address ?? context.l10n.startLocationGps,
               style: TextStyle(
                 fontSize: 13,
-                color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
