@@ -66,4 +66,19 @@ class TripConstants {
   /// 700 / 1.35 ≈ 518.5km Haversine
   static double get maxHaversineKmForDisplay =>
       maxDisplayKmPerDay / haversineToDisplayFactor;
+
+  /// Konvertiert Haversine-km in angezeigte Fahr-km.
+  static double toDisplayKm(double haversineKm) {
+    return haversineKm * haversineToDisplayFactor;
+  }
+
+  /// Konvertiert angezeigte Fahr-km zur Haversine-Naeherung.
+  static double toHaversineKm(double displayKm) {
+    return displayKm / haversineToDisplayFactor;
+  }
+
+  /// Prueft, ob eine Display-Distanz das Tageslimit ueberschreitet.
+  static bool isDisplayOverDayLimit(double displayKm) {
+    return displayKm > maxDisplayKmPerDay;
+  }
 }

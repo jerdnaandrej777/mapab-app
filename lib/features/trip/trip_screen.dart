@@ -37,7 +37,6 @@ class TripScreen extends ConsumerStatefulWidget {
 }
 
 class _TripScreenState extends ConsumerState<TripScreen> {
-
   @override
   Widget build(BuildContext context) {
     final tripState = ref.watch(tripStateProvider);
@@ -46,7 +45,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final colorScheme = theme.colorScheme;
 
     // Prüfen ob Route vorhanden (von normaler Planung oder AI Trip)
-    final hasRoute = tripState.hasRoute || randomTripState.step == RandomTripStep.preview;
+    final hasRoute =
+        tripState.hasRoute || randomTripState.step == RandomTripStep.preview;
     final isGenerating = randomTripState.step == RandomTripStep.generating;
 
     return Scaffold(
@@ -86,12 +86,14 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       body: isGenerating
           ? _buildGeneratingView(context, colorScheme)
           : hasRoute || tripState.hasStops
-              ? _buildTripContent(context, ref, tripState, randomTripState, theme, colorScheme)
+              ? _buildTripContent(
+                  context, ref, tripState, randomTripState, theme, colorScheme)
               : _buildConfigView(context, ref, theme, colorScheme),
     );
   }
 
-  String _getTitle(BuildContext context, TripStateData tripState, RandomTripState randomTripState) {
+  String _getTitle(BuildContext context, TripStateData tripState,
+      RandomTripState randomTripState) {
     if (randomTripState.step == RandomTripStep.generating) {
       return context.l10n.tripInfoGenerating;
     }
@@ -189,7 +191,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     );
   }
 
-  Future<void> _saveRoute(BuildContext context, WidgetRef ref, TripStateData tripState) async {
+  Future<void> _saveRoute(
+      BuildContext context, WidgetRef ref, TripStateData tripState) async {
     final route = tripState.route;
     if (route == null) return;
 
@@ -240,7 +243,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   /// Speichert einen AI Trip in die Favoriten
-  Future<void> _saveAITrip(BuildContext context, WidgetRef ref, RandomTripState randomTripState) async {
+  Future<void> _saveAITrip(BuildContext context, WidgetRef ref,
+      RandomTripState randomTripState) async {
     final generatedTrip = randomTripState.generatedTrip;
     if (generatedTrip == null) return;
 
@@ -312,13 +316,16 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints
-  Future<void> _openInGoogleMaps(BuildContext context, TripStateData tripState) async {
+  Future<void> _openInGoogleMaps(
+      BuildContext context, TripStateData tripState) async {
     final route = tripState.route;
     if (route == null) return;
 
     // Google Maps URL mit Waypoints
-    final origin = '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
-    final destination = '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
+    final origin =
+        '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
+    final destination =
+        '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
 
     var url = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$origin'
@@ -329,7 +336,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (tripState.stops.isNotEmpty) {
       final waypoints = tripState.stops
           .take(TripConstants.maxPoisPerDay)
-          .map((poi) => '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
+          .map((poi) =>
+              '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
           .join('|');
       url += '&waypoints=$waypoints';
     }
@@ -364,7 +372,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     BuildContext context,
     Trip trip,
     int dayNumber,
-    LatLng tripStartLocation,
     String startAddress,
   ) async {
     final stopsForDay = trip.getStopsForDay(dayNumber);
@@ -375,53 +382,45 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       return;
     }
 
-    // Start bestimmen: Tag 1 = Trip-Start, sonst letzter Stop vom Vortag
-    LatLng origin;
-    String originName;
-    if (dayNumber == 1) {
-      origin = tripStartLocation;
-      originName = startAddress;
-    } else {
-      final prevDayStops = trip.getStopsForDay(dayNumber - 1);
-      if (prevDayStops.isNotEmpty) {
-        origin = prevDayStops.last.location;
-        originName = prevDayStops.last.name;
-      } else {
-        origin = tripStartLocation;
-        originName = startAddress;
-      }
-    }
-
-    // Ziel bestimmen: letzter Tag = Trip-Start, sonst erster Stop vom Folgetag
-    LatLng destination;
-    String destinationName;
-    if (dayNumber == trip.actualDays) {
-      destination = tripStartLocation;
-      destinationName = startAddress;
-    } else {
-      final nextDayStops = trip.getStopsForDay(dayNumber + 1);
-      if (nextDayStops.isNotEmpty) {
-        destination = nextDayStops.first.location;
-        destinationName = nextDayStops.first.name;
-      } else {
-        destination = tripStartLocation;
-        destinationName = startAddress;
-      }
-    }
+    final origin = trip.getDayStartLocation(dayNumber);
+    final originName = trip.getDayStartLabel(
+      dayNumber,
+      defaultStartAddress: startAddress,
+    );
+    final destination = trip.getDayEndLocation(dayNumber);
+    final destinationName = trip.getDayEndLabel(
+      dayNumber,
+      defaultStartAddress: startAddress,
+    );
 
     // Waypoints: Alle Stops des Tages (max 9)
-    final waypoints = stopsForDay
+    final waypointsList = stopsForDay
         .take(TripConstants.maxPoisPerDay)
-        .map((s) => '${s.location.latitude.toStringAsFixed(6)},${s.location.longitude.toStringAsFixed(6)}')
+        .map((s) => s.location)
+        .toList();
+    if (waypointsList.isNotEmpty) {
+      final lastWaypoint = waypointsList.last;
+      final sameAsDestination =
+          (lastWaypoint.latitude - destination.latitude).abs() < 0.00001 &&
+              (lastWaypoint.longitude - destination.longitude).abs() < 0.00001;
+      if (sameAsDestination) {
+        waypointsList.removeLast();
+      }
+    }
+    final waypoints = waypointsList
+        .map((p) =>
+            '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
         .join('|');
 
-    final originStr = '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
-    final destinationStr = '${destination.latitude.toStringAsFixed(6)},${destination.longitude.toStringAsFixed(6)}';
+    final originStr =
+        '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
+    final destinationStr =
+        '${destination.latitude.toStringAsFixed(6)},${destination.longitude.toStringAsFixed(6)}';
 
     final url = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$originStr'
         '&destination=$destinationStr'
-        '&waypoints=$waypoints'
+        '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
         '&travelmode=driving';
 
     debugPrint('[GoogleMaps] Tag $dayNumber: $originName -> $destinationName');
@@ -487,13 +486,16 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   /// Teilt die Route über WhatsApp, Email, etc.
-  Future<void> _shareRoute(BuildContext context, TripStateData tripState) async {
+  Future<void> _shareRoute(
+      BuildContext context, TripStateData tripState) async {
     final route = tripState.route;
     if (route == null) return;
 
     // Google Maps Link generieren
-    final origin = '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
-    final destination = '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
+    final origin =
+        '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
+    final destination =
+        '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
     var mapsUrl = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$origin'
         '&destination=$destination'
@@ -502,7 +504,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     if (tripState.stops.isNotEmpty) {
       final waypoints = tripState.stops
           .take(10)
-          .map((poi) => '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
+          .map((poi) =>
+              '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
           .join('|');
       mapsUrl += '&waypoints=$waypoints';
     }
@@ -559,7 +562,8 @@ $mapsUrl
     if (route != null && route.coordinates.length >= 2) {
       // Async laden ohne build zu blockieren (Provider cached intern)
       Future.microtask(() {
-        ref.read(elevationNotifierProvider.notifier)
+        ref
+            .read(elevationNotifierProvider.notifier)
             .loadElevation(route.coordinates);
       });
     }
@@ -574,9 +578,10 @@ $mapsUrl
     final locationCondition = ref.watch(
       locationWeatherNotifierProvider.select((w) => w.condition),
     );
-    final tripWeatherCondition = routeOverallCondition != WeatherCondition.unknown
-        ? routeOverallCondition
-        : locationCondition;
+    final tripWeatherCondition =
+        routeOverallCondition != WeatherCondition.unknown
+            ? routeOverallCondition
+            : locationCondition;
 
     return Column(
       children: [
@@ -669,7 +674,9 @@ $mapsUrl
               var adjustedNew = newIndex - 1;
               if (newIndex > oldIndex) adjustedNew--;
 
-              ref.read(tripStateProvider.notifier).reorderStops(adjustedOld, adjustedNew);
+              ref
+                  .read(tripStateProvider.notifier)
+                  .reorderStops(adjustedOld, adjustedNew);
             },
             itemBuilder: (context, index) {
               // Start
@@ -712,7 +719,8 @@ $mapsUrl
                 onTap: () {
                   // v1.6.8: POI zum State hinzufügen bevor Navigation
                   // Ermöglicht POI-Details mit Foto für Trip-Stops
-                  final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+                  final poiNotifier =
+                      ref.read(pOIStateNotifierProvider.notifier);
                   poiNotifier.addPOI(stop);
                   // Enrichment triggern für Foto-Laden
                   if (stop.imageUrl == null) {
@@ -750,7 +758,8 @@ $mapsUrl
                     onPressed: route != null
                         ? () {
                             // Flag setzen für Auto-Zoom beim Tab-Wechsel
-                            ref.read(shouldFitToRouteProvider.notifier).state = true;
+                            ref.read(shouldFitToRouteProvider.notifier).state =
+                                true;
                             context.go('/');
                           }
                         : null,
@@ -768,9 +777,8 @@ $mapsUrl
                         onPressed: () => CorridorBrowserSheet.show(
                           context: context,
                           route: route,
-                          existingStopIds: tripState.stops
-                              .map((s) => s.id)
-                              .toSet(),
+                          existingStopIds:
+                              tripState.stops.map((s) => s.id).toSet(),
                         ),
                         icon: const Icon(Icons.add_location_alt_rounded),
                         label: Text(context.l10n.tripConfigPoisAlongRoute),
@@ -791,7 +799,8 @@ $mapsUrl
                             'stops': tripState.stops
                                 .asMap()
                                 .entries
-                                .map((e) => TripStop.fromPOI(e.value, order: e.key))
+                                .map((e) =>
+                                    TripStop.fromPOI(e.value, order: e.key))
                                 .toList(),
                           },
                         ),
@@ -846,7 +855,8 @@ $mapsUrl
     // Hoehenprofil fuer AI Trip laden
     if (trip != null && trip.route.coordinates.length >= 2) {
       Future.microtask(() {
-        ref.read(elevationNotifierProvider.notifier)
+        ref
+            .read(elevationNotifierProvider.notifier)
             .loadElevation(trip.route.coordinates);
       });
     }
@@ -879,7 +889,8 @@ $mapsUrl
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                            valueColor:
+                                AlwaysStoppedAnimation(colorScheme.primary),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -900,6 +911,9 @@ $mapsUrl
                     suggestionsByDay: state.hotelSuggestions,
                     selectedHotels: state.selectedHotels,
                     onSelect: notifier.selectHotel,
+                    tripStartDate: state.tripStartDate ??
+                        state.generatedTrip?.trip.startDate,
+                    radiusKm: 20,
                   ),
                 ],
               ],
@@ -952,8 +966,7 @@ $mapsUrl
                       onPressed: () => CorridorBrowserSheet.show(
                         context: context,
                         route: trip.route,
-                        existingStopIds:
-                            trip.stops.map((s) => s.poiId).toSet(),
+                        existingStopIds: trip.stops.map((s) => s.poiId).toSet(),
                       ),
                       icon: const Icon(Icons.add_location_alt_rounded),
                       label: Text(context.l10n.tripConfigPoisAlongRoute),
@@ -1001,7 +1014,6 @@ $mapsUrl
                                 context,
                                 trip,
                                 state.selectedDay,
-                                state.startLocation!,
                                 state.startAddress!,
                               )
                           : null,
@@ -1047,7 +1059,8 @@ $mapsUrl
                       icon: const Icon(Icons.edit),
                       label: Text(context.l10n.edit),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1060,7 +1073,8 @@ $mapsUrl
                       icon: const Icon(Icons.refresh),
                       label: Text(context.l10n.tripNew),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1181,7 +1195,8 @@ $mapsUrl
               onTap: () {
                 Navigator.pop(ctx);
                 final tripState = ref.read(tripStateProvider);
-                if (tripState.route == null || tripState.stops.length < 3) return;
+                if (tripState.route == null || tripState.stops.length < 3)
+                  return;
                 final optimizer = RouteOptimizer();
                 final optimized = optimizer.optimizeRoute(
                   pois: tripState.stops,
@@ -1237,10 +1252,13 @@ $mapsUrl
                   // Normale Route
                   trip = Trip(
                     id: const Uuid().v4(),
-                    name: '${tripState.route!.startAddress} → ${tripState.route!.endAddress}',
+                    name:
+                        '${tripState.route!.startAddress} → ${tripState.route!.endAddress}',
                     type: TripType.daytrip,
                     route: tripState.route!,
-                    stops: tripState.stops.map((poi) => TripStop.fromPOI(poi)).toList(),
+                    stops: tripState.stops
+                        .map((poi) => TripStop.fromPOI(poi))
+                        .toList(),
                     createdAt: DateTime.now(),
                   );
                 } else {
@@ -1310,7 +1328,8 @@ $mapsUrl
               Navigator.pop(ctx);
               ref.read(tripStateProvider.notifier).clearStops();
             },
-            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1338,7 +1357,8 @@ $mapsUrl
               // Zur Karte navigieren
               context.go('/');
             },
-            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1358,9 +1378,10 @@ $mapsUrl
       // AI Trip aktiv
       final trip = randomTripState.generatedTrip?.trip;
       tripId = trip?.id ?? const Uuid().v4();
-      tripName = trip?.name ?? (randomTripState.mode == RandomTripMode.daytrip
-          ? context.l10n.tripInfoAiDayTrip
-          : context.l10n.tripInfoAiEuroTrip);
+      tripName = trip?.name ??
+          (randomTripState.mode == RandomTripMode.daytrip
+              ? context.l10n.tripInfoAiDayTrip
+              : context.l10n.tripInfoAiEuroTrip);
     } else if (tripState.hasRoute) {
       // Normale Route
       tripId = tripState.route?.hashCode.toString() ?? const Uuid().v4();

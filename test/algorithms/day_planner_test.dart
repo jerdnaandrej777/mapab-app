@@ -66,18 +66,36 @@ void main() {
     test('erstellt mehrere Tage fuer weit entfernte POIs', () {
       // POIs verteilt von Muenchen bis Rom (>800km)
       final pois = [
-        createPOI(id: 'sbg', name: 'Salzburg',
-            latitude: salzburg.latitude, longitude: salzburg.longitude),
-        createPOI(id: 'vie', name: 'Wien',
-            latitude: vienna.latitude, longitude: vienna.longitude),
-        createPOI(id: 'zur', name: 'Zuerich',
-            latitude: zurich.latitude, longitude: zurich.longitude),
-        createPOI(id: 'pra', name: 'Prag',
-            latitude: prague.latitude, longitude: prague.longitude),
-        createPOI(id: 'ber', name: 'Berlin',
-            latitude: berlin.latitude, longitude: berlin.longitude),
-        createPOI(id: 'rom', name: 'Rom',
-            latitude: rome.latitude, longitude: rome.longitude),
+        createPOI(
+            id: 'sbg',
+            name: 'Salzburg',
+            latitude: salzburg.latitude,
+            longitude: salzburg.longitude),
+        createPOI(
+            id: 'vie',
+            name: 'Wien',
+            latitude: vienna.latitude,
+            longitude: vienna.longitude),
+        createPOI(
+            id: 'zur',
+            name: 'Zuerich',
+            latitude: zurich.latitude,
+            longitude: zurich.longitude),
+        createPOI(
+            id: 'pra',
+            name: 'Prag',
+            latitude: prague.latitude,
+            longitude: prague.longitude),
+        createPOI(
+            id: 'ber',
+            name: 'Berlin',
+            latitude: berlin.latitude,
+            longitude: berlin.longitude),
+        createPOI(
+            id: 'rom',
+            name: 'Rom',
+            latitude: rome.latitude,
+            longitude: rome.longitude),
       ];
 
       final result = planner.planDays(
@@ -155,7 +173,8 @@ void main() {
 
       for (final day in result) {
         expect(day.stops.length, lessThanOrEqualTo(TripConstants.maxPoisPerDay),
-            reason: 'Tag ${day.dayNumber} hat ${day.stops.length} Stops, max ${TripConstants.maxPoisPerDay}');
+            reason:
+                'Tag ${day.dayNumber} hat ${day.stops.length} Stops, max ${TripConstants.maxPoisPerDay}');
       }
     });
 
@@ -336,6 +355,63 @@ void main() {
     });
   });
 
+  group('DayPlanner.validateDayLimits', () {
+    test('meldet Verletzung bei >700km Display-Distanz', () {
+      final tripDays = [
+        TripDay(
+          dayNumber: 1,
+          title: 'Tag 1',
+          stops: [
+            createTripStop(
+              poiId: 'rome',
+              latitude: rome.latitude,
+              longitude: rome.longitude,
+              day: 1,
+              order: 0,
+            ),
+          ],
+        ),
+      ];
+
+      final violations = planner.validateDayLimits(
+        tripDays: tripDays,
+        tripStart: munich,
+        returnToStart: true,
+      );
+
+      expect(violations, isNotEmpty);
+      expect(violations.first.dayNumber, 1);
+      expect(violations.first.displayKm, greaterThan(700));
+    });
+
+    test('keine Verletzung bei kurzer Tagesdistanz', () {
+      final tripDays = [
+        TripDay(
+          dayNumber: 1,
+          title: 'Tag 1',
+          stops: [
+            createTripStop(
+              poiId: 'sbg',
+              latitude: salzburg.latitude,
+              longitude: salzburg.longitude,
+              day: 1,
+              order: 0,
+            ),
+          ],
+        ),
+      ];
+
+      final violations = planner.validateDayLimits(
+        tripDays: tripDays,
+        tripStart: munich,
+        returnToStart: false,
+        tripEnd: salzburg,
+      );
+
+      expect(violations, isEmpty);
+    });
+  });
+
   group('DayPlanResult', () {
     test('totalStops zaehlt alle Stops', () {
       final result = DayPlanResult(
@@ -372,15 +448,19 @@ void main() {
 
     test('formattedTotalDuration formatiert korrekt', () {
       expect(
-        DayPlanResult(days: [], totalDistanceKm: 0,
-            totalDurationMinutes: 150, overnightLocations: [])
-            .formattedTotalDuration,
+        DayPlanResult(
+            days: [],
+            totalDistanceKm: 0,
+            totalDurationMinutes: 150,
+            overnightLocations: []).formattedTotalDuration,
         '2 Std. 30 Min.',
       );
       expect(
-        DayPlanResult(days: [], totalDistanceKm: 0,
-            totalDurationMinutes: 120, overnightLocations: [])
-            .formattedTotalDuration,
+        DayPlanResult(
+            days: [],
+            totalDistanceKm: 0,
+            totalDurationMinutes: 120,
+            overnightLocations: []).formattedTotalDuration,
         '2 Std.',
       );
     });

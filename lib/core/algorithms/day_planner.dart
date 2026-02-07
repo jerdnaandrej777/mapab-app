@@ -29,6 +29,7 @@ class DayPlanner {
     required int days,
     int hoursPerDay = 6,
     bool returnToStart = true,
+    LatLng? endLocation,
   }) {
     if (pois.isEmpty || days <= 0) return [];
 
@@ -39,10 +40,13 @@ class DayPlanner {
           dayNumber: 1,
           title: 'Tag 1',
           stops: pois.map((poi) => TripStop.fromPOI(poi)).toList(),
-          distanceKm: _routeOptimizer.calculateTotalDistance(
-            pois: pois,
-            startLocation: startLocation,
+          distanceKm: _calculateDayHaversineDistance(
+            dayPois: pois,
+            dayStart: startLocation,
+            isLastDay: true,
             returnToStart: returnToStart,
+            tripStart: startLocation,
+            tripEnd: endLocation,
           ),
           durationMinutes: _routeOptimizer.calculateEstimatedDuration(
             pois: pois,
@@ -54,7 +58,13 @@ class DayPlanner {
     }
 
     // Mehrtages-Trip: Distanz-basierte Cluster bilden
-    final clusters = _clusterPOIsByDistance(pois, days, startLocation, returnToStart: returnToStart);
+    final clusters = _clusterPOIsByDistance(
+      pois,
+      days,
+      startLocation,
+      returnToStart: returnToStart,
+      endLocation: endLocation,
+    );
 
     // Cluster zu TripDays konvertieren
     final tripDays = <TripDay>[];
@@ -82,10 +92,13 @@ class DayPlanner {
       // Distanz und Dauer für diesen Tag berechnen
       // Letzter Tag: Rückkehr-Segment einrechnen wenn returnToStart
       final includeReturn = isLastDay && returnToStart;
-      final distance = _routeOptimizer.calculateTotalDistance(
-        pois: optimizedDayPois,
-        startLocation: currentStartLocation,
-        returnToStart: includeReturn,
+      final distance = _calculateDayHaversineDistance(
+        dayPois: optimizedDayPois,
+        dayStart: currentStartLocation,
+        isLastDay: isLastDay,
+        returnToStart: returnToStart,
+        tripStart: startLocation,
+        tripEnd: endLocation,
       );
 
       final duration = _routeOptimizer.calculateEstimatedDuration(
@@ -111,6 +124,21 @@ class DayPlanner {
       }
     }
 
+    final limitViolations = validateDayLimits(
+      tripDays: tripDays,
+      tripStart: startLocation,
+      returnToStart: returnToStart,
+      tripEnd: endLocation,
+    );
+    for (final violation in limitViolations) {
+      debugPrint(
+        '[DayPlanner] ⚠️ Limit-Verletzung Tag ${violation.dayNumber}: '
+        '~${violation.displayKm.toStringAsFixed(0)}km > '
+        '${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km '
+        '(${violation.reason})',
+      );
+    }
+
     return tripDays;
   }
 
@@ -130,6 +158,7 @@ class DayPlanner {
     int requestedDays,
     LatLng startLocation, {
     bool returnToStart = true,
+    LatLng? endLocation,
   }) {
     if (pois.isEmpty) return [];
     if (pois.length == 1) return [pois];
@@ -187,24 +216,45 @@ class DayPlanner {
     _mergeShortDays(clusters, startLocation);
 
     // Post-Processing: Letzten Tag splitten wenn Rückkehr-Segment 700km sprengt
-    if (returnToStart && clusters.length >= 2) {
-      _splitLastDayIfOverLimit(clusters, startLocation);
+    if (clusters.length >= 2) {
+      _splitLastDayIfOverLimit(
+        clusters,
+        startLocation,
+        returnToStart: returnToStart,
+        endLocation: endLocation,
+      );
     }
 
     // Post-Processing: Tage die einzeln >700km Display haben versuchen zu splitten
-    _splitOverlimitDays(clusters, startLocation);
+    _splitOverlimitDays(
+      clusters,
+      startLocation,
+      returnToStart: returnToStart,
+      endLocation: endLocation,
+    );
 
     debugPrint('[DayPlanner] Distanz-Clustering: $requestedDays angefragt → ${clusters.length} Tage');
     for (int i = 0; i < clusters.length; i++) {
       final clusterStart = i > 0 ? clusters[i - 1].last.location : startLocation;
       final km = _calculateClusterDistance(clusters[i], clusterStart);
       final isLast = i == clusters.length - 1;
-      var displayKm = km * TripConstants.haversineToDisplayFactor;
+      var displayKm = TripConstants.toDisplayKm(km);
 
-      // Letzter Tag: Rückkehr-Segment einrechnen
-      if (isLast && returnToStart && clusters[i].isNotEmpty) {
-        final returnKm = GeoUtils.haversineDistance(clusters[i].last.location, startLocation);
-        displayKm = (km + returnKm) * TripConstants.haversineToDisplayFactor;
+      // Letzter Tag: Endsegment einrechnen (Rundreise oder A->B)
+      if (isLast && clusters[i].isNotEmpty) {
+        if (returnToStart) {
+          final returnKm = GeoUtils.haversineDistance(
+            clusters[i].last.location,
+            startLocation,
+          );
+          displayKm = TripConstants.toDisplayKm(km + returnKm);
+        } else if (endLocation != null) {
+          final endKm = GeoUtils.haversineDistance(
+            clusters[i].last.location,
+            endLocation,
+          );
+          displayKm = TripConstants.toDisplayKm(km + endKm);
+        }
       }
 
       debugPrint('[DayPlanner]   Tag ${i + 1}: ${clusters[i].length} POIs, ${km.toStringAsFixed(0)}km Haversine, ~${displayKm.toStringAsFixed(0)}km Display');
@@ -259,26 +309,39 @@ class DayPlanner {
   /// Berechnet die Gesamt-Display-Distanz des letzten Tages inkl. Rückkehr
   /// zum Startpunkt. Wenn > 700km, werden POIs in einen neuen Tag verschoben,
   /// bis der letzte Tag wieder unter dem Limit liegt.
-  void _splitLastDayIfOverLimit(List<List<POI>> clusters, LatLng startLocation) {
+  void _splitLastDayIfOverLimit(
+    List<List<POI>> clusters,
+    LatLng startLocation, {
+    required bool returnToStart,
+    LatLng? endLocation,
+  }) {
     if (clusters.isEmpty) return;
 
     final lastIdx = clusters.length - 1;
     final lastCluster = clusters[lastIdx];
     if (lastCluster.length <= 1) return;
 
+    final endpoint = returnToStart ? startLocation : endLocation;
+    if (endpoint == null) return;
+
     // Start des letzten Tages = letzter POI des Vortages
     final lastDayStart = lastIdx > 0
         ? clusters[lastIdx - 1].last.location
         : startLocation;
 
-    // Haversine-Distanz des letzten Tages + Rückkehr zum Start
+    // Haversine-Distanz des letzten Tages + Endsegment
     final dayKm = _calculateClusterDistance(lastCluster, lastDayStart);
-    final returnKm = GeoUtils.haversineDistance(lastCluster.last.location, startLocation);
-    final totalDisplayKm = (dayKm + returnKm) * TripConstants.haversineToDisplayFactor;
+    final returnKm =
+        GeoUtils.haversineDistance(lastCluster.last.location, endpoint);
+    final totalDisplayKm = TripConstants.toDisplayKm(dayKm + returnKm);
 
     if (totalDisplayKm <= TripConstants.maxDisplayKmPerDay) return;
 
-    debugPrint('[DayPlanner] Letzter Tag ~${totalDisplayKm.toStringAsFixed(0)}km Display (inkl. Rückkehr) > ${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit → Split');
+    debugPrint(
+      '[DayPlanner] Letzter Tag ~${totalDisplayKm.toStringAsFixed(0)}km '
+      'Display (inkl. Endsegment) > '
+      '${TripConstants.maxDisplayKmPerDay.toStringAsFixed(0)}km Limit → Split',
+    );
 
     // POIs vom Anfang des letzten Tages in einen neuen vorletzten Tag verschieben,
     // bis der verbleibende letzte Tag + Rückkehr unter 700km liegt
@@ -292,8 +355,9 @@ class DayPlanner {
       // Neue Display-Distanz des verbleibenden letzten Tages prüfen
       final newLastStart = newSecondToLast.last.location;
       final newLastKm = _calculateClusterDistance(remainingLast, newLastStart);
-      final newReturnKm = GeoUtils.haversineDistance(remainingLast.last.location, startLocation);
-      final newTotalDisplay = (newLastKm + newReturnKm) * TripConstants.haversineToDisplayFactor;
+      final newReturnKm =
+          GeoUtils.haversineDistance(remainingLast.last.location, endpoint);
+      final newTotalDisplay = TripConstants.toDisplayKm(newLastKm + newReturnKm);
 
       if (newTotalDisplay <= TripConstants.maxDisplayKmPerDay) {
         debugPrint('[DayPlanner] Split: ${newSecondToLast.length} POIs → neuer Tag, letzter Tag ~${newTotalDisplay.toStringAsFixed(0)}km Display');
@@ -315,7 +379,12 @@ class DayPlanner {
   /// - Mehrere Stops mit hoher Einzeldistanz sich aufaddieren
   ///
   /// Tage mit nur 1 POI koennen nicht weiter gesplittet werden.
-  void _splitOverlimitDays(List<List<POI>> clusters, LatLng startLocation) {
+  void _splitOverlimitDays(
+    List<List<POI>> clusters,
+    LatLng startLocation, {
+    required bool returnToStart,
+    LatLng? endLocation,
+  }) {
     var i = 0;
     // v1.9.28: Absolute Obergrenze (50) statt relatives clusters.length*2
     // da clusters bei jedem Split wachsen koennen
@@ -330,7 +399,19 @@ class DayPlanner {
 
       final clusterStart = i > 0 ? clusters[i - 1].last.location : startLocation;
       final km = _calculateClusterDistance(cluster, clusterStart);
-      final displayKm = km * TripConstants.haversineToDisplayFactor;
+      final isLast = i == clusters.length - 1;
+      var displayKm = TripConstants.toDisplayKm(km);
+      if (isLast && cluster.isNotEmpty) {
+        if (returnToStart) {
+          final endKm =
+              GeoUtils.haversineDistance(cluster.last.location, startLocation);
+          displayKm = TripConstants.toDisplayKm(km + endKm);
+        } else if (endLocation != null) {
+          final endKm =
+              GeoUtils.haversineDistance(cluster.last.location, endLocation);
+          displayKm = TripConstants.toDisplayKm(km + endKm);
+        }
+      }
 
       if (displayKm <= TripConstants.maxDisplayKmPerDay) {
         i++;
@@ -386,6 +467,83 @@ class DayPlanner {
       );
     }
     return total;
+  }
+
+  /// Berechnet die Haversine-Distanz eines Tages inklusive Endsegment am
+  /// letzten Tag (Rueckkehr oder A->B Ziel).
+  double _calculateDayHaversineDistance({
+    required List<POI> dayPois,
+    required LatLng dayStart,
+    required bool isLastDay,
+    required bool returnToStart,
+    required LatLng tripStart,
+    LatLng? tripEnd,
+  }) {
+    if (dayPois.isEmpty) return 0;
+
+    var km = _calculateClusterDistance(dayPois, dayStart);
+    if (isLastDay) {
+      if (returnToStart) {
+        km += GeoUtils.haversineDistance(dayPois.last.location, tripStart);
+      } else if (tripEnd != null) {
+        km += GeoUtils.haversineDistance(dayPois.last.location, tripEnd);
+      }
+    }
+    return km;
+  }
+
+  /// Validiert hartes 700km-Limit je Tag.
+  /// Liefert eine strukturierte Liste aller verletzten Tage.
+  List<DayLimitViolation> validateDayLimits({
+    required List<TripDay> tripDays,
+    required LatLng tripStart,
+    required bool returnToStart,
+    LatLng? tripEnd,
+  }) {
+    if (tripDays.isEmpty) return const [];
+
+    final violations = <DayLimitViolation>[];
+    var dayStart = tripStart;
+
+    for (int i = 0; i < tripDays.length; i++) {
+      final day = tripDays[i];
+      final isLastDay = i == tripDays.length - 1;
+      final dayPois = day.stops
+          .where((stop) => !stop.isOvernightStop)
+          .map((stop) => stop.toPOI())
+          .toList();
+      if (dayPois.isEmpty) {
+        continue;
+      }
+
+      final dayHaversineKm = _calculateDayHaversineDistance(
+        dayPois: dayPois,
+        dayStart: dayStart,
+        isLastDay: isLastDay,
+        returnToStart: returnToStart,
+        tripStart: tripStart,
+        tripEnd: tripEnd,
+      );
+      final displayKm = TripConstants.toDisplayKm(dayHaversineKm);
+
+      if (TripConstants.isDisplayOverDayLimit(displayKm)) {
+        final reason = dayPois.length == 1
+            ? 'single_poi_or_segment_too_far'
+            : 'cluster_over_limit';
+        violations.add(
+          DayLimitViolation(
+            dayNumber: day.dayNumber,
+            displayKm: displayKm,
+            haversineKm: dayHaversineKm,
+            reason: reason,
+          ),
+        );
+      }
+
+      dayStart = day.stops.last.location;
+    }
+
+    return violations;
   }
 
   /// Generiert einen beschreibenden Titel für einen Tag
@@ -512,4 +670,19 @@ class DayPlanResult {
     if (mins == 0) return '$hours Std.';
     return '$hours Std. $mins Min.';
   }
+}
+
+/// Strukturierte Limit-Verletzung fuer Tagesdistanzen.
+class DayLimitViolation {
+  final int dayNumber;
+  final double displayKm;
+  final double haversineKm;
+  final String reason;
+
+  const DayLimitViolation({
+    required this.dayNumber,
+    required this.displayKm,
+    required this.haversineKm,
+    required this.reason,
+  });
 }

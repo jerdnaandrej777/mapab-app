@@ -45,9 +45,8 @@ class TripPreviewCard extends ConsumerWidget {
               children: [
                 // Neu generieren
                 IconButton(
-                  onPressed: state.isLoading
-                      ? null
-                      : () => notifier.regenerateTrip(),
+                  onPressed:
+                      state.isLoading ? null : () => notifier.regenerateTrip(),
                   icon: state.isLoading
                       ? SizedBox(
                           width: 20,
@@ -128,7 +127,8 @@ class _TripStatistics extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     // Bei Mehrtages-Trip: Statistiken für ausgewählten Tag
-    final stopsForDay = isMultiDay ? trip.getStopsForDay(selectedDay) : trip.stops;
+    final stopsForDay =
+        isMultiDay ? trip.getStopsForDay(selectedDay) : trip.stops;
     final stopCount = stopsForDay.length;
 
     // Warnung wenn Tag das Limit überschreitet
@@ -141,9 +141,7 @@ class _TripStatistics extends StatelessWidget {
             ? Colors.orange.withValues(alpha: 0.15)
             : colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
-        border: isOverLimit
-            ? Border.all(color: Colors.orange, width: 1)
-            : null,
+        border: isOverLimit ? Border.all(color: Colors.orange, width: 1) : null,
       ),
       child: Column(
         children: [
@@ -153,10 +151,12 @@ class _TripStatistics extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
+                  const Icon(Icons.warning_amber,
+                      color: Colors.orange, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    context.l10n.tripPreviewMaxStopsWarning(TripConstants.maxPoisPerDay),
+                    context.l10n.tripPreviewMaxStopsWarning(
+                        TripConstants.maxPoisPerDay),
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.orange.shade800,
@@ -172,7 +172,9 @@ class _TripStatistics extends StatelessWidget {
               _StatItem(
                 icon: Icons.place,
                 value: '$stopCount',
-                label: isMultiDay ? context.l10n.tripPreviewStopsDay(selectedDay) : context.l10n.tripSummaryStops,
+                label: isMultiDay
+                    ? context.l10n.tripPreviewStopsDay(selectedDay)
+                    : context.l10n.tripSummaryStops,
                 isWarning: isOverLimit,
               ),
               _StatItem(
@@ -211,7 +213,8 @@ class _StatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textColor = isWarning ? Colors.orange.shade800 : colorScheme.onPrimaryContainer;
+    final textColor =
+        isWarning ? Colors.orange.shade800 : colorScheme.onPrimaryContainer;
 
     return Column(
       children: [
@@ -362,29 +365,24 @@ class _StopList extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isMultiDay = trip.actualDays > 1;
 
-    // Start-Label basierend auf Tag
+    // Start-/End-Label basierend auf Tag
     String startLabel;
     String endLabel;
     if (isMultiDay && selectedDay != null) {
-      if (selectedDay == 1) {
-        startLabel = context.l10n.tripPreviewStartDay1;
-      } else {
-        // Vorheriger Tag: letzter Stop
-        final prevDayStops = trip.getStopsForDay(selectedDay! - 1);
-        startLabel = prevDayStops.isNotEmpty
-            ? 'Von: ${prevDayStops.last.name}'
-            : context.l10n.tripPreviewDayStart('$selectedDay');
-      }
-
-      if (selectedDay == trip.actualDays) {
-        endLabel = context.l10n.tripPreviewBackToStart;
-      } else {
-        // Nächster Tag: erster Stop als Ziel
-        final nextDayStops = trip.getStopsForDay(selectedDay! + 1);
-        endLabel = nextDayStops.isNotEmpty
-            ? 'Weiter nach: ${nextDayStops.first.name}'
-            : context.l10n.tripPreviewEndDay('$selectedDay');
-      }
+      final day = selectedDay!;
+      final dayStartLabel = trip.getDayStartLabel(
+        day,
+        defaultStartAddress: startAddress,
+      );
+      final dayEndLabel = trip.getDayEndLabel(
+        day,
+        defaultStartAddress: startAddress,
+      );
+      startLabel =
+          day == 1 ? context.l10n.tripPreviewStartDay1 : 'Von: $dayStartLabel';
+      endLabel = day == trip.actualDays
+          ? context.l10n.tripPreviewBackToStart
+          : 'Ende: $dayEndLabel';
     } else {
       startLabel = context.l10n.weatherPointStart;
       endLabel = context.l10n.tripPreviewBackToStart;
@@ -409,7 +407,8 @@ class _StopList extends ConsumerWidget {
           final isThisPOILoading = loadingPOIId == stop.poiId;
 
           // v1.6.9: POI aus State holen für aktuelle Bilddaten
-          final poiFromState = poiState.pois.where((p) => p.id == stop.poiId).firstOrNull;
+          final poiFromState =
+              poiState.pois.where((p) => p.id == stop.poiId).firstOrNull;
           final imageUrl = poiFromState?.imageUrl ?? stop.imageUrl;
           final category = poiFromState?.category ?? stop.category;
 
@@ -419,7 +418,8 @@ class _StopList extends ConsumerWidget {
             iconColor: colorScheme.primary,
             title: stop.name,
             subtitle: stop.detourKm != null
-                ? context.l10n.tripPreviewDetour(stop.detourKm!.toStringAsFixed(1))
+                ? context.l10n
+                    .tripPreviewDetour(stop.detourKm!.toStringAsFixed(1))
                 : null,
             isOvernightStop: stop.isOvernightStop,
             imageUrl: imageUrl,
@@ -456,7 +456,10 @@ class _StopList extends ConsumerWidget {
               : Colors.blue,
           title: endLabel,
           subtitle: selectedDay == trip.actualDays || !isMultiDay
-              ? startAddress
+              ? trip.getDayEndLabel(
+                  selectedDay ?? trip.actualDays,
+                  defaultStartAddress: startAddress,
+                )
               : null,
           isLast: true,
         ),
@@ -619,8 +622,10 @@ class _StopItem extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: imageUrl!,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => _buildImagePlaceholder(colorScheme),
-                errorWidget: (context, url, error) => _buildImagePlaceholder(colorScheme),
+                placeholder: (context, url) =>
+                    _buildImagePlaceholder(colorScheme),
+                errorWidget: (context, url, error) =>
+                    _buildImagePlaceholder(colorScheme),
               )
             : _buildImagePlaceholder(colorScheme),
       ),

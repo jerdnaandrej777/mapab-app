@@ -21,6 +21,10 @@ cp .env.example .env
 
 **Erforderlich:**
 - `OPENAI_API_KEY` - OpenAI API Key von https://platform.openai.com/api-keys
+- `GOOGLE_PLACES_API_KEY` - Google Places API Key fuer Hotelsuche
+
+**Optional:**
+- `BOOKING_AFFILIATE_ID` - Affiliate-ID fuer Booking-Links
 
 ### 3. Lokal entwickeln
 
@@ -78,6 +82,22 @@ Content-Type: application/json
   "startLocation": "München",
   "days": 3,
   "interests": ["Kultur", "Geschichte", "Essen"]
+}
+```
+
+### Hotel Search
+```
+POST /api/hotels/search
+Content-Type: application/json
+
+{
+  "lat": 48.137,
+  "lng": 11.575,
+  "radiusKm": 20,
+  "checkInDate": "2026-02-15",
+  "checkOutDate": "2026-02-16",
+  "language": "de",
+  "dayIndex": 1
 }
 ```
 

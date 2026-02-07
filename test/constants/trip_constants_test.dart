@@ -75,4 +75,20 @@ void main() {
       }
     });
   });
+
+  group('TripConstants - Distanz-Konvertierung', () {
+    test('toDisplayKm und toHaversineKm sind konsistent', () {
+      const haversine = 320.0;
+      final display = TripConstants.toDisplayKm(haversine);
+      final back = TripConstants.toHaversineKm(display);
+
+      expect(display, closeTo(432.0, 0.001));
+      expect(back, closeTo(haversine, 0.001));
+    });
+
+    test('isDisplayOverDayLimit erkennt >700km', () {
+      expect(TripConstants.isDisplayOverDayLimit(701), isTrue);
+      expect(TripConstants.isDisplayOverDayLimit(700), isFalse);
+    });
+  });
 }

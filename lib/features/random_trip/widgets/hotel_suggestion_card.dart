@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+
 import '../../../data/services/hotel_service.dart';
 import 'hotel_detail_sheet.dart';
 
-/// Widget zur Anzeige von Hotel-Vorschlägen
 class HotelSuggestionCard extends StatelessWidget {
   final int dayNumber;
   final List<HotelSuggestion> suggestions;
   final HotelSuggestion? selectedHotel;
-  final Function(HotelSuggestion) onSelect;
+  final void Function(HotelSuggestion) onSelect;
   final DateTime? tripDate;
+  final double radiusKm;
 
   const HotelSuggestionCard({
     super.key,
@@ -17,6 +18,7 @@ class HotelSuggestionCard extends StatelessWidget {
     this.selectedHotel,
     required this.onSelect,
     this.tripDate,
+    this.radiusKm = 20,
   });
 
   @override
@@ -25,19 +27,19 @@ class HotelSuggestionCard extends StatelessWidget {
 
     if (suggestions.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
         ),
         child: Row(
           children: [
             const Icon(Icons.info_outline, color: Colors.orange),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Keine Hotels für Tag $dayNumber gefunden',
+                'Keine Hotels nach Tag $dayNumber im Umkreis von ${radiusKm.toStringAsFixed(0)} km gefunden.',
                 style: const TextStyle(color: Colors.orange),
               ),
             ),
@@ -49,20 +51,14 @@ class HotelSuggestionCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Text('🏨', style: TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            Text(
-              'Übernachtung Tag $dayNumber',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ],
+        Text(
+          'Uebernachtung nach Tag $dayNumber (bis ${radiusKm.toStringAsFixed(0)} km)',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         ...suggestions.map((hotel) {
           final isSelected = selectedHotel?.id == hotel.id;
           return _HotelItem(
@@ -97,9 +93,19 @@ class _HotelItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final reviewText = hotel.reviewCount != null
+        ? '${hotel.reviewCount} Bewertungen'
+        : 'Keine Bewertungsdaten';
+    final ratingText =
+        hotel.rating != null ? '${hotel.rating!.toStringAsFixed(1)} / 5' : null;
+    final qualityLabel = switch (hotel.dataQuality) {
+      'verified' => 'Verifiziert',
+      'few_or_no_reviews' => 'Wenige/keine Reviews',
+      _ => 'Begrenzte Daten',
+    };
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: isSelected
             ? colorScheme.primaryContainer
@@ -120,35 +126,10 @@ class _HotelItem extends StatelessWidget {
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Radio
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected
-                          ? colorScheme.primary
-                          : colorScheme.outline.withValues(alpha: 0.5),
-                      width: 2,
-                    ),
-                  ),
-                  child: isSelected
-                      ? Center(
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                // Content
+                _RadioDot(isSelected: isSelected),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,18 +156,28 @@ class _HotelItem extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Text(
+                        '${hotel.typeDisplay}  ·  ${hotel.formattedDistance}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
-                          Text(
-                            hotel.typeDisplay,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant,
+                          if (ratingText != null)
+                            Text(
+                              'Rating: $ratingText',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
                           Text(
-                            hotel.formattedDistance,
+                            reviewText,
                             style: TextStyle(
                               fontSize: 12,
                               color: colorScheme.onSurfaceVariant,
@@ -194,8 +185,55 @@ class _HotelItem extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          qualityLabel,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                      if (hotel.highlights.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          hotel.highlights.first,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      if (hotel.amenities.hasAny) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: hotel.amenities.availableAmenities
+                              .take(4)
+                              .map((a) => Text(
+                                    '${a.icon} ${a.label}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ],
                       if (hotel.address != null) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           hotel.address!,
                           style: TextStyle(
@@ -209,12 +247,10 @@ class _HotelItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Info-Button für Details
-                const SizedBox(width: 8),
                 IconButton(
                   onPressed: onInfoTap,
                   icon: const Icon(Icons.info_outline, size: 22),
-                  tooltip: 'Details anzeigen',
+                  tooltip: 'Details',
                   padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
                   color: colorScheme.primary,
@@ -228,17 +264,56 @@ class _HotelItem extends StatelessWidget {
   }
 }
 
-/// Liste aller Hotel-Vorschläge für einen Mehrtages-Trip
+class _RadioDot extends StatelessWidget {
+  final bool isSelected;
+
+  const _RadioDot({required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected
+              ? colorScheme.primary
+              : colorScheme.outline.withValues(alpha: 0.5),
+          width: 2,
+        ),
+      ),
+      child: isSelected
+          ? Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primary,
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
 class HotelSuggestionsSection extends StatelessWidget {
   final List<List<HotelSuggestion>> suggestionsByDay;
   final Map<int, HotelSuggestion> selectedHotels;
-  final Function(int, HotelSuggestion) onSelect;
+  final void Function(int, HotelSuggestion) onSelect;
+  final DateTime? tripStartDate;
+  final double radiusKm;
 
   const HotelSuggestionsSection({
     super.key,
     required this.suggestionsByDay,
     required this.selectedHotels,
     required this.onSelect,
+    this.tripStartDate,
+    this.radiusKm = 20,
   });
 
   @override
@@ -249,14 +324,14 @@ class HotelSuggestionsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Hotel-Vorschläge',
+          'Hotel-Vorschlaege',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Basierend auf OpenStreetMap-Daten',
+          'Datenquelle: Google Places (Fallback: OSM), Radius bis ${radiusKm.toStringAsFixed(0)} km',
           style: TextStyle(
             fontSize: 12,
             color: colorScheme.onSurfaceVariant,
@@ -266,6 +341,7 @@ class HotelSuggestionsSection extends StatelessWidget {
         ...suggestionsByDay.asMap().entries.map((entry) {
           final dayIndex = entry.key;
           final suggestions = entry.value;
+          final tripDate = tripStartDate?.add(Duration(days: dayIndex));
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: HotelSuggestionCard(
@@ -273,6 +349,8 @@ class HotelSuggestionsSection extends StatelessWidget {
               suggestions: suggestions,
               selectedHotel: selectedHotels[dayIndex],
               onSelect: (hotel) => onSelect(dayIndex, hotel),
+              tripDate: tripDate,
+              radiusKm: radiusKm,
             ),
           );
         }),

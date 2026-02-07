@@ -167,6 +167,58 @@ void main() {
     });
   });
 
+  group('Trip day start/end helpers', () {
+    test('getDayStartLocation nutzt Vortags-Ende', () {
+      final trip = createTrip(
+        route: createRoute(start: munich, end: vienna),
+        stops: [
+          createTripStop(
+            poiId: 'day1-stop',
+            day: 1,
+            order: 0,
+            latitude: salzburg.latitude,
+            longitude: salzburg.longitude,
+          ),
+          createTripStop(
+            poiId: 'day2-stop',
+            day: 2,
+            order: 0,
+            latitude: vienna.latitude,
+            longitude: vienna.longitude,
+          ),
+        ],
+      );
+
+      expect(trip.getDayStartLocation(1), munich);
+      expect(trip.getDayStartLocation(2), const LatLng(47.8095, 13.0550));
+    });
+
+    test('getDayEndLocation nutzt Tagesende und finales Ziel', () {
+      final trip = createTrip(
+        route: createRoute(start: munich, end: vienna),
+        stops: [
+          createTripStop(
+            poiId: 'day1-stop',
+            day: 1,
+            order: 0,
+            latitude: salzburg.latitude,
+            longitude: salzburg.longitude,
+          ),
+          createTripStop(
+            poiId: 'day2-stop',
+            day: 2,
+            order: 0,
+            latitude: prague.latitude,
+            longitude: prague.longitude,
+          ),
+        ],
+      );
+
+      expect(trip.getDayEndLocation(1), const LatLng(47.8095, 13.0550));
+      expect(trip.getDayEndLocation(2), vienna);
+    });
+  });
+
   group('Trip.isDayOverLimit', () {
     test('erkennt Ueberschreitung von 9 Stops', () {
       final stops = List.generate(

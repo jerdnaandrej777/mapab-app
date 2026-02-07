@@ -66,6 +66,14 @@ class HotelDetailSheet extends StatelessWidget {
                   children: [
                     _buildHeader(),
                     const SizedBox(height: 20),
+                    if (hotel.rating != null || hotel.reviewCount != null) ...[
+                      _buildRatings(),
+                      const SizedBox(height: 20),
+                    ],
+                    if (hotel.highlights.isNotEmpty) ...[
+                      _buildHighlights(),
+                      const SizedBox(height: 20),
+                    ],
                     if (hotel.amenities.hasAny) ...[
                       _buildAmenities(),
                       const SizedBox(height: 20),
@@ -86,6 +94,8 @@ class HotelDetailSheet extends StatelessWidget {
                       _buildDescription(),
                       const SizedBox(height: 20),
                     ],
+                    _buildSourceQuality(),
+                    const SizedBox(height: 20),
                     _buildBookingButton(context),
                     const SizedBox(height: 12),
                     _buildMapsButton(),
@@ -216,6 +226,59 @@ class HotelDetailSheet extends StatelessWidget {
     );
   }
 
+  Widget _buildRatings() {
+    final ratingText =
+        hotel.rating != null ? '${hotel.rating!.toStringAsFixed(1)} / 5' : '-';
+    final reviewsText = hotel.reviewCount != null
+        ? '${hotel.reviewCount} Bewertungen'
+        : 'Keine Bewertungsdaten';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.star_rate_rounded, color: Colors.amber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Rating: $ratingText\n$reviewsText',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHighlights() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Highlights',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        ...hotel.highlights.take(3).map(
+              (highlight) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• '),
+                    Expanded(child: Text(highlight)),
+                  ],
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+
   Widget _buildCheckInOut() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -321,7 +384,11 @@ class HotelDetailSheet extends StatelessWidget {
 
   Widget _buildBookingButton(BuildContext context) {
     final checkIn = tripDate ?? DateTime.now().add(const Duration(days: 1));
-    final bookingUrl = hotel.getBookingUrl(checkIn: checkIn);
+    final checkOut = checkIn.add(const Duration(days: 1));
+    final bookingUrl = hotel.getBookingUrl(
+      checkIn: checkIn,
+      checkOut: checkOut,
+    );
 
     return ElevatedButton.icon(
       onPressed: () => _launchUrl(bookingUrl),
@@ -349,6 +416,28 @@ class HotelDetailSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSourceQuality() {
+    final sourceLabel = hotel.source.isNotEmpty ? hotel.source : 'unknown';
+    final qualityLabel = switch (hotel.dataQuality) {
+      'verified' => 'Verifiziert',
+      'few_or_no_reviews' => 'Wenige/keine Reviews',
+      _ => 'Begrenzte Daten',
+    };
+
+    return Row(
+      children: [
+        const Icon(Icons.verified_outlined, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Quelle: $sourceLabel · Qualität: $qualityLabel',
+            style: TextStyle(color: AppTheme.textSecondary),
+          ),
+        ),
+      ],
     );
   }
 

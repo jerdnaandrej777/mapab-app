@@ -1,35 +1,148 @@
 import 'dart:math' show cos, pi;
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../core/constants/api_config.dart' as backend_api;
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/geo_utils.dart';
 import '../models/trip.dart';
 
 part 'hotel_service.g.dart';
 
-/// Service für Hotel-Suche via Overpass API
-/// Verwendet OpenStreetMap-Daten (kostenlos, DSGVO-konform)
+/// Hotel search service.
+///
+/// Primary source: backend `/api/hotels/search` (Google Places).
+/// Fallback: Overpass/OSM when backend is unavailable.
 class HotelService {
-  final Dio _dio;
+  final Dio _overpassDio;
+  final Dio? _backendDio;
 
-  HotelService({Dio? dio})
-      : _dio = dio ?? ApiConfig.createDio(profile: DioProfile.overpass);
+  HotelService({Dio? overpassDio, Dio? backendDio})
+      : _overpassDio =
+            overpassDio ?? ApiConfig.createDio(profile: DioProfile.overpass),
+        _backendDio = backendDio ??
+            (backend_api.ApiConfig.isConfigured
+                ? Dio(
+                    BaseOptions(
+                      baseUrl: backend_api.ApiConfig.backendBaseUrl,
+                      connectTimeout: backend_api.ApiConfig.connectTimeout,
+                      receiveTimeout: backend_api.ApiConfig.receiveTimeout,
+                      headers: const {'Content-Type': 'application/json'},
+                    ),
+                  )
+                : null);
 
-  /// Sucht Hotels in einem Radius um einen Punkt
+  /// Searches hotels around a location.
   ///
-  /// [location] - Zentrum der Suche
-  /// [radiusKm] - Suchradius in Kilometern (Standard: 10km)
-  /// [limit] - Maximale Anzahl Ergebnisse
+  /// Radius is hard-clamped to <= 20km.
   Future<List<HotelSuggestion>> searchHotelsNearby({
     required LatLng location,
     double radiusKm = 10,
     int limit = 5,
+    DateTime? checkInDate,
+    DateTime? checkOutDate,
+    String? language,
+    int? dayIndex,
   }) async {
-    // Bounding Box berechnen
+    final safeRadiusKm = radiusKm.clamp(1, 20).toDouble();
+    final safeLimit = limit.clamp(1, 20);
+
+    if (_backendDio != null) {
+      try {
+        final backendHotels = await _searchHotelsViaBackend(
+          location: location,
+          radiusKm: safeRadiusKm,
+          limit: safeLimit,
+          checkInDate: checkInDate,
+          checkOutDate: checkOutDate,
+          language: language,
+          dayIndex: dayIndex,
+        );
+        if (backendHotels.isNotEmpty) {
+          return backendHotels.take(safeLimit).toList();
+        }
+      } catch (e) {
+        debugPrint('[HotelService] Backend hotel search failed, fallback: $e');
+      }
+    }
+
+    final fallbackHotels = await _searchHotelsViaOverpass(
+      location: location,
+      radiusKm: safeRadiusKm,
+      limit: safeLimit,
+    );
+    return fallbackHotels.take(safeLimit).toList();
+  }
+
+  Future<List<HotelSuggestion>> _searchHotelsViaBackend({
+    required LatLng location,
+    required double radiusKm,
+    required int limit,
+    DateTime? checkInDate,
+    DateTime? checkOutDate,
+    String? language,
+    int? dayIndex,
+  }) async {
+    final dio = _backendDio;
+    if (dio == null) return const [];
+
+    final response = await dio.post(
+      '/api/hotels/search',
+      data: {
+        'lat': location.latitude,
+        'lng': location.longitude,
+        'radiusKm': radiusKm,
+        'limit': limit,
+        if (checkInDate != null) 'checkInDate': _formatIsoDate(checkInDate),
+        if (checkOutDate != null) 'checkOutDate': _formatIsoDate(checkOutDate),
+        if (language != null && language.isNotEmpty) 'language': language,
+        if (dayIndex != null) 'dayIndex': dayIndex,
+      },
+    );
+
+    final payload = response.data;
+    final rawHotels = switch (payload) {
+      {'hotels': final List hotels} => hotels,
+      List hotels => hotels,
+      _ => const <dynamic>[],
+    };
+
+    final parsed = rawHotels
+        .whereType<Map<String, dynamic>>()
+        .map((raw) => _parseBackendHotel(raw, location))
+        .toList();
+    parsed.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+    final filteredByReviews = _applyReviewThreshold(parsed);
+    return filteredByReviews.take(limit).toList();
+  }
+
+  List<HotelSuggestion> _applyReviewThreshold(List<HotelSuggestion> hotels) {
+    if (hotels.isEmpty) return hotels;
+
+    final strict = hotels.where((hotel) {
+      final count = hotel.reviewCount;
+      if (count == null || count <= 0) return true;
+      return count >= 10;
+    }).toList();
+
+    if (strict.isNotEmpty) return strict;
+
+    return hotels
+        .map((hotel) => hotel.copyWith(dataQuality: 'few_or_no_reviews'))
+        .toList();
+  }
+
+  Future<List<HotelSuggestion>> _searchHotelsViaOverpass({
+    required LatLng location,
+    required double radiusKm,
+    required int limit,
+  }) async {
     final bounds = _createBoundsFromRadius(location, radiusKm);
 
-    // Overpass Query für Hotels, Hostels, Pensionen
     final query = '''
 [out:json][timeout:15];
 (
@@ -43,60 +156,67 @@ out center;
 ''';
 
     try {
-      final response = await _dio.post(
+      final response = await _overpassDio.post(
         ApiEndpoints.overpassApi,
         data: query,
-        options: Options(
-          contentType: 'application/x-www-form-urlencoded',
-        ),
+        options: Options(contentType: 'application/x-www-form-urlencoded'),
       );
 
       final elements = response.data['elements'] as List?;
-      if (elements == null || elements.isEmpty) return [];
+      if (elements == null || elements.isEmpty) return const [];
 
-      // Parsen und nach Distanz sortieren
       final hotels = elements
-          .where((e) => e['tags']?['name'] != null)
-          .map((e) => _parseHotel(e, location))
+          .whereType<Map<String, dynamic>>()
+          .where((element) => element['tags']?['name'] != null)
+          .map((element) => _parseOverpassHotel(element, location))
           .toList();
 
-      // Nach Distanz sortieren und limitieren
       hotels.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
       return hotels.take(limit).toList();
     } on DioException catch (e) {
-      throw HotelSearchException('Hotel-Suche fehlgeschlagen: ${e.message}');
+      throw HotelSearchException('Hotel search failed: ${e.message}');
     }
   }
 
-  /// Sucht Hotels für mehrere Übernachtungsorte
+  /// Searches hotels for each overnight location.
+  ///
+  /// `tripStartDate` is used for day-specific check-in/check-out dates.
   Future<List<List<HotelSuggestion>>> searchHotelsForMultipleLocations({
     required List<LatLng> locations,
     double radiusKm = 10,
     int limitPerLocation = 3,
+    DateTime? tripStartDate,
+    String? language,
   }) async {
     final results = <List<HotelSuggestion>>[];
 
-    for (final location in locations) {
+    for (int i = 0; i < locations.length; i++) {
+      final location = locations[i];
+      final checkIn = tripStartDate?.add(Duration(days: i));
+      final checkOut = checkIn?.add(const Duration(days: 1));
+
       try {
         final hotels = await searchHotelsNearby(
           location: location,
           radiusKm: radiusKm,
           limit: limitPerLocation,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          language: language,
+          dayIndex: i + 1,
         );
         results.add(hotels);
-
-        // Rate Limiting für Overpass API
-        await Future.delayed(const Duration(milliseconds: 500));
       } catch (_) {
-        results.add([]);
+        results.add(const []);
       }
+
+      // Keep external API usage polite.
+      await Future.delayed(const Duration(milliseconds: 250));
     }
 
     return results;
   }
 
-  /// Konvertiert Hotel-Vorschläge zu TripStops
   List<TripStop> convertToTripStops(List<HotelSuggestion> hotels) {
     return hotels.map((hotel) {
       return TripStop(
@@ -111,12 +231,61 @@ out center;
     }).toList();
   }
 
-  /// Parst Overpass-Antwort zu HotelSuggestion
-  HotelSuggestion _parseHotel(Map<String, dynamic> data, LatLng searchCenter) {
+  HotelSuggestion _parseBackendHotel(
+    Map<String, dynamic> data,
+    LatLng searchCenter,
+  ) {
+    final lat = (data['lat'] as num?)?.toDouble();
+    final lng = (data['lng'] as num?)?.toDouble();
+    if (lat == null || lng == null) {
+      throw HotelSearchException('Backend hotel has no coordinates');
+    }
+
+    final location = LatLng(lat, lng);
+    final directDistance = GeoUtils.haversineDistance(searchCenter, location);
+    final responseDistance = (data['distanceKm'] as num?)?.toDouble();
+
+    return HotelSuggestion(
+      id: (data['id'] as String?) ??
+          (data['placeId'] as String?) ??
+          'hotel-${lat.toStringAsFixed(5)}-${lng.toStringAsFixed(5)}',
+      placeId: data['placeId'] as String?,
+      name: (data['name'] as String?)?.trim().isNotEmpty == true
+          ? data['name'] as String
+          : 'Hotel',
+      location: location,
+      type: _hotelTypeFromString(data['type'] as String?),
+      stars: (data['stars'] as num?)?.toInt(),
+      website: data['website'] as String?,
+      phone: data['phone'] as String?,
+      email: data['email'] as String?,
+      address: data['address'] as String?,
+      distanceKm: responseDistance ?? directDistance,
+      amenities:
+          HotelAmenities.fromMap(data['amenities'] as Map<String, dynamic>?),
+      checkInTime: data['checkInTime'] as String?,
+      checkOutTime: data['checkOutTime'] as String?,
+      description: data['description'] as String?,
+      rating: (data['rating'] as num?)?.toDouble(),
+      reviewCount: (data['reviewCount'] as num?)?.toInt(),
+      highlights: ((data['highlights'] as List?) ?? const [])
+          .whereType<String>()
+          .where((text) => text.trim().isNotEmpty)
+          .toList(),
+      source: (data['source'] as String?) ?? 'backend',
+      bookingUrl: data['bookingUrl'] as String?,
+      dataQuality: (data['dataQuality'] as String?) ?? 'verified',
+    );
+  }
+
+  HotelSuggestion _parseOverpassHotel(
+    Map<String, dynamic> data,
+    LatLng searchCenter,
+  ) {
     final tags = data['tags'] as Map<String, dynamic>? ?? {};
 
-    // Koordinaten ermitteln (Node vs Way)
-    double lat, lng;
+    double lat;
+    double lng;
     if (data['center'] != null) {
       lat = (data['center']['lat'] as num).toDouble();
       lng = (data['center']['lon'] as num).toDouble();
@@ -128,96 +297,96 @@ out center;
     final location = LatLng(lat, lng);
     final distance = GeoUtils.haversineDistance(searchCenter, location);
 
-    // Typ ermitteln
-    HotelType type = HotelType.hotel;
-    final tourism = tags['tourism'];
-    if (tourism == 'hostel') {
-      type = HotelType.hostel;
-    } else if (tourism == 'guest_house') {
-      type = HotelType.guestHouse;
-    } else if (tourism == 'motel') {
-      type = HotelType.motel;
-    }
-
-    // Sterne (falls verfügbar)
-    int? stars;
-    if (tags['stars'] != null) {
-      stars = int.tryParse(tags['stars'].toString());
-    }
-
-    // Amenities aus Tags parsen
-    final amenities = HotelAmenities.fromOsmTags(tags);
-
-    // Check-in/out Zeiten
-    String? checkInTime = tags['check_in'];
-    String? checkOutTime = tags['check_out'];
-
-    // Beschreibung (falls vorhanden)
-    String? description = tags['description'] ?? tags['note'];
-
     return HotelSuggestion(
       id: 'hotel-${data['type']}-${data['id']}',
-      name: tags['name'] ?? 'Unbekanntes Hotel',
+      name: tags['name'] ?? 'Hotel',
       location: location,
-      type: type,
-      stars: stars,
-      website: tags['website'],
-      phone: tags['phone'],
-      email: tags['email'],
+      type: _hotelTypeFromOsm(tags['tourism'] as String?),
+      stars: int.tryParse((tags['stars'] ?? '').toString()),
+      website: tags['website'] as String?,
+      phone: tags['phone'] as String?,
+      email: tags['email'] as String?,
       address: _buildAddress(tags),
       distanceKm: distance,
-      amenities: amenities,
-      checkInTime: checkInTime,
-      checkOutTime: checkOutTime,
-      description: description,
+      amenities: HotelAmenities.fromOsmTags(tags),
+      checkInTime: tags['check_in'] as String?,
+      checkOutTime: tags['check_out'] as String?,
+      description: tags['description'] as String? ?? tags['note'] as String?,
+      highlights: const [],
+      source: 'osm_overpass',
+      dataQuality: 'limited',
     );
   }
 
-  /// Baut Adresse aus Tags
-  String? _buildAddress(Map<String, dynamic> tags) {
-    final parts = <String>[];
-
-    if (tags['addr:street'] != null) {
-      parts.add(tags['addr:street']);
-      if (tags['addr:housenumber'] != null) {
-        parts[0] = '${parts[0]} ${tags['addr:housenumber']}';
-      }
+  HotelType _hotelTypeFromOsm(String? tourism) {
+    switch (tourism) {
+      case 'hostel':
+        return HotelType.hostel;
+      case 'guest_house':
+        return HotelType.guestHouse;
+      case 'motel':
+        return HotelType.motel;
+      default:
+        return HotelType.hotel;
     }
-
-    if (tags['addr:postcode'] != null) {
-      parts.add(tags['addr:postcode']);
-    }
-
-    if (tags['addr:city'] != null) {
-      parts.add(tags['addr:city']);
-    }
-
-    return parts.isNotEmpty ? parts.join(', ') : null;
   }
 
-  /// Erstellt Bounding Box aus Zentrum und Radius
+  HotelType _hotelTypeFromString(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'hostel':
+        return HotelType.hostel;
+      case 'guest_house':
+      case 'guesthouse':
+        return HotelType.guestHouse;
+      case 'motel':
+        return HotelType.motel;
+      default:
+        return HotelType.hotel;
+    }
+  }
+
+  String? _buildAddress(Map<String, dynamic> tags) {
+    final parts = <String>[];
+    if (tags['addr:street'] != null) {
+      var street = '${tags['addr:street']}';
+      if (tags['addr:housenumber'] != null) {
+        street = '$street ${tags['addr:housenumber']}';
+      }
+      parts.add(street);
+    }
+    if (tags['addr:postcode'] != null) {
+      parts.add('${tags['addr:postcode']}');
+    }
+    if (tags['addr:city'] != null) {
+      parts.add('${tags['addr:city']}');
+    }
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+
   ({LatLng southwest, LatLng northeast}) _createBoundsFromRadius(
     LatLng center,
     double radiusKm,
   ) {
     const latDegreeKm = 111.0;
     final lngDegreeKm = 111.0 * cos(center.latitude * pi / 180);
-
     final latDelta = radiusKm / latDegreeKm;
     final lngDelta = radiusKm / lngDegreeKm;
-
     return (
-      southwest: LatLng(center.latitude - latDelta, center.longitude - lngDelta),
-      northeast: LatLng(center.latitude + latDelta, center.longitude + lngDelta),
+      southwest:
+          LatLng(center.latitude - latDelta, center.longitude - lngDelta),
+      northeast:
+          LatLng(center.latitude + latDelta, center.longitude + lngDelta),
     );
   }
+
+  String _formatIsoDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
-/// Hotel-Typ
 enum HotelType {
   hotel('Hotel', '🏨'),
   hostel('Hostel', '🛏️'),
-  guestHouse('Pension', '🏠'),
+  guestHouse('Guest House', '🏠'),
   motel('Motel', '🏩');
 
   final String label;
@@ -226,7 +395,6 @@ enum HotelType {
   const HotelType(this.label, this.icon);
 }
 
-/// Amenities (Hotel-Ausstattung)
 class HotelAmenities {
   final bool wifi;
   final bool parking;
@@ -250,7 +418,32 @@ class HotelAmenities {
     this.wheelchairAccessible = false,
   });
 
-  /// Parst Amenities aus OSM-Tags
+  factory HotelAmenities.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const HotelAmenities();
+
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        return normalized == 'true' || normalized == 'yes' || normalized == '1';
+      }
+      return false;
+    }
+
+    return HotelAmenities(
+      wifi: parseBool(map['wifi']),
+      parking: parseBool(map['parking']),
+      breakfast: parseBool(map['breakfast']),
+      restaurant: parseBool(map['restaurant']),
+      pool: parseBool(map['pool']),
+      spa: parseBool(map['spa']),
+      airConditioning: parseBool(map['airConditioning']),
+      petsAllowed: parseBool(map['petsAllowed']),
+      wheelchairAccessible: parseBool(map['wheelchairAccessible']),
+    );
+  }
+
   factory HotelAmenities.fromOsmTags(Map<String, dynamic> tags) {
     return HotelAmenities(
       wifi: tags['internet_access'] == 'wlan' ||
@@ -259,28 +452,39 @@ class HotelAmenities {
       parking: tags['parking'] != null ||
           tags['parking:fee'] != null ||
           tags['capacity:parking'] != null,
-      breakfast: tags['breakfast'] == 'yes' ||
-          tags['breakfast'] == 'included',
-      restaurant: tags['restaurant'] == 'yes' ||
-          tags['amenity'] == 'restaurant',
-      pool: tags['swimming_pool'] == 'yes' ||
-          tags['leisure'] == 'swimming_pool',
+      breakfast: tags['breakfast'] == 'yes' || tags['breakfast'] == 'included',
+      restaurant:
+          tags['restaurant'] == 'yes' || tags['amenity'] == 'restaurant',
+      pool:
+          tags['swimming_pool'] == 'yes' || tags['leisure'] == 'swimming_pool',
       spa: tags['spa'] == 'yes' ||
           tags['leisure'] == 'spa' ||
           tags['wellness'] == 'yes',
       airConditioning: tags['air_conditioning'] == 'yes',
-      petsAllowed: tags['pets'] == 'yes' ||
-          tags['dog'] == 'yes',
+      petsAllowed: tags['pets'] == 'yes' || tags['dog'] == 'yes',
       wheelchairAccessible: tags['wheelchair'] == 'yes',
     );
   }
 
-  /// Liste der verfügbaren Amenities mit Icons
+  Map<String, dynamic> toJson() {
+    return {
+      'wifi': wifi,
+      'parking': parking,
+      'breakfast': breakfast,
+      'restaurant': restaurant,
+      'pool': pool,
+      'spa': spa,
+      'airConditioning': airConditioning,
+      'petsAllowed': petsAllowed,
+      'wheelchairAccessible': wheelchairAccessible,
+    };
+  }
+
   List<({String icon, String label})> get availableAmenities {
     final list = <({String icon, String label})>[];
     if (wifi) list.add((icon: '📶', label: 'WLAN'));
     if (parking) list.add((icon: '🅿️', label: 'Parkplatz'));
-    if (breakfast) list.add((icon: '🍳', label: 'Frühstück'));
+    if (breakfast) list.add((icon: '🍳', label: 'Fruehstueck'));
     if (restaurant) list.add((icon: '🍽️', label: 'Restaurant'));
     if (pool) list.add((icon: '🏊', label: 'Pool'));
     if (spa) list.add((icon: '🧖', label: 'Spa'));
@@ -290,15 +494,21 @@ class HotelAmenities {
     return list;
   }
 
-  /// Hat mindestens ein Amenity
   bool get hasAny =>
-      wifi || parking || breakfast || restaurant || pool ||
-      spa || airConditioning || petsAllowed || wheelchairAccessible;
+      wifi ||
+      parking ||
+      breakfast ||
+      restaurant ||
+      pool ||
+      spa ||
+      airConditioning ||
+      petsAllowed ||
+      wheelchairAccessible;
 }
 
-/// Hotel-Vorschlag
 class HotelSuggestion {
   final String id;
+  final String? placeId;
   final String name;
   final LatLng location;
   final HotelType type;
@@ -308,15 +518,20 @@ class HotelSuggestion {
   final String? email;
   final String? address;
   final double distanceKm;
-
-  // Neue Felder für Amenities und Check-in/out
   final HotelAmenities amenities;
   final String? checkInTime;
   final String? checkOutTime;
   final String? description;
+  final double? rating;
+  final int? reviewCount;
+  final List<String> highlights;
+  final String source;
+  final String? bookingUrl;
+  final String dataQuality;
 
-  HotelSuggestion({
+  const HotelSuggestion({
     required this.id,
+    this.placeId,
     required this.name,
     required this.location,
     required this.type,
@@ -330,24 +545,132 @@ class HotelSuggestion {
     this.checkInTime,
     this.checkOutTime,
     this.description,
+    this.rating,
+    this.reviewCount,
+    this.highlights = const [],
+    this.source = 'unknown',
+    this.bookingUrl,
+    this.dataQuality = 'limited',
   });
 
-  /// Formatierte Distanz
-  String get formattedDistance => '${distanceKm.toStringAsFixed(1)} km';
-
-  /// Hat Kontaktdaten
-  bool get hasContactInfo => website != null || phone != null || email != null;
-
-  /// Sterne als String
-  String get starsDisplay {
-    if (stars == null) return '';
-    return '⭐' * stars!;
+  HotelSuggestion copyWith({
+    String? id,
+    String? placeId,
+    String? name,
+    LatLng? location,
+    HotelType? type,
+    int? stars,
+    String? website,
+    String? phone,
+    String? email,
+    String? address,
+    double? distanceKm,
+    HotelAmenities? amenities,
+    String? checkInTime,
+    String? checkOutTime,
+    String? description,
+    double? rating,
+    int? reviewCount,
+    List<String>? highlights,
+    String? source,
+    String? bookingUrl,
+    String? dataQuality,
+  }) {
+    return HotelSuggestion(
+      id: id ?? this.id,
+      placeId: placeId ?? this.placeId,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      type: type ?? this.type,
+      stars: stars ?? this.stars,
+      website: website ?? this.website,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      address: address ?? this.address,
+      distanceKm: distanceKm ?? this.distanceKm,
+      amenities: amenities ?? this.amenities,
+      checkInTime: checkInTime ?? this.checkInTime,
+      checkOutTime: checkOutTime ?? this.checkOutTime,
+      description: description ?? this.description,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      highlights: highlights ?? this.highlights,
+      source: source ?? this.source,
+      bookingUrl: bookingUrl ?? this.bookingUrl,
+      dataQuality: dataQuality ?? this.dataQuality,
+    );
   }
 
-  /// Typ mit Icon
-  String get typeDisplay => '${type.icon} ${type.label}';
+  factory HotelSuggestion.fromJson(Map<String, dynamic> json) {
+    return HotelSuggestion(
+      id: json['id'] as String,
+      placeId: json['placeId'] as String?,
+      name: json['name'] as String,
+      location: LatLng(
+        (json['lat'] as num).toDouble(),
+        (json['lng'] as num).toDouble(),
+      ),
+      type: HotelType.values.firstWhere(
+        (t) => t.name == (json['type'] as String?),
+        orElse: () => HotelType.hotel,
+      ),
+      stars: (json['stars'] as num?)?.toInt(),
+      website: json['website'] as String?,
+      phone: json['phone'] as String?,
+      email: json['email'] as String?,
+      address: json['address'] as String?,
+      distanceKm: (json['distanceKm'] as num).toDouble(),
+      amenities: HotelAmenities.fromMap(
+        json['amenities'] as Map<String, dynamic>?,
+      ),
+      checkInTime: json['checkInTime'] as String?,
+      checkOutTime: json['checkOutTime'] as String?,
+      description: json['description'] as String?,
+      rating: (json['rating'] as num?)?.toDouble(),
+      reviewCount: (json['reviewCount'] as num?)?.toInt(),
+      highlights: ((json['highlights'] as List?) ?? const [])
+          .whereType<String>()
+          .toList(),
+      source: (json['source'] as String?) ?? 'unknown',
+      bookingUrl: json['bookingUrl'] as String?,
+      dataQuality: (json['dataQuality'] as String?) ?? 'limited',
+    );
+  }
 
-  /// Check-in/out formatiert
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'placeId': placeId,
+      'name': name,
+      'lat': location.latitude,
+      'lng': location.longitude,
+      'type': type.name,
+      'stars': stars,
+      'website': website,
+      'phone': phone,
+      'email': email,
+      'address': address,
+      'distanceKm': distanceKm,
+      'amenities': amenities.toJson(),
+      'checkInTime': checkInTime,
+      'checkOutTime': checkOutTime,
+      'description': description,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'highlights': highlights,
+      'source': source,
+      'bookingUrl': bookingUrl,
+      'dataQuality': dataQuality,
+    };
+  }
+
+  String get formattedDistance => '${distanceKm.toStringAsFixed(1)} km';
+  bool get hasContactInfo => website != null || phone != null || email != null;
+  String get starsDisplay => stars == null ? '' : '⭐' * stars!;
+  String get typeDisplay => '${type.icon} ${type.label}';
+  bool get hasEnoughReviews =>
+      reviewCount == null || reviewCount == 0 || reviewCount! >= 10;
+
   String? get checkInOutDisplay {
     if (checkInTime == null && checkOutTime == null) return null;
     final parts = <String>[];
@@ -356,20 +679,17 @@ class HotelSuggestion {
     return parts.join(' · ');
   }
 
-  /// Generiert Booking.com Such-URL mit Datum
-  /// [checkIn] - Anreisedatum
-  /// [checkOut] - Abreisedatum (optional, Standard: checkIn + 1 Tag)
   String getBookingUrl({
     required DateTime checkIn,
     DateTime? checkOut,
   }) {
-    final checkout = checkOut ?? checkIn.add(const Duration(days: 1));
+    if (bookingUrl != null && bookingUrl!.isNotEmpty) {
+      return bookingUrl!;
+    }
 
-    // Datum formatieren (YYYY-MM-DD)
+    final checkout = checkOut ?? checkIn.add(const Duration(days: 1));
     String formatDate(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-    // URL-kodierter Name
     final encodedName = Uri.encodeComponent(name);
 
     return 'https://www.booking.com/searchresults.html'
@@ -378,15 +698,13 @@ class HotelSuggestion {
         '&checkout=${formatDate(checkout)}'
         '&latitude=${location.latitude}'
         '&longitude=${location.longitude}'
-        '&radius=1'; // 1km Radius um die Koordinaten
+        '&radius=1';
   }
 
-  /// Google Maps URL für Navigation
   String get googleMapsUrl =>
       'https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}';
 }
 
-/// Hotel-Suche Exception
 class HotelSearchException implements Exception {
   final String message;
   HotelSearchException(this.message);
@@ -395,7 +713,6 @@ class HotelSearchException implements Exception {
   String toString() => 'HotelSearchException: $message';
 }
 
-/// Riverpod Provider für HotelService
 @riverpod
 HotelService hotelService(HotelServiceRef ref) {
   return HotelService();

@@ -7,6 +7,38 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.25] - 2026-02-07
+
+### AI Euro Trip Stabilisierung
+
+#### Behoben
+- **700-km-Hardlimit pro Tag wird jetzt strikt erzwungen**
+  - Tagesplanung und Day-Edits validieren das Limit hart statt nur zu warnen.
+  - Bei unloesbaren Verstoessen wird mit klarer `TripGenerationException` abgebrochen.
+- **Tagesuebergabe ist konsistent**
+  - Tag `N+1` startet exakt am Endpunkt von Tag `N` (POI oder ausgewaehltes Hotel).
+  - Tagesexport und Navigation verwenden den echten Tagesendpunkt, nicht den ersten Stop des Folgetags.
+- **Hotel-Logik fuer Mehrtagetrips erweitert**
+  - Hotelradius auf maximal 20 km gesetzt.
+  - Rich-Hoteldaten (Rating, Reviews, Highlights, Amenities, Kontakt, Booking-Link) integriert.
+  - Falls Reviews vorhanden sind, werden Hotels mit mindestens 10 Reviews bevorzugt/zugelassen; transparenter Fallback bleibt aktiv.
+- **Datumslogik fuer Booking korrigiert**
+  - Booking-Links werden pro Uebernachtungstag mit korrektem Check-in/Check-out erstellt.
+  - Trip-Startdatum wird im Random Trip Flow erfasst und persistiert.
+
+#### Technisch
+- `backend/api/hotels/search.ts` (neu): Google Places Hotel-Suche + Detailanreicherung.
+- `lib/core/algorithms/day_planner.dart`: strukturierte Limit-Validierung und Endpunkt-korrekte Distanzberechnung.
+- `lib/data/repositories/trip_generator_repo.dart`: Retry-/Abbruchlogik, Day-Edit-Hardlimit, Hotel-Dedupe und Hotel-Auswahl in echte Stop-Kette.
+- `lib/data/services/hotel_service.dart`: Backend-first Hotelpipeline mit Overpass-Fallback.
+- Neue/erweiterte Tests:
+  - `test/algorithms/day_planner_test.dart`
+  - `test/models/trip_model_test.dart`
+  - `test/constants/trip_constants_test.dart`
+  - `test/services/hotel_service_test.dart`
+
+---
+
 ## [1.10.24] - 2026-02-07
 
 ### AI Tagestrip Fixes

@@ -55,6 +55,9 @@ class RandomTripState with _$RandomTripState {
     /// Ausgewählte Hotels pro Tag
     @Default({}) Map<int, HotelSuggestion> selectedHotels,
 
+    /// Startdatum fuer den Euro Trip
+    DateTime? tripStartDate,
+
     /// Lädt gerade
     @Default(false) bool isLoading,
 

@@ -5,7 +5,7 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.24 - AI Tagestrip Distanzlimit-Fix | Plattformen: Android, iOS, Desktop
+Version: 1.10.25 - AI Euro Trip Stabilitaets-Update | Plattformen: Android, iOS, Desktop
 
 ## Tech Stack
 
@@ -497,6 +497,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `Dokumentation/CHANGELOG-v1.10.24.md` (AI Tagestrip Fix: Reiseentfernung wird als echtes Distanzlimit erzwungen; Tagestrip-Radius bleibt beim Moduswechsel erhalten statt Reset auf 100km; 2 Regression-Tests fuer RouteOptimizer)
+- `Dokumentation/CHANGELOG-v1.10.25.md` (AI Euro Trip Stabilisierung: 700-km-Hardlimit pro Tag, korrekte Tagesuebergabe Tag N -> Tag N+1, Hotel-Engine mit 20-km-Radius und Rich-Details inkl. Booking-Datum)
 - `Dokumentation/CHANGELOG-v1.10.23.md` (Gamification: Leaderboard mit 4 Sortieroptionen, woechentliche Challenges (9 Typen), Streak-System, XP-Belohnungen bis 2000 XP, 20+ neue l10n-Keys)
 - `Dokumentation/CHANGELOG-v1.10.22.md` (Routen-Reihenfolge pro Tag umkehrbar (Naechster Stopp/Navigation-Ziel), Start-/Ziel-Buttons blau, persistente Einstellung reverseRouteOrder, 5 neue l10n-Keys)
 - `Dokumentation/CHANGELOG-v1.10.21.md` (Trip-Foto-Upload: Cover-Bild beim Veroeffentlichen, Foto-Galerie in Trip-Detail, TripPhoto Freezed-Model, Migration 008 trip_photos, 6 neue l10n-Keys in 5 Sprachen)

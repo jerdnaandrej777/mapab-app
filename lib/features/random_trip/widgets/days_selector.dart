@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/constants/trip_constants.dart';
 import '../providers/random_trip_provider.dart';
 
-/// Widget zur Anzeige der Reisedauer und Hotel-Optionen
-/// Die Tage werden direkt aus dem State gelesen (v1.7.38)
 class DaysSelector extends ConsumerWidget {
   const DaysSelector({super.key});
 
@@ -12,22 +12,19 @@ class DaysSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    // Tage direkt aus State (Euro Trip) oder 1 (Tagestrip)
+    final colorScheme = Theme.of(context).colorScheme;
     final calculatedDays = state.calculatedDays;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Info-Box mit berechneten Tagen
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: colorScheme.primaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
+            border:
+                Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -53,12 +50,10 @@ class DaysSelector extends ConsumerWidget {
                   children: [
                     Text(
                       _getDaysDescription(calculatedDays),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      'Max ${TripConstants.maxPoisPerDay} Stops pro Tag (Google Maps)',
+                      'Max ${TripConstants.maxPoisPerDay} Stops pro Tag',
                       style: TextStyle(
                         fontSize: 11,
                         color: colorScheme.onSurfaceVariant,
@@ -71,23 +66,91 @@ class DaysSelector extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Hotel-Vorschläge Toggle (nur bei Mehrtages-Trips)
-        if (calculatedDays > 1)
+        if (calculatedDays > 1) ...[
+          _TripStartDatePicker(
+            selectedDate: state.tripStartDate ?? DateTime.now(),
+            onChanged: notifier.setTripStartDate,
+          ),
+          const SizedBox(height: 12),
           _HotelToggle(
             isEnabled: state.includeHotels,
-            onChanged: (value) => notifier.toggleHotels(value),
+            onChanged: notifier.toggleHotels,
           ),
+        ],
       ],
     );
   }
 
   String _getDaysDescription(int days) {
-    if (days == 1) return 'Tagesausflug ohne Übernachtung';
-    if (days == 2) return 'Wochenend-Trip mit 1 Übernachtung';
-    if (days <= 4) return 'Kurzurlaub mit ${days - 1} Übernachtungen';
-    if (days <= 7) return 'Ausgedehnter Trip mit ${days - 1} Übernachtungen';
-    return 'Epischer Euro Trip mit ${days - 1} Übernachtungen';
+    if (days == 1) return 'Tagesausflug ohne Uebernachtung';
+    if (days == 2) return 'Wochenend-Trip mit 1 Uebernachtung';
+    if (days <= 4) return 'Kurzurlaub mit ${days - 1} Uebernachtungen';
+    if (days <= 7) return 'Ausgedehnter Trip mit ${days - 1} Uebernachtungen';
+    return 'Euro Trip mit ${days - 1} Uebernachtungen';
+  }
+}
+
+class _TripStartDatePicker extends StatelessWidget {
+  final DateTime selectedDate;
+  final ValueChanged<DateTime> onChanged;
+
+  const _TripStartDatePicker({
+    required this.selectedDate,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final formatted = DateFormat('dd.MM.yyyy').format(selectedDate);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.event_available_outlined),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Trip-Startdatum',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  formatted,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final now = DateTime.now();
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: selectedDate,
+                firstDate: DateTime(now.year, now.month, now.day),
+                lastDate: DateTime(now.year + 3),
+              );
+              if (picked != null) {
+                onChanged(picked);
+              }
+            },
+            child: const Text('Waehlen'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -117,14 +180,11 @@ class _HotelToggle extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: isEnabled
-                  ? Colors.purple.withValues(alpha: 0.15)
+                  ? colorScheme.primary.withValues(alpha: 0.15)
                   : colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              '🏨',
-              style: TextStyle(fontSize: 20),
-            ),
+            child: const Icon(Icons.hotel_outlined),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -133,12 +193,10 @@ class _HotelToggle extends StatelessWidget {
               children: [
                 const Text(
                   'Hotels vorschlagen',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  'Übernachtungs-Vorschläge für jeden Tag',
+                  'Uebernachtungs-Vorschlaege je Tag (bis 20 km)',
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurfaceVariant,

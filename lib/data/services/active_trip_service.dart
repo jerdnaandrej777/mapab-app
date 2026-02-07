@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/poi.dart';
 import '../models/trip.dart';
+import 'hotel_service.dart';
 import '../../features/random_trip/providers/random_trip_state.dart';
 
 part 'active_trip_service.g.dart';
@@ -27,6 +28,9 @@ class ActiveTripService {
   static const String _destinationLatKey = 'destination_lat';
   static const String _destinationLngKey = 'destination_lng';
   static const String _destinationAddressKey = 'destination_address';
+  static const String _hotelSuggestionsKey = 'hotel_suggestions_json';
+  static const String _selectedHotelsKey = 'selected_hotels_json';
+  static const String _tripStartDateKey = 'trip_start_date';
 
   Box? _box;
 
@@ -44,6 +48,8 @@ class ActiveTripService {
     required int selectedDay,
     List<POI>? selectedPOIs,
     List<POI>? availablePOIs,
+    List<List<HotelSuggestion>>? hotelSuggestions,
+    Map<int, HotelSuggestion>? selectedHotels,
     LatLng? startLocation,
     String? startAddress,
     RandomTripMode mode = RandomTripMode.eurotrip,
@@ -51,6 +57,7 @@ class ActiveTripService {
     double radiusKm = 100,
     LatLng? destinationLocation,
     String? destinationAddress,
+    DateTime? tripStartDate,
   }) async {
     try {
       await _ensureInitialized();
@@ -62,17 +69,27 @@ class ActiveTripService {
 
       // POI-Listen speichern (falls vorhanden)
       if (selectedPOIs != null) {
-        final poisJson = selectedPOIs
-            .map((poi) => poi.toJson())
-            .toList();
+        final poisJson = selectedPOIs.map((poi) => poi.toJson()).toList();
         await _box!.put(_selectedPOIsKey, jsonEncode(poisJson));
       }
 
       if (availablePOIs != null) {
-        final poisJson = availablePOIs
-            .map((poi) => poi.toJson())
-            .toList();
+        final poisJson = availablePOIs.map((poi) => poi.toJson()).toList();
         await _box!.put(_availablePOIsKey, jsonEncode(poisJson));
+      }
+
+      if (hotelSuggestions != null) {
+        final suggestionsJson = hotelSuggestions
+            .map((perDay) => perDay.map((hotel) => hotel.toJson()).toList())
+            .toList();
+        await _box!.put(_hotelSuggestionsKey, jsonEncode(suggestionsJson));
+      }
+
+      if (selectedHotels != null) {
+        final selectedJson = selectedHotels.map(
+          (dayIndex, hotel) => MapEntry(dayIndex.toString(), hotel.toJson()),
+        );
+        await _box!.put(_selectedHotelsKey, jsonEncode(selectedJson));
       }
 
       // Konfiguration speichern
@@ -94,8 +111,12 @@ class ActiveTripService {
       if (destinationAddress != null) {
         await _box!.put(_destinationAddressKey, destinationAddress);
       }
+      if (tripStartDate != null) {
+        await _box!.put(_tripStartDateKey, tripStartDate.toIso8601String());
+      }
 
-      debugPrint('[ActiveTrip] Trip gespeichert: ${trip.name}, Tag $selectedDay, ${completedDays.length} Tage abgeschlossen');
+      debugPrint(
+          '[ActiveTrip] Trip gespeichert: ${trip.name}, Tag $selectedDay, ${completedDays.length} Tage abgeschlossen');
     } catch (e) {
       debugPrint('[ActiveTrip] Fehler beim Speichern: $e');
       rethrow;
@@ -139,6 +160,31 @@ class ActiveTripService {
             .toList();
       }
 
+      List<List<HotelSuggestion>> hotelSuggestions = [];
+      final hotelSuggestionsJson = _box!.get(_hotelSuggestionsKey) as String?;
+      if (hotelSuggestionsJson != null) {
+        final parsed = jsonDecode(hotelSuggestionsJson) as List<dynamic>;
+        hotelSuggestions = parsed.map((dayList) {
+          final hotels = dayList as List<dynamic>;
+          return hotels
+              .map((json) =>
+                  HotelSuggestion.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }).toList();
+      }
+
+      Map<int, HotelSuggestion> selectedHotels = {};
+      final selectedHotelsJson = _box!.get(_selectedHotelsKey) as String?;
+      if (selectedHotelsJson != null) {
+        final parsed = jsonDecode(selectedHotelsJson) as Map<String, dynamic>;
+        selectedHotels = parsed.map(
+          (dayIndex, hotelJson) => MapEntry(
+            int.parse(dayIndex),
+            HotelSuggestion.fromJson(hotelJson as Map<String, dynamic>),
+          ),
+        );
+      }
+
       // Konfiguration laden
       final startLat = _box!.get(_startLatKey) as double?;
       final startLng = _box!.get(_startLngKey) as double?;
@@ -160,8 +206,12 @@ class ActiveTripService {
           ? LatLng(destLat, destLng)
           : null;
       final destinationAddress = _box!.get(_destinationAddressKey) as String?;
+      final tripStartDateRaw = _box!.get(_tripStartDateKey) as String?;
+      final tripStartDate =
+          tripStartDateRaw != null ? DateTime.tryParse(tripStartDateRaw) : null;
 
-      debugPrint('[ActiveTrip] Trip geladen: ${trip.name}, Tag $selectedDay, ${selectedPOIs.length} POIs');
+      debugPrint(
+          '[ActiveTrip] Trip geladen: ${trip.name}, Tag $selectedDay, ${selectedPOIs.length} POIs');
 
       return ActiveTripData(
         trip: trip,
@@ -169,6 +219,8 @@ class ActiveTripService {
         selectedDay: selectedDay,
         selectedPOIs: selectedPOIs,
         availablePOIs: availablePOIs,
+        hotelSuggestions: hotelSuggestions,
+        selectedHotels: selectedHotels,
         startLocation: startLocation,
         startAddress: startAddress,
         mode: mode,
@@ -176,6 +228,7 @@ class ActiveTripService {
         radiusKm: radiusKm,
         destinationLocation: destinationLocation,
         destinationAddress: destinationAddress,
+        tripStartDate: tripStartDate,
       );
     } catch (e) {
       debugPrint('[ActiveTrip] Fehler beim Laden: $e');
@@ -227,7 +280,8 @@ class ActiveTripService {
       current.add(day);
       await _box!.put(_completedDaysKey, current.toList());
     } catch (e) {
-      debugPrint('[ActiveTrip] Fehler beim Hinzufügen des abgeschlossenen Tages: $e');
+      debugPrint(
+          '[ActiveTrip] Fehler beim Hinzufügen des abgeschlossenen Tages: $e');
     }
   }
 }
@@ -239,6 +293,8 @@ class ActiveTripData {
   final int selectedDay;
   final List<POI> selectedPOIs;
   final List<POI> availablePOIs;
+  final List<List<HotelSuggestion>> hotelSuggestions;
+  final Map<int, HotelSuggestion> selectedHotels;
   final LatLng? startLocation;
   final String? startAddress;
   final RandomTripMode mode;
@@ -246,6 +302,7 @@ class ActiveTripData {
   final double radiusKm;
   final LatLng? destinationLocation;
   final String? destinationAddress;
+  final DateTime? tripStartDate;
 
   ActiveTripData({
     required this.trip,
@@ -253,6 +310,8 @@ class ActiveTripData {
     required this.selectedDay,
     this.selectedPOIs = const [],
     this.availablePOIs = const [],
+    this.hotelSuggestions = const [],
+    this.selectedHotels = const {},
     this.startLocation,
     this.startAddress,
     this.mode = RandomTripMode.eurotrip,
@@ -260,6 +319,7 @@ class ActiveTripData {
     this.radiusKm = 100,
     this.destinationLocation,
     this.destinationAddress,
+    this.tripStartDate,
   });
 
   /// Prüft ob alle Tage abgeschlossen sind

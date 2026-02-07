@@ -78,21 +78,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final fullRoute = trip.route;
     List<LatLng> routeSegment = [];
     if (stopsForDay.isNotEmpty) {
-      LatLng segStart;
-      LatLng segEnd;
-      if (selectedDay == 1) {
-        segStart = fullRoute.start;
-      } else {
-        final prevDayStops = trip.getStopsForDay(selectedDay - 1);
-        segStart = prevDayStops.isNotEmpty
-            ? prevDayStops.last.location
-            : stopsForDay.first.location;
-      }
-      if (selectedDay == trip.actualDays) {
-        segEnd = fullRoute.end;
-      } else {
-        segEnd = stopsForDay.last.location;
-      }
+      final segStart = trip.getDayStartLocation(selectedDay);
+      final segEnd = trip.getDayEndLocation(selectedDay);
       routeSegment = extractRouteSegment(
         fullRoute.coordinates,
         segStart,
@@ -108,7 +95,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     );
 
     // Tages-Vorhersage fuer Detail-Anzeige
-    final dayForecast = routeWeather.getDayForecast(selectedDay, trip.actualDays);
+    final dayForecast =
+        routeWeather.getDayForecast(selectedDay, trip.actualDays);
 
     // Outdoor-POIs zaehlen
     final outdoorCount = stopsForDay.where((s) {
@@ -124,7 +112,9 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
       _lastAutoTriggeredDay = selectedDay;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ref.read(aITripAdvisorNotifierProvider.notifier).loadSmartRecommendations(
+        ref
+            .read(aITripAdvisorNotifierProvider.notifier)
+            .loadSmartRecommendations(
               day: selectedDay,
               trip: trip,
               route: trip.route,
@@ -154,9 +144,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
           ),
           // Neu generieren
           IconButton(
-            onPressed: state.isLoading
-                ? null
-                : () => notifier.regenerateTrip(),
+            onPressed: state.isLoading ? null : () => notifier.regenerateTrip(),
             icon: state.isLoading
                 ? const SizedBox(
                     width: 20,
@@ -232,8 +220,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
             Expanded(
               child: CorridorBrowserContent(
                 route: trip.route,
-                existingStopIds:
-                    trip.stops.map((s) => s.poiId).toSet(),
+                existingStopIds: trip.stops.map((s) => s.poiId).toSet(),
                 onAddPOI: (poi) async {
                   final success = await ref
                       .read(randomTripNotifierProvider.notifier)
@@ -347,7 +334,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              context.l10n.dayEditorMaxStops(TripConstants.maxPoisPerDay),
+                              context.l10n.dayEditorMaxStops(
+                                  TripConstants.maxPoisPerDay),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.orange.shade800,
@@ -394,9 +382,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     }
 
     // Fallback: Position-basiertes Mapping (Tagesausflug)
-    final dayPosition = totalDays > 1
-        ? (selectedDay - 1) / (totalDays - 1)
-        : 0.5;
+    final dayPosition =
+        totalDays > 1 ? (selectedDay - 1) / (totalDays - 1) : 0.5;
 
     WeatherCondition closest = routeWeather.overallCondition;
     double minDist = double.infinity;
@@ -409,7 +396,6 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     }
     return closest;
   }
-
 }
 
 class _DayStats extends StatelessWidget {
@@ -522,9 +508,8 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = isWarning
-        ? Colors.orange.shade700
-        : colorScheme.onPrimaryContainer;
+    final color =
+        isWarning ? Colors.orange.shade700 : colorScheme.onPrimaryContainer;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -670,8 +655,7 @@ class _AISuggestionsSection extends ConsumerWidget {
 
           // Text-Vorschlag (bestehend)
           final isWeather = suggestion.type == SuggestionType.weather;
-          final isAlternative =
-              suggestion.type == SuggestionType.alternative;
+          final isAlternative = suggestion.type == SuggestionType.alternative;
 
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 3),
@@ -698,9 +682,7 @@ class _AISuggestionsSection extends ConsumerWidget {
                           ? Icons.swap_horiz_rounded
                           : Icons.lightbulb_outline,
                   size: 16,
-                  color: isWeather
-                      ? colorScheme.tertiary
-                      : colorScheme.primary,
+                  color: isWeather ? colorScheme.tertiary : colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -862,9 +844,8 @@ class _AIRecommendedPOICard extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => isSwap
-            ? _handleSwap(context, ref)
-            : _handleAdd(context, ref),
+        onTap: () =>
+            isSwap ? _handleSwap(context, ref) : _handleAdd(context, ref),
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(6),
@@ -889,7 +870,8 @@ class _AIRecommendedPOICard extends ConsumerWidget {
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('"${poi.name}" ${context.l10n.dayEditorAddedToDay(dayNumber)}'),
+          content: Text(
+              '"${poi.name}" ${context.l10n.dayEditorAddedToDay(dayNumber)}'),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
         ),
@@ -963,7 +945,8 @@ class _BottomActions extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: onOpenCorridorBrowser,
-                      icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                      icon:
+                          const Icon(Icons.add_location_alt_rounded, size: 18),
                       label: Text(context.l10n.dayEditorAddPois),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1039,43 +1022,35 @@ class _BottomActions extends ConsumerWidget {
     );
   }
 
-  Future<void> _openDayInGoogleMaps(
-      BuildContext context, WidgetRef ref) async {
+  Future<void> _openDayInGoogleMaps(BuildContext context, WidgetRef ref) async {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
+        SnackBar(
+            content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
 
-    // Start bestimmen
-    LatLng origin;
-    if (selectedDay == 1) {
-      origin = startLocation;
-    } else {
-      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
-      origin = prevDayStops.isNotEmpty
-          ? prevDayStops.last.location
-          : startLocation;
-    }
+    final origin = trip.getDayStartLocation(selectedDay);
+    final destination = trip.getDayEndLocation(selectedDay);
 
-    // Ziel bestimmen
-    LatLng destination;
-    if (selectedDay == trip.actualDays) {
-      destination = startLocation;
-    } else {
-      final nextDayStops = trip.getStopsForDay(selectedDay + 1);
-      destination = nextDayStops.isNotEmpty
-          ? nextDayStops.first.location
-          : startLocation;
-    }
-
-    // Waypoints
-    final waypoints = stopsForDay
+    final waypointsList = stopsForDay
         .take(TripConstants.maxPoisPerDay)
-        .map((s) =>
-            '${s.location.latitude.toStringAsFixed(6)},${s.location.longitude.toStringAsFixed(6)}')
+        .map((s) => s.location)
+        .toList();
+    if (waypointsList.isNotEmpty) {
+      final lastWaypoint = waypointsList.last;
+      final sameAsDestination =
+          (lastWaypoint.latitude - destination.latitude).abs() < 0.00001 &&
+              (lastWaypoint.longitude - destination.longitude).abs() < 0.00001;
+      if (sameAsDestination) {
+        waypointsList.removeLast();
+      }
+    }
+    final waypoints = waypointsList
+        .map((p) =>
+            '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
         .join('|');
 
     final originStr =
@@ -1086,7 +1061,7 @@ class _BottomActions extends ConsumerWidget {
     final url = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$originStr'
         '&destination=$destinationStr'
-        '&waypoints=$waypoints'
+        '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
         '&travelmode=driving';
 
     try {
@@ -1138,44 +1113,22 @@ class _BottomActions extends ConsumerWidget {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
+        SnackBar(
+            content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
 
-    // Start bestimmen (gleiche Logik wie Google Maps Export)
-    LatLng origin;
-    String originAddress;
-    if (selectedDay == 1) {
-      origin = startLocation;
-      originAddress = startAddress;
-    } else {
-      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
-      if (prevDayStops.isNotEmpty) {
-        origin = prevDayStops.last.location;
-        originAddress = prevDayStops.last.name;
-      } else {
-        origin = startLocation;
-        originAddress = startAddress;
-      }
-    }
-
-    // Ziel bestimmen
-    LatLng destination;
-    String destinationAddress;
-    if (selectedDay == trip.actualDays) {
-      destination = startLocation;
-      destinationAddress = startAddress;
-    } else {
-      final nextDayStops = trip.getStopsForDay(selectedDay + 1);
-      if (nextDayStops.isNotEmpty) {
-        destination = nextDayStops.first.location;
-        destinationAddress = nextDayStops.first.name;
-      } else {
-        destination = startLocation;
-        destinationAddress = startAddress;
-      }
-    }
+    final origin = trip.getDayStartLocation(selectedDay);
+    final originAddress = trip.getDayStartLabel(
+      selectedDay,
+      defaultStartAddress: startAddress,
+    );
+    final destination = trip.getDayEndLocation(selectedDay);
+    final destinationAddress = trip.getDayEndLabel(
+      selectedDay,
+      defaultStartAddress: startAddress,
+    );
 
     // Tages-Route erstellen (OSRM berechnet echte Route)
     final dayRoute = AppRoute(
@@ -1184,9 +1137,8 @@ class _BottomActions extends ConsumerWidget {
       startAddress: originAddress,
       endAddress: destinationAddress,
       coordinates: [origin, destination],
-      waypoints: stopsForDay
-          .map((s) => LatLng(s.latitude, s.longitude))
-          .toList(),
+      waypoints:
+          stopsForDay.map((s) => LatLng(s.latitude, s.longitude)).toList(),
       distanceKm: 0,
       durationMinutes: 0,
     );
@@ -1205,38 +1157,32 @@ class _BottomActions extends ConsumerWidget {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     if (stopsForDay.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
+        SnackBar(
+            content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
       );
       return;
     }
 
-    // Start bestimmen (gleiche Logik wie Google Maps Export)
-    LatLng origin;
-    if (selectedDay == 1) {
-      origin = startLocation;
-    } else {
-      final prevDayStops = trip.getStopsForDay(selectedDay - 1);
-      origin = prevDayStops.isNotEmpty
-          ? prevDayStops.last.location
-          : startLocation;
-    }
-
-    // Ziel bestimmen
-    LatLng destination;
-    if (selectedDay == trip.actualDays) {
-      destination = startLocation;
-    } else {
-      final nextDayStops = trip.getStopsForDay(selectedDay + 1);
-      destination = nextDayStops.isNotEmpty
-          ? nextDayStops.first.location
-          : startLocation;
-    }
+    final origin = trip.getDayStartLocation(selectedDay);
+    final destination = trip.getDayEndLocation(selectedDay);
 
     // Google Maps URL bauen
-    final waypoints = stopsForDay
+    final waypointsList = stopsForDay
         .take(TripConstants.maxPoisPerDay)
-        .map((s) =>
-            '${s.location.latitude.toStringAsFixed(6)},${s.location.longitude.toStringAsFixed(6)}')
+        .map((s) => s.location)
+        .toList();
+    if (waypointsList.isNotEmpty) {
+      final lastWaypoint = waypointsList.last;
+      final sameAsDestination =
+          (lastWaypoint.latitude - destination.latitude).abs() < 0.00001 &&
+              (lastWaypoint.longitude - destination.longitude).abs() < 0.00001;
+      if (sameAsDestination) {
+        waypointsList.removeLast();
+      }
+    }
+    final waypoints = waypointsList
+        .map((p) =>
+            '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
         .join('|');
     final originStr =
         '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
@@ -1245,7 +1191,7 @@ class _BottomActions extends ConsumerWidget {
     final mapsUrl = 'https://www.google.com/maps/dir/?api=1'
         '&origin=$originStr'
         '&destination=$destinationStr'
-        '&waypoints=$waypoints'
+        '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
         '&travelmode=driving';
 
     // Share-Text
@@ -1259,7 +1205,8 @@ class _BottomActions extends ConsumerWidget {
         '${context.l10n.dayEditorShareOpenGoogleMaps}:\n$mapsUrl';
 
     try {
-      await Share.share(shareText, subject: context.l10n.dayEditorMapabRouteDay(selectedDay));
+      await Share.share(shareText,
+          subject: context.l10n.dayEditorMapabRouteDay(selectedDay));
       debugPrint('[Share] Tag $selectedDay Route geteilt');
     } catch (e) {
       debugPrint('[Share] Error: $e');

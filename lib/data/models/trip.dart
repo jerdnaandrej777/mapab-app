@@ -124,6 +124,60 @@ class Trip with _$Trip {
     return dayStops;
   }
 
+  /// Start-Position eines Tages:
+  /// Tag 1 -> Trip-Start, sonst letzter Stop des Vortags.
+  LatLng getDayStartLocation(int dayNumber) {
+    if (dayNumber <= 1) return route.start;
+
+    final prevDayStops = getStopsForDay(dayNumber - 1);
+    if (prevDayStops.isNotEmpty) {
+      return prevDayStops.last.location;
+    }
+    return route.start;
+  }
+
+  /// End-Position eines Tages:
+  /// Letzter Tag -> Trip-Ziel, sonst letzter Stop des Tages.
+  LatLng getDayEndLocation(int dayNumber) {
+    if (dayNumber == actualDays) return route.end;
+
+    final dayStops = getStopsForDay(dayNumber);
+    if (dayStops.isNotEmpty) {
+      return dayStops.last.location;
+    }
+    return route.end;
+  }
+
+  /// Label fuer den Tagesstart.
+  String getDayStartLabel(
+    int dayNumber, {
+    required String defaultStartAddress,
+  }) {
+    if (dayNumber <= 1) return defaultStartAddress;
+
+    final prevDayStops = getStopsForDay(dayNumber - 1);
+    if (prevDayStops.isNotEmpty) {
+      return prevDayStops.last.name;
+    }
+    return defaultStartAddress;
+  }
+
+  /// Label fuer das Tagesende.
+  String getDayEndLabel(
+    int dayNumber, {
+    required String defaultStartAddress,
+  }) {
+    if (dayNumber == actualDays) {
+      return route.endAddress.isNotEmpty ? route.endAddress : defaultStartAddress;
+    }
+
+    final dayStops = getStopsForDay(dayNumber);
+    if (dayStops.isNotEmpty) {
+      return dayStops.last.name;
+    }
+    return route.endAddress.isNotEmpty ? route.endAddress : defaultStartAddress;
+  }
+
   /// Berechnet die geschaetzte Fahrdistanz fuer einen bestimmten Tag
   /// Haversine-Summe × Faktor 1.35 (≈ echte Fahrstrecke)
   ///
@@ -135,35 +189,20 @@ class Trip with _$Trip {
     if (dayStops.isEmpty) return 0;
 
     double total = 0;
-    LatLng? prevLocation;
-
-    // Start des Tages bestimmen
-    if (dayNumber == 1) {
-      prevLocation = route.start;
-    } else {
-      final prevDayStops = getStopsForDay(dayNumber - 1);
-      if (prevDayStops.isNotEmpty) {
-        prevLocation = prevDayStops.last.location;
-      }
-    }
-
-    if (prevLocation == null) {
-      // Fallback: gleichmaessige Aufteilung
-      return route.distanceKm / actualDays;
-    }
+    var prevLocation = getDayStartLocation(dayNumber);
 
     for (final stop in dayStops) {
-      total += _haversineDistance(prevLocation!, stop.location);
+      total += _haversineDistance(prevLocation, stop.location);
       prevLocation = stop.location;
     }
 
     // Nur letzter Tag: Rueckkehr-Segment zum Trip-Ziel einrechnen
     if (dayNumber == actualDays) {
-      total += _haversineDistance(prevLocation!, route.end);
+      total += _haversineDistance(prevLocation, route.end);
     }
 
     // Haversine → geschaetzte Fahrstrecke (Faktor ~1.35)
-    return total * 1.35;
+    return TripConstants.toDisplayKm(total);
   }
 
   /// Haversine-Distanz in km (inline, da Freezed kein GeoUtils-Import erlaubt)

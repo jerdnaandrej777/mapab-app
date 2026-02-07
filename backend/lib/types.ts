@@ -54,6 +54,55 @@ export interface TripPlanResponse {
 }
 
 // ============================================
+// Hotel Search Request/Response Types
+// ============================================
+
+export const HotelSearchRequestSchema = z.object({
+  lat: z.number().gte(-90).lte(90),
+  lng: z.number().gte(-180).lte(180),
+  radiusKm: z.number().gt(0).lte(20).default(20),
+  limit: z.number().int().min(1).max(20).default(8).optional(),
+  checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  language: z.string().min(2).max(5).optional(),
+  dayIndex: z.number().int().min(1).max(30).optional(),
+});
+
+export type HotelSearchRequest = z.infer<typeof HotelSearchRequestSchema>;
+
+export interface HotelSearchResponseAmenities {
+  wifi?: boolean;
+  parking?: boolean;
+  breakfast?: boolean;
+  restaurant?: boolean;
+  pool?: boolean;
+  spa?: boolean;
+  airConditioning?: boolean;
+  petsAllowed?: boolean;
+  wheelchairAccessible?: boolean;
+}
+
+export interface HotelSearchResponseItem {
+  id: string;
+  placeId: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  distanceKm: number;
+  rating?: number;
+  reviewCount?: number;
+  highlights: string[];
+  amenities: HotelSearchResponseAmenities;
+  address?: string;
+  phone?: string;
+  website?: string;
+  bookingUrl?: string;
+  source: 'google_places';
+  dataQuality: 'verified' | 'few_or_no_reviews' | 'limited';
+}
+
+// ============================================
 // Error Types
 // ============================================
 

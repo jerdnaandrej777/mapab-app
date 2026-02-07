@@ -286,6 +286,9 @@ class _PreviewView extends ConsumerWidget {
                     suggestionsByDay: state.hotelSuggestions,
                     selectedHotels: state.selectedHotels,
                     onSelect: notifier.selectHotel,
+                    tripStartDate:
+                        state.tripStartDate ?? state.generatedTrip?.trip.startDate,
+                    radiusKm: 20,
                   ),
                 ],
               ],

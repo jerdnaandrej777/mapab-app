@@ -40,7 +40,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   RandomTripState build() {
     _tripGenerator = ref.watch(tripGeneratorRepositoryProvider);
     _geocodingRepo = ref.watch(geocodingRepositoryProvider);
-    return const RandomTripState();
+    return RandomTripState(
+      tripStartDate: DateTime.now(),
+    );
   }
 
   /// Setzt den Trip-Modus (Tagesausflug/Euro Trip)
@@ -55,6 +57,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       mode: mode,
       days: days,
       radiusKm: nextRadius,
+      tripStartDate: mode == RandomTripMode.eurotrip
+          ? (state.tripStartDate ?? DateTime.now())
+          : state.tripStartDate,
     );
   }
 
@@ -79,6 +84,11 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   /// Setzt die Anzahl der Tage
   void setDays(int days) {
     state = state.copyWith(days: days);
+  }
+
+  void setTripStartDate(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    state = state.copyWith(tripStartDate: normalized);
   }
 
   /// Schaltet Hotel-Vorschläge um
@@ -349,6 +359,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
         debugPrint(
             '[RandomTrip] Euro Trip starten: ${state.days} Tage (${state.radiusKm}km), Start: $startAddr${state.hasDestination ? ', Ziel: ${state.destinationAddress}' : ' (Rundreise)'}');
+        final tripStartDate = state.tripStartDate ?? DateTime.now();
         result = await _tripGenerator.generateEuroTrip(
           startLocation: startLoc,
           startAddress: startAddr,
@@ -359,6 +370,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           destinationLocation: state.destinationLocation,
           destinationAddress: state.destinationAddress,
           weatherCondition: currentWeather,
+          tripStartDate: tripStartDate,
         );
         debugPrint(
             '[RandomTrip] Euro Trip generiert! ${state.days} Tage, POIs: ${result.selectedPOIs.length}, Route: ${result.trip.route.distanceKm.toStringAsFixed(0)}km');
@@ -381,6 +393,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       state = state.copyWith(
         generatedTrip: result,
         hotelSuggestions: result.hotelSuggestions ?? [],
+        selectedHotels: {},
+        tripStartDate: result.trip.startDate ?? state.tripStartDate,
         step: RandomTripStep.preview,
         isLoading: false,
         generationPhase: GenerationPhase.complete,
@@ -497,9 +511,49 @@ class RandomTripNotifier extends _$RandomTripNotifier {
 
   /// Wählt ein Hotel für einen Tag aus
   void selectHotel(int dayIndex, HotelSuggestion hotel) {
-    final selected = Map<int, HotelSuggestion>.from(state.selectedHotels);
-    selected[dayIndex] = hotel;
+    final selected = Map<int, HotelSuggestion>.from(state.selectedHotels)
+      ..[dayIndex] = hotel;
     state = state.copyWith(selectedHotels: selected);
+
+    final generatedTrip = state.generatedTrip;
+    final startLoc = state.startLocation;
+    if (generatedTrip == null || startLoc == null) return;
+
+    unawaited(() async {
+      try {
+        final updated = await _tripGenerator.applySelectedHotelForDay(
+          currentTrip: generatedTrip,
+          dayIndex: dayIndex,
+          hotel: hotel,
+          startLocation: startLoc,
+          startAddress: state.startAddress ?? '',
+        );
+
+        final selectedAfter =
+            Map<int, HotelSuggestion>.from(state.selectedHotels)
+              ..[dayIndex] = hotel;
+        state = state.copyWith(
+          generatedTrip: updated,
+          hotelSuggestions: updated.hotelSuggestions ?? state.hotelSuggestions,
+          selectedHotels: selectedAfter,
+          error: null,
+        );
+
+        final tripStateNotifier = ref.read(tripStateProvider.notifier);
+        tripStateNotifier.setRouteAndStops(
+          updated.trip.route,
+          updated.selectedPOIs,
+        );
+
+        if (state.isMultiDay) {
+          await _persistActiveTrip();
+        }
+      } catch (e) {
+        state = state.copyWith(
+          error: 'Hotel konnte nicht gesetzt werden: $e',
+        );
+      }
+    }());
   }
 
   /// Markiert den Trip als bestätigt ohne alte Daten zu löschen
@@ -696,7 +750,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   void reset() {
     ref.read(activeTripServiceProvider).clearTrip();
     ref.read(activeTripNotifierProvider.notifier).refresh();
-    state = const RandomTripState();
+    state = RandomTripState(
+      tripStartDate: DateTime.now(),
+    );
   }
 
   /// Löscht Fehler
@@ -762,6 +818,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
             selectedDay: state.selectedDay,
             selectedPOIs: generatedTrip.selectedPOIs,
             availablePOIs: generatedTrip.availablePOIs,
+            hotelSuggestions: state.hotelSuggestions,
+            selectedHotels: state.selectedHotels,
             startLocation: state.startLocation,
             startAddress: state.startAddress,
             mode: state.mode,
@@ -769,6 +827,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
             radiusKm: state.radiusKm,
             destinationLocation: state.destinationLocation,
             destinationAddress: state.destinationAddress,
+            tripStartDate: state.tripStartDate,
           );
       try {
         ref.read(activeTripNotifierProvider.notifier).refresh();
@@ -789,6 +848,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       trip: data.trip,
       selectedPOIs: data.selectedPOIs,
       availablePOIs: data.availablePOIs,
+      hotelSuggestions: data.hotelSuggestions,
     );
 
     state = state.copyWith(
@@ -799,6 +859,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       radiusKm: data.radiusKm,
       days: data.days,
       generatedTrip: generatedTrip,
+      hotelSuggestions: data.hotelSuggestions,
+      selectedHotels: data.selectedHotels,
+      tripStartDate: data.tripStartDate ?? data.trip.startDate,
       selectedDay: data.selectedDay,
       completedDays: data.completedDays,
       destinationLocation: data.destinationLocation,
