@@ -25,18 +25,21 @@ class FavoritesNotifier extends _$FavoritesNotifier {
   Future<FavoritesState> _loadFavorites() async {
     try {
       // Gespeicherte Routen
-      final routesData = _favoritesBox.get('saved_routes', defaultValue: <dynamic>[]);
+      final routesData =
+          _favoritesBox.get('saved_routes', defaultValue: <dynamic>[]);
       final routes = (routesData as List)
           .map((json) => Trip.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
 
       // Favorisierte POIs
-      final poisData = _favoritesBox.get('favorite_pois', defaultValue: <dynamic>[]);
+      final poisData =
+          _favoritesBox.get('favorite_pois', defaultValue: <dynamic>[]);
       final pois = (poisData as List)
           .map((json) => POI.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
 
-      debugPrint('[Favorites] Geladen: ${routes.length} Routen, ${pois.length} POIs');
+      debugPrint(
+          '[Favorites] Geladen: ${routes.length} Routen, ${pois.length} POIs');
 
       return FavoritesState(
         savedRoutes: routes,
@@ -58,7 +61,8 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     // Warte auf das Laden
     debugPrint('[Favorites] Warte auf State-Laden...');
     final currentState = await future;
-    debugPrint('[Favorites] State geladen: ${currentState.routeCount} Routen, ${currentState.poiCount} POIs');
+    debugPrint(
+        '[Favorites] State geladen: ${currentState.routeCount} Routen, ${currentState.poiCount} POIs');
     return currentState;
   }
 
@@ -245,11 +249,13 @@ List<POI> favoritePOIs(FavoritePOIsRef ref) {
 /// Helper Provider: Prüft ob POI favorisiert ist
 @riverpod
 bool isPOIFavorite(IsPOIFavoriteRef ref, String poiId) {
-  return ref.watch(favoritesNotifierProvider.notifier).isPOIFavorite(poiId);
+  final favorites = ref.watch(favoritesNotifierProvider);
+  return favorites.value?.favoritePOIs.any((p) => p.id == poiId) ?? false;
 }
 
 /// Helper Provider: Prüft ob Route gespeichert ist
 @riverpod
 bool isRouteSaved(IsRouteSavedRef ref, String tripId) {
-  return ref.watch(favoritesNotifierProvider.notifier).isRouteSaved(tripId);
+  final favorites = ref.watch(favoritesNotifierProvider);
+  return favorites.value?.savedRoutes.any((r) => r.id == tripId) ?? false;
 }

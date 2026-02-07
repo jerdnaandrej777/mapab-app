@@ -400,6 +400,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         generationPhase: GenerationPhase.complete,
         generationProgress: GenerationPhase.complete.baseProgress,
       );
+      _refreshRouteWeatherForGeneratedTrip(
+        result,
+        reason: 'initial generation',
+      );
       debugPrint(
           '[RandomTrip] State aktualisiert: step=${state.step}, generatedTrip=${state.generatedTrip != null}');
     } on TripGenerationException catch (e, stackTrace) {
@@ -459,6 +463,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
         loadingPOIId: null,
       );
+      _refreshRouteWeatherForGeneratedTrip(
+        result,
+        reason: 'reroll poi',
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -500,6 +508,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
         loadingPOIId: null,
       );
+      _refreshRouteWeatherForGeneratedTrip(
+        result,
+        reason: 'remove poi',
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -537,6 +549,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           hotelSuggestions: updated.hotelSuggestions ?? state.hotelSuggestions,
           selectedHotels: selectedAfter,
           error: null,
+        );
+        _refreshRouteWeatherForGeneratedTrip(
+          updated,
+          reason: 'select hotel',
         );
 
         final tripStateNotifier = ref.read(tripStateProvider.notifier);
@@ -584,6 +600,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       state = state.copyWith(
         generatedTrip: result,
         isLoading: false,
+      );
+      _refreshRouteWeatherForGeneratedTrip(
+        result,
+        reason: 'add poi to day',
       );
 
       // POI enrichen fuer Foto-Anzeige
@@ -652,6 +672,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         isLoading: false,
         loadingPOIId: null,
       );
+      _refreshRouteWeatherForGeneratedTrip(
+        result,
+        reason: 'remove poi from day',
+      );
 
       // TripStateProvider synchronisieren
       final tripStateNotifier = ref.read(tripStateProvider.notifier);
@@ -713,28 +737,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       _persistActiveTrip();
     }
 
-    // Routen-Wetter laden fuer die bestaetigte Route
-    // Bei Multi-Day: Vorhersage mit Tages-Forecast (max 7 Tage)
-    final routeCoords = generatedTrip.trip.route.coordinates;
-    if (routeCoords.isNotEmpty) {
-      final tripDays = generatedTrip.trip.actualDays;
-      if (tripDays > 1) {
-        ref
-            .read(routeWeatherNotifierProvider.notifier)
-            .loadWeatherForRouteWithForecast(
-              routeCoords,
-              forecastDays: tripDays.clamp(2, 7),
-            );
-        debugPrint(
-            '[RandomTrip] Routen-Wetter mit ${tripDays.clamp(2, 7)}-Tage-Forecast geladen');
-      } else {
-        ref
-            .read(routeWeatherNotifierProvider.notifier)
-            .loadWeatherForRoute(routeCoords);
-        debugPrint(
-            '[RandomTrip] Routen-Wetter wird geladen (${routeCoords.length} Punkte)');
-      }
-    }
+    _refreshRouteWeatherForGeneratedTrip(
+      generatedTrip,
+      reason: 'confirm trip',
+    );
   }
 
   /// Geht zurück zur Konfiguration
@@ -890,6 +896,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     // POIs enrichen für Foto-Anzeige
     // FIX v1.10.5: Sicher aufrufen
     _safeEnrichGeneratedPOIs(generatedTrip);
+    _refreshRouteWeatherForGeneratedTrip(
+      generatedTrip,
+      reason: 'restore active trip',
+    );
 
     debugPrint('[RandomTrip] Trip wiederhergestellt: Tag ${data.selectedDay}, '
         '${data.completedDays.length}/${data.trip.actualDays} Tage abgeschlossen');
@@ -962,6 +972,39 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       // Enrichment-Fehler sollten den Trip nicht blockieren
       debugPrint('[RandomTrip] Enrichment-Fehler (nicht kritisch): $e');
       debugPrint('[RandomTrip] Enrichment-StackTrace: $stackTrace');
+    }
+  }
+
+  /// Laedt Wetter immer fuer die aktuellste Route.
+  /// Trigger fuer alle Recompute-Pfade (Generate/Reroll/Add/Remove/Hotel/Restore/Confirm).
+  void _refreshRouteWeatherForGeneratedTrip(
+    GeneratedTrip trip, {
+    String reason = '',
+  }) {
+    final routeCoords = trip.trip.route.coordinates;
+    if (routeCoords.isEmpty) return;
+
+    final weatherNotifier = ref.read(routeWeatherNotifierProvider.notifier);
+    final tripDays = trip.trip.actualDays;
+    final logReason = reason.isEmpty ? '' : ' ($reason)';
+
+    if (tripDays > 1) {
+      unawaited(
+        weatherNotifier.loadWeatherForRouteWithForecast(
+          routeCoords,
+          forecastDays: tripDays.clamp(2, 7),
+        ),
+      );
+      debugPrint(
+        '[RandomTrip] Routen-Wetter neu geladen$logReason: '
+        'Forecast ${tripDays.clamp(2, 7)} Tage',
+      );
+    } else {
+      unawaited(weatherNotifier.loadWeatherForRoute(routeCoords));
+      debugPrint(
+        '[RandomTrip] Routen-Wetter neu geladen$logReason: '
+        '${routeCoords.length} Punkte',
+      );
     }
   }
 }

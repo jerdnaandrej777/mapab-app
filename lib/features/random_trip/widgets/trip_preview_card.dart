@@ -8,6 +8,7 @@ import '../../../core/constants/categories.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/models/trip.dart';
+import '../../../data/providers/favorites_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../providers/random_trip_provider.dart';
 import 'day_tab_selector.dart';
@@ -240,15 +241,17 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-class _TripMap extends StatelessWidget {
+class _TripMap extends ConsumerWidget {
   final Trip trip;
   final LatLng startLocation;
 
   const _TripMap({required this.trip, required this.startLocation});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final favoriteIds =
+        ref.watch(favoritePOIsProvider).map((poi) => poi.id).toSet();
 
     // Alle Punkte für Bounds
     final allPoints = [
@@ -308,28 +311,68 @@ class _TripMap extends StatelessWidget {
             // Stops
             ...trip.sortedStops.asMap().entries.map((entry) {
               final stop = entry.value;
+              final isFavorite = favoriteIds.contains(stop.poiId);
               return Marker(
                 point: stop.location,
-                width: 36,
-                height: 36,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      stop.categoryIcon,
-                      style: const TextStyle(fontSize: 14),
+                width: 40,
+                height: 40,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 2,
+                      top: 2,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            stop.categoryIcon,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (isFavorite)
+                      const Positioned(
+                        right: 0,
+                        top: 0,
+                        child: _FavoriteMapBadge(),
+                      ),
+                  ],
                 ),
               );
             }),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _FavoriteMapBadge extends StatelessWidget {
+  const _FavoriteMapBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: Colors.red,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      child: const Icon(
+        Icons.favorite,
+        size: 8,
+        color: Colors.white,
+      ),
     );
   }
 }

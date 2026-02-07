@@ -50,7 +50,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
 
   void _expandFooterAfterScroll() {
     _footerExpandTimer?.cancel();
-    _footerExpandTimer = Timer(const Duration(milliseconds: 220), () {
+    _footerExpandTimer = Timer(const Duration(seconds: 1), () {
       if (!mounted || !_isFooterCollapsed) return;
       setState(() => _isFooterCollapsed = false);
     });
@@ -379,7 +379,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
-                      height: _isFooterCollapsed ? 16 : 160,
+                      height: _isFooterCollapsed ? 8 : 160,
                     ), // Platz fuer Bottom Buttons (dynamisch)
                   ],
                 ),
@@ -959,7 +959,6 @@ class _BottomActions extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fullContent = Container(
-      key: const ValueKey('footer-expanded'),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         boxShadow: [
@@ -1059,59 +1058,26 @@ class _BottomActions extends ConsumerWidget {
       ),
     );
 
-    final collapsedContent = Container(
-      key: const ValueKey('footer-collapsed'),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-          child: Center(
-            child: Container(
-              width: 56,
-              height: 6,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurface.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(999),
-              ),
+    return ClipRect(
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.bottomCenter,
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+          offset: isCollapsed ? const Offset(0, 1) : Offset.zero,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            opacity: isCollapsed ? 0 : 1,
+            child: IgnorePointer(
+              ignoring: isCollapsed,
+              child: isCollapsed ? const SizedBox.shrink() : fullContent,
             ),
           ),
         ),
       ),
-    );
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      reverseDuration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final slide = Tween<Offset>(
-          begin: const Offset(0, 0.12),
-          end: Offset.zero,
-        ).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: slide,
-            child: SizeTransition(
-              sizeFactor: animation,
-              axisAlignment: -1,
-              child: child,
-            ),
-          ),
-        );
-      },
-      child: isCollapsed ? collapsedContent : fullContent,
     );
   }
 

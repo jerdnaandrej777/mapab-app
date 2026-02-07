@@ -1,14 +1,16 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
+import '../../../data/providers/favorites_provider.dart';
 
 /// Mini-Karte für den Day Editor, zeigt Route + POIs des ausgewählten Tages
 /// Aktualisiert den Kartenausschnitt automatisch bei POI-Aenderungen (Reroll/Delete)
 /// Zeigt optional empfohlene POIs als halbtransparente Marker
-class DayMiniMap extends StatefulWidget {
+class DayMiniMap extends ConsumerStatefulWidget {
   final Trip trip;
   final int selectedDay;
   final LatLng startLocation;
@@ -27,10 +29,10 @@ class DayMiniMap extends StatefulWidget {
   });
 
   @override
-  State<DayMiniMap> createState() => _DayMiniMapState();
+  ConsumerState<DayMiniMap> createState() => _DayMiniMapState();
 }
 
-class _DayMiniMapState extends State<DayMiniMap> {
+class _DayMiniMapState extends ConsumerState<DayMiniMap> {
   late final MapController _mapController;
 
   @override
@@ -100,6 +102,8 @@ class _DayMiniMapState extends State<DayMiniMap> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final favoriteIds =
+        ref.watch(favoritePOIsProvider).map((poi) => poi.id).toSet();
     final stopsForDay = widget.trip.getStopsForDay(widget.selectedDay);
     final isMultiDay = widget.trip.actualDays > 1;
 
@@ -140,13 +144,13 @@ class _DayMiniMapState extends State<DayMiniMap> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.travelplanner.app',
                 maxZoom: 19,
               ),
               // Route-Segment
-              if (widget.routeSegment != null && widget.routeSegment!.isNotEmpty)
+              if (widget.routeSegment != null &&
+                  widget.routeSegment!.isNotEmpty)
                 PolylineLayer(
                   polylines: [
                     Polyline(
@@ -170,7 +174,8 @@ class _DayMiniMapState extends State<DayMiniMap> {
                       decoration: BoxDecoration(
                         color: colorScheme.tertiary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: colorScheme.surface, width: 2),
+                        border:
+                            Border.all(color: colorScheme.surface, width: 2),
                         boxShadow: [
                           BoxShadow(
                             color: colorScheme.shadow.withValues(alpha: 0.2),
@@ -212,32 +217,54 @@ class _DayMiniMapState extends State<DayMiniMap> {
                   ...stopsForDay.asMap().entries.map((entry) {
                     final index = entry.key;
                     final stop = entry.value;
+                    final isFavorite = favoriteIds.contains(stop.poiId);
                     return Marker(
                       point: stop.location,
-                      width: 36,
-                      height: 36,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: colorScheme.surface, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colorScheme.shadow.withValues(alpha: 0.2),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                      width: 40,
+                      height: 40,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            left: 2,
+                            top: 2,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colorScheme.surface,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.shadow
+                                        .withValues(alpha: 0.2),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    color: colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          if (isFavorite)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: _FavoriteBadge(colorScheme: colorScheme),
+                            ),
+                        ],
                       ),
                     );
                   }),
@@ -276,6 +303,36 @@ class _DayMiniMapState extends State<DayMiniMap> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FavoriteBadge extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _FavoriteBadge({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: Colors.red,
+        shape: BoxShape.circle,
+        border: Border.all(color: colorScheme.surface, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 2,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.favorite,
+        size: 8,
+        color: Colors.white,
       ),
     );
   }

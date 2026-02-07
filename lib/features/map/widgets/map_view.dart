@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../../core/utils/location_helper.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,6 +12,7 @@ import '../../trip/providers/trip_state_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
+import '../../../data/providers/favorites_provider.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/models/poi.dart';
@@ -36,7 +36,8 @@ List<LatLng> _downsampleCoordinates(List<LatLng> coords) {
   }
 
   result.add(coords.last);
-  debugPrint('[MapView] Route downsampled: ${coords.length} → ${result.length} Punkte');
+  debugPrint(
+      '[MapView] Route downsampled: ${coords.length} → ${result.length} Punkte');
   return result;
 }
 
@@ -81,24 +82,17 @@ class _MapViewState extends ConsumerState<MapView> {
     _subscriptions.add(
       ref.listenManual(routePlannerProvider, (previous, next) {
         if (next.hasRoute && previous?.route != next.route) {
-          ref.read(routeWeatherNotifierProvider.notifier)
+          ref
+              .read(routeWeatherNotifierProvider.notifier)
               .loadWeatherForRoute(next.route!.coordinates);
         }
       }),
     );
 
-    // AI Trip Preview + Auto-Zoom bei Tageswechsel (zusammengefuehrt)
+    // AI Trip Preview: Auto-Zoom bei Tageswechsel
+    // Wetter wird zentral im RandomTripNotifier nach jeder Route-Neuberechnung geladen.
     _subscriptions.add(
       ref.listenManual(randomTripNotifierProvider, (previous, next) {
-        // Wetter laden bei Trip-Generierung
-        if (next.step == RandomTripStep.preview &&
-            previous?.step != RandomTripStep.preview) {
-          final route = next.generatedTrip?.trip.route;
-          if (route != null) {
-            ref.read(routeWeatherNotifierProvider.notifier)
-                .loadWeatherForRoute(route.coordinates);
-          }
-        }
         // Auto-Zoom bei Tageswechsel (v1.8.1)
         if (previous?.selectedDay != next.selectedDay &&
             next.generatedTrip != null &&
@@ -113,7 +107,8 @@ class _MapViewState extends ConsumerState<MapView> {
     _subscriptions.add(
       ref.listenManual(tripStateProvider, (previous, next) {
         if (next.hasRoute && previous?.route != next.route) {
-          ref.read(routeWeatherNotifierProvider.notifier)
+          ref
+              .read(routeWeatherNotifierProvider.notifier)
               .loadWeatherForRoute(next.route!.coordinates);
         }
       }),
@@ -171,7 +166,8 @@ class _MapViewState extends ConsumerState<MapView> {
       ),
     );
 
-    debugPrint('[MapView] Auto-Zoom auf Tag $selectedDay (${stopsForDay.length} Stops)');
+    debugPrint(
+        '[MapView] Auto-Zoom auf Tag $selectedDay (${stopsForDay.length} Stops)');
   }
 
   @override
@@ -190,6 +186,8 @@ class _MapViewState extends ConsumerState<MapView> {
     final routePlanner = ref.watch(routePlannerProvider);
     final poiState = ref.watch(pOIStateNotifierProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
+    final favoriteIds =
+        ref.watch(favoritePOIsProvider).map((poi) => poi.id).toSet();
     final weatherState = ref.watch(locationWeatherNotifierProvider);
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
 
@@ -207,7 +205,8 @@ class _MapViewState extends ConsumerState<MapView> {
     if (isMultiDay && fullAIRoute != null) {
       final stopsForDay = aiTrip.getStopsForDay(selectedDay);
       final dayPOIIds = stopsForDay.map((s) => s.poiId).toSet();
-      aiTripPOIs = allAITripPOIs.where((p) => dayPOIIds.contains(p.id)).toList();
+      aiTripPOIs =
+          allAITripPOIs.where((p) => dayPOIIds.contains(p.id)).toList();
 
       // Route-Segment für den ausgewählten Tag extrahieren
       if (stopsForDay.isNotEmpty) {
@@ -227,7 +226,9 @@ class _MapViewState extends ConsumerState<MapView> {
           segEnd = stopsForDay.last.location;
         }
         aiRouteCoordinates = _extractRouteSegment(
-          fullAIRoute.coordinates, segStart, segEnd,
+          fullAIRoute.coordinates,
+          segStart,
+          segEnd,
         );
       } else {
         aiRouteCoordinates = fullAIRoute.coordinates;
@@ -238,7 +239,8 @@ class _MapViewState extends ConsumerState<MapView> {
     }
 
     // Wetter-Zustand für POI-Marker-Badges
-    final weatherCondition = weatherState.hasWeather ? weatherState.condition : null;
+    final weatherCondition =
+        weatherState.hasWeather ? weatherState.condition : null;
 
     return FlutterMap(
       mapController: _mapController,
@@ -263,7 +265,9 @@ class _MapViewState extends ConsumerState<MapView> {
 
         // Route-Polyline (wenn Route vorhanden - inkl. AI Trip Preview)
         // WICHTIG: AI Trip Preview hat Priorität über andere Routen
-        if (tripState.hasRoute || routePlanner.route != null || (isAITripPreview && aiRouteCoordinates.isNotEmpty))
+        if (tripState.hasRoute ||
+            routePlanner.route != null ||
+            (isAITripPreview && aiRouteCoordinates.isNotEmpty))
           PolylineLayer(
             polylines: [
               Polyline(
@@ -279,7 +283,10 @@ class _MapViewState extends ConsumerState<MapView> {
                 ),
                 color: Theme.of(context).colorScheme.primary,
                 strokeWidth: 5,
-                borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                borderColor: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.3),
                 borderStrokeWidth: 2,
               ),
             ],
@@ -314,7 +321,9 @@ class _MapViewState extends ConsumerState<MapView> {
         if (poiState.filteredPOIs.isNotEmpty && !isAITripPreview)
           MarkerLayer(
             markers: poiState.filteredPOIs.map((poi) {
-              final markerSize = _selectedPOIId == poi.id ? 48.0 : (poi.isMustSee ? 40.0 : 32.0);
+              final markerSize = _selectedPOIId == poi.id
+                  ? 48.0
+                  : (poi.isMustSee ? 40.0 : 32.0);
               return Marker(
                 point: poi.location,
                 width: markerSize + 8,
@@ -340,7 +349,8 @@ class _MapViewState extends ConsumerState<MapView> {
               // Tages-Wetter fuer Multi-Day-Trips
               WeatherCondition? markerWeather;
               if (isMultiDay && routeWeather.hasForecast) {
-                final forecastPerDay = routeWeather.getForecastPerDay(aiTrip!.actualDays);
+                final forecastPerDay =
+                    routeWeather.getForecastPerDay(aiTrip!.actualDays);
                 markerWeather = forecastPerDay[selectedDay];
               } else {
                 markerWeather = weatherCondition;
@@ -355,6 +365,7 @@ class _MapViewState extends ConsumerState<MapView> {
                   onTap: () => _onPOITap(poi),
                   weatherCondition: markerWeather,
                   isWeatherResilient: poi.category?.isWeatherResilient ?? false,
+                  isFavorite: favoriteIds.contains(poi.id),
                 ),
               );
             }).toList(),
@@ -362,17 +373,21 @@ class _MapViewState extends ConsumerState<MapView> {
 
         // Start-Marker (für normale Route oder AI Trip)
         // Bei Mehrtages-Trips: Start des ausgewählten Tages anzeigen
-        if (routePlanner.startLocation != null || (isAITripPreview && randomTripState.startLocation != null))
+        if (routePlanner.startLocation != null ||
+            (isAITripPreview && randomTripState.startLocation != null))
           MarkerLayer(
             markers: [
               Marker(
                 point: () {
                   if (isAITripPreview && isMultiDay && selectedDay > 1) {
                     // Ab Tag 2: Letzter Stop des Vortages als Start
-                    final prevDayStops = aiTrip!.getStopsForDay(selectedDay - 1);
-                    if (prevDayStops.isNotEmpty) return prevDayStops.last.location;
+                    final prevDayStops =
+                        aiTrip!.getStopsForDay(selectedDay - 1);
+                    if (prevDayStops.isNotEmpty)
+                      return prevDayStops.last.location;
                   }
-                  if (isAITripPreview && randomTripState.startLocation != null) {
+                  if (isAITripPreview &&
+                      randomTripState.startLocation != null) {
                     return randomTripState.startLocation!;
                   }
                   return routePlanner.startLocation!;
@@ -410,6 +425,7 @@ class _MapViewState extends ConsumerState<MapView> {
                 child: StopMarker(
                   number: index + 1,
                   onTap: () => _onPOITap(poi),
+                  isFavorite: favoriteIds.contains(poi.id),
                 ),
               );
             }).toList(),
@@ -435,7 +451,8 @@ class _MapViewState extends ConsumerState<MapView> {
       endIdx = temp;
     }
 
-    return fullCoordinates.sublist(startIdx, (endIdx + 1).clamp(0, fullCoordinates.length));
+    return fullCoordinates.sublist(
+        startIdx, (endIdx + 1).clamp(0, fullCoordinates.length));
   }
 
   int _findNearestIndex(List<LatLng> coords, LatLng target) {
@@ -517,159 +534,167 @@ class _MapViewState extends ConsumerState<MapView> {
                     children: [
                       // POI Info Row
                       Row(
-              children: [
-                // Icon
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Color(poi.category?.colorValue ?? 0xFF666666)
-                        .withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      poi.categoryIcon,
-                      style: const TextStyle(fontSize: 28),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // Name & Category
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        poi.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
                         children: [
-                          Text(
-                            poi.categoryLabel,
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 14,
+                          // Icon
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color:
+                                  Color(poi.category?.colorValue ?? 0xFF666666)
+                                      .withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                poi.categoryIcon,
+                                style: const TextStyle(fontSize: 28),
+                              ),
                             ),
                           ),
-                          if (poi.isMustSee) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.tertiary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '⭐ Must-See',
-                                style: TextStyle(
-                                  color: colorScheme.onTertiary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(width: 16),
+
+                          // Name & Category
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  poi.name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      poi.categoryLabel,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurfaceVariant,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    if (poi.isMustSee) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.tertiary,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '⭐ Must-See',
+                                          style: TextStyle(
+                                            color: colorScheme.onTertiary,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-            // Beschreibung (wenn vorhanden)
-            if (poi.shortDescription.isNotEmpty) ...[
-              Text(
-                poi.shortDescription,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 16),
-            ],
+                      // Beschreibung (wenn vorhanden)
+                      if (poi.shortDescription.isNotEmpty) ...[
+                        Text(
+                          poi.shortDescription,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
-            // Detour Info (wenn verfügbar)
-            if (poi.detourKm != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.route, size: 16, color: colorScheme.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      '+${poi.detourKm!.toStringAsFixed(1)} km Umweg',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.timer, size: 16, color: colorScheme.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      '+${poi.detourMinutes ?? 0} Min.',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                      // Detour Info (wenn verfügbar)
+                      if (poi.detourKm != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.route,
+                                  size: 16, color: colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                '+${poi.detourKm!.toStringAsFixed(1)} km Umweg',
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(Icons.timer,
+                                  size: 16, color: colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                '+${poi.detourMinutes ?? 0} Min.',
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
-            const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-            // Action Buttons
-            Row(
-              children: [
-                // Details Button
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ref.read(pOIStateNotifierProvider.notifier).selectPOI(poi);
-                      context.push('/poi/${poi.id}');
-                    },
-                    icon: const Icon(Icons.info_outline),
-                    label: Text(context.l10n.mapDetails),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Zur Route Button
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _addPOIToTripFromMap(poi);
-                    },
-                    icon: const Icon(Icons.add),
-                    label: Text(context.l10n.mapAddToRoute),
-                  ),
-                ),
-              ],
+                      // Action Buttons
+                      Row(
+                        children: [
+                          // Details Button
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                ref
+                                    .read(pOIStateNotifierProvider.notifier)
+                                    .selectPOI(poi);
+                                context.push('/poi/${poi.id}');
+                              },
+                              icon: const Icon(Icons.info_outline),
+                              label: Text(context.l10n.mapDetails),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Zur Route Button
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _addPOIToTripFromMap(poi);
+                              },
+                              icon: const Icon(Icons.add),
+                              label: Text(context.l10n.mapAddToRoute),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -824,7 +849,9 @@ class POIMarker extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.blue
-                    : (isHighlight ? colorScheme.tertiary : colorScheme.surface),
+                    : (isHighlight
+                        ? colorScheme.tertiary
+                        : colorScheme.surface),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: _getMarkerBorderColor(colorScheme),
@@ -968,11 +995,13 @@ class EndMarker extends StatelessWidget {
 class StopMarker extends StatelessWidget {
   final int number;
   final VoidCallback? onTap;
+  final bool isFavorite;
 
   const StopMarker({
     super.key,
     required this.number,
     this.onTap,
+    this.isFavorite = false,
   });
 
   @override
@@ -980,29 +1009,48 @@ class StopMarker extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          shape: BoxShape.circle,
-          border: Border.all(color: colorScheme.surface, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 4,
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 2,
+              top: 2,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colorScheme.surface, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '$number',
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
             ),
+            if (isFavorite)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: _FavoriteBadge(surfaceColor: colorScheme.surface),
+              ),
           ],
-        ),
-        child: Center(
-          child: Text(
-            '$number',
-            style: TextStyle(
-              color: colorScheme.onPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
         ),
       ),
     );
@@ -1016,6 +1064,7 @@ class _AITripStopMarker extends StatelessWidget {
   final VoidCallback? onTap;
   final WeatherCondition? weatherCondition;
   final bool isWeatherResilient;
+  final bool isFavorite;
 
   const _AITripStopMarker({
     required this.number,
@@ -1023,6 +1072,7 @@ class _AITripStopMarker extends StatelessWidget {
     this.onTap,
     this.weatherCondition,
     this.isWeatherResilient = false,
+    this.isFavorite = false,
   });
 
   @override
@@ -1068,26 +1118,53 @@ class _AITripStopMarker extends StatelessWidget {
             Positioned(
               right: 0,
               top: 0,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: colorScheme.tertiary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: colorScheme.surface, width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    '$number',
-                    style: TextStyle(
-                      color: colorScheme.onTertiary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 9,
+              child: isFavorite
+                  ? _FavoriteBadge(surfaceColor: colorScheme.surface)
+                  : Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: colorScheme.surface, width: 1.5),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$number',
+                          style: TextStyle(
+                            color: colorScheme.onTertiary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+            if (isFavorite)
+              Positioned(
+                right: 0,
+                top: 18,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colorScheme.surface, width: 1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$number',
+                      style: TextStyle(
+                        color: colorScheme.onTertiary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 8,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
             // Wetter-Badge (links unten)
             if (weatherCondition != null &&
                 weatherCondition != WeatherCondition.unknown &&
@@ -1103,6 +1180,30 @@ class _AITripStopMarker extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FavoriteBadge extends StatelessWidget {
+  final Color surfaceColor;
+
+  const _FavoriteBadge({required this.surfaceColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: Colors.red,
+        shape: BoxShape.circle,
+        border: Border.all(color: surfaceColor, width: 1.5),
+      ),
+      child: const Icon(
+        Icons.favorite,
+        size: 8,
+        color: Colors.white,
       ),
     );
   }
