@@ -176,23 +176,29 @@ class TripGeneratorRepository {
       );
     }
 
-    // 4. Radius als harte Distanzgrenze fuer Tagestrip anwenden.
-    // Vorher wurde radiusKm nur fuer die POI-Suche genutzt.
-    final constrainedPOIs = _routeOptimizer.trimRouteToMaxDistance(
-      pois: optimizedPOIs,
-      startLocation: startLocation,
-      maxDistanceKm: radiusKm,
-      returnToStart: !hasDestination,
-    );
+    // 4. Distanzgrenze nur fuer Rundreisen anwenden.
+    // Bei gesetztem Ziel darf die Tagesroute laenger als der Radius sein
+    // (z.B. Hamburg -> Muenchen), der Radius steuert dort primar die POI-Suche.
+    final constrainedPOIs = hasDestination
+        ? optimizedPOIs
+        : _routeOptimizer.trimRouteToMaxDistance(
+            pois: optimizedPOIs,
+            startLocation: startLocation,
+            maxDistanceKm: radiusKm,
+            returnToStart: true,
+          );
 
     if (constrainedPOIs.isEmpty) {
       throw TripGenerationException(
-        'Keine Route innerhalb von ${radiusKm.round()}km moeglich. '
-        'Bitte Distanz erhoehen oder Start/Ziel anpassen.',
+        hasDestination
+            ? 'Keine gueltige POI-Route zwischen Start und Ziel moeglich. '
+                'Bitte Ziel oder Kategorien anpassen.'
+            : 'Keine Route innerhalb von ${radiusKm.round()}km moeglich. '
+                'Bitte Distanz erhoehen oder Start/Ziel anpassen.',
       );
     }
 
-    if (constrainedPOIs.length < optimizedPOIs.length) {
+    if (!hasDestination && constrainedPOIs.length < optimizedPOIs.length) {
       debugPrint(
         '[TripGenerator] Tagestrip auf Distanzlimit gekuerzt: '
         '${optimizedPOIs.length} -> ${constrainedPOIs.length} POIs '
@@ -1684,17 +1690,17 @@ class TripGeneratorRepository {
       (startLocation.longitude + endLocation.longitude) / 2,
     );
 
-    final baseRadiusKm = radiusKm.clamp(25.0, 220.0);
+    final baseRadiusKm = radiusKm.clamp(25.0, 500.0);
     final expandedRadiusKm =
-        max(baseRadiusKm * 1.35, baseRadiusKm + 25.0).clamp(45.0, 280.0);
+        max(baseRadiusKm * 1.35, baseRadiusKm + 40.0).clamp(45.0, 650.0);
     final rescueRadiusKm =
-        max(baseRadiusKm * 1.8, baseRadiusKm + 70.0).clamp(70.0, 360.0);
+        max(baseRadiusKm * 1.8, baseRadiusKm + 90.0).clamp(70.0, 850.0);
 
-    final baseBufferKm = radiusKm.clamp(20.0, 200.0);
+    final baseBufferKm = radiusKm.clamp(20.0, 500.0);
     final expandedBufferKm =
-        max(baseBufferKm * 1.35, baseBufferKm + 20.0).clamp(35.0, 280.0);
+        max(baseBufferKm * 1.35, baseBufferKm + 30.0).clamp(35.0, 700.0);
     final rescueBufferKm =
-        max(baseBufferKm * 1.9, baseBufferKm + 60.0).clamp(60.0, 360.0);
+        max(baseBufferKm * 1.9, baseBufferKm + 80.0).clamp(60.0, 900.0);
 
     const strictMinScore = minimumPOIScore;
     const relaxedMinScore = 25;
@@ -1897,7 +1903,7 @@ class TripGeneratorRepository {
     int minScore = minimumPOIScore,
     bool useCache = true,
   }) async {
-    final endpointRadiusKm = radiusKm.clamp(30.0, 240.0);
+    final endpointRadiusKm = radiusKm.clamp(30.0, 500.0);
     final results = await Future.wait([
       _poiRepo.loadPOIsInRadius(
         center: start,

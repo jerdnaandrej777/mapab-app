@@ -922,7 +922,7 @@ class _CompactRadiusSlider extends StatelessWidget {
   Widget _buildRadiusSlider(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     const minRadius = 30.0;
-    const maxRadius = 300.0;
+    const maxRadius = 500.0;
     final currentRadius = state.radiusKm.clamp(minRadius, maxRadius);
 
     return Column(
@@ -987,7 +987,7 @@ class _CompactRadiusSlider extends StatelessWidget {
         // Quick Select (kompakt)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [50.0, 100.0, 200.0, 300.0].map((value) {
+          children: [50.0, 100.0, 200.0, 300.0, 500.0].map((value) {
             final isSelected = (currentRadius - value).abs() < 10;
             return GestureDetector(
               onTap: () => notifier.setRadius(value),

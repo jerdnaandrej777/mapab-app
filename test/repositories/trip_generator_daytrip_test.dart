@@ -218,5 +218,35 @@ void main() {
       expect(result.selectedPOIs, isNotEmpty);
       expect(result.trip.route.coordinates, isNotEmpty);
     });
+
+    test('does not enforce radius hard-limit when destination is set',
+        () async {
+      const farDestination = LatLng(48.1351, 11.5820); // Muenchen
+      final poiRepo = _FakePOIRepository([samplePOI]);
+      final routingRepo = _FakeRoutingRepository();
+      final repo = TripGeneratorRepository(
+        poiRepo: poiRepo,
+        routingRepo: routingRepo,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        destinationLocation: farDestination,
+        destinationAddress: 'Muenchen',
+        radiusKm: 80,
+        poiCount: 1,
+      );
+
+      expect(result.selectedPOIs, isNotEmpty);
+      expect(
+        result.trip.route.end.latitude,
+        closeTo(farDestination.latitude, 0.00001),
+      );
+      expect(
+        result.trip.route.end.longitude,
+        closeTo(farDestination.longitude, 0.00001),
+      );
+    });
   });
 }
