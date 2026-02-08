@@ -7,6 +7,34 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.38] - 2026-02-08
+
+### AI Tagestrip Routing-Stabilitaet
+
+#### Behoben
+- **AI Tagestrip bricht bei instabilen POI-Sets deutlich seltener ab**
+  - `generateDayTrip(...)` nutzt jetzt mehrere Selektionsversuche (Retry-Strategie) statt nur einen Single-Pass.
+  - Jeder Versuch wird separat optimiert und ueber die neue Backoff-Pipeline geroutet.
+- **Routing-Backoff und Rescue sind robuster**
+  - Zentrale Helper-Routeberechnung mit iterativem Entfernen problematischer Stops.
+  - Single-POI-Rescue nutzt erweiterten Kandidatenpool: `routingPOIs` -> `constrainedPOIs` -> `availablePOIs`.
+  - Fallback auf 1 POI wird aktiv genutzt, bevor ein harter Fehler geworfen wird.
+- **Single-Day Edit-Flow behaelt Zielendpunkt bei A->B Trips**
+  - `removePOI(...)`, `addPOIToTrip(...)` und `rerollPOI(...)` verwenden nicht mehr pauschal `end = start`.
+  - Rebuild nutzt den echten Trip-Endpunkt und waehlt korrekt zwischen directional (A->B) und roundtrip Optimierung.
+- **Diagnose verbessert**
+  - Strukturierte Debug-Logs pro Daytrip-Versuch, inkl. Backoff-Schritten und Rescue-Pfad.
+
+#### Technisch
+- `lib/data/repositories/trip_generator_repo.dart`
+  - Neue interne Helper fuer Daytrip-Versuche, Routing-Backoff, Rescue-Kandidaten und Single-Day-Endpoint-Resolve.
+  - `generateDayTrip(...)` auf Retry-Flow mit zentralem Routing-Backoff umgestellt.
+  - Single-Day-Edit-Rebuild auf echte Endpunkte korrigiert.
+- `test/repositories/trip_generator_daytrip_test.dart`
+  - Neue Regression-Tests fuer Retry-Erfolg, erweitertes Single-POI-Rescue und Zielerhalt bei `removePOI`/`addPOIToTrip`/`rerollPOI`.
+
+---
+
 ## [1.10.35] - 2026-02-08
 
 ### Social Publish + POI Preview + Daytrip Stabilisierung

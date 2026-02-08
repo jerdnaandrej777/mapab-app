@@ -54,7 +54,7 @@ class TripGeneratorRepository {
   /// [radiusKm] - Suchradius für POIs (oder Korridor-Breite bei Ziel)
   /// [categories] - Bevorzugte Kategorien
   /// [poiCount] - Anzahl gewünschter POIs
-  /// [destinationLocation] - Optionaler Zielpunkt (wenn null → Rundreise)
+  /// [destinationLocation] - Optionaler Zielpunkt (wenn null -> Rundreise)
   /// [destinationAddress] - Optionale Zieladresse
   Future<GeneratedTrip> generateDayTrip({
     required LatLng startLocation,
@@ -86,7 +86,7 @@ class TripGeneratorRepository {
       '(Ziel aktiv: ${destinationLocation != null}, effektiv: $hasDestination)',
     );
 
-    // 1. POIs laden — Korridor oder Radius
+    // 1. POIs laden - Korridor oder Radius
     final categoryIds = _normalizeCategoryIds(
       categories.isNotEmpty ? categories.map((c) => c.id).toList() : null,
     );
@@ -119,7 +119,7 @@ class TripGeneratorRepository {
           : '';
       throw TripGenerationException(
         hasDestination
-            ? 'Keine POIs entlang der Route $startAddress → $endAddress gefunden'
+            ? 'Keine POIs entlang der Route $startAddress -> $endAddress gefunden'
             : 'Keine POIs im Umkreis von ${radiusKm}km gefunden$categoryHint',
       );
     }
@@ -138,169 +138,102 @@ class TripGeneratorRepository {
       }).toList();
     }
 
-    // 2. Zufällige POIs auswählen
-    var selectedPOIs = _poiSelector.selectRandomPOIs(
-      pois: availablePOIs,
+    // 2. POI-Auswahl mit Retry-Strategie
+    final selectionAttempts = _buildDayTripSelectionAttempts(
+      availablePOIs: availablePOIs,
       startLocation: startLocation,
+      endLocation: endLocation,
       count: poiCount,
       preferredCategories: categories,
     );
-
-    if (selectedPOIs.isEmpty) {
-      selectedPOIs = _fallbackSelectPOIsForDayTrip(
-        availablePOIs: availablePOIs,
-        startLocation: startLocation,
-        endLocation: endLocation,
-        count: poiCount,
-      );
-    }
-
-    if (selectedPOIs.isEmpty) {
+    if (selectionAttempts.isEmpty) {
       throw TripGenerationException('Keine passenden POIs gefunden');
     }
 
-    // 3. Route optimieren
-    final List<POI> optimizedPOIs;
-    if (hasDestination) {
-      // Richtungs-Optimierung: POIs vorwaerts entlang Start → Ziel
-      optimizedPOIs = _routeOptimizer.optimizeDirectionalRoute(
-        pois: selectedPOIs,
+    AppRoute? route;
+    List<POI>? routingPOIs;
+    TripGenerationException? lastAttemptError;
+
+    for (var i = 0; i < selectionAttempts.length; i++) {
+      final attempt = selectionAttempts[i];
+      debugPrint(
+        '[TripGenerator] Tagestrip Versuch ${i + 1}/${selectionAttempts.length}: '
+        '${attempt.label} (${attempt.pois.length} POIs)',
+      );
+
+      final optimizedPOIs = _optimizeDayTripPOIsForRoute(
+        pois: attempt.pois,
         startLocation: startLocation,
         endLocation: endLocation,
+        hasDestination: hasDestination,
       );
-    } else {
-      optimizedPOIs = _routeOptimizer.optimizeRoute(
-        pois: selectedPOIs,
-        startLocation: startLocation,
-        returnToStart: true,
-      );
-    }
-
-    // 4. Distanzgrenze nur fuer Rundreisen anwenden.
-    // Bei gesetztem Ziel darf die Tagesroute laenger als der Radius sein
-    // (z.B. Hamburg -> Muenchen), der Radius steuert dort primar die POI-Suche.
-    final constrainedPOIs = hasDestination
-        ? optimizedPOIs
-        : _routeOptimizer.trimRouteToMaxDistance(
-            pois: optimizedPOIs,
-            startLocation: startLocation,
-            maxDistanceKm: radiusKm,
-            returnToStart: true,
-          );
-
-    if (constrainedPOIs.isEmpty) {
-      throw TripGenerationException(
-        hasDestination
-            ? 'Keine gueltige POI-Route zwischen Start und Ziel moeglich. '
-                'Bitte Ziel oder Kategorien anpassen.'
-            : 'Keine Route innerhalb von ${radiusKm.round()}km moeglich. '
-                'Bitte Distanz erhoehen oder Start/Ziel anpassen.',
-      );
-    }
-
-    if (!hasDestination && constrainedPOIs.length < optimizedPOIs.length) {
-      debugPrint(
-        '[TripGenerator] Tagestrip auf Distanzlimit gekuerzt: '
-        '${optimizedPOIs.length} -> ${constrainedPOIs.length} POIs '
-        '(max ${radiusKm.toStringAsFixed(0)}km)',
-      );
-    }
-
-    // 5. Echte Route berechnen (robust mit Backoff bei unroutbaren POIs)
-    var routingPOIs = constrainedPOIs
-        .where((poi) => _isValidLatLng(poi.location))
-        .toList(growable: true);
-    if (routingPOIs.isEmpty) {
-      throw TripGenerationException(
-        'Keine gueltigen POI-Koordinaten fuer die Routenberechnung gefunden.',
-      );
-    }
-
-    AppRoute? route;
-    RoutingException? lastRoutingError;
-
-    while (routingPOIs.isNotEmpty) {
-      final optimizedForRouting = hasDestination
-          ? _routeOptimizer.optimizeDirectionalRoute(
-              pois: routingPOIs,
+      final constrainedPOIs = hasDestination
+          ? optimizedPOIs
+          : _routeOptimizer.trimRouteToMaxDistance(
+              pois: optimizedPOIs,
               startLocation: startLocation,
-              endLocation: endLocation,
-            )
-          : _routeOptimizer.optimizeRoute(
-              pois: routingPOIs,
-              startLocation: startLocation,
+              maxDistanceKm: radiusKm,
               returnToStart: true,
             );
 
-      try {
-        route = await _routingRepo.calculateFastRoute(
-          start: startLocation,
-          end: endLocation,
-          waypoints: optimizedForRouting.map((p) => p.location).toList(),
-          startAddress: startAddress,
-          endAddress: endAddress,
-        );
-        routingPOIs = optimizedForRouting;
-        break;
-      } on RoutingException catch (e) {
-        lastRoutingError = e;
-        if (optimizedForRouting.length <= 1) {
-          break;
-        }
+      debugPrint(
+        '[TripGenerator] Tagestrip Versuch ${i + 1}: '
+        'optimiert ${optimizedPOIs.length}, nach Distanzlimit ${constrainedPOIs.length}',
+      );
 
-        final removedPoi = _selectWorstPOIForRoutingBackoff(
-          pois: optimizedForRouting,
+      if (constrainedPOIs.isEmpty) {
+        lastAttemptError = TripGenerationException(
+          hasDestination
+              ? 'Keine gueltige POI-Route zwischen Start und Ziel moeglich. '
+                  'Bitte Ziel oder Kategorien anpassen.'
+              : 'Keine Route innerhalb von ${radiusKm.round()}km moeglich. '
+                  'Bitte Distanz erhoehen oder Start/Ziel anpassen.',
+        );
+        continue;
+      }
+
+      if (!hasDestination && constrainedPOIs.length < optimizedPOIs.length) {
+        debugPrint(
+          '[TripGenerator] Tagestrip auf Distanzlimit gekuerzt: '
+          '${optimizedPOIs.length} -> ${constrainedPOIs.length} POIs '
+          '(max ${radiusKm.toStringAsFixed(0)}km)',
+        );
+      }
+
+      try {
+        final routingResult = await _calculateDayTripRouteWithBackoff(
+          candidatePOIs: constrainedPOIs,
+          constrainedPOIs: constrainedPOIs,
+          availablePOIs: availablePOIs,
           startLocation: startLocation,
           endLocation: endLocation,
+          hasDestination: hasDestination,
+          startAddress: startAddress,
+          endAddress: endAddress,
+          attemptLabel: attempt.label,
         );
+        route = routingResult.route;
+        routingPOIs = routingResult.routingPOIs;
         debugPrint(
-          '[TripGenerator] Tagestrip Routing-Backoff: entferne POI '
-          '"${removedPoi.name}" nach Routing-Fehler: ${e.message}',
+          '[TripGenerator] Tagestrip Versuch ${i + 1} erfolgreich '
+          '(singlePOIRescue=${routingResult.usedSinglePoiRescue}, '
+          'source=${routingResult.rescueSource})',
         );
-        routingPOIs = optimizedForRouting
-            .where((poi) => poi.id != removedPoi.id)
-            .toList();
-      }
-    }
-    if (route == null && routingPOIs.isNotEmpty) {
-      final singlePoiCandidates = [...routingPOIs]
-        ..sort((a, b) => _dayTripDetourScore(
-              poi: a,
-              startLocation: startLocation,
-              endLocation: endLocation,
-            ).compareTo(
-              _dayTripDetourScore(
-                poi: b,
-                startLocation: startLocation,
-                endLocation: endLocation,
-              ),
-            ));
-
-      for (final candidate in singlePoiCandidates) {
-        try {
-          route = await _routingRepo.calculateFastRoute(
-            start: startLocation,
-            end: endLocation,
-            waypoints: [candidate.location],
-            startAddress: startAddress,
-            endAddress: endAddress,
-          );
-          routingPOIs = [candidate];
-          debugPrint(
-            '[TripGenerator] Tagestrip Routing-Safety-Fallback erfolgreich mit 1 POI: ${candidate.name}',
-          );
-          break;
-        } on RoutingException {
-          continue;
-        }
+        break;
+      } on TripGenerationException catch (e) {
+        lastAttemptError = e;
+        debugPrint(
+          '[TripGenerator] Tagestrip Versuch ${i + 1} fehlgeschlagen: ${e.message}',
+        );
       }
     }
 
-    if (route == null) {
-      throw TripGenerationException(
-        'Route konnte fuer die ausgewaehlten POIs nicht berechnet werden. '
-        'Bitte Radius/Kategorien anpassen.${lastRoutingError != null ? ' (${lastRoutingError.message})' : ''}',
-      );
+    if (route == null || routingPOIs == null || routingPOIs.isEmpty) {
+      throw lastAttemptError ??
+          TripGenerationException(
+            'Route konnte fuer die ausgewaehlten POIs nicht berechnet werden. '
+            'Bitte Radius/Kategorien anpassen.',
+          );
     }
 
     // 6. Trip erstellen
@@ -331,7 +264,7 @@ class TripGeneratorRepository {
   /// [radiusKm] - Such-Radius in km (oder Korridor-Breite bei Ziel)
   /// [categories] - Bevorzugte Kategorien
   /// [includeHotels] - Hotels vorschlagen
-  /// [destinationLocation] - Optionaler Zielpunkt (wenn null → Rundreise)
+  /// [destinationLocation] - Optionaler Zielpunkt (wenn null -> Rundreise)
   /// [destinationAddress] - Optionale Zieladresse
   Future<GeneratedTrip> generateEuroTrip({
     required LatLng startLocation,
@@ -941,26 +874,37 @@ class TripGeneratorRepository {
       );
     }
 
-    // Single-Day: Globale Re-Optimierung (bestehendes Verhalten)
+    // Single-Day: Re-Optimierung mit konsistentem Endpunkt
     // POI aus der Liste entfernen
     final newSelectedPOIs =
         currentTrip.selectedPOIs.where((p) => p.id != poiIdToRemove).toList();
+    final endPoints = _resolveSingleDayEditEndPoints(
+      currentTrip: currentTrip,
+      startLocation: startLocation,
+      startAddress: startAddress,
+    );
 
     // Route neu optimieren
-    final optimizedPOIs = _routeOptimizer.optimizeRoute(
-      pois: newSelectedPOIs,
-      startLocation: startLocation,
-      returnToStart: true,
-    );
+    final optimizedPOIs = endPoints.isRoundTrip
+        ? _routeOptimizer.optimizeRoute(
+            pois: newSelectedPOIs,
+            startLocation: startLocation,
+            returnToStart: true,
+          )
+        : _routeOptimizer.optimizeDirectionalRoute(
+            pois: newSelectedPOIs,
+            startLocation: startLocation,
+            endLocation: endPoints.endLocation,
+          );
 
     // Neue Route berechnen
     final waypoints = optimizedPOIs.map((p) => p.location).toList();
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
-      end: startLocation,
+      end: endPoints.endLocation,
       waypoints: waypoints,
       startAddress: startAddress,
-      endAddress: startAddress,
+      endAddress: endPoints.endAddress,
     );
 
     // Trip aktualisieren - bei Mehrtages-Trips Tagesplanung wiederholen
@@ -1024,22 +968,33 @@ class TripGeneratorRepository {
       );
     }
 
-    // Single-Day: Globale Re-Optimierung
+    // Single-Day: Re-Optimierung mit konsistentem Endpunkt
     final newSelectedPOIs = [...currentTrip.selectedPOIs, newPOI];
-
-    final optimizedPOIs = _routeOptimizer.optimizeRoute(
-      pois: newSelectedPOIs,
+    final endPoints = _resolveSingleDayEditEndPoints(
+      currentTrip: currentTrip,
       startLocation: startLocation,
-      returnToStart: true,
+      startAddress: startAddress,
     );
+
+    final optimizedPOIs = endPoints.isRoundTrip
+        ? _routeOptimizer.optimizeRoute(
+            pois: newSelectedPOIs,
+            startLocation: startLocation,
+            returnToStart: true,
+          )
+        : _routeOptimizer.optimizeDirectionalRoute(
+            pois: newSelectedPOIs,
+            startLocation: startLocation,
+            endLocation: endPoints.endLocation,
+          );
 
     final waypoints = optimizedPOIs.map((p) => p.location).toList();
     final route = await _routingRepo.calculateFastRoute(
       start: startLocation,
-      end: startLocation,
+      end: endPoints.endLocation,
       waypoints: waypoints,
       startAddress: startAddress,
-      endAddress: startAddress,
+      endAddress: endPoints.endAddress,
     );
 
     final newStops = optimizedPOIs.asMap().entries.map((entry) {
@@ -1151,7 +1106,13 @@ class TripGeneratorRepository {
       );
     }
 
-    // Single-Day: Globale Re-Optimierung (bestehendes Verhalten)
+    // Single-Day: Re-Optimierung mit konsistentem Endpunkt
+    final endPoints = _resolveSingleDayEditEndPoints(
+      currentTrip: currentTrip,
+      startLocation: startLocation,
+      startAddress: startAddress,
+    );
+
     // Nachbar-Positionen fuer Distanz-bewusste Auswahl ermitteln
     final currentIndex = currentTrip.selectedPOIs.indexOf(poiToReplace);
     final previousLocation = currentIndex > 0
@@ -1159,7 +1120,7 @@ class TripGeneratorRepository {
         : startLocation;
     final nextLocation = currentIndex < currentTrip.selectedPOIs.length - 1
         ? currentTrip.selectedPOIs[currentIndex + 1].location
-        : startLocation;
+        : endPoints.endLocation;
 
     // Max Segment = halbe Tagesbudget (ein Segment soll nicht den ganzen Tag verbrauchen)
     const maxSegmentKm = TripConstants.maxKmPerDay / 2;
@@ -1197,20 +1158,26 @@ class TripGeneratorRepository {
       }).toList();
 
       // Route neu optimieren
-      final optimizedPOIs = _routeOptimizer.optimizeRoute(
-        pois: newSelectedPOIs,
-        startLocation: startLocation,
-        returnToStart: true,
-      );
+      final optimizedPOIs = endPoints.isRoundTrip
+          ? _routeOptimizer.optimizeRoute(
+              pois: newSelectedPOIs,
+              startLocation: startLocation,
+              returnToStart: true,
+            )
+          : _routeOptimizer.optimizeDirectionalRoute(
+              pois: newSelectedPOIs,
+              startLocation: startLocation,
+              endLocation: endPoints.endLocation,
+            );
 
       // Neue Route berechnen
       final waypoints = optimizedPOIs.map((p) => p.location).toList();
       final route = await _routingRepo.calculateFastRoute(
         start: startLocation,
-        end: startLocation,
+        end: endPoints.endLocation,
         waypoints: waypoints,
         startAddress: startAddress,
-        endAddress: startAddress,
+        endAddress: endPoints.endAddress,
       );
 
       final newStops = optimizedPOIs.asMap().entries.map((entry) {
@@ -1672,7 +1639,7 @@ class TripGeneratorRepository {
     }).toList();
   }
 
-  /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)
+  /// Laedt POIs entlang eines Korridors (Start->Ziel mit Buffer)
   /// Berechnet eine Direct-Route und sucht POIs in der Bounding Box
   Future<List<POI>> _loadDayTripPOIsWithFallbacks({
     required LatLng startLocation,
@@ -1996,6 +1963,271 @@ class TripGeneratorRepository {
     return detourKm - (quality * 0.05);
   }
 
+  List<({String label, List<POI> pois})> _buildDayTripSelectionAttempts({
+    required List<POI> availablePOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required int count,
+    required List<POICategory> preferredCategories,
+  }) {
+    if (availablePOIs.isEmpty || count <= 0) return const [];
+
+    final normalizedCount = count.clamp(1, availablePOIs.length).toInt();
+    final attempts = <({String label, List<POI> pois})>[];
+    final seenKeys = <String>{};
+
+    void addAttempt(String label, List<POI> pois) {
+      if (pois.isEmpty) return;
+      final deduped = <POI>[];
+      final seenIds = <String>{};
+      for (final poi in pois) {
+        if (seenIds.add(poi.id)) {
+          deduped.add(poi);
+        }
+      }
+      if (deduped.isEmpty) return;
+      final key = deduped.map((poi) => poi.id).join('|');
+      if (!seenKeys.add(key)) return;
+      attempts.add((label: label, pois: deduped));
+    }
+
+    final randomSelection = _poiSelector.selectRandomPOIs(
+      pois: availablePOIs,
+      startLocation: startLocation,
+      count: normalizedCount,
+      preferredCategories: preferredCategories,
+    );
+    addAttempt('random_weighted', randomSelection);
+
+    final fallbackSelection = _fallbackSelectPOIsForDayTrip(
+      availablePOIs: availablePOIs,
+      startLocation: startLocation,
+      endLocation: endLocation,
+      count: normalizedCount,
+    );
+    addAttempt('detour_sorted', fallbackSelection);
+
+    final sortedByDetour = [...availablePOIs]
+      ..sort((a, b) => _dayTripDetourScore(
+            poi: a,
+            startLocation: startLocation,
+            endLocation: endLocation,
+          ).compareTo(
+            _dayTripDetourScore(
+              poi: b,
+              startLocation: startLocation,
+              endLocation: endLocation,
+            ),
+          ));
+    final conservativeWindow = min(
+      sortedByDetour.length,
+      max(normalizedCount + 2, normalizedCount * 2),
+    );
+    addAttempt(
+      'conservative_window',
+      sortedByDetour.take(conservativeWindow).take(normalizedCount).toList(),
+    );
+
+    return attempts;
+  }
+
+  List<POI> _optimizeDayTripPOIsForRoute({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+  }) {
+    if (pois.isEmpty) return const [];
+    if (hasDestination) {
+      return _routeOptimizer.optimizeDirectionalRoute(
+        pois: pois,
+        startLocation: startLocation,
+        endLocation: endLocation,
+      );
+    }
+    return _routeOptimizer.optimizeRoute(
+      pois: pois,
+      startLocation: startLocation,
+      returnToStart: true,
+    );
+  }
+
+  List<POI> _buildDayTripSinglePoiRescueCandidates({
+    required List<POI> primaryPOIs,
+    required List<POI> secondaryPOIs,
+    required List<POI> tertiaryPOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+  }) {
+    final scored =
+        <({POI poi, int priority, double detourScore, double quality})>[];
+    final seenIds = <String>{};
+
+    void addCandidates(List<POI> pois, int priority) {
+      for (final poi in pois) {
+        if (!_isValidLatLng(poi.location) || !seenIds.add(poi.id)) {
+          continue;
+        }
+        scored.add((
+          poi: poi,
+          priority: priority,
+          detourScore: _dayTripDetourScore(
+            poi: poi,
+            startLocation: startLocation,
+            endLocation: endLocation,
+          ),
+          quality: (poi.effectiveScore ?? poi.score.toDouble()),
+        ));
+      }
+    }
+
+    addCandidates(primaryPOIs, 0);
+    addCandidates(secondaryPOIs, 1);
+    addCandidates(tertiaryPOIs, 2);
+
+    scored.sort((a, b) {
+      final byPriority = a.priority.compareTo(b.priority);
+      if (byPriority != 0) return byPriority;
+      final byDetour = a.detourScore.compareTo(b.detourScore);
+      if (byDetour != 0) return byDetour;
+      return b.quality.compareTo(a.quality);
+    });
+
+    return scored.map((entry) => entry.poi).toList();
+  }
+
+  Future<
+      ({
+        AppRoute route,
+        List<POI> routingPOIs,
+        bool usedSinglePoiRescue,
+        String rescueSource
+      })> _calculateDayTripRouteWithBackoff({
+    required List<POI> candidatePOIs,
+    required List<POI> constrainedPOIs,
+    required List<POI> availablePOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+    required String startAddress,
+    required String endAddress,
+    required String attemptLabel,
+  }) async {
+    var routingPOIs = candidatePOIs
+        .where((poi) => _isValidLatLng(poi.location))
+        .toList(growable: true);
+    if (routingPOIs.isEmpty) {
+      throw TripGenerationException(
+        'Keine gueltigen POI-Koordinaten fuer die Routenberechnung gefunden.',
+      );
+    }
+
+    RoutingException? lastRoutingError;
+    List<POI> lastAttemptedPOIs = routingPOIs;
+
+    while (routingPOIs.isNotEmpty) {
+      final optimizedForRouting = _optimizeDayTripPOIsForRoute(
+        pois: routingPOIs,
+        startLocation: startLocation,
+        endLocation: endLocation,
+        hasDestination: hasDestination,
+      );
+      if (optimizedForRouting.isEmpty) {
+        break;
+      }
+      lastAttemptedPOIs = optimizedForRouting;
+
+      try {
+        final route = await _routingRepo.calculateFastRoute(
+          start: startLocation,
+          end: endLocation,
+          waypoints: optimizedForRouting.map((p) => p.location).toList(),
+          startAddress: startAddress,
+          endAddress: endAddress,
+        );
+        return (
+          route: route,
+          routingPOIs: optimizedForRouting,
+          usedSinglePoiRescue: false,
+          rescueSource: 'multi_poi'
+        );
+      } on RoutingException catch (e) {
+        lastRoutingError = e;
+        if (optimizedForRouting.length <= 1) {
+          routingPOIs = optimizedForRouting;
+          break;
+        }
+
+        final removedPoi = _selectWorstPOIForRoutingBackoff(
+          pois: optimizedForRouting,
+          startLocation: startLocation,
+          endLocation: endLocation,
+        );
+        debugPrint(
+          '[TripGenerator] Tagestrip Routing-Backoff ($attemptLabel): entferne '
+          '"${removedPoi.name}" nach Routing-Fehler: ${e.message}',
+        );
+        routingPOIs = optimizedForRouting
+            .where((poi) => poi.id != removedPoi.id)
+            .toList();
+      }
+    }
+
+    final singlePoiCandidates = _buildDayTripSinglePoiRescueCandidates(
+      primaryPOIs: lastAttemptedPOIs,
+      secondaryPOIs: constrainedPOIs,
+      tertiaryPOIs: availablePOIs,
+      startLocation: startLocation,
+      endLocation: endLocation,
+    );
+    for (final candidate in singlePoiCandidates) {
+      try {
+        final route = await _routingRepo.calculateFastRoute(
+          start: startLocation,
+          end: endLocation,
+          waypoints: [candidate.location],
+          startAddress: startAddress,
+          endAddress: endAddress,
+        );
+        debugPrint(
+          '[TripGenerator] Tagestrip Single-POI-Rescue ($attemptLabel) erfolgreich: ${candidate.name}',
+        );
+        return (
+          route: route,
+          routingPOIs: [candidate],
+          usedSinglePoiRescue: true,
+          rescueSource: candidate.id
+        );
+      } on RoutingException catch (e) {
+        lastRoutingError = e;
+      }
+    }
+
+    throw TripGenerationException(
+      'Route konnte fuer die ausgewaehlten POIs nicht berechnet werden. '
+      'Bitte Radius/Kategorien anpassen.${lastRoutingError != null ? ' (${lastRoutingError.message})' : ''}',
+    );
+  }
+
+  ({LatLng endLocation, String endAddress, bool isRoundTrip})
+      _resolveSingleDayEditEndPoints({
+    required GeneratedTrip currentTrip,
+    required LatLng startLocation,
+    required String startAddress,
+  }) {
+    final tripEnd = currentTrip.trip.route.end;
+    final tripEndAddress = currentTrip.trip.route.endAddress;
+    final isRoundTrip = GeoUtils.haversineDistance(startLocation, tripEnd) <
+        _minDestinationDistanceKm;
+    return (
+      endLocation: isRoundTrip ? startLocation : tripEnd,
+      endAddress: isRoundTrip
+          ? startAddress
+          : (tripEndAddress.isNotEmpty ? tripEndAddress : startAddress),
+      isRoundTrip: isRoundTrip
+    );
+  }
+
   Future<List<POI>> _loadPOIsAlongCorridor({
     required LatLng start,
     required LatLng end,
@@ -2039,7 +2271,7 @@ class TripGeneratorRepository {
     );
 
     debugPrint(
-        '[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) → NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
+        '[TripGenerator] Korridor-Bounds: SW(${bounds.southwest.latitude.toStringAsFixed(2)}, ${bounds.southwest.longitude.toStringAsFixed(2)}) -> NE(${bounds.northeast.latitude.toStringAsFixed(2)}, ${bounds.northeast.longitude.toStringAsFixed(2)})');
 
     // 3. POIs in der Box laden
     final poisInBounds = await _poiRepo.loadPOIsInBounds(
@@ -2053,7 +2285,7 @@ class TripGeneratorRepository {
     if (poisInBounds.isEmpty) return poisInBounds;
 
     // 4. Harte Korridor-Filterung entlang der direkten Route
-    // Verhindert Bounding-Box-Ausreißer weit weg von der eigentlichen Route.
+    // Verhindert Bounding-Box-Ausreisser weit weg von der eigentlichen Route.
     final corridorToleranceKm = max(15.0, bufferKm * 1.25);
     final filtered = poisInBounds.where((poi) {
       if (!_isValidLatLng(poi.location)) return false;
@@ -2136,7 +2368,7 @@ class TripGeneratorRepository {
 
     if (highlights.isEmpty) return 'Euro Trip ${days.length} Tage';
 
-    return '${days.length}-Tage-Trip: ${highlights.join(' → ')}';
+    return '${days.length}-Tage-Trip: ${highlights.join(' -> ')}';
   }
 
   List<String>? _normalizeCategoryIds(List<String>? categoryIds) {

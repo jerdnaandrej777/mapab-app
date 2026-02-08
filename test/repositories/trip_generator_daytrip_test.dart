@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:travel_planner/core/algorithms/random_poi_selector.dart';
 import 'package:travel_planner/core/constants/categories.dart';
 import 'package:travel_planner/data/models/poi.dart';
 import 'package:travel_planner/data/models/route.dart';
+import 'package:travel_planner/data/models/trip.dart';
 import 'package:travel_planner/data/repositories/poi_repo.dart';
 import 'package:travel_planner/data/repositories/routing_repo.dart';
 import 'package:travel_planner/data/repositories/trip_generator_repo.dart';
@@ -119,6 +121,178 @@ class _FakeRoutingRepository extends RoutingRepository {
       calculatedAt: DateTime.now(),
     );
   }
+}
+
+class _ProgrammableRoutingRepository extends RoutingRepository {
+  _ProgrammableRoutingRepository({required this.shouldFail});
+
+  final bool Function(
+    List<LatLng> waypoints,
+    int callCount,
+    LatLng start,
+    LatLng end,
+  ) shouldFail;
+  int callCount = 0;
+  LatLng? lastEnd;
+
+  @override
+  Future<AppRoute> calculateFastRoute({
+    required LatLng start,
+    required LatLng end,
+    List<LatLng>? waypoints,
+    required String startAddress,
+    required String endAddress,
+  }) async {
+    callCount++;
+    final effectiveWaypoints = waypoints ?? const <LatLng>[];
+    if (shouldFail(effectiveWaypoints, callCount, start, end)) {
+      throw RoutingException('HTTP 400 - scripted failure #$callCount');
+    }
+
+    lastEnd = end;
+    return AppRoute(
+      start: start,
+      end: end,
+      startAddress: startAddress,
+      endAddress: endAddress,
+      coordinates: [start, ...effectiveWaypoints, end],
+      distanceKm: 42,
+      durationMinutes: 50,
+      type: RouteType.fast,
+      waypoints: effectiveWaypoints,
+      calculatedAt: DateTime.now(),
+    );
+  }
+}
+
+class _ScriptedPOISelector extends RandomPOISelector {
+  _ScriptedPOISelector({
+    this.selections = const [],
+    this.rerollResult,
+  });
+
+  final List<List<POI>> selections;
+  final POI? rerollResult;
+  int _selectionCall = 0;
+
+  @override
+  List<POI> selectRandomPOIs({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required int count,
+    List<POICategory> preferredCategories = const [],
+    int maxPerCategory = 2,
+    double? maxSegmentKm,
+    LatLng? tripEndLocation,
+    double? remainingTripBudgetKm,
+    LatLng? currentAnchorLocation,
+    List<LatLng>? progressRouteCoordinates,
+  }) {
+    if (_selectionCall < selections.length) {
+      return selections[_selectionCall++];
+    }
+    _selectionCall++;
+    return super.selectRandomPOIs(
+      pois: pois,
+      startLocation: startLocation,
+      count: count,
+      preferredCategories: preferredCategories,
+      maxPerCategory: maxPerCategory,
+      maxSegmentKm: maxSegmentKm,
+      tripEndLocation: tripEndLocation,
+      remainingTripBudgetKm: remainingTripBudgetKm,
+      currentAnchorLocation: currentAnchorLocation,
+      progressRouteCoordinates: progressRouteCoordinates,
+    );
+  }
+
+  @override
+  POI? rerollSinglePOI({
+    required List<POI> availablePOIs,
+    required List<POI> currentSelection,
+    required POI poiToReplace,
+    required LatLng startLocation,
+    List<POICategory> preferredCategories = const [],
+    LatLng? previousLocation,
+    LatLng? nextLocation,
+    double? maxSegmentKm,
+  }) {
+    return rerollResult ??
+        super.rerollSinglePOI(
+          availablePOIs: availablePOIs,
+          currentSelection: currentSelection,
+          poiToReplace: poiToReplace,
+          startLocation: startLocation,
+          preferredCategories: preferredCategories,
+          previousLocation: previousLocation,
+          nextLocation: nextLocation,
+          maxSegmentKm: maxSegmentKm,
+        );
+  }
+}
+
+POI _buildPOI(
+  String id,
+  double lat,
+  double lng, {
+  int score = 80,
+  POICategory category = POICategory.attraction,
+}) {
+  return POI(
+    id: id,
+    name: 'POI $id',
+    latitude: lat,
+    longitude: lng,
+    categoryId: category.id,
+    score: score,
+  );
+}
+
+bool _hasCoordinate(
+  List<LatLng> points,
+  LatLng target, {
+  double thresholdKm = 0.1,
+}) {
+  return points.any(
+    (point) =>
+        const Distance().as(LengthUnit.Kilometer, point, target) <= thresholdKm,
+  );
+}
+
+GeneratedTrip _buildSingleDayGeneratedTrip({
+  required LatLng start,
+  required LatLng destination,
+  required List<POI> selectedPOIs,
+  List<POI>? availablePOIs,
+}) {
+  final route = AppRoute(
+    start: start,
+    end: destination,
+    startAddress: 'Start',
+    endAddress: 'Destination',
+    coordinates: [start, ...selectedPOIs.map((p) => p.location), destination],
+    distanceKm: 30,
+    durationMinutes: 45,
+    type: RouteType.fast,
+    waypoints: selectedPOIs.map((p) => p.location).toList(),
+    calculatedAt: DateTime.now(),
+  );
+  final trip = Trip(
+    id: 'single-day-trip',
+    name: 'Single Day',
+    type: TripType.daytrip,
+    route: route,
+    stops: selectedPOIs.asMap().entries.map((entry) {
+      return TripStop.fromPOI(entry.value).copyWith(order: entry.key);
+    }).toList(),
+    days: 1,
+    createdAt: DateTime.now(),
+  );
+  return GeneratedTrip(
+    trip: trip,
+    availablePOIs: availablePOIs ?? selectedPOIs,
+    selectedPOIs: selectedPOIs,
+  );
 }
 
 void main() {
@@ -247,6 +421,177 @@ void main() {
         result.trip.route.end.longitude,
         closeTo(farDestination.longitude, 0.00001),
       );
+    });
+
+    test('retries daytrip generation when first selection remains unroutable',
+        () async {
+      final blockedPoi = _buildPOI('blocked', 50.9800, 7.2000, score: 30);
+      final stablePoi = _buildPOI('stable', 50.9400, 6.9700, score: 95);
+      final backupPoi = _buildPOI('backup', 50.9450, 6.9750, score: 90);
+      final poiRepo = _FakePOIRepository([blockedPoi, stablePoi, backupPoi]);
+
+      final routingRepo = _ProgrammableRoutingRepository(
+        // Erste 4 Routing-Aufrufe scheitern komplett -> erster Versuch bricht.
+        shouldFail: (_, callCount, __, ___) => callCount <= 4,
+      );
+      final selector = _ScriptedPOISelector(
+        selections: [
+          [blockedPoi], // Versuch A
+        ],
+      );
+      final repo = TripGeneratorRepository(
+        poiRepo: poiRepo,
+        routingRepo: routingRepo,
+        poiSelector: selector,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        radiusKm: 120,
+        poiCount: 1,
+      );
+
+      expect(routingRepo.callCount, greaterThanOrEqualTo(5));
+      expect(result.selectedPOIs, isNotEmpty);
+      expect(result.trip.route.coordinates, isNotEmpty);
+    });
+
+    test('single-POI rescue can recover from extended available pool',
+        () async {
+      final blockedA = _buildPOI('blocked-a', 50.9800, 7.1800);
+      final blockedB = _buildPOI('blocked-b', 50.9900, 7.2200);
+      final rescue = _buildPOI('rescue', 50.9420, 6.9750, score: 98);
+      final poiRepo = _FakePOIRepository([blockedA, blockedB, rescue]);
+
+      final routingRepo = _ProgrammableRoutingRepository(
+        shouldFail: (waypoints, _, __, ___) =>
+            _hasCoordinate(waypoints, blockedA.location) ||
+            _hasCoordinate(waypoints, blockedB.location),
+      );
+      final selector = _ScriptedPOISelector(
+        selections: [
+          [blockedA, blockedB],
+        ],
+      );
+      final repo = TripGeneratorRepository(
+        poiRepo: poiRepo,
+        routingRepo: routingRepo,
+        poiSelector: selector,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        radiusKm: 150,
+        poiCount: 2,
+      );
+
+      expect(result.selectedPOIs.length, 1);
+      expect(result.selectedPOIs.first.id, rescue.id);
+    });
+
+    test('keeps destination endpoint in single-day removePOI', () async {
+      const destination = LatLng(50.9950, 7.1200);
+      final p1 = _buildPOI('p1', 50.9450, 6.9800);
+      final p2 = _buildPOI('p2', 50.9550, 7.0100);
+      final p3 = _buildPOI('p3', 50.9700, 7.0600);
+      final currentTrip = _buildSingleDayGeneratedTrip(
+        start: start,
+        destination: destination,
+        selectedPOIs: [p1, p2, p3],
+      );
+      final routingRepo = _ProgrammableRoutingRepository(
+          shouldFail: (_, __, ___, ____) => false);
+      final repo = TripGeneratorRepository(
+        poiRepo: _FakePOIRepository([p1, p2, p3]),
+        routingRepo: routingRepo,
+      );
+
+      final result = await repo.removePOI(
+        currentTrip: currentTrip,
+        poiIdToRemove: p2.id,
+        startLocation: start,
+        startAddress: 'Koeln',
+      );
+
+      expect(result.trip.route.end.latitude,
+          closeTo(destination.latitude, 0.00001));
+      expect(result.trip.route.end.longitude,
+          closeTo(destination.longitude, 0.00001));
+      expect(routingRepo.lastEnd, isNotNull);
+      expect(routingRepo.lastEnd!.latitude,
+          closeTo(destination.latitude, 0.00001));
+    });
+
+    test('keeps destination endpoint in single-day addPOIToTrip', () async {
+      const destination = LatLng(50.9950, 7.1200);
+      final p1 = _buildPOI('p1', 50.9450, 6.9800);
+      final p2 = _buildPOI('p2', 50.9550, 7.0100);
+      final p3 = _buildPOI('p3', 50.9700, 7.0600);
+      final currentTrip = _buildSingleDayGeneratedTrip(
+        start: start,
+        destination: destination,
+        selectedPOIs: [p1, p2],
+        availablePOIs: [p1, p2, p3],
+      );
+      final routingRepo = _ProgrammableRoutingRepository(
+          shouldFail: (_, __, ___, ____) => false);
+      final repo = TripGeneratorRepository(
+        poiRepo: _FakePOIRepository([p1, p2, p3]),
+        routingRepo: routingRepo,
+      );
+
+      final result = await repo.addPOIToTrip(
+        currentTrip: currentTrip,
+        newPOI: p3,
+        targetDay: 1,
+        startLocation: start,
+        startAddress: 'Koeln',
+      );
+
+      expect(result.trip.route.end.latitude,
+          closeTo(destination.latitude, 0.00001));
+      expect(result.trip.route.end.longitude,
+          closeTo(destination.longitude, 0.00001));
+      expect(routingRepo.lastEnd!.longitude,
+          closeTo(destination.longitude, 0.00001));
+    });
+
+    test('keeps destination endpoint in single-day rerollPOI', () async {
+      const destination = LatLng(50.9950, 7.1200);
+      final p1 = _buildPOI('p1', 50.9450, 6.9800);
+      final p2 = _buildPOI('p2', 50.9550, 7.0100);
+      final p3 = _buildPOI('p3', 50.9700, 7.0600);
+      final replacement = _buildPOI('replacement', 50.9650, 7.0400, score: 99);
+      final currentTrip = _buildSingleDayGeneratedTrip(
+        start: start,
+        destination: destination,
+        selectedPOIs: [p1, p2, p3],
+        availablePOIs: [p1, p2, p3, replacement],
+      );
+      final routingRepo = _ProgrammableRoutingRepository(
+          shouldFail: (_, __, ___, ____) => false);
+      final selector = _ScriptedPOISelector(rerollResult: replacement);
+      final repo = TripGeneratorRepository(
+        poiRepo: _FakePOIRepository([p1, p2, p3, replacement]),
+        routingRepo: routingRepo,
+        poiSelector: selector,
+      );
+
+      final result = await repo.rerollPOI(
+        currentTrip: currentTrip,
+        poiIdToReroll: p2.id,
+        startLocation: start,
+        startAddress: 'Koeln',
+      );
+
+      expect(result.trip.route.end.latitude,
+          closeTo(destination.latitude, 0.00001));
+      expect(result.trip.route.end.longitude,
+          closeTo(destination.longitude, 0.00001));
+      expect(
+          result.selectedPOIs.any((poi) => poi.id == replacement.id), isTrue);
     });
   });
 }

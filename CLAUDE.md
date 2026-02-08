@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.37 - Daytrip Stabilisierung + Public-POI-Highlights + Release/APK-Fix | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.37)
+Version: 1.10.38 - AI Tagestrip Routing-Stabilitaet (Retry + Rescue + Endpoint-Konsistenz) | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.38)
 
-- AI Tagestrip stabilisiert: deutlich breitere POI-Fallbacksuche (Radius/Buffer/Score) und zusaetzliche Emergency-Fallbacks.
-- Tagestrip-UX: Radius bis 500 km, Hinweistext korrigiert (mit Zieladresse darf die Route >500 km sein).
-- Public Trip POI-Vorschau: Highlights werden aus tripData korrekt uebernommen und angezeigt.
-- Settings-Version: Anzeige nutzt --dart-define=APP_VERSION (Build zeigt reale Release-Version).
-- Android Build-Hotfix: Fallback fuer PackageInfoPlugin unter android/app/src/main/java/dev/fluttercommunity/plus/packageinfo/PackageInfoPlugin.java.
+- AI Tagestrip Generierung stabilisiert: Mehrfach-Selektionsversuche statt Single-Pass.
+- Routing-Backoff zentralisiert: iteratives Entfernen problematischer Stops mit Single-POI-Rescue.
+- Single-POI-Rescue erweitert: Kandidaten jetzt aus routingPOIs, constrainedPOIs und availablePOIs.
+- Single-Day Edit-Flows korrigiert: remove/add/reroll erhalten bei A->B das echte Ziel statt erzwungenem Rundtrip.
+- Neue Regression-Tests fuer Retry, Rescue und Zielerhalt in Daytrip-Edits.
 
 
 ## Tech Stack
@@ -214,7 +214,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/repositories/leaderboard_repo.dart` | Leaderboard Repository: getLeaderboard() mit Sortierung (XP/km/Trips/Likes), getMyPosition(), Pagination (v1.10.23) |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS -> Client-Fallback -> Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) + Wikipedia-Grid 4er-Batches mit 200ms Pause + 8s Timeout + 200-POI-Cap, globaler 20s Future.wait-Timeout (v1.9.28) + minScore-Parameter in Radius/Bounds sowie loadPOIById() (Supabase+curated Fallback) (v1.10.35) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage->Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) + lastResult Null-Check statt force-unwrap, Post-Validierung Max-Tage-Cap 2x (v1.9.28) + Daytrip-POI-Rescue-Strategie (strict/relaxed/rescue), erweiterte Endpoint-Radien und tolerantere Korridorfilter (v1.10.35) + Emergency-Fallbacks (minScore 0), groesserer Radius/Buffer-Rescue und robustere Treffer in duennen Regionen (v1.10.37) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage->Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) + lastResult Null-Check statt force-unwrap, Post-Validierung Max-Tage-Cap 2x (v1.9.28) + Daytrip-POI-Rescue-Strategie (strict/relaxed/rescue), erweiterte Endpoint-Radien und tolerantere Korridorfilter (v1.10.35) + Emergency-Fallbacks (minScore 0), groesserer Radius/Buffer-Rescue und robustere Treffer in duennen Regionen (v1.10.37) + Retry-basierte Daytrip-Auswahl, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und A->B-Endpunkt-Erhalt in remove/add/reroll (v1.10.38) |
 | `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte Aâ†’B Routen (v1.8.1) + 2-opt Skip bei >50 POIs, reduzierte Iterationen 20-50 POIs (v1.9.28) |
 | `lib/core/utils/navigation_instruction_generator.dart` | OSRM Maneuver â†’ Lokalisierte Instruktionen mit l10n-Parameter (Abbiegen, Kreisverkehr, Auffahrt, etc.) (v1.9.0, v1.10.3: AppLocalizations l10n Parameter, 35 neue ARB-Keys) |
 | `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) + Display-basiertes Splitting, Merge-Guard, _splitLastDayIfOverLimit (v1.9.5) + _splitOverlimitDays() Safety-Split fuer Tage die trotz Clustering >700km sind (v1.9.11) + Absolute Iterations-Obergrenze min(clusters*2, 50) (v1.9.28) |
@@ -505,6 +505,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.38.md` (AI Tagestrip Routing-Stabilitaet: Retry-Auswahl statt Single-Pass, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und konsistente A->B-Endpunkte bei remove/add/reroll im Single-Day-Edit-Flow)
 - `Dokumentation/CHANGELOG-v1.10.35.md` (Social Publish + POI Preview + Daytrip Stabilisierung: publish_poi_post RPC-Fallback, angereicherte tripData.stops, korrekt verlinkte POI-Vorschau, erweiterte Daytrip-POI-Fallbacks)
 - `Dokumentation/CHANGELOG-v1.10.34.md` (AI Tagestrip Stabilisierung: robuste POI-Fallback-Pipeline bei Korridor/Radius, Routing-Safety-Fallback, kontinuierlicher Ladefortschritt 1-100%, Lade-Widget auf Panel-Hoehe)
 - `Dokumentation/CHANGELOG-v1.10.27.md` (EuroTrip Routing-Stabilisierung: OSRM-400 Fallback via segmentierte Berechnung, direkter Korridor-Filter statt Bounding-Box-Ausreißer, Vorwärts-POI-Progress ohne Rücksprung, Waypoint-Sanitizing/Downsampling)
