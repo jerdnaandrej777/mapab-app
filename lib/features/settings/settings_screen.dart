@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/l10n/category_l10n.dart';
 import '../../core/theme/app_theme.dart';
@@ -9,6 +10,8 @@ import '../../data/providers/settings_provider.dart';
 /// Einstellungen Screen
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
+  static final Future<PackageInfo> _packageInfoFuture =
+      PackageInfo.fromPlatform();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,7 +55,9 @@ class SettingsScreen extends ConsumerWidget {
             trailing: Switch(
               value: settings.autoSunsetDarkMode,
               onChanged: (value) {
-                ref.read(settingsNotifierProvider.notifier).setAutoSunsetDarkMode(value);
+                ref
+                    .read(settingsNotifierProvider.notifier)
+                    .setAutoSunsetDarkMode(value);
               },
             ),
           ),
@@ -70,7 +75,9 @@ class SettingsScreen extends ConsumerWidget {
             trailing: Switch(
               value: settings.hapticFeedback,
               onChanged: (value) {
-                ref.read(settingsNotifierProvider.notifier).setHapticFeedback(value);
+                ref
+                    .read(settingsNotifierProvider.notifier)
+                    .setHapticFeedback(value);
               },
             ),
           ),
@@ -82,7 +89,9 @@ class SettingsScreen extends ConsumerWidget {
             trailing: Switch(
               value: settings.soundEffects,
               onChanged: (value) {
-                ref.read(settingsNotifierProvider.notifier).setSoundEffects(value);
+                ref
+                    .read(settingsNotifierProvider.notifier)
+                    .setSoundEffects(value);
               },
             ),
           ),
@@ -106,21 +115,32 @@ class SettingsScreen extends ConsumerWidget {
           _SectionHeader(title: context.l10n.settingsAbout),
           const SizedBox(height: AppSpacing.sm),
 
-          _SettingsTile(
-            icon: Icons.info_outline,
-            title: context.l10n.settingsAppVersion,
-            subtitle: '1.10.16',
-            onTap: () {},
-          ),
-
-          _SettingsTile(
-            icon: Icons.code,
-            title: context.l10n.settingsLicenses,
-            onTap: () {
-              showLicensePage(
-                context: context,
-                applicationName: context.l10n.appName,
-                applicationVersion: '1.10.16',
+          FutureBuilder<PackageInfo>(
+            future: _packageInfoFuture,
+            builder: (context, snapshot) {
+              final appVersion = snapshot.hasData
+                  ? '${snapshot.data!.version} (${snapshot.data!.buildNumber})'
+                  : '...';
+              return Column(
+                children: [
+                  _SettingsTile(
+                    icon: Icons.info_outline,
+                    title: context.l10n.settingsAppVersion,
+                    subtitle: appVersion,
+                    onTap: () {},
+                  ),
+                  _SettingsTile(
+                    icon: Icons.code,
+                    title: context.l10n.settingsLicenses,
+                    onTap: () {
+                      showLicensePage(
+                        context: context,
+                        applicationName: context.l10n.appName,
+                        applicationVersion: appVersion,
+                      );
+                    },
+                  ),
+                ],
               );
             },
           ),
@@ -141,9 +161,9 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.bold,
-        color: AppTheme.primaryColor,
-      ),
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
+          ),
     );
   }
 }
@@ -255,9 +275,8 @@ class _ThemeOption extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
+                color:
+                    isSelected ? Theme.of(context).colorScheme.primary : null,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -293,7 +312,8 @@ class _SettingsTile extends StatelessWidget {
         leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(title),
         subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+        trailing: trailing ??
+            (onTap != null ? const Icon(Icons.chevron_right) : null),
         onTap: onTap,
       ),
     );
@@ -416,9 +436,8 @@ class _LanguageOption extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
+                color:
+                    isSelected ? Theme.of(context).colorScheme.primary : null,
               ),
             ),
           ],
