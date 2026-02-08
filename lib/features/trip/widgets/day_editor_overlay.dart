@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import '../../../core/constants/categories.dart';
 import '../../../core/utils/url_utils.dart';
@@ -16,6 +15,7 @@ import '../../../data/models/weather.dart';
 import '../../map/providers/weather_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
+import '../../random_trip/providers/random_trip_state.dart';
 import '../../random_trip/widgets/day_tab_selector.dart';
 import '../../ai/providers/ai_trip_advisor_provider.dart';
 import '../../ai/widgets/ai_suggestion_banner.dart';
@@ -99,10 +99,11 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
 
     final isMultiDay = trip.actualDays > 1;
     final selectedDay = state.selectedDay;
+    final isEuroTripMode = state.mode == RandomTripMode.eurotrip;
     final stopsForDay = trip.getStopsForDay(selectedDay);
     final bottomSafeArea = MediaQuery.of(context).viewPadding.bottom;
     final footerSpacerHeight =
-        _isFooterCollapsed ? 16.0 + bottomSafeArea : 300.0 + bottomSafeArea;
+        _isFooterCollapsed ? 16.0 + bottomSafeArea : 120.0 + bottomSafeArea;
     final startLocation = state.startLocation;
     if (startLocation == null) {
       return Scaffold(
@@ -379,6 +380,10 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               startAddress: state.startAddress ?? '',
               isCompleted: state.isDayCompleted(selectedDay),
               isCollapsed: _isFooterCollapsed,
+              isMultiDay: isMultiDay,
+              isEuroTripMode: isEuroTripMode,
+              dayForecast: dayForecast,
+              dayWeather: dayWeather,
               onOpenCorridorBrowser: () {
                 setState(() => _isCorridorBrowserActive = true);
               },
@@ -1053,6 +1058,10 @@ class _BottomActions extends ConsumerWidget {
   final String startAddress;
   final bool isCompleted;
   final bool isCollapsed;
+  final bool isMultiDay;
+  final bool isEuroTripMode;
+  final DailyForecast? dayForecast;
+  final WeatherCondition dayWeather;
   final VoidCallback onOpenCorridorBrowser;
   final VoidCallback? onSaveToFavorites;
   final VoidCallback? onPublishTrip;
@@ -1064,6 +1073,10 @@ class _BottomActions extends ConsumerWidget {
     required this.startAddress,
     required this.isCompleted,
     required this.isCollapsed,
+    required this.isMultiDay,
+    required this.isEuroTripMode,
+    this.dayForecast,
+    this.dayWeather = WeatherCondition.unknown,
     required this.onOpenCorridorBrowser,
     this.onSaveToFavorites,
     this.onPublishTrip,
@@ -1091,7 +1104,7 @@ class _BottomActions extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ebene 1: POIs hinzufuegen + Route Teilen
+              // Minimal-Footer: Weitere POIs + Fertig
               Row(
                 children: [
                   Expanded(
@@ -1099,9 +1112,9 @@ class _BottomActions extends ConsumerWidget {
                       onPressed: onOpenCorridorBrowser,
                       icon:
                           const Icon(Icons.add_location_alt_rounded, size: 18),
-                      label: Text(context.l10n.dayEditorAddPois),
+                      label: const Text('Weitere POIs hinzufügen'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1110,94 +1123,12 @@ class _BottomActions extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _shareDayRoute(context, ref),
-                      icon: const Icon(Icons.share, size: 18),
-                      label: Text(context.l10n.dayEditorRouteShare),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Ebene 2: Navigation starten (dominant)
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _startDayNavigation(context, ref),
-                  icon: const Icon(Icons.navigation_rounded),
-                  label: Text(context.l10n.tripInfoStartNavigation),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Ebene 3: Google Maps Export (tertiaer)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openDayInGoogleMaps(context, ref),
-                  icon: Icon(
-                    isCompleted ? Icons.check_circle : Icons.open_in_new,
-                    size: 18,
-                  ),
-                  label: Text(
-                    isCompleted
-                        ? context.l10n.dayEditorOpenAgain(selectedDay)
-                        : context.l10n.dayEditorDayInGoogleMaps(selectedDay),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    foregroundColor: isCompleted ? Colors.green : null,
-                    side: isCompleted
-                        ? const BorderSide(color: Colors.green)
-                        : null,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Ebene 4: Tertiaere Aktionen (sichtbar, aber dezent)
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      onPressed: onSaveToFavorites,
-                      icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                      label: Text(
-                        context.l10n.tripSaveRoute,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    child: FilledButton.icon(
+                      onPressed: () => _showFinishOverviewModal(context, ref),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('Fertig'),
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      onPressed: onPublishTrip,
-                      icon: const Icon(Icons.public, size: 18),
-                      label: Text(
-                        context.l10n.publishButton,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1232,6 +1163,150 @@ class _BottomActions extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showFinishOverviewModal(BuildContext context, WidgetRef ref) {
+    final stopsForDay = trip.getStopsForDay(selectedDay);
+    final origin = trip.getDayStartLocation(selectedDay);
+    final destination = trip.getDayEndLocation(selectedDay);
+    final mapsLabel = isEuroTripMode
+        ? context.l10n.dayEditorDayInGoogleMaps(selectedDay)
+        : 'Tagestrip in Google Maps';
+
+    final routeSegment = extractRouteSegment(
+      trip.route.coordinates,
+      origin,
+      destination,
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (modalContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.92,
+          minChildSize: 0.65,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 8),
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Übersicht',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.pop(modalContext),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    children: [
+                      DayMiniMap(
+                        key: ValueKey(
+                            'summary-$selectedDay-${stopsForDay.length}'),
+                        trip: trip,
+                        selectedDay: selectedDay,
+                        startLocation: startLocation,
+                        routeSegment: routeSegment,
+                        recommendedPOIs: const [],
+                        onMarkerTap: null,
+                      ),
+                      const SizedBox(height: 12),
+                      _DayStats(
+                        stopsForDay: stopsForDay,
+                        selectedDay: selectedDay,
+                        isMultiDay: isMultiDay,
+                        trip: trip,
+                        dayForecast: dayForecast,
+                        dayWeather: dayWeather,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(modalContext);
+                            _startDayNavigation(context, ref);
+                          },
+                          icon: const Icon(Icons.navigation_rounded),
+                          label: Text(context.l10n.tripInfoStartNavigation),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          onPressed: onSaveToFavorites == null
+                              ? null
+                              : () {
+                                  Navigator.pop(modalContext);
+                                  onSaveToFavorites?.call();
+                                },
+                          icon: const Icon(Icons.favorite_border_rounded),
+                          label: const Text('Route speichern'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          onPressed: onPublishTrip == null
+                              ? null
+                              : () {
+                                  Navigator.pop(modalContext);
+                                  onPublishTrip?.call();
+                                },
+                          icon: const Icon(Icons.public),
+                          label: Text(context.l10n.publishButton),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(modalContext);
+                            _openDayInGoogleMaps(context, ref);
+                          },
+                          icon: Icon(
+                            isCompleted
+                                ? Icons.check_circle
+                                : Icons.open_in_new,
+                          ),
+                          label: Text(mapsLabel),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1363,74 +1438,6 @@ class _BottomActions extends ConsumerWidget {
         'route': dayRoute,
         'stops': stopsForDay,
       });
-    }
-  }
-
-  Future<void> _shareDayRoute(BuildContext context, WidgetRef ref) async {
-    final stopsForDay = trip.getStopsForDay(selectedDay);
-    if (stopsForDay.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(context.l10n.dayEditorNoStopsForDay(selectedDay))),
-      );
-      return;
-    }
-
-    final origin = trip.getDayStartLocation(selectedDay);
-    final destination = trip.getDayEndLocation(selectedDay);
-
-    // Google Maps URL bauen
-    final waypointsList = stopsForDay
-        .take(TripConstants.maxPoisPerDay)
-        .map((s) => s.location)
-        .toList();
-    if (waypointsList.isNotEmpty) {
-      final lastWaypoint = waypointsList.last;
-      final sameAsDestination =
-          (lastWaypoint.latitude - destination.latitude).abs() < 0.00001 &&
-              (lastWaypoint.longitude - destination.longitude).abs() < 0.00001;
-      if (sameAsDestination) {
-        waypointsList.removeLast();
-      }
-    }
-    final waypoints = waypointsList
-        .map((p) =>
-            '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
-        .join('|');
-    final originStr =
-        '${origin.latitude.toStringAsFixed(6)},${origin.longitude.toStringAsFixed(6)}';
-    final destinationStr =
-        '${destination.latitude.toStringAsFixed(6)},${destination.longitude.toStringAsFixed(6)}';
-    final mapsUrl = 'https://www.google.com/maps/dir/?api=1'
-        '&origin=$originStr'
-        '&destination=$destinationStr'
-        '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
-        '&travelmode=driving';
-
-    // Share-Text
-    final stopNames = stopsForDay
-        .asMap()
-        .entries
-        .map((e) => '${e.key + 1}. ${e.value.name}')
-        .join('\n');
-    final shareText = '${context.l10n.dayEditorMyRouteDay(selectedDay)}\n\n'
-        '${context.l10n.dayEditorShareStops}:\n$stopNames\n\n'
-        '${context.l10n.dayEditorShareOpenGoogleMaps}:\n$mapsUrl';
-
-    try {
-      await Share.share(shareText,
-          subject: context.l10n.dayEditorMapabRouteDay(selectedDay));
-      debugPrint('[Share] Tag $selectedDay Route geteilt');
-    } catch (e) {
-      debugPrint('[Share] Error: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.dayEditorRouteShareError),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
 }

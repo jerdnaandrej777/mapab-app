@@ -5,14 +5,13 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.40 - UI-Refactor Modale + Trip-Bearbeiten aufgeraeumt | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.40)
+Version: 1.10.41 - Trip-Bearbeiten UX vereinfacht (Footer + Fertig-Modal) | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.41)
 
-- Modale und Chips im Ziel-Scope vereinheitlicht (Dialog/Bottom-Sheet/Chip-Kontraste in Light/Dark/OLED).
-- AI-Assistent Such-Radius: Quick-Filterchips sind klar lesbar (kein weiss-auf-weiss).
-- Sehenswuerdigkeiten Filter-Sheet: Kategorie-Chips mit expliziten Zustandsfarben und besserer Lesbarkeit.
-- Trip-Bearbeiten Modal aufgeraeumt: Save/Publish aus Header in den priorisierten Sticky-Footer verschoben.
-- Alle 6 Aktionen bleiben erhalten und sind hierarchisch benutzerfreundlicher angeordnet.
+- Footer im Trip-Bearbeiten Modal auf 2 Aktionen reduziert: `Weitere POIs hinzufügen` + `Fertig`.
+- Neuer `Fertig`-Modal zeigt Übersichtskarte + Stats (Stops, Distanz, Fahrzeit, Wetter).
+- Abschlussaktionen gebündelt im neuen Modal: Navigation, Route speichern (Favoriten), Veröffentlichen, Google Maps.
+- Google-Maps-Label ist jetzt modusabhängig: Tagestrip `Tagestrip in Google Maps`, AI Euro Trip `Tag in Google Maps`.
 
 
 ## Tech Stack
@@ -505,6 +504,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.41.md` (Trip-Bearbeiten vereinfacht: Footer mit `Weitere POIs hinzufügen` + `Fertig`, neuer Übersichts-Modal mit Karte/Stats und Abschlussaktionen, dynamisches Google-Maps-Label für Tagestrip vs. Euro Trip)
 - `Dokumentation/CHANGELOG-v1.10.40.md` (UI-Refactor Modale: Theme-Kontrast vereinheitlicht, lesbare AI-Radius/POI-Filter-Chips, Trip-Bearbeiten Header entschlackt und alle 6 Aktionen im priorisierten Sticky-Footer)
 - `Dokumentation/CHANGELOG-v1.10.39.md` (AI-POI-Erlebnis erweitert: strukturierte AI-Vorschlaege, klickbare AI-POIs in allen AI-Flaechen, mehr Vorschlaege mit longDescription/Highlights/Fotos, neue Routen `'/ai-assistant'` und `'/pois'`)
 - `Dokumentation/CHANGELOG-v1.10.38.md` (AI Tagestrip Routing-Stabilitaet: Retry-Auswahl statt Single-Pass, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und konsistente A->B-Endpunkte bei remove/add/reroll im Single-Day-Edit-Flow)

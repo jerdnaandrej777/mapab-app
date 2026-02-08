@@ -7,6 +7,30 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.41] - 2026-02-08
+
+### Trip-Bearbeiten UX vereinfacht
+
+#### Geaendert
+- **Footer im Trip-Bearbeiten Modal auf 2 klare Hauptaktionen reduziert**
+  - `POIs hinzufügen` wurde zu **`Weitere POIs hinzufügen`** umbenannt.
+  - Neuer Button **`Fertig`** neben `Weitere POIs hinzufügen`.
+- **Neuer Fertig-Modal mit Uebersicht**
+  - Zeigt `Übersichtskarte` mit aktueller Route und Tagessegment.
+  - Zeigt kompaktes Stats-Widget: Stops, Distanz, Fahrzeit und Wetter.
+  - Enthält zentrale Aktionen:
+    - `Navigation starten`
+    - `Route speichern` (mit Herz-Icon, speichert in Favoriten)
+    - `Veröffentlichen`
+    - Google-Maps Export-Button
+- **Google-Maps-Button-Label dynamisch nach Modus**
+  - Bei Tagestrip: **`Tagestrip in Google Maps`**
+  - Bei AI Euro Trip: Label bleibt wie bisher **`Tag in Google Maps`**
+
+#### Technisch
+- Geaenderte Datei:
+  - `lib/features/trip/widgets/day_editor_overlay.dart`
+
 ## [1.10.40] - 2026-02-08
 
 ### UI-Refactor Modale + Trip-Bearbeiten
