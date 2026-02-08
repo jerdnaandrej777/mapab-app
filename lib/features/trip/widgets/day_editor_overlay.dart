@@ -102,7 +102,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final stopsForDay = trip.getStopsForDay(selectedDay);
     final bottomSafeArea = MediaQuery.of(context).viewPadding.bottom;
     final footerSpacerHeight =
-        _isFooterCollapsed ? 16.0 + bottomSafeArea : 220.0 + bottomSafeArea;
+        _isFooterCollapsed ? 16.0 + bottomSafeArea : 300.0 + bottomSafeArea;
     final startLocation = state.startLocation;
     if (startLocation == null) {
       return Scaffold(
@@ -170,38 +170,6 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          // Route speichern
-          IconButton(
-            onPressed: state.isLoading
-                ? null
-                : () => TripSaveHelper.saveAITrip(context, ref, state),
-            icon: const Icon(Icons.bookmark_add_outlined),
-            tooltip: context.l10n.tripSaveRoute,
-          ),
-          // Trip veröffentlichen Button
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              onPressed: () async {
-                final published = await PublishTripSheet.show(context, trip);
-                if (published && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.l10n.publishSuccess),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              icon: const Icon(Icons.public, size: 20),
-              label: Text(context.l10n.publishButton),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -413,6 +381,22 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               isCollapsed: _isFooterCollapsed,
               onOpenCorridorBrowser: () {
                 setState(() => _isCorridorBrowserActive = true);
+              },
+              onSaveToFavorites: state.isLoading
+                  ? null
+                  : () => TripSaveHelper.saveAITrip(context, ref, state),
+              onPublishTrip: () {
+                unawaited(() async {
+                  final published = await PublishTripSheet.show(context, trip);
+                  if (published && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.publishSuccess),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }());
               },
             ),
     );
@@ -792,195 +776,197 @@ class _AIRecommendedPOICard extends ConsumerWidget {
         onTap: () => _openDetails(context, ref),
         borderRadius: BorderRadius.circular(12),
         child: Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // POI-Info-Zeile
-          Row(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: colorScheme.primary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasPreviewImage)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: CachedNetworkImage(
-                      imageUrl: previewImage,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        color: colorScheme.surfaceContainerHighest,
-                        child: Center(
-                          child: Text(
-                            poi.category?.icon ?? 'P',
-                            style: const TextStyle(fontSize: 18),
+              // POI-Info-Zeile
+              Row(
+                children: [
+                  if (hasPreviewImage)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: CachedNetworkImage(
+                          imageUrl: previewImage,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: Text(
+                                poi.category?.icon ?? 'P',
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: Text(
+                                poi.category?.icon ?? 'P',
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: colorScheme.surfaceContainerHighest,
-                        child: Center(
-                          child: Text(
-                            poi.category?.icon ?? 'P',
-                            style: const TextStyle(fontSize: 18),
-                          ),
+                    )
+                  else
+                    // Kategorie-Icon
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.primaryContainer.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          poi.category?.icon ?? '📍',
+                          style: const TextStyle(fontSize: 18),
                         ),
                       ),
                     ),
-                  ),
-                )
-              else
-              // Kategorie-Icon
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    poi.category?.icon ?? '📍',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Name + Kategorie
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      poi.name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
+                  const SizedBox(width: 10),
+                  // Name + Kategorie
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          poi.category?.localizedLabel(context) ?? '',
+                          poi.name,
                           style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (poi.detourKm != null) ...[
-                          Text(
-                            ' • +${poi.detourKm!.toStringAsFixed(1)} km',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant,
+                        Row(
+                          children: [
+                            Text(
+                              poi.category?.localizedLabel(context) ?? '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            context.l10n.dayEditorRecommended,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green.shade700,
+                            if (poi.detourKm != null) ...[
+                              Text(
+                                ' • +${poi.detourKm!.toStringAsFixed(1)} km',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                context.l10n.dayEditorRecommended,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  // Action-Button
+                  _buildActionButton(context, ref, colorScheme),
+                ],
               ),
-              // Action-Button
-              _buildActionButton(context, ref, colorScheme),
+              if (!hasPreviewImage)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    context.l10n.dayEditorNoPhotoFallbackHint,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              if (highlights.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: highlights.take(4).map((h) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colorScheme.tertiaryContainer
+                              .withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          h,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colorScheme.onTertiaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              if (longDescription != null && longDescription!.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    longDescription!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurface.withValues(alpha: 0.78),
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              // AI-Reasoning
+              if (reasoning.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    reasoning,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
             ],
           ),
-          if (!hasPreviewImage)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                context.l10n.dayEditorNoPhotoFallbackHint,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontStyle: FontStyle.italic,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          if (highlights.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: highlights.take(4).map((h) {
-                  return Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: colorScheme.tertiaryContainer.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      h,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: colorScheme.onTertiaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          if (longDescription != null && longDescription!.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                longDescription!,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurface.withValues(alpha: 0.78),
-                ),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          // AI-Reasoning
-          if (reasoning.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                reasoning,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic,
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
         ),
       ),
     );
@@ -1068,6 +1054,8 @@ class _BottomActions extends ConsumerWidget {
   final bool isCompleted;
   final bool isCollapsed;
   final VoidCallback onOpenCorridorBrowser;
+  final VoidCallback? onSaveToFavorites;
+  final VoidCallback? onPublishTrip;
 
   const _BottomActions({
     required this.trip,
@@ -1077,6 +1065,8 @@ class _BottomActions extends ConsumerWidget {
     required this.isCompleted,
     required this.isCollapsed,
     required this.onOpenCorridorBrowser,
+    this.onSaveToFavorites,
+    this.onPublishTrip,
   });
 
   @override
@@ -1176,6 +1166,45 @@ class _BottomActions extends ConsumerWidget {
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              // Ebene 4: Tertiaere Aktionen (sichtbar, aber dezent)
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: onSaveToFavorites,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                      label: Text(
+                        context.l10n.tripSaveRoute,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: onPublishTrip,
+                      icon: const Icon(Icons.public, size: 18),
+                      label: Text(
+                        context.l10n.publishButton,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

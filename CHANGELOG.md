@@ -7,6 +7,35 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.40] - 2026-02-08
+
+### UI-Refactor Modale + Trip-Bearbeiten
+
+#### Geaendert
+- **Modale und Chips konsistenter im gesamten UI-Flow**
+  - `AppTheme` erweitert: Light Theme hat jetzt explizite `dialogTheme`/`bottomSheetTheme`.
+  - Chip-Styling in Light/Dark/OLED vereinheitlicht (Label-Kontrast inkl. `secondaryLabelStyle`).
+- **AI-Assistent: Such-Radius Chips lesbar**
+  - Quick-Radius `ChoiceChip`s im Radius-Dialog mit expliziten Kontrastfarben, Border und Checkmark-Style.
+  - Kein weiss-auf-weiss Zustand mehr in Light/Dark/OLED.
+- **Sehenswuerdigkeiten: Filter-Sheet lesbarer und design-konsistent**
+  - Kategorie-`FilterChip`s mit klaren selected/unselected Text- und Hintergrundfarben.
+  - Footer-Aktion auf klare Primary-CTA (`FilledButton`) umgestellt.
+  - Header/Footer visuell an Modal-Design angepasst.
+- **Trip bearbeiten aufgeraeumt (ohne Funktionsverlust)**
+  - Header entlastet: `Favoriten speichern` und `Veroeffentlichen` aus der AppBar entfernt.
+  - Alle 6 Aktionen bleiben erhalten und sind im Sticky-Footer priorisiert:
+    - `Navigation starten` (primaer)
+    - `POIs hinzufuegen`, `Route Teilen`, `Tag in Google Maps` (sekundaer)
+    - `Favoriten speichern`, `Veroeffentlichen` (tertiaer)
+
+#### Technisch
+- Geaenderte Dateien:
+  - `lib/core/theme/app_theme.dart`
+  - `lib/features/ai_assistant/chat_screen.dart`
+  - `lib/features/poi/widgets/poi_filters.dart`
+  - `lib/features/trip/widgets/day_editor_overlay.dart`
+
 ## [1.10.39] - 2026-02-08
 
 ### Erweiterung AI-POI-Erlebnis

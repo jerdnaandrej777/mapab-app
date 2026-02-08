@@ -147,8 +147,15 @@ class AppTheme {
       // Chips
       chipTheme: ChipThemeData(
         backgroundColor: backgroundColor,
-        selectedColor: primaryColor.withValues(alpha: 0.15),
-        labelStyle: const TextStyle(fontSize: 14),
+        selectedColor: primaryColor.withValues(alpha: 0.18),
+        labelStyle: const TextStyle(
+          fontSize: 14,
+          color: textPrimary,
+        ),
+        secondaryLabelStyle: const TextStyle(
+          fontSize: 14,
+          color: textPrimary,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -167,6 +174,20 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+      ),
+
+      // Dialog
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+
+      // Bottom Sheet
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: surfaceColor,
+        modalBackgroundColor: surfaceColor,
       ),
     );
   }
@@ -290,6 +311,10 @@ class AppTheme {
         backgroundColor: darkSurfaceColor,
         selectedColor: primaryLight.withValues(alpha: 0.3),
         labelStyle: const TextStyle(fontSize: 14, color: darkTextPrimary),
+        secondaryLabelStyle: const TextStyle(
+          fontSize: 14,
+          color: darkTextPrimary,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -383,7 +408,7 @@ class AppTheme {
       bottomNavigationBarTheme: baseDark.bottomNavigationBarTheme.copyWith(
         backgroundColor: oledBackgroundColor,
       ),
-      dialogTheme: baseDark.dialogTheme?.copyWith(
+      dialogTheme: baseDark.dialogTheme.copyWith(
         backgroundColor: oledSurfaceColor,
       ),
       bottomSheetTheme: const BottomSheetThemeData(

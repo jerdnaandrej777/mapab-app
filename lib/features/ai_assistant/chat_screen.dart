@@ -376,7 +376,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          _currentLocationName ?? context.l10n.chatLocationActive,
+                          _currentLocationName ??
+                              context.l10n.chatLocationActive,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -498,11 +499,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               // Quick-Select Buttons
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [15, 30, 50, 100].map((radius) {
                   final isSelected = tempRadius == radius.toDouble();
                   return ChoiceChip(
-                    label: Text('$radius km'),
+                    label: Text(
+                      '$radius km',
+                      style: TextStyle(
+                        color: isSelected
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
                     selected: isSelected,
+                    backgroundColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.65),
+                    selectedColor: colorScheme.primaryContainer,
+                    side: BorderSide(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.outline.withValues(alpha: 0.4),
+                    ),
+                    showCheckmark: true,
+                    checkmarkColor: colorScheme.primary,
                     onSelected: (selected) {
                       setDialogState(() {
                         tempRadius = radius.toDouble();
@@ -813,15 +834,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             if (_chatWeatherCondition != null &&
                                 _chatWeatherCondition !=
                                     WeatherCondition.unknown &&
-                                _chatWeatherCondition != WeatherCondition.mixed)
-                              ...[
-                                const SizedBox(width: 6),
-                                WeatherBadgeUnified.fromCategory(
-                                  condition: _chatWeatherCondition!,
-                                  category: poi.category,
-                                  size: WeatherBadgeSize.compact,
-                                ),
-                              ],
+                                _chatWeatherCondition !=
+                                    WeatherCondition.mixed) ...[
+                              const SizedBox(width: 6),
+                              WeatherBadgeUnified.fromCategory(
+                                condition: _chatWeatherCondition!,
+                                category: poi.category,
+                                size: WeatherBadgeSize.compact,
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -1057,9 +1078,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'freizeitpark': ['activity'],
       'therme': ['activity'],
       'stadt': ['city'],
-      'indoor': ['museum', 'church', 'restaurant', 'hotel', 'castle', 'activity'],
+      'indoor': [
+        'museum',
+        'church',
+        'restaurant',
+        'hotel',
+        'castle',
+        'activity'
+      ],
       'outdoor': ['nature', 'park', 'lake', 'coast', 'viewpoint'],
-      'regen': ['museum', 'church', 'restaurant', 'hotel', 'castle', 'activity'],
+      'regen': [
+        'museum',
+        'church',
+        'restaurant',
+        'hotel',
+        'castle',
+        'activity'
+      ],
     };
 
     for (final entry in categoryMapping.entries) {
@@ -1104,8 +1139,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           setState(() {
             _isLoading = false;
             _messages.add({
-              'content':
-                  '**${l10n.chatLocationNotAvailable}**\n\n'
+              'content': '**${l10n.chatLocationNotAvailable}**\n\n'
                   '${l10n.chatLocationNotAvailableMessage}',
               'isUser': false,
               'type': ChatMessageType.text,
@@ -1136,10 +1170,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final distanceCalculator = const Distance();
       var sortedPOIs = List<POI>.from(pois);
       sortedPOIs.sort((a, b) {
-        final distA =
-            distanceCalculator.as(LengthUnit.Kilometer, currentLocation, a.location);
-        final distB =
-            distanceCalculator.as(LengthUnit.Kilometer, currentLocation, b.location);
+        final distA = distanceCalculator.as(
+            LengthUnit.Kilometer, currentLocation, a.location);
+        final distB = distanceCalculator.as(
+            LengthUnit.Kilometer, currentLocation, b.location);
         return distA.compareTo(distB);
       });
 
@@ -1189,7 +1223,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               maxSuggestions: 8,
               allowSwap: false,
             ),
-            candidates: candidates.map(AIPoiSuggestionCandidate.fromPOI).toList(),
+            candidates:
+                candidates.map(AIPoiSuggestionCandidate.fromPOI).toList(),
           );
 
           final structured = await aiService.getPoiSuggestionsStructured(
@@ -1233,19 +1268,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         if (topAIPois.isNotEmpty) {
           try {
             final enrichmentService = ref.read(poiEnrichmentServiceProvider);
-            final enrichedMap = await enrichmentService.enrichPOIsBatch(topAIPois);
-            sortedPOIs = sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
+            final enrichedMap =
+                await enrichmentService.enrichPOIsBatch(topAIPois);
+            sortedPOIs =
+                sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
 
             final socialRepo = ref.read(poiSocialRepositoryProvider);
             final photoResults = await Future.wait(
               topAIPois.map((poi) async {
                 final effective = enrichedMap[poi.id] ?? poi;
                 final urls = <String>{};
-                if (effective.imageUrl != null && effective.imageUrl!.isNotEmpty) {
+                if (effective.imageUrl != null &&
+                    effective.imageUrl!.isNotEmpty) {
                   urls.add(effective.imageUrl!);
                 }
                 try {
-                  final photos = await socialRepo.loadPhotos(effective.id, limit: 3);
+                  final photos =
+                      await socialRepo.loadPhotos(effective.id, limit: 3);
                   for (final photo in photos) {
                     final url = getStorageUrl(photo.storagePath);
                     if (url.isNotEmpty) {
@@ -1268,8 +1307,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
                 final poi = byId[entry.key];
                 if (poi != null) {
-                  meta['longDescription'] =
-                      poi.description ?? poi.wikidataDescription ?? poi.shortDescription;
+                  meta['longDescription'] = poi.description ??
+                      poi.wikidataDescription ??
+                      poi.shortDescription;
                 }
               }
             }
@@ -1285,7 +1325,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         headerText =
             '**${l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}** (${categories.join(", ")}):';
       } else {
-        headerText = '**${l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}**:';
+        headerText =
+            '**${l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}**:';
       }
       if (aiSummary.isNotEmpty) {
         headerText = '$headerText\n$aiSummary';
@@ -1313,10 +1354,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         debugPrint(
             '[AI-Chat] Starte Hintergrund-Enrichment fuer ${poisToEnrich.length} POIs');
         final enrichmentService = ref.read(poiEnrichmentServiceProvider);
-        final enrichedMap = await enrichmentService.enrichPOIsBatch(poisToEnrich);
+        final enrichedMap =
+            await enrichmentService.enrichPOIsBatch(poisToEnrich);
 
         if (mounted && messageIndex < _messages.length) {
-          final updatedPOIs = sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
+          final updatedPOIs =
+              sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
           setState(() {
             final existingMetaRaw = _messages[messageIndex]['aiMeta'];
             final existingMeta = existingMetaRaw is Map
@@ -1343,8 +1386,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 meta['photoUrls'] = [poi.imageUrl!];
               }
               if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
-                meta['longDescription'] =
-                    poi.description ?? poi.wikidataDescription ?? poi.shortDescription;
+                meta['longDescription'] = poi.description ??
+                    poi.wikidataDescription ??
+                    poi.shortDescription;
               }
             }
 
@@ -1364,8 +1408,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         setState(() {
           _isLoading = false;
           _messages.add({
-            'content':
-                '**${l10n.chatPoisSearchError}**\n\n'
+            'content': '**${l10n.chatPoisSearchError}**\n\n'
                 '${l10n.chatPoisSearchErrorMessage}',
             'isUser': false,
             'type': ChatMessageType.text,
@@ -1585,7 +1628,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     // Städte-spezifisch
-    final cities = ['münchen', 'berlin', 'hamburg', 'köln', 'prag', 'wien', 'salzburg'];
+    final cities = [
+      'münchen',
+      'berlin',
+      'hamburg',
+      'köln',
+      'prag',
+      'wien',
+      'salzburg'
+    ];
     for (final city in cities) {
       if (lowerQuery.contains(city)) {
         return '🏙️ **$city erkunden:**\n\n'
@@ -1662,7 +1713,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } else if (suggestion.contains(l10n.chatRestaurants)) {
       _handleLocationBasedQuery('Zeig mir Restaurants in meiner Nähe');
     } else if (suggestion.contains(l10n.chatIndoorTips)) {
-      _handleLocationBasedQuery('Zeig mir Indoor-Tipps bei Regen in meiner Nähe');
+      _handleLocationBasedQuery(
+          'Zeig mir Indoor-Tipps bei Regen in meiner Nähe');
     } else if (suggestion.contains(l10n.chatOutdoorHighlights)) {
       _handleLocationBasedQuery('Zeig mir Outdoor-Highlights in meiner Nähe');
     } else {
@@ -1925,8 +1977,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Fehler wurde bereits in _getLocationIfNeeded angezeigt
                     setState(() {
                       _messages.add({
-                        'content':
-                            '❌ Konnte keinen Standort ermitteln.\n\n'
+                        'content': '❌ Konnte keinen Standort ermitteln.\n\n'
                             'Bitte gib einen Startpunkt ein oder aktiviere GPS.',
                         'isUser': false,
                       });
@@ -2124,14 +2175,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     // Wenn keine Interessen gewählt, alle Kategorien verwenden (außer Hotel)
     if (categoryIds.isEmpty) {
-      return POICategory.values
-          .where((c) => c != POICategory.hotel)
-          .toList();
+      return POICategory.values.where((c) => c != POICategory.hotel).toList();
     }
 
-    return POICategory.values
-        .where((c) => categoryIds.contains(c.id))
-        .toList();
+    return POICategory.values.where((c) => categoryIds.contains(c.id)).toList();
   }
 
   /// Random Trip generieren und an Trip-Screen übergeben
@@ -2145,8 +2192,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // User-Nachricht hinzufügen
     setState(() {
       _messages.add({
-        'content':
-            '🎲 Generiere zufällige Route um "$address"\n'
+        'content': '🎲 Generiere zufällige Route um "$address"\n'
             '${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : "Alle Kategorien"}',
         'isUser': true,
       });
@@ -2174,8 +2220,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _isLoading = false;
         _messages.add({
-          'content':
-              '✅ Route generiert!\n\n'
+          'content': '✅ Route generiert!\n\n'
               '📍 **${result.trip.name}**\n'
               '📏 ${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
               '⏱️ ${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
@@ -2209,8 +2254,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _isLoading = false;
         _messages.add({
-          'content':
-              '❌ Fehler beim Generieren der Route:\n$e\n\n'
+          'content': '❌ Fehler beim Generieren der Route:\n$e\n\n'
               'Bitte versuche es erneut oder gib ein konkretes Ziel ein.',
           'isUser': false,
         });
@@ -2219,7 +2263,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  String _generateDemoTripPlan(String destination, int days, List<String> interests) {
+  String _generateDemoTripPlan(
+      String destination, int days, List<String> interests) {
     final interestsText = interests.isNotEmpty
         ? 'Basierend auf deinen Interessen (${interests.join(', ')}):\n\n'
         : '';
@@ -2239,4 +2284,3 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel für eine echte Route mit POIs!';
   }
 }
-

@@ -53,6 +53,9 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
           decoration: BoxDecoration(
             color: colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
           ),
           child: Column(
             children: [
@@ -69,7 +72,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
 
               // Header
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -83,6 +86,9 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                     ),
                     TextButton(
                       onPressed: _resetFilters,
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                      ),
                       child: Text(context.l10n.reset),
                     ),
                   ],
@@ -117,8 +123,7 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                       subtitle: context.l10n.weatherRecBad,
                       icon: Icons.roofing,
                       value: _indoorOnly,
-                      onChanged: (value) =>
-                          setState(() => _indoorOnly = value),
+                      onChanged: (value) => setState(() => _indoorOnly = value),
                     ),
 
                     const SizedBox(height: 24),
@@ -138,18 +143,29 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        widget.onApply(
-                          _categories,
-                          _mustSeeOnly,
-                          _indoorOnly,
-                          _maxDetour,
-                        );
-                      },
-                      child: Text(context.l10n.filterApply),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: colorScheme.outlineVariant
+                              .withValues(alpha: 0.35),
+                        ),
+                      ),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          widget.onApply(
+                            _categories,
+                            _mustSeeOnly,
+                            _indoorOnly,
+                            _maxDetour,
+                          );
+                        },
+                        child: Text(context.l10n.filterApply),
+                      ),
                     ),
                   ),
                 ),
@@ -324,10 +340,21 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                 children: [
                   Text(category.icon),
                   const SizedBox(width: 6),
-                  Text(category.localizedLabel(context)),
+                  Text(
+                    category.localizedLabel(context),
+                    style: TextStyle(
+                      color: isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
               selected: isSelected,
+              backgroundColor:
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
@@ -337,8 +364,13 @@ class _POIFiltersSheetState extends State<POIFiltersSheet> {
                   }
                 });
               },
-              selectedColor: colorScheme.primary.withValues(alpha: 0.15),
+              selectedColor: colorScheme.primaryContainer,
               checkmarkColor: colorScheme.primary,
+              side: BorderSide(
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.outline.withValues(alpha: 0.35),
+              ),
             );
           }).toList(),
         ),
