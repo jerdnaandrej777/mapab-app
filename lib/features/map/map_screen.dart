@@ -226,6 +226,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       });
     }
 
+    final pendingMapCenter = ref.watch(pendingMapCenterProvider);
+    if (pendingMapCenter != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final controller = ref.read(mapControllerProvider);
+        if (controller == null) return;
+        controller.move(pendingMapCenter, 13.0);
+        ref.read(pendingMapCenterProvider.notifier).state = null;
+      });
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
 
     // Panel-Sichtbarkeits-Logik
@@ -242,6 +253,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         backgroundColor: colorScheme.surface,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.smart_toy_outlined),
+            onPressed: () => context.push('/ai-assistant'),
+            tooltip: context.l10n.chatTitle,
+          ),
           // Galerie-Button
           IconButton(
             icon: const Icon(Icons.explore_outlined),

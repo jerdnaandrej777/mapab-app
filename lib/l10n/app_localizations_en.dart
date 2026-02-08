@@ -1117,6 +1117,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dayEditorRecommended => 'Recommended';
 
   @override
+  String get dayEditorNoPhotoFallbackHint =>
+      'No photo available - description and highlights are still available.';
+
+  @override
   String dayEditorAddedToDay(int day) {
     return 'added to day $day';
   }
@@ -2929,6 +2933,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatPoisSearchErrorMessage =>
       'Sorry, there was a problem loading the POIs.\n\nPlease try again.';
+
+  @override
+  String get chatNoPhotoFallbackHint =>
+      'No photo available - details are still available.';
 
   @override
   String get chatNoResponseGenerated =>

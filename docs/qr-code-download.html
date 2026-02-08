@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.38 - Download</title>
+    <title>MapAB v1.10.39 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.38 (Build 221)</div>
-        <span class="release-tag">AI Tagestrip Routing-Stabilitaet</span>
+        <div class="version">Version 1.10.39 (Build 222)</div>
+        <span class="release-tag">AI-POI Erlebnis erweitert</span>
         <p class="subtitle">
-            Robusterer AI-Tagestrip mit Retry-Generierung, erweitertem Rescue und korrektem A-&gt;B-Rebuild im Day-Editor.
+            AI-POI-Vorschlaege sind jetzt app-weit klickbar, reichhaltig beschrieben und foto-basiert mit strukturiertem Backend-Fallback.
         </p>
 
         <div class="qr-container">
@@ -213,32 +213,32 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.38/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.39/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~125 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.38:</h3>
+            <h3>&#x2728; Neu in v1.10.39:</h3>
             <ul>
-                <li class="highlight">Daytrip-Generierung nutzt mehrere Selektionsversuche statt Single-Pass</li>
-                <li class="highlight">Routing-Backoff mit erweitertem Single-POI-Rescue verhindert harte Abbrueche</li>
-                <li class="highlight">Single-Day remove/add/reroll behalten bei A-&gt;B Trips das echte Ziel</li>
-                <li>Neue Regression-Tests decken Retry, Rescue und Zielerhalt ab</li>
-                <li>Debug-Logs je Versuch verbessern die Fehleranalyse im Live-Betrieb</li>
+                <li class="highlight">Neuer Endpoint `/api/ai/poi-suggestions` mit strukturierten AI-Antworten + Fallback</li>
+                <li class="highlight">AI-POIs in Day-Editor, Day-Mini-Map, Hauptkarte und AI-Chat sind klickbar wie normale POIs</li>
+                <li class="highlight">Bis zu 8 AI-Vorschlaege mit longDescription, Highlights und Fotoquellen</li>
+                <li>ChatScreen (`/ai-assistant`) und POI-Liste (`/pois`) sind als Routen integriert</li>
+                <li>Neue Tests fuer AI-Fehlerpfade und tappbare Day-Mini-Map Marker</li>
             </ul>
         </div>
 
         <div class="stats">
             <div class="stat">
-                <div class="stat-value">4</div>
-                <div class="stat-label">Fix-Bloecke</div>
+                <div class="stat-value">8</div>
+                <div class="stat-label">AI Vorschlaege</div>
             </div>
             <div class="stat">
                 <div class="stat-value">5</div>
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">221</div>
+                <div class="stat-value">222</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.38/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.39/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
@@ -266,6 +266,13 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

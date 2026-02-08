@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/api_config.dart';
+import '../../core/constants/categories.dart';
 import '../models/poi.dart';
 import '../models/route.dart';
 import '../models/trip.dart';
@@ -67,6 +68,29 @@ class AIService {
 
       if (language != null) {
         contextData['responseLanguage'] = language;
+      }
+
+      if (context.overallWeather != null) {
+        contextData['overallWeather'] = context.overallWeather;
+      }
+
+      if (context.dayWeather != null && context.dayWeather!.isNotEmpty) {
+        contextData['dayWeather'] = context.dayWeather!.map(
+          (k, v) => MapEntry(k.toString(), v),
+        );
+      }
+
+      if (context.selectedDay != null) {
+        contextData['selectedDay'] = context.selectedDay;
+      }
+
+      if (context.totalDays != null) {
+        contextData['totalDays'] = context.totalDays;
+      }
+
+      if (context.preferredCategories != null &&
+          context.preferredCategories!.isNotEmpty) {
+        contextData['preferredCategories'] = context.preferredCategories!.toList();
       }
 
       // History für Backend aufbereiten
@@ -315,6 +339,38 @@ Antworte als JSON:
     }
   }
 
+  /// Strukturierte AI-POI-Vorschlaege fuer Day-Editor und Chat
+  Future<AIPoiSuggestionResponse> getPoiSuggestionsStructured({
+    required AIPoiSuggestionRequest request,
+  }) async {
+    debugPrint('[AI] Sende strukturierte POI-Suggestions an Backend...');
+
+    try {
+      final response = await _dio.post(
+        ApiConfig.aiPoiSuggestionsEndpoint,
+        data: request.toJson(),
+      );
+
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        throw AIException('Ungueltige Antwort vom AI-Suggestions-Endpunkt');
+      }
+
+      final parsed = AIPoiSuggestionResponse.fromJson(data);
+      debugPrint(
+        '[AI] Strukturierte POI-Suggestions erhalten: ${parsed.suggestions.length} '
+        '(Quelle: ${parsed.source ?? "unknown"})',
+      );
+      return parsed;
+    } on DioException catch (e) {
+      debugPrint('[AI] Strukturierte POI-Suggestions Fehler: ${e.response?.data}');
+      _handleDioError(e);
+    } catch (e) {
+      debugPrint('[AI] Strukturierte POI-Suggestions unerwarteter Fehler: $e');
+      throw AIException('POI-Suggestions konnten nicht geladen werden: $e');
+    }
+  }
+
   /// Health-Check für Backend
   Future<bool> checkHealth() async {
     // Zuerst prüfen ob Backend-URL konfiguriert ist
@@ -532,6 +588,270 @@ class AIOptimizationSuggestion {
     required this.message,
     required this.type,
     this.dayNumber,
+  });
+}
+
+enum AIPoiSuggestionMode { dayEditor, chatNearby }
+
+class AIPoiSuggestionRequest {
+  final AIPoiSuggestionMode mode;
+  final String? language;
+  final AIPoiSuggestionUserContext? userContext;
+  final AIPoiSuggestionTripContext? tripContext;
+  final AIPoiSuggestionConstraints? constraints;
+  final List<AIPoiSuggestionCandidate> candidates;
+
+  AIPoiSuggestionRequest({
+    required this.mode,
+    this.language,
+    this.userContext,
+    this.tripContext,
+    this.constraints,
+    required this.candidates,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'mode': mode == AIPoiSuggestionMode.dayEditor
+            ? 'day_editor'
+            : 'chat_nearby',
+        if (language != null) 'language': language,
+        if (userContext != null) 'userContext': userContext!.toJson(),
+        if (tripContext != null) 'tripContext': tripContext!.toJson(),
+        if (constraints != null) 'constraints': constraints!.toJson(),
+        'candidates': candidates.map((c) => c.toJson()).toList(),
+      };
+}
+
+class AIPoiSuggestionUserContext {
+  final double? lat;
+  final double? lng;
+  final String? locationName;
+  final WeatherCondition? weatherCondition;
+  final int? selectedDay;
+  final int? totalDays;
+
+  AIPoiSuggestionUserContext({
+    this.lat,
+    this.lng,
+    this.locationName,
+    this.weatherCondition,
+    this.selectedDay,
+    this.totalDays,
+  });
+
+  Map<String, dynamic> toJson() => {
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+        if (locationName != null) 'locationName': locationName,
+        if (weatherCondition != null)
+          'weatherCondition': switch (weatherCondition!) {
+            WeatherCondition.good => 'good',
+            WeatherCondition.mixed => 'mixed',
+            WeatherCondition.bad => 'bad',
+            WeatherCondition.danger => 'danger',
+            WeatherCondition.unknown => 'unknown',
+          },
+        if (selectedDay != null) 'selectedDay': selectedDay,
+        if (totalDays != null) 'totalDays': totalDays,
+      };
+}
+
+class AIPoiSuggestionTripContext {
+  final String? routeStart;
+  final String? routeEnd;
+  final List<AIPoiSuggestionStop> stops;
+
+  AIPoiSuggestionTripContext({
+    this.routeStart,
+    this.routeEnd,
+    this.stops = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+        if (routeStart != null) 'routeStart': routeStart,
+        if (routeEnd != null) 'routeEnd': routeEnd,
+        if (stops.isNotEmpty) 'stops': stops.map((s) => s.toJson()).toList(),
+      };
+}
+
+class AIPoiSuggestionStop {
+  final String id;
+  final String name;
+  final String? categoryId;
+  final int? day;
+
+  AIPoiSuggestionStop({
+    required this.id,
+    required this.name,
+    this.categoryId,
+    this.day,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        if (categoryId != null) 'categoryId': categoryId,
+        if (day != null) 'day': day,
+      };
+}
+
+class AIPoiSuggestionConstraints {
+  final int? maxSuggestions;
+  final bool? allowSwap;
+
+  AIPoiSuggestionConstraints({this.maxSuggestions, this.allowSwap});
+
+  Map<String, dynamic> toJson() => {
+        if (maxSuggestions != null) 'maxSuggestions': maxSuggestions,
+        if (allowSwap != null) 'allowSwap': allowSwap,
+      };
+}
+
+class AIPoiSuggestionCandidate {
+  final String id;
+  final String name;
+  final String categoryId;
+  final double lat;
+  final double lng;
+  final double score;
+  final bool isMustSee;
+  final bool isCurated;
+  final bool isUnesco;
+  final bool isIndoor;
+  final double? detourKm;
+  final double? routePosition;
+  final String? imageUrl;
+  final String? shortDescription;
+  final List<String>? tags;
+
+  AIPoiSuggestionCandidate({
+    required this.id,
+    required this.name,
+    required this.categoryId,
+    required this.lat,
+    required this.lng,
+    required this.score,
+    required this.isMustSee,
+    required this.isCurated,
+    required this.isUnesco,
+    required this.isIndoor,
+    this.detourKm,
+    this.routePosition,
+    this.imageUrl,
+    this.shortDescription,
+    this.tags,
+  });
+
+  factory AIPoiSuggestionCandidate.fromPOI(POI poi) {
+    return AIPoiSuggestionCandidate(
+      id: poi.id,
+      name: poi.name,
+      categoryId: poi.categoryId,
+      lat: poi.latitude,
+      lng: poi.longitude,
+      score: poi.score.toDouble(),
+      isMustSee: poi.isMustSee,
+      isCurated: poi.isCurated,
+      isUnesco: poi.isUnesco,
+      isIndoor: poi.isIndoor,
+      detourKm: poi.detourKm,
+      routePosition: poi.routePosition,
+      imageUrl: poi.imageUrl,
+      shortDescription: poi.shortDescription,
+      tags: poi.tags,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'categoryId': categoryId,
+        'lat': lat,
+        'lng': lng,
+        'score': score,
+        'isMustSee': isMustSee,
+        'isCurated': isCurated,
+        'isUnesco': isUnesco,
+        'isIndoor': isIndoor,
+        if (detourKm != null) 'detourKm': detourKm,
+        if (routePosition != null) 'routePosition': routePosition,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+        if (shortDescription != null) 'shortDescription': shortDescription,
+        if (tags != null) 'tags': tags,
+      };
+}
+
+class AIPoiSuggestion {
+  final String poiId;
+  final String action;
+  final String? targetPoiId;
+  final String reason;
+  final double relevance;
+  final List<String> highlights;
+  final String longDescription;
+
+  AIPoiSuggestion({
+    required this.poiId,
+    required this.action,
+    this.targetPoiId,
+    required this.reason,
+    required this.relevance,
+    this.highlights = const [],
+    required this.longDescription,
+  });
+
+  factory AIPoiSuggestion.fromJson(Map<String, dynamic> json) {
+    return AIPoiSuggestion(
+      poiId: (json['poiId'] ?? '').toString(),
+      action: (json['action'] ?? 'add').toString(),
+      targetPoiId: json['targetPoiId']?.toString(),
+      reason: (json['reason'] ?? '').toString(),
+      relevance:
+          ((json['relevance'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 1.0),
+      highlights: ((json['highlights'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      longDescription: (json['longDescription'] ?? '').toString(),
+    );
+  }
+}
+
+class AIPoiSuggestionResponse {
+  final String summary;
+  final List<AIPoiSuggestion> suggestions;
+  final String? source;
+  final int? tokensUsed;
+
+  AIPoiSuggestionResponse({
+    required this.summary,
+    required this.suggestions,
+    this.source,
+    this.tokensUsed,
+  });
+
+  factory AIPoiSuggestionResponse.fromJson(Map<String, dynamic> json) {
+    final rawSuggestions = (json['suggestions'] as List?) ?? const [];
+    return AIPoiSuggestionResponse(
+      summary: (json['summary'] ?? '').toString(),
+      suggestions: rawSuggestions
+          .whereType<Map>()
+          .map((e) => AIPoiSuggestion.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+      source: json['source']?.toString(),
+      tokensUsed: (json['tokensUsed'] as num?)?.toInt(),
+    );
+  }
+}
+
+class AIPoiSuggestionBundle {
+  final POI poi;
+  final AIPoiSuggestion suggestion;
+  final List<String> photoUrls;
+
+  AIPoiSuggestionBundle({
+    required this.poi,
+    required this.suggestion,
+    this.photoUrls = const [],
   });
 }
 

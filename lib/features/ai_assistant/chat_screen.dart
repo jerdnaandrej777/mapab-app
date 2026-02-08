@@ -10,6 +10,7 @@ import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
 import '../../core/utils/weather_poi_utils.dart';
 import '../../data/models/poi.dart';
+import '../../data/repositories/poi_social_repo.dart';
 import '../../data/services/ai_service.dart';
 import '../../data/services/poi_enrichment_service.dart';
 import '../../data/repositories/geocoding_repo.dart';
@@ -17,6 +18,7 @@ import '../../data/repositories/poi_repo.dart';
 import '../../data/repositories/trip_generator_repo.dart';
 import '../../features/map/providers/route_session_provider.dart';
 import '../../features/map/providers/weather_provider.dart';
+import '../../features/map/providers/map_controller_provider.dart';
 import '../../features/map/widgets/weather_badge_unified.dart';
 import '../../features/poi/providers/poi_state_provider.dart';
 import '../../features/trip/providers/trip_state_provider.dart';
@@ -244,10 +246,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       if (messageType == ChatMessageType.poiList) {
                         final pois = message['pois'] as List<POI>?;
                         final headerText = message['content'] as String?;
+                        final aiMetaRaw = message['aiMeta'];
+                        final aiMeta = aiMetaRaw is Map
+                            ? Map<String, Map<String, dynamic>>.from(
+                                aiMetaRaw.map(
+                                  (key, value) => MapEntry(
+                                    key.toString(),
+                                    Map<String, dynamic>.from(
+                                      (value as Map?) ?? const {},
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const <String, Map<String, dynamic>>{};
                         return _buildPOIListMessage(
                           pois: pois ?? [],
                           headerText: headerText,
                           colorScheme: colorScheme,
+                          aiMeta: aiMeta,
                         );
                       }
 
@@ -614,6 +630,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<POI> pois,
     String? headerText,
     required ColorScheme colorScheme,
+    Map<String, Map<String, dynamic>> aiMeta = const {},
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,10 +675,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           )
         else
-          ...pois.take(5).map((poi) => _buildPOICard(poi, colorScheme)),
+          ...pois
+              .take(8)
+              .map((poi) => _buildPOICard(poi, colorScheme, aiMeta[poi.id])),
 
-        // "Mehr anzeigen" Button wenn > 5 POIs
-        if (pois.length > 5)
+        // "Mehr anzeigen" Button wenn > 8 POIs
+        if (pois.length > 8)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: TextButton.icon(
@@ -680,7 +699,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   /// Einzelne POI-Karte (anklickbar)
-  Widget _buildPOICard(POI poi, ColorScheme colorScheme) {
+  Widget _buildPOICard(
+    POI poi,
+    ColorScheme colorScheme,
+    Map<String, dynamic>? aiMeta,
+  ) {
     // Distanz zum aktuellen Standort berechnen
     double? distanceKm;
     if (_currentLocation != null) {
@@ -693,126 +716,234 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           1000;
     }
 
+    final highlights = ((aiMeta?['highlights'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .toList();
+    final aiPhotoUrls = ((aiMeta?['photoUrls'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .where((url) => url.isNotEmpty)
+        .toList();
+    final longDescription = (aiMeta?['longDescription'] as String?)?.trim();
+    final aiReason = (aiMeta?['reason'] as String?)?.trim();
+    final cardImageUrl =
+        aiPhotoUrls.isNotEmpty ? aiPhotoUrls.first : poi.imageUrl;
+    final showPhotoFallbackHint = cardImageUrl == null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _navigateToPOI(poi),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // POI-Bild oder Placeholder
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: poi.imageUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: poi.imageUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: colorScheme.surfaceContainerHighest,
-                            child: Icon(
-                              _getCategoryIcon(poi.categoryId),
-                              color: colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => _navigateToPOI(poi),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
+                children: [
+                  // POI-Bild oder Placeholder
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: cardImageUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: cardImageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: colorScheme.surfaceContainerHighest,
+                                child: Icon(
+                                  _getCategoryIcon(poi.categoryId),
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: colorScheme.surfaceContainerHighest,
+                                child: Icon(
+                                  _getCategoryIcon(poi.categoryId),
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Icon(
+                                _getCategoryIcon(poi.categoryId),
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: colorScheme.surfaceContainerHighest,
-                            child: Icon(
-                              _getCategoryIcon(poi.categoryId),
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : Container(
-                          color: colorScheme.surfaceContainerHighest,
-                          child: Icon(
-                            _getCategoryIcon(poi.categoryId),
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // POI-Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      poi.name,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // POI-Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            poi.shortDescription ?? poi.categoryLabel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          poi.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (_chatWeatherCondition != null &&
-                            _chatWeatherCondition != WeatherCondition.unknown &&
-                            _chatWeatherCondition != WeatherCondition.mixed) ...[
-                          const SizedBox(width: 6),
-                          WeatherBadgeUnified.fromCategory(
-                            condition: _chatWeatherCondition!,
-                            category: poi.category,
-                            size: WeatherBadgeSize.compact,
-                          ),
-                        ],
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                poi.shortDescription.isNotEmpty
+                                    ? poi.shortDescription
+                                    : poi.categoryLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_chatWeatherCondition != null &&
+                                _chatWeatherCondition !=
+                                    WeatherCondition.unknown &&
+                                _chatWeatherCondition != WeatherCondition.mixed)
+                              ...[
+                                const SizedBox(width: 6),
+                                WeatherBadgeUnified.fromCategory(
+                                  condition: _chatWeatherCondition!,
+                                  category: poi.category,
+                                  size: WeatherBadgeSize.compact,
+                                ),
+                              ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // Distanz
-              if (distanceKm != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    '${distanceKm.toStringAsFixed(1)} km',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.primary,
+
+                  // Distanz
+                  if (distanceKm != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.primaryContainer.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${distanceKm.toStringAsFixed(1)} km',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.primary,
+                        ),
+                      ),
                     ),
+
+                  const SizedBox(width: 4),
+
+                  // Pfeil-Icon
+                  Icon(
+                    Icons.chevron_right,
+                    color: colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+            if (showPhotoFallbackHint)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  context.l10n.chatNoPhotoFallbackHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
-
-              const SizedBox(width: 4),
-
-              // Pfeil-Icon
-              Icon(
-                Icons.chevron_right,
-                color: colorScheme.onSurfaceVariant,
-                size: 20,
               ),
-            ],
-          ),
+            if (highlights.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: highlights.take(4).map((h) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer
+                            .withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        h,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            if (longDescription != null && longDescription.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  longDescription,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onSurface.withValues(alpha: 0.78),
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            if (aiReason != null && aiReason.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  aiReason,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _navigateToPOI(poi),
+                    icon: const Icon(Icons.info_outline, size: 16),
+                    label: Text(context.l10n.mapDetails),
+                  ),
+                  const SizedBox(width: 6),
+                  TextButton.icon(
+                    onPressed: () => _showOnMap(poi),
+                    icon: const Icon(Icons.map_outlined, size: 16),
+                    label: Text(context.l10n.showOnMap),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -860,6 +991,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     // Navigieren
     context.push('/poi/${poi.id}');
+  }
+
+  void _showOnMap(POI poi) {
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    poiNotifier.addPOI(poi);
+    poiNotifier.selectPOI(poi);
+    ref.read(pendingMapCenterProvider.notifier).state = poi.location;
+    context.go('/');
   }
 
   /// Prüft ob die Anfrage standortbasiert ist
@@ -935,7 +1074,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Standortbasierte POI-Anfrage verarbeiten
   Future<void> _handleLocationBasedQuery(String query) async {
-    // User-Nachricht hinzufügen
+    final l10n = context.l10n;
+    final responseLanguage = Localizations.localeOf(context).languageCode;
+
     setState(() {
       _messages.add({
         'content': query,
@@ -947,13 +1088,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Standort prüfen
     if (_currentLocation == null) {
-      // Versuche Standort zu laden
       await _initializeLocation();
 
       if (_currentLocation == null) {
-        // Kein Standort verfügbar
         final serviceEnabled = await LocationHelper.isServiceEnabled();
         if (!serviceEnabled) {
           final shouldOpen = await _showGpsDialog();
@@ -967,8 +1105,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             _isLoading = false;
             _messages.add({
               'content':
-                  '📍 **${context.l10n.chatLocationNotAvailable}**\n\n'
-                  '${context.l10n.chatLocationNotAvailableMessage}',
+                  '**${l10n.chatLocationNotAvailable}**\n\n'
+                  '${l10n.chatLocationNotAvailableMessage}',
               'isUser': false,
               'type': ChatMessageType.text,
             });
@@ -980,42 +1118,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     try {
+      final currentLocation = _currentLocation!;
       debugPrint(
-          '[AI-Chat] Suche POIs um ${_currentLocation!.latitude}, ${_currentLocation!.longitude} mit Radius ${_searchRadius}km');
+          '[AI-Chat] Suche POIs um ${currentLocation.latitude}, ${currentLocation.longitude} mit Radius ${_searchRadius}km');
 
-      // Kategorien aus Anfrage extrahieren
       final categories = _getCategoriesFromQuery(query);
-
-      // POIs laden
       final poiRepo = ref.read(poiRepositoryProvider);
       final pois = await poiRepo.loadPOIsInRadius(
-        center: _currentLocation!,
+        center: currentLocation,
         radiusKm: _searchRadius,
         categoryFilter: categories,
       );
 
+      if (!mounted) return;
       debugPrint('[AI-Chat] ${pois.length} POIs gefunden');
 
-      if (!mounted) return;
-
-      // POIs nach Distanz sortieren
-      final Distance distanceCalculator = const Distance();
+      final distanceCalculator = const Distance();
       var sortedPOIs = List<POI>.from(pois);
       sortedPOIs.sort((a, b) {
-        final distA = distanceCalculator.as(
-          LengthUnit.Kilometer,
-          _currentLocation!,
-          a.location,
-        );
-        final distB = distanceCalculator.as(
-          LengthUnit.Kilometer,
-          _currentLocation!,
-          b.location,
-        );
+        final distA =
+            distanceCalculator.as(LengthUnit.Kilometer, currentLocation, a.location);
+        final distB =
+            distanceCalculator.as(LengthUnit.Kilometer, currentLocation, b.location);
         return distA.compareTo(distB);
       });
 
-      // Wetter-basierte Sekundaer-Sortierung
       final weatherState = ref.read(locationWeatherNotifierProvider);
       final chatWeatherCondition = weatherState.condition;
       if (chatWeatherCondition != WeatherCondition.unknown &&
@@ -1026,18 +1153,144 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
 
-      // Header-Text basierend auf Kategorien
+      final aiMeta = <String, Map<String, dynamic>>{};
+      String aiSummary = '';
+
+      if (_backendAvailable && sortedPOIs.isNotEmpty) {
+        try {
+          final aiService = ref.read(aiServiceProvider);
+          final tripState = ref.read(tripStateProvider);
+          final candidates = sortedPOIs.take(40).toList();
+
+          final request = AIPoiSuggestionRequest(
+            mode: AIPoiSuggestionMode.chatNearby,
+            language: responseLanguage,
+            userContext: AIPoiSuggestionUserContext(
+              lat: currentLocation.latitude,
+              lng: currentLocation.longitude,
+              locationName: _currentLocationName,
+              weatherCondition: chatWeatherCondition,
+            ),
+            tripContext: AIPoiSuggestionTripContext(
+              routeStart: tripState.route?.startAddress,
+              routeEnd: tripState.route?.endAddress,
+              stops: tripState.stops
+                  .take(20)
+                  .map(
+                    (stop) => AIPoiSuggestionStop(
+                      id: stop.id,
+                      name: stop.name,
+                      categoryId: stop.categoryId,
+                    ),
+                  )
+                  .toList(),
+            ),
+            constraints: AIPoiSuggestionConstraints(
+              maxSuggestions: 8,
+              allowSwap: false,
+            ),
+            candidates: candidates.map(AIPoiSuggestionCandidate.fromPOI).toList(),
+          );
+
+          final structured = await aiService.getPoiSuggestionsStructured(
+            request: request,
+          );
+
+          aiSummary = structured.summary.trim();
+          final byId = {for (final poi in sortedPOIs) poi.id: poi};
+          final prioritized = <POI>[];
+          for (final suggestion in structured.suggestions.take(8)) {
+            final poi = byId[suggestion.poiId];
+            if (poi == null) continue;
+            prioritized.add(poi);
+            aiMeta[poi.id] = {
+              'reason': suggestion.reason,
+              'highlights': suggestion.highlights,
+              'longDescription': suggestion.longDescription,
+              'photoUrls': <String>[],
+            };
+          }
+
+          if (prioritized.isNotEmpty) {
+            final prioritizedIds = prioritized.map((p) => p.id).toSet();
+            sortedPOIs = [
+              ...prioritized,
+              ...sortedPOIs.where((poi) => !prioritizedIds.contains(poi.id)),
+            ];
+          }
+        } catch (e) {
+          debugPrint('[AI-Chat] Strukturierte Suggestions fehlgeschlagen: $e');
+        }
+      }
+
+      if (aiMeta.isNotEmpty) {
+        final aiTargetIds = aiMeta.keys.toSet();
+        final topAIPois = sortedPOIs
+            .where((poi) => aiTargetIds.contains(poi.id))
+            .take(8)
+            .toList();
+
+        if (topAIPois.isNotEmpty) {
+          try {
+            final enrichmentService = ref.read(poiEnrichmentServiceProvider);
+            final enrichedMap = await enrichmentService.enrichPOIsBatch(topAIPois);
+            sortedPOIs = sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
+
+            final socialRepo = ref.read(poiSocialRepositoryProvider);
+            final photoResults = await Future.wait(
+              topAIPois.map((poi) async {
+                final effective = enrichedMap[poi.id] ?? poi;
+                final urls = <String>{};
+                if (effective.imageUrl != null && effective.imageUrl!.isNotEmpty) {
+                  urls.add(effective.imageUrl!);
+                }
+                try {
+                  final photos = await socialRepo.loadPhotos(effective.id, limit: 3);
+                  for (final photo in photos) {
+                    final url = getStorageUrl(photo.storagePath);
+                    if (url.isNotEmpty) {
+                      urls.add(url);
+                    }
+                  }
+                } catch (e) {
+                  debugPrint(
+                      '[AI-Chat] Social-Fotos fuer ${effective.id} fehlgeschlagen: $e');
+                }
+                return MapEntry(effective.id, urls.toList());
+              }),
+            );
+
+            final byId = {for (final poi in sortedPOIs) poi.id: poi};
+            for (final entry in photoResults) {
+              final meta = aiMeta[entry.key];
+              if (meta == null) continue;
+              meta['photoUrls'] = entry.value;
+              if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
+                final poi = byId[entry.key];
+                if (poi != null) {
+                  meta['longDescription'] =
+                      poi.description ?? poi.wikidataDescription ?? poi.shortDescription;
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint('[AI-Chat] Media-Enrichment fehlgeschlagen: $e');
+          }
+        }
+      }
+
       final radiusStr = _searchRadius.toInt().toString();
       String headerText;
       if (categories != null && categories.isNotEmpty) {
         headerText =
-            '📍 **${context.l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}** (${categories.join(", ")}):';
+            '**${l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}** (${categories.join(", ")}):';
       } else {
-        headerText =
-            '📍 **${context.l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}**:';
+        headerText = '**${l10n.chatPoisInRadius(sortedPOIs.length, radiusStr)}**:';
+      }
+      if (aiSummary.isNotEmpty) {
+        headerText = '$headerText\n$aiSummary';
       }
 
-      // POIs sofort anzeigen (mit Kategorie-Icons als Placeholder)
       setState(() {
         _isLoading = false;
         _messages.add({
@@ -1045,12 +1298,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           'isUser': false,
           'type': ChatMessageType.poiList,
           'pois': sortedPOIs,
+          if (aiMeta.isNotEmpty) 'aiMeta': aiMeta,
         });
       });
       _scrollToBottom();
 
-      // OPTIMIERT v1.7.6: Hintergrund-Enrichment für Bilder im Chat
-      // POIs werden sofort angezeigt, Bilder laden asynchron nach
       final messageIndex = _messages.length - 1;
       final poisToEnrich = sortedPOIs
           .where((p) => p.imageUrl == null && !p.isEnriched)
@@ -1058,23 +1310,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .toList();
 
       if (poisToEnrich.isNotEmpty) {
-        debugPrint('[AI-Chat] Starte Hintergrund-Enrichment für ${poisToEnrich.length} POIs');
+        debugPrint(
+            '[AI-Chat] Starte Hintergrund-Enrichment fuer ${poisToEnrich.length} POIs');
         final enrichmentService = ref.read(poiEnrichmentServiceProvider);
         final enrichedMap = await enrichmentService.enrichPOIsBatch(poisToEnrich);
 
         if (mounted && messageIndex < _messages.length) {
-          // Bestehende Nachricht mit angereicherten POIs aktualisieren
-          final updatedPOIs = sortedPOIs.map((poi) {
-            return enrichedMap[poi.id] ?? poi;
-          }).toList();
-
+          final updatedPOIs = sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
           setState(() {
+            final existingMetaRaw = _messages[messageIndex]['aiMeta'];
+            final existingMeta = existingMetaRaw is Map
+                ? Map<String, Map<String, dynamic>>.from(
+                    existingMetaRaw.map(
+                      (key, value) => MapEntry(
+                        key.toString(),
+                        Map<String, dynamic>.from((value as Map?) ?? const {}),
+                      ),
+                    ),
+                  )
+                : <String, Map<String, dynamic>>{};
+
+            for (final poi in updatedPOIs) {
+              final meta = existingMeta[poi.id];
+              if (meta == null) continue;
+              final currentPhotos = ((meta['photoUrls'] as List?) ?? const [])
+                  .map((e) => e.toString())
+                  .where((url) => url.isNotEmpty)
+                  .toList();
+              if (currentPhotos.isEmpty &&
+                  poi.imageUrl != null &&
+                  poi.imageUrl!.isNotEmpty) {
+                meta['photoUrls'] = [poi.imageUrl!];
+              }
+              if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
+                meta['longDescription'] =
+                    poi.description ?? poi.wikidataDescription ?? poi.shortDescription;
+              }
+            }
+
             _messages[messageIndex] = {
               ..._messages[messageIndex],
               'pois': updatedPOIs,
+              if (existingMeta.isNotEmpty) 'aiMeta': existingMeta,
             };
           });
-          debugPrint('[AI-Chat] Hintergrund-Enrichment abgeschlossen - Bilder aktualisiert');
+          debugPrint('[AI-Chat] Hintergrund-Enrichment abgeschlossen');
         }
       }
     } catch (e) {
@@ -1085,8 +1365,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _isLoading = false;
           _messages.add({
             'content':
-                '❌ **${context.l10n.chatPoisSearchError}**\n\n'
-                '${context.l10n.chatPoisSearchErrorMessage}',
+                '**${l10n.chatPoisSearchError}**\n\n'
+                '${l10n.chatPoisSearchErrorMessage}',
             'isUser': false,
             'type': ChatMessageType.text,
           });
@@ -1959,3 +2239,4 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel für eine echte Route mit POIs!';
   }
 }
+

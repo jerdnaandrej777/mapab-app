@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.38 - AI Tagestrip Routing-Stabilitaet (Retry + Rescue + Endpoint-Konsistenz) | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.38)
+Version: 1.10.39 - Erweiterung AI-POI-Erlebnis (klickbar + reichhaltig + foto-basiert) | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.39)
 
-- AI Tagestrip Generierung stabilisiert: Mehrfach-Selektionsversuche statt Single-Pass.
-- Routing-Backoff zentralisiert: iteratives Entfernen problematischer Stops mit Single-POI-Rescue.
-- Single-POI-Rescue erweitert: Kandidaten jetzt aus routingPOIs, constrainedPOIs und availablePOIs.
-- Single-Day Edit-Flows korrigiert: remove/add/reroll erhalten bei A->B das echte Ziel statt erzwungenem Rundtrip.
-- Neue Regression-Tests fuer Retry, Rescue und Zielerhalt in Daytrip-Edits.
+- Neuer strukturierter AI-Endpoint `POST /api/ai/poi-suggestions` mit validierter Ausgabe und Fallback-Ranking.
+- AI-Vorschlaege sind ueber Day-Editor, Day-Mini-Map, Hauptkarte und AI-Chat klickbar wie normale POIs.
+- AI-Suggestions auf bis zu 8 erweitert, inkl. longDescription, Highlights und Bilder (Enrichment + Social).
+- Navigationsluecken geschlossen: `'/ai-assistant'` und `'/pois'` sind als Routen verfuegbar.
+- Neue Tests fuer AI-Exception-Handling und tappable Day-Mini-Map-Marker.
 
 
 ## Tech Stack
@@ -505,6 +505,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.39.md` (AI-POI-Erlebnis erweitert: strukturierte AI-Vorschlaege, klickbare AI-POIs in allen AI-Flaechen, mehr Vorschlaege mit longDescription/Highlights/Fotos, neue Routen `'/ai-assistant'` und `'/pois'`)
 - `Dokumentation/CHANGELOG-v1.10.38.md` (AI Tagestrip Routing-Stabilitaet: Retry-Auswahl statt Single-Pass, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und konsistente A->B-Endpunkte bei remove/add/reroll im Single-Day-Edit-Flow)
 - `Dokumentation/CHANGELOG-v1.10.35.md` (Social Publish + POI Preview + Daytrip Stabilisierung: publish_poi_post RPC-Fallback, angereicherte tripData.stops, korrekt verlinkte POI-Vorschau, erweiterte Daytrip-POI-Fallbacks)
 - `Dokumentation/CHANGELOG-v1.10.34.md` (AI Tagestrip Stabilisierung: robuste POI-Fallback-Pipeline bei Korridor/Radius, Routing-Safety-Fallback, kontinuierlicher Ladefortschritt 1-100%, Lade-Widget auf Panel-Hoehe)

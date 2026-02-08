@@ -32,5 +32,6 @@ class ApiConfig {
   /// Endpoints
   static const String aiChatEndpoint = '/api/ai/chat';
   static const String aiTripPlanEndpoint = '/api/ai/trip-plan';
+  static const String aiPoiSuggestionsEndpoint = '/api/ai/poi-suggestions';
   static const String healthEndpoint = '/api/health';
 }

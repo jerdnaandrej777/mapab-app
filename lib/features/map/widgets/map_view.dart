@@ -12,6 +12,7 @@ import '../../trip/providers/trip_state_provider.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
+import '../../ai/providers/ai_trip_advisor_provider.dart';
 import '../../../data/providers/favorites_provider.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
@@ -182,6 +183,7 @@ class _MapViewState extends ConsumerState<MapView> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final tripState = ref.watch(tripStateProvider);
     final routePlanner = ref.watch(routePlannerProvider);
     final poiState = ref.watch(pOIStateNotifierProvider);
@@ -190,6 +192,7 @@ class _MapViewState extends ConsumerState<MapView> {
         ref.watch(favoritePOIsProvider).map((poi) => poi.id).toSet();
     final weatherState = ref.watch(locationWeatherNotifierProvider);
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
+    final advisorState = ref.watch(aITripAdvisorNotifierProvider);
 
     // AI Trip Preview Route und POIs
     final fullAIRoute = randomTripState.generatedTrip?.trip.route;
@@ -202,6 +205,12 @@ class _MapViewState extends ConsumerState<MapView> {
     // Auf der Hauptkarte immer die komplette AI-Route anzeigen (nicht tagesweise)
     final aiTripPOIs = allAITripPOIs;
     final aiRouteCoordinates = fullAIRoute?.coordinates ?? [];
+    final recommendedDayPOIs = advisorState.getRecommendedPOIsForDay(selectedDay);
+    final aiTripPoiIds = aiTripPOIs.map((p) => p.id).toSet();
+    final overlayRecommendedPOIs = recommendedDayPOIs
+        .where((p) => !aiTripPoiIds.contains(p.id))
+        .take(8)
+        .toList();
 
     // Wetter-Zustand für POI-Marker-Badges
     final weatherCondition =
@@ -313,18 +322,19 @@ class _MapViewState extends ConsumerState<MapView> {
               final poi = entry.value;
               // Wetter pro Stop-Tag fuer Multi-Day-Trips
               WeatherCondition? markerWeather;
-              if (isMultiDay && routeWeather.hasForecast) {
+              final previewTrip = aiTrip;
+              if (previewTrip != null && isMultiDay && routeWeather.hasForecast) {
                 int stopDay = selectedDay;
-                for (int day = 1; day <= aiTrip!.actualDays; day++) {
+                for (int day = 1; day <= previewTrip.actualDays; day++) {
                   final isStopInDay =
-                      aiTrip.getStopsForDay(day).any((s) => s.poiId == poi.id);
+                      previewTrip.getStopsForDay(day).any((s) => s.poiId == poi.id);
                   if (isStopInDay) {
                     stopDay = day;
                     break;
                   }
                 }
                 final forecastPerDay =
-                    routeWeather.getForecastPerDay(aiTrip.actualDays);
+                    routeWeather.getForecastPerDay(previewTrip.actualDays);
                 markerWeather = forecastPerDay[stopDay];
               } else {
                 markerWeather = weatherCondition;
@@ -340,6 +350,36 @@ class _MapViewState extends ConsumerState<MapView> {
                   weatherCondition: markerWeather,
                   isWeatherResilient: poi.category?.isWeatherResilient ?? false,
                   isFavorite: favoriteIds.contains(poi.id),
+                ),
+              );
+            }).toList(),
+          ),
+
+        // AI-Empfehlungs-Overlay auf der Hauptkarte (anklickbar)
+        if (isAITripPreview && overlayRecommendedPOIs.isNotEmpty)
+          MarkerLayer(
+            markers: overlayRecommendedPOIs.map((poi) {
+              return Marker(
+                point: poi.location,
+                width: 34,
+                height: 34,
+                child: GestureDetector(
+                  onTap: () => _onPOITap(poi),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.tertiary.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colorScheme.surface,
+                        width: 1.6,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: colorScheme.onTertiary,
+                      size: 16,
+                    ),
+                  ),
                 ),
               );
             }).toList(),
@@ -418,8 +458,12 @@ class _MapViewState extends ConsumerState<MapView> {
       _selectedPOIId = poi.id;
     });
 
-    // Direkt zur POI-Detail-Seite navigieren
-    ref.read(pOIStateNotifierProvider.notifier).selectPOI(poi);
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    poiNotifier.addPOI(poi);
+    poiNotifier.selectPOI(poi);
+    if (poi.imageUrl == null || !poi.isEnriched) {
+      poiNotifier.enrichPOI(poi.id);
+    }
     context.push('/poi/${poi.id}');
   }
 

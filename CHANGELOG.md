@@ -7,6 +7,41 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.39] - 2026-02-08
+
+### Erweiterung AI-POI-Erlebnis
+
+#### Hinzugefuegt
+- **Neuer strukturierter AI-POI-Endpoint**
+  - Backend-Route `POST /api/ai/poi-suggestions` liefert validierte, strukturierte Vorschlaege.
+  - JSON-Schema-Output mit robustem Fallback-Ranking bei ungueltiger oder leerer AI-Antwort.
+- **Kontextstarker AI-Prompt**
+  - `TripContext` beruecksichtigt jetzt u.a. Standort, Wetter, ausgewaehlten Tag, bevorzugte Kategorien und Antwortsprache.
+
+#### Geaendert
+- **AI-Vorschlaege sind app-weit klickbar wie normale POIs**
+  - Day-Editor, Day-Mini-Map, Hauptkarte und AI-Chat nutzen denselben POI-Detailflow.
+  - AI-Marker und AI-Karten oeffnen konsistent POI-Details inkl. Enrichment.
+- **AI liefert mehr und reichhaltigere Vorschlaege**
+  - Standardmaessig bis zu 8 Vorschlaege.
+  - Vorschlaege enthalten Begruendung, Highlights, lange Beschreibung und Bilder (Enrichment + Social-Fallback).
+- **Navigation vervollstaendigt**
+  - `ChatScreen` ist ueber `'/ai-assistant'` erreichbar.
+  - `POIListScreen` ist ueber `'/pois'` erreichbar.
+
+#### Technisch
+- Neue/erweiterte Dateien:
+  - `backend/api/ai/poi-suggestions.ts`
+  - `backend/lib/types.ts`
+  - `backend/lib/openai.ts`
+  - `lib/data/services/ai_service.dart`
+  - `lib/features/ai/providers/ai_trip_advisor_provider.dart`
+  - `lib/features/ai_assistant/chat_screen.dart`
+  - `lib/features/trip/widgets/day_editor_overlay.dart`
+  - `lib/features/trip/widgets/day_mini_map.dart`
+  - `lib/features/map/widgets/map_view.dart`
+  - `lib/app.dart`
+
 ## [1.10.38] - 2026-02-08
 
 ### AI Tagestrip Routing-Stabilitaet

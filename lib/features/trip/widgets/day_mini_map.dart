@@ -16,7 +16,8 @@ class DayMiniMap extends ConsumerStatefulWidget {
   final LatLng startLocation;
   final List<LatLng>? routeSegment;
   final List<POI> recommendedPOIs;
-  final VoidCallback? onMarkerTap;
+  final ValueChanged<POI>? onMarkerTap;
+  final bool showTileLayer;
 
   const DayMiniMap({
     super.key,
@@ -26,6 +27,7 @@ class DayMiniMap extends ConsumerStatefulWidget {
     this.routeSegment,
     this.recommendedPOIs = const [],
     this.onMarkerTap,
+    this.showTileLayer = true,
   });
 
   @override
@@ -143,11 +145,12 @@ class _DayMiniMapState extends ConsumerState<DayMiniMap> {
               ),
             ),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.travelplanner.app',
-                maxZoom: 19,
-              ),
+              if (widget.showTileLayer)
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.travelplanner.app',
+                  maxZoom: 19,
+                ),
               // Route-Segment
               if (widget.routeSegment != null &&
                   widget.routeSegment!.isNotEmpty)
@@ -196,19 +199,23 @@ class _DayMiniMapState extends ConsumerState<DayMiniMap> {
                       point: poi.location,
                       width: 30,
                       height: 30,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: colorScheme.tertiary.withValues(alpha: 0.6),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colorScheme.tertiary.withValues(alpha: 0.8),
-                            width: 1.5,
+                      child: GestureDetector(
+                        onTap: () => widget.onMarkerTap?.call(poi),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.tertiary.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  colorScheme.tertiary.withValues(alpha: 0.8),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: Icon(
-                          Icons.auto_awesome,
-                          color: colorScheme.onTertiary,
-                          size: 14,
+                          child: Icon(
+                            Icons.auto_awesome,
+                            color: colorScheme.onTertiary,
+                            size: 14,
+                          ),
                         ),
                       ),
                     );

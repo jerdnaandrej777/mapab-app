@@ -355,6 +355,7 @@
   "dayEditorLoadRecommendations": "Cargar recomendaciones de POI",
   "dayEditorAiRecommendations": "Recomendaciones de IA",
   "dayEditorRecommended": "Recomendado",
+  "dayEditorNoPhotoFallbackHint": "No hay foto disponible - la descripción y los destacados siguen disponibles.",
   "dayEditorAddedToDay": "añadido al día {day}",
   "dayEditorAllDaysExported": "Todos los días se han exportado con éxito a Google Maps. ¡Buen viaje!",
   "dayEditorAddPois": "Añadir POIs",
@@ -896,6 +897,7 @@
   "chatLocationNotAvailableMessage": "Para encontrar POIs cerca de ti, necesito acceso a tu ubicación.\n\nPor favor activa los servicios de ubicación e inténtalo de nuevo.",
   "chatPoisSearchError": "Error en la búsqueda de POIs",
   "chatPoisSearchErrorMessage": "Lo siento, hubo un problema al cargar los POIs.\n\nPor favor inténtalo de nuevo.",
+  "chatNoPhotoFallbackHint": "No hay foto disponible - los detalles siguen disponibles.",
   "chatNoResponseGenerated": "Lo siento, no pude generar una respuesta.",
   "chatRadiusAdjust": "Ajustar radio de búsqueda",
 

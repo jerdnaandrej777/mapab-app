@@ -12,7 +12,9 @@ import '../../../data/models/trip.dart';
 import '../../../data/models/route.dart';
 import '../../../data/providers/settings_provider.dart';
 import '../../../data/repositories/poi_repo.dart';
+import '../../../data/repositories/poi_social_repo.dart';
 import '../../../data/services/ai_service.dart';
+import '../../../data/services/poi_enrichment_service.dart';
 import '../../map/providers/weather_provider.dart';
 
 part 'ai_trip_advisor_provider.g.dart';
@@ -44,6 +46,9 @@ class AISuggestion {
   final String? actionType; // swap, remove, reorder, add
   final String? aiReasoning; // GPT-Begruendung
   final double? relevanceScore; // 0.0-1.0 Ranking
+  final List<String> highlights;
+  final String? longDescription;
+  final List<String> photoUrls;
 
   const AISuggestion({
     required this.message,
@@ -55,6 +60,9 @@ class AISuggestion {
     this.actionType,
     this.aiReasoning,
     this.relevanceScore,
+    this.highlights = const [],
+    this.longDescription,
+    this.photoUrls = const [],
   });
 }
 
@@ -443,6 +451,9 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         }
       }
 
+      // 7. Medien-/Text-Enrichment fuer die besten Vorschlaege.
+      rankedSuggestions = await _enrichSuggestionsWithMedia(rankedSuggestions);
+
       // Cancellation-Check vor State-Update
       if (requestId != _loadRequestId) {
         debugPrint('[AIAdvisor] Request $requestId abgebrochen (neuer Request aktiv)');
@@ -768,67 +779,83 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     required RouteWeatherState routeWeather,
   }) async {
     final aiService = ref.read(aiServiceProvider);
+    final dayWeather = _getDayWeather(day, trip.actualDays, routeWeather);
+    final settings = ref.read(settingsNotifierProvider);
     final stopsForDay = trip.getStopsForDay(day);
-    final dayWeather =
-        _getDayWeather(day, trip.actualDays, routeWeather);
 
-    // Wetter-Info
-    final dayWeatherStrings = routeWeather.hasForecast
-        ? routeWeather.getForecastPerDayAsStrings(trip.actualDays)
-        : routeWeather.getWeatherPerDayAsStrings(trip.actualDays);
-    final weatherInfo = dayWeatherStrings[day] ?? dayWeather.label;
-
-    // Aktuelle Stops als Text
-    final currentStopsText = stopsForDay
-        .map((s) =>
-            '${s.name} (${s.categoryId}, ${(s.category?.isIndoor ?? false) ? "indoor" : "outdoor"})')
-        .join(', ');
-
-    // Kandidaten als Text mit Stop-Zuordnung
-    final candidatesText = candidates
-        .map((entry) {
-          final p = entry.poi;
-          final mustSee = p.isMustSee ? ', MUST-SEE' : '';
-          final indoor = p.category?.isWeatherResilient == true ? ', indoor' : ', outdoor';
-          return '${p.name} (${p.categoryId}$indoor$mustSee, '
-              '${entry.distanceKm.toStringAsFixed(1)}km von ${entry.nearestStop}, '
-              '${p.detourKm?.toStringAsFixed(1) ?? "?"}km Umweg, Score: ${p.score})';
-        })
-        .join('\n');
-
-    // Outdoor-Stops identifizieren (fuer Swap-Vorschlaege bei schlechtem Wetter)
-    final outdoorStops = stopsForDay
-        .where((s) => s.category != null && !s.category!.isIndoor)
-        .toList();
-
-    final isBadWeather = dayWeather == WeatherCondition.bad ||
-        dayWeather == WeatherCondition.danger;
-
-    final prompt = 'Wetter Tag $day: $weatherInfo\n'
-        'Aktuelle Stops: $currentStopsText\n'
-        '${isBadWeather ? 'Outdoor-Stops die ersetzt werden koennten: ${outdoorStops.map((s) => '${s.name} (${s.poiId})').join(', ')}\n' : ''}'
-        'Must-See POIs in der Naehe:\n$candidatesText\n\n'
-        'Aufgabe: Waehle die besten 3 Must-See Highlights als Empfehlungen.\n'
-        'Nur die bekanntesten und lohnenswertesten Sehenswuerdigkeiten empfehlen.\n'
-        'Beruecksichtige: Bekanntheit, Wetter (Indoor bei Regen), Ortsbezug.\n'
-        '${isBadWeather ? 'Bei schlechtem Wetter: Schlage Indoor-Alternativen vor und nutze "swap".\n' : 'Empfehle die bekanntesten Highlights zum Hinzufuegen.\n'}'
-        'Antworte als JSON Array:\n'
-        '[{"name": "...", "action": "add|swap", "targetPOIId": "...", "reasoning": "1 Satz", "score": 0.0-1.0}]';
-
-    final response = await aiService.chat(
-      message: prompt,
-      context: TripContext(
-        route: trip.route,
-        stops: candidates.map((c) => c.poi).toList(),
+    final request = AIPoiSuggestionRequest(
+      mode: AIPoiSuggestionMode.dayEditor,
+      language: settings.language,
+      userContext: AIPoiSuggestionUserContext(
+        weatherCondition: dayWeather,
+        selectedDay: day,
+        totalDays: trip.actualDays,
       ),
+      tripContext: AIPoiSuggestionTripContext(
+        routeStart: trip.route.startAddress,
+        routeEnd: trip.route.endAddress,
+        stops: stopsForDay
+            .map(
+              (s) => AIPoiSuggestionStop(
+                id: s.poiId,
+                name: s.name,
+                categoryId: s.categoryId,
+                day: s.day,
+              ),
+            )
+            .toList(),
+      ),
+      constraints: AIPoiSuggestionConstraints(
+        maxSuggestions: 8,
+        allowSwap: true,
+      ),
+      candidates: candidates
+          .map((c) => AIPoiSuggestionCandidate.fromPOI(c.poi))
+          .toList(),
     );
 
-    // JSON aus der Response extrahieren
-    return _parseGPTResponse(
-      response: response,
-      candidates: candidates,
-      dayWeather: dayWeather,
+    final response = await aiService.getPoiSuggestionsStructured(
+      request: request,
     );
+
+    if (response.suggestions.isEmpty) {
+      throw const FormatException('Keine strukturierten AI-Suggestions erhalten');
+    }
+
+    final byId = {for (final entry in candidates) entry.poi.id: entry};
+    final suggestions = <AISuggestion>[];
+    final l10n = _l10n;
+    for (final structured in response.suggestions.take(8)) {
+      final matchedEntry = byId[structured.poiId];
+      if (matchedEntry == null) continue;
+      final categoryLabel = matchedEntry.poi.category != null
+          ? ServiceL10n.localizedCategoryLabel(l10n, matchedEntry.poi.category!)
+          : matchedEntry.poi.categoryId;
+      suggestions.add(
+        AISuggestion(
+          message: l10n.advisorPoiCategory(matchedEntry.poi.name, categoryLabel),
+          type: SuggestionType.alternative,
+          alternativePOI: matchedEntry.poi,
+          weather: dayWeather,
+          actionType: structured.action,
+          targetPOIId:
+              structured.action == 'swap' ? structured.targetPoiId : null,
+          aiReasoning: structured.reason,
+          relevanceScore: structured.relevance,
+          highlights: structured.highlights,
+          longDescription: structured.longDescription,
+        ),
+      );
+    }
+
+    if (suggestions.isEmpty) {
+      throw const FormatException('AI-Suggestions konnten keinen Kandidaten zugeordnet werden');
+    }
+
+    suggestions.sort(
+      (a, b) => (b.relevanceScore ?? 0).compareTo(a.relevanceScore ?? 0),
+    );
+    return suggestions;
   }
 
   /// Parsed die GPT-Response und erstellt AISuggestion-Objekte
@@ -893,6 +920,96 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
     }
   }
 
+  Future<List<AISuggestion>> _enrichSuggestionsWithMedia(
+    List<AISuggestion> suggestions,
+  ) async {
+    final actionable = suggestions
+        .where((s) => s.alternativePOI != null)
+        .take(8)
+        .toList();
+    if (actionable.isEmpty) return suggestions;
+
+    Map<String, POI> enrichedMap = const {};
+    try {
+      final enrichmentService = ref.read(poiEnrichmentServiceProvider);
+      final basePois = actionable.map((s) => s.alternativePOI!).toList();
+      enrichedMap = await enrichmentService.enrichPOIsBatch(basePois);
+    } catch (e) {
+      debugPrint('[AIAdvisor] Enrichment fuer AI-Suggestions fehlgeschlagen: $e');
+    }
+
+    final socialRepo = ref.read(poiSocialRepositoryProvider);
+    final updated = <AISuggestion>[];
+    for (final suggestion in suggestions) {
+      final basePoi = suggestion.alternativePOI;
+      if (basePoi == null) {
+        updated.add(suggestion);
+        continue;
+      }
+
+      final poi = enrichedMap[basePoi.id] ?? basePoi;
+      final photoUrls = <String>{};
+      if (poi.imageUrl != null && poi.imageUrl!.isNotEmpty) {
+        photoUrls.add(poi.imageUrl!);
+      }
+
+      try {
+        final photos = await socialRepo.loadPhotos(poi.id, limit: 3);
+        for (final photo in photos) {
+          final url = getStorageUrl(photo.storagePath);
+          if (url.isNotEmpty) photoUrls.add(url);
+        }
+      } catch (e) {
+        debugPrint('[AIAdvisor] Social-Fotos fuer ${poi.id} nicht verfuegbar: $e');
+      }
+
+      final autoHighlights = _derivePoiHighlights(poi, suggestion.weather);
+      final highlights = suggestion.highlights.isNotEmpty
+          ? suggestion.highlights
+          : autoHighlights;
+      final longDescription = suggestion.longDescription != null &&
+              suggestion.longDescription!.trim().isNotEmpty
+          ? suggestion.longDescription!
+          : (poi.description ??
+              poi.wikidataDescription ??
+              suggestion.aiReasoning ??
+              suggestion.message);
+
+      updated.add(
+        AISuggestion(
+          message: suggestion.message,
+          type: suggestion.type,
+          targetPOIId: suggestion.targetPOIId,
+          alternativePOI: poi,
+          weather: suggestion.weather,
+          replacementPOIName: suggestion.replacementPOIName,
+          actionType: suggestion.actionType,
+          aiReasoning: suggestion.aiReasoning,
+          relevanceScore: suggestion.relevanceScore,
+          highlights: highlights,
+          longDescription: longDescription,
+          photoUrls: photoUrls.toList(),
+        ),
+      );
+    }
+
+    return updated;
+  }
+
+  List<String> _derivePoiHighlights(POI poi, WeatherCondition? weather) {
+    final highlights = <String>[];
+    if (poi.isMustSee) highlights.add('Must-See');
+    if (poi.isUnesco) highlights.add('UNESCO');
+    if (poi.isCurated) highlights.add('Kuratiert');
+    if (poi.isHistoric) highlights.add('Historisch');
+    if (weather != null &&
+        (weather == WeatherCondition.bad || weather == WeatherCondition.danger) &&
+        (poi.category?.isWeatherResilient ?? false)) {
+      highlights.add('Indoor geeignet');
+    }
+    return highlights;
+  }
+
   /// Regelbasiertes Fallback-Ranking (ohne GPT)
   /// Beruecksichtigt Must-See, Wetter-Resilience, Umweg und Stop-Naehe
   List<AISuggestion> _rankRuleBased({
@@ -914,7 +1031,7 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         return bScore.compareTo(aScore);
       });
 
-    return sorted.take(3).map((entry) {
+    return sorted.take(8).map((entry) {
       final poi = entry.poi;
       final detourText = poi.detourKm != null
           ? ' (${poi.detourKm!.toStringAsFixed(1)} km Umweg)'
@@ -935,6 +1052,8 @@ class AITripAdvisorNotifier extends _$AITripAdvisorNotifier {
         actionType: 'add',
         aiReasoning: '$mustSeeText$weatherText - $locationText$detourText',
         relevanceScore: _calculateSmartScore(poi, isBadWeather, distanceKm: entry.distanceKm) / 140.0,
+        highlights: _derivePoiHighlights(poi, dayWeather),
+        longDescription: poi.description ?? poi.wikidataDescription ?? '$weatherText. $locationText$detourText',
       );
     }).toList();
   }

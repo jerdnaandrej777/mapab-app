@@ -2132,6 +2132,12 @@ abstract class AppLocalizations {
   /// **'Empfohlen'**
   String get dayEditorRecommended;
 
+  /// No description provided for @dayEditorNoPhotoFallbackHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Foto verfügbar - Beschreibung und Highlights sind trotzdem verfügbar.'**
+  String get dayEditorNoPhotoFallbackHint;
+
   /// No description provided for @dayEditorAddedToDay.
   ///
   /// In de, this message translates to:
@@ -5161,6 +5167,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Entschuldigung, es gab ein Problem beim Laden der POIs.\n\nBitte versuche es erneut.'**
   String get chatPoisSearchErrorMessage;
+
+  /// No description provided for @chatNoPhotoFallbackHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Foto verfügbar - Details sind trotzdem verfügbar.'**
+  String get chatNoPhotoFallbackHint;
 
   /// No description provided for @chatNoResponseGenerated.
   ///

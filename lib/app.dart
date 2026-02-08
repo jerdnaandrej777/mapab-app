@@ -13,6 +13,7 @@ import 'features/map/map_screen.dart';
 import 'features/map/widgets/trip_mode_selector.dart';
 import 'features/search/search_screen.dart';
 import 'features/poi/poi_detail_screen.dart';
+import 'features/poi/poi_list_screen.dart';
 import 'features/trip/trip_screen.dart';
 import 'features/random_trip/random_trip_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -33,6 +34,7 @@ import 'features/social/trip_detail_public_screen.dart';
 import 'features/admin/admin_screen.dart';
 import 'features/leaderboard/leaderboard_screen.dart';
 import 'features/challenges/challenges_screen.dart';
+import 'features/ai_assistant/chat_screen.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -183,6 +185,18 @@ final _router = GoRouter(
         final poiId = state.pathParameters['id']!;
         return POIDetailScreen(poiId: poiId);
       },
+    ),
+
+    GoRoute(
+      path: '/pois',
+      name: 'poi-list',
+      builder: (context, state) => const POIListScreen(),
+    ),
+
+    GoRoute(
+      path: '/ai-assistant',
+      name: 'ai-assistant',
+      builder: (context, state) => const ChatScreen(),
     ),
 
     // Trip-Screen (Push-Route fuer Google Maps Export)

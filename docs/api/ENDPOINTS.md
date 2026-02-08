@@ -100,6 +100,79 @@ Generiert einen AI-basierten Reiseplan.
 
 ---
 
+### POST /api/ai/poi-suggestions
+
+Liefert strukturierte AI-POI-Empfehlungen fuer Day-Editor und Chat-Nearby.
+
+**Request:**
+```json
+{
+  "mode": "day_editor",
+  "language": "de",
+  "userContext": {
+    "lat": 48.1371,
+    "lng": 11.5753,
+    "locationName": "Muenchen",
+    "weatherCondition": "good",
+    "selectedDay": 1,
+    "totalDays": 3
+  },
+  "tripContext": {
+    "routeStart": "Muenchen",
+    "routeEnd": "Salzburg",
+    "stops": [
+      { "id": "poi-1", "name": "Marienplatz", "categoryId": "sight" }
+    ]
+  },
+  "constraints": {
+    "maxSuggestions": 8,
+    "allowSwap": true
+  },
+  "candidates": [
+    {
+      "id": "poi-2",
+      "name": "Nymphenburg",
+      "categoryId": "castle",
+      "lat": 48.1584,
+      "lng": 11.5036,
+      "score": 0.86,
+      "isMustSee": true,
+      "isCurated": true,
+      "isUnesco": false,
+      "isIndoor": false,
+      "detourKm": 3.2,
+      "routePosition": 0.42,
+      "imageUrl": "https://...",
+      "shortDescription": "Barockschloss",
+      "tags": ["historisch", "garten"]
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "summary": "Diese POIs passen gut fuer Tag 1.",
+  "suggestions": [
+    {
+      "poiId": "poi-2",
+      "action": "add",
+      "reason": "Passt thematisch und liegt nahe der Route.",
+      "relevance": 0.92,
+      "highlights": ["Historische Architektur", "Grosse Gartenanlage"],
+      "longDescription": "Nymphenburg ist ein ausgedehnter Schlosskomplex..."
+    }
+  ]
+}
+```
+
+**Fallback-Verhalten:**
+- Bei ungueltiger AI-Antwort faellt das Backend automatisch auf regelbasiertes Ranking zurueck.
+- `relevance` wird auf `0..1` begrenzt; `swap`-Actions enthalten immer ein `targetPoiId`.
+
+---
+
 ## Trips
 
 ### GET /api/v1/trips

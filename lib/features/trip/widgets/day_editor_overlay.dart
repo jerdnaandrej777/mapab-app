@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -60,6 +61,15 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   void dispose() {
     _footerExpandTimer?.cancel();
     super.dispose();
+  }
+
+  void _openRecommendedPoiDetail(POI poi) {
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    poiNotifier.addPOI(poi);
+    if (poi.imageUrl == null || !(poi.isEnriched)) {
+      unawaited(poiNotifier.enrichPOI(poi.id));
+    }
+    context.push('/poi/${poi.id}');
   }
 
   @override
@@ -214,6 +224,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               recommendedPOIs: ref
                   .watch(aITripAdvisorNotifierProvider)
                   .getRecommendedPOIsForDay(selectedDay),
+              onMarkerTap: _openRecommendedPoiDetail,
             ),
           ),
           const SizedBox(height: 12),
@@ -689,6 +700,9 @@ class _AISuggestionsSection extends ConsumerWidget {
               actionType: suggestion.actionType ?? 'add',
               targetPOIId: suggestion.targetPOIId,
               dayNumber: dayNumber,
+              highlights: suggestion.highlights,
+              longDescription: suggestion.longDescription,
+              photoUrls: suggestion.photoUrls,
             );
           }
 
@@ -749,6 +763,9 @@ class _AIRecommendedPOICard extends ConsumerWidget {
   final String actionType;
   final String? targetPOIId;
   final int dayNumber;
+  final List<String> highlights;
+  final String? longDescription;
+  final List<String> photoUrls;
 
   const _AIRecommendedPOICard({
     required this.poi,
@@ -756,13 +773,25 @@ class _AIRecommendedPOICard extends ConsumerWidget {
     required this.actionType,
     this.targetPOIId,
     required this.dayNumber,
+    this.highlights = const [],
+    this.longDescription,
+    this.photoUrls = const [],
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final previewImage = photoUrls.isNotEmpty
+        ? photoUrls.first
+        : (poi.imageUrl ?? poi.thumbnailUrl);
+    final hasPreviewImage = previewImage != null && previewImage.isNotEmpty;
 
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openDetails(context, ref),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -778,6 +807,37 @@ class _AIRecommendedPOICard extends ConsumerWidget {
           // POI-Info-Zeile
           Row(
             children: [
+              if (hasPreviewImage)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CachedNetworkImage(
+                      imageUrl: previewImage,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: colorScheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Text(
+                            poi.category?.icon ?? 'P',
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: colorScheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Text(
+                            poi.category?.icon ?? 'P',
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
               // Kategorie-Icon
               Container(
                 width: 36,
@@ -853,6 +913,57 @@ class _AIRecommendedPOICard extends ConsumerWidget {
               _buildActionButton(context, ref, colorScheme),
             ],
           ),
+          if (!hasPreviewImage)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                context.l10n.dayEditorNoPhotoFallbackHint,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (highlights.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: highlights.take(4).map((h) {
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: colorScheme.tertiaryContainer.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      h,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colorScheme.onTertiaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          if (longDescription != null && longDescription!.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                longDescription!,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.78),
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           // AI-Reasoning
           if (reasoning.isNotEmpty)
             Padding(
@@ -869,6 +980,8 @@ class _AIRecommendedPOICard extends ConsumerWidget {
               ),
             ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -900,6 +1013,15 @@ class _AIRecommendedPOICard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _openDetails(BuildContext context, WidgetRef ref) {
+    final poiNotifier = ref.read(pOIStateNotifierProvider.notifier);
+    poiNotifier.addPOI(poi);
+    if (poi.imageUrl == null || !poi.isEnriched) {
+      unawaited(poiNotifier.enrichPOI(poi.id));
+    }
+    context.push('/poi/${poi.id}');
   }
 
   Future<void> _handleAdd(BuildContext context, WidgetRef ref) async {

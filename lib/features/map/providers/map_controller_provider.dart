@@ -16,6 +16,9 @@ final currentMapZoomProvider = StateProvider<double>((ref) => 6.0);
 /// Wird auf true gesetzt nach Route-Berechnung und bei Tab-Wechsel zum Trip-Screen
 final shouldFitToRouteProvider = StateProvider<bool>((ref) => false);
 
+/// Optionales Fokus-Ziel fuer Karte (z. B. aus AI-Chat "Auf Karte")
+final pendingMapCenterProvider = StateProvider<LatLng?>((ref) => null);
+
 /// Extension für einfache Karten-Operationen
 extension MapControllerExtension on MapController {
   /// Bewegt die Karte zu einer Position mit Animation
