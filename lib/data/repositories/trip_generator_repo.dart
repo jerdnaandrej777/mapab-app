@@ -1692,19 +1692,20 @@ class TripGeneratorRepository {
 
     final baseRadiusKm = radiusKm.clamp(25.0, 500.0);
     final expandedRadiusKm =
-        max(baseRadiusKm * 1.35, baseRadiusKm + 40.0).clamp(45.0, 650.0);
+        max(baseRadiusKm * 1.45, baseRadiusKm + 60.0).clamp(45.0, 750.0);
     final rescueRadiusKm =
-        max(baseRadiusKm * 1.8, baseRadiusKm + 90.0).clamp(70.0, 850.0);
+        max(baseRadiusKm * 2.0, baseRadiusKm + 130.0).clamp(70.0, 1000.0);
 
     final baseBufferKm = radiusKm.clamp(20.0, 500.0);
     final expandedBufferKm =
-        max(baseBufferKm * 1.35, baseBufferKm + 30.0).clamp(35.0, 700.0);
+        max(baseBufferKm * 1.45, baseBufferKm + 45.0).clamp(35.0, 800.0);
     final rescueBufferKm =
-        max(baseBufferKm * 1.9, baseBufferKm + 80.0).clamp(60.0, 900.0);
+        max(baseBufferKm * 2.1, baseBufferKm + 120.0).clamp(60.0, 1100.0);
 
     const strictMinScore = minimumPOIScore;
-    const relaxedMinScore = 25;
-    const rescueMinScore = 15;
+    const relaxedMinScore = 20;
+    const rescueMinScore = 10;
+    const emergencyMinScore = 0;
 
     if (hasDestination) {
       attempts.add(
@@ -1814,6 +1815,15 @@ class TripGeneratorRepository {
           useCache: false,
         ),
       );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: midpoint,
+          radiusKm: (rescueRadiusKm + 200).clamp(200.0, 1300.0),
+          categoryFilter: null,
+          minScore: emergencyMinScore,
+          useCache: false,
+        ),
+      );
     } else {
       attempts.add(
         () => _poiRepo.loadPOIsInRadius(
@@ -1877,6 +1887,15 @@ class TripGeneratorRepository {
           radiusKm: rescueRadiusKm,
           categoryFilter: null,
           minScore: rescueMinScore,
+          useCache: false,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: (rescueRadiusKm + 200).clamp(200.0, 1300.0),
+          categoryFilter: null,
+          minScore: emergencyMinScore,
           useCache: false,
         ),
       );

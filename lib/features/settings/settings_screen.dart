@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/l10n/category_l10n.dart';
 import '../../core/theme/app_theme.dart';
@@ -10,8 +9,8 @@ import '../../data/providers/settings_provider.dart';
 /// Einstellungen Screen
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-  static final Future<PackageInfo> _packageInfoFuture =
-      PackageInfo.fromPlatform();
+  static const String _appVersion =
+      String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,32 +114,20 @@ class SettingsScreen extends ConsumerWidget {
           _SectionHeader(title: context.l10n.settingsAbout),
           const SizedBox(height: AppSpacing.sm),
 
-          FutureBuilder<PackageInfo>(
-            future: _packageInfoFuture,
-            builder: (context, snapshot) {
-              final appVersion = snapshot.hasData
-                  ? '${snapshot.data!.version} (${snapshot.data!.buildNumber})'
-                  : '...';
-              return Column(
-                children: [
-                  _SettingsTile(
-                    icon: Icons.info_outline,
-                    title: context.l10n.settingsAppVersion,
-                    subtitle: appVersion,
-                    onTap: () {},
-                  ),
-                  _SettingsTile(
-                    icon: Icons.code,
-                    title: context.l10n.settingsLicenses,
-                    onTap: () {
-                      showLicensePage(
-                        context: context,
-                        applicationName: context.l10n.appName,
-                        applicationVersion: appVersion,
-                      );
-                    },
-                  ),
-                ],
+          _SettingsTile(
+            icon: Icons.info_outline,
+            title: context.l10n.settingsAppVersion,
+            subtitle: _appVersion,
+            onTap: () {},
+          ),
+          _SettingsTile(
+            icon: Icons.code,
+            title: context.l10n.settingsLicenses,
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: context.l10n.appName,
+                applicationVersion: _appVersion,
               );
             },
           ),

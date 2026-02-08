@@ -476,6 +476,10 @@ class _TripDetailPublicScreenState
     if (score != null) {
       subtitleParts.add('Score ${score.toStringAsFixed(0)}');
     }
+    final highlights = _stopHighlightLabels(stop);
+    if (highlights.isNotEmpty) {
+      subtitleParts.add(highlights.take(2).join(', '));
+    }
     if (isMustSee) {
       subtitleParts.add('Must-See');
     }
@@ -818,8 +822,15 @@ class _TripDetailPublicScreenState
         .map((e) => e.toString())
         .where((e) => e.isNotEmpty)
         .toList();
+    final highlights = ((map['highlights'] as List?) ?? const [])
+        .map((e) => e.toString().trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final tagsWithHighlights = <String>{...tags, ...highlights}.toList();
     final isMustSee = _asBool(map['isMustSee'] ?? map['is_must_see']) ||
-        tags.contains('unesco');
+        tagsWithHighlights.contains('unesco') ||
+        tagsWithHighlights.contains('mustsee') ||
+        tagsWithHighlights.contains('must_see');
 
     return <String, dynamic>{
       ...map,
@@ -829,7 +840,8 @@ class _TripDetailPublicScreenState
       'longitude': longitude,
       'categoryId': categoryId,
       'score': _asDouble(map['score']),
-      'tags': tags,
+      'tags': tagsWithHighlights,
+      'highlights': highlights,
       'isMustSee': isMustSee,
       'imageUrl': map['imageUrl'] ?? map['image_url'],
       'thumbnailUrl': map['thumbnailUrl'] ?? map['thumbnail_url'],
@@ -851,6 +863,30 @@ class _TripDetailPublicScreenState
     final tags = stop['tags'] as List?;
     if (tags == null) return const <String>[];
     return tags.map((e) => e.toString()).toList();
+  }
+
+  List<String> _stopHighlightLabels(Map<String, dynamic> stop) {
+    final raw = stop['highlights'] as List?;
+    if (raw == null) return const <String>[];
+    return raw
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .map((e) {
+      final normalized = e.toLowerCase();
+      switch (normalized) {
+        case 'must_see':
+        case 'mustsee':
+          return 'Must-See';
+        case 'unesco':
+          return 'UNESCO';
+        case 'historic':
+          return 'Historisch';
+        case 'secret':
+          return 'Geheimtipp';
+        default:
+          return e;
+      }
+    }).toList();
   }
 
   double? _asDouble(dynamic value) {

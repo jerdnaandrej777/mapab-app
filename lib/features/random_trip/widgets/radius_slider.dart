@@ -191,7 +191,7 @@ class RadiusSlider extends ConsumerWidget {
     if (radius <= 150) return 'Ausgedehnter Tagesausflug';
     if (radius <= 300) return 'Langer Tagesausflug mit viel Fahrzeit';
     if (radius <= 400) return 'Sehr weiter Tagesausflug';
-    return 'Maximaler Suchraum (Route wird trotzdem hart begrenzt)';
+    return 'Maximaler Suchraum (mit Zieladresse kann die Route >500 km sein)';
   }
 
   String _getDaysDescription(int days) {
