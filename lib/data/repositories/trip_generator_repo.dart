@@ -90,25 +90,15 @@ class TripGeneratorRepository {
     final categoryIds = _normalizeCategoryIds(
       categories.isNotEmpty ? categories.map((c) => c.id).toList() : null,
     );
-
     List<POI> availablePOIs;
     try {
-      if (hasDestination) {
-        debugPrint(
-            '[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
-        availablePOIs = await _loadPOIsAlongCorridor(
-          start: startLocation,
-          end: endLocation,
-          bufferKm: radiusKm,
-          categoryFilter: categoryIds,
-        );
-      } else {
-        availablePOIs = await _poiRepo.loadPOIsInRadius(
-          center: startLocation,
-          radiusKm: radiusKm,
-          categoryFilter: categoryIds,
-        );
-      }
+      availablePOIs = await _loadDayTripPOIsWithFallbacks(
+        startLocation: startLocation,
+        endLocation: endLocation,
+        hasDestination: hasDestination,
+        radiusKm: radiusKm,
+        categoryIds: categoryIds,
+      );
     } on RoutingException catch (e) {
       throw TripGenerationException(
         'POI-Suche fehlgeschlagen: Routenkorridor nicht verfuegbar. '
@@ -119,54 +109,6 @@ class TripGeneratorRepository {
         'POI-Suche fehlgeschlagen. Bitte Einstellungen pruefen und erneut versuchen. ($e)',
       );
     }
-
-    if (availablePOIs.isEmpty &&
-        categoryIds != null &&
-        categoryIds.isNotEmpty) {
-      final expandedCategories = _expandCategoryIds(categoryIds);
-      if (expandedCategories.length > categoryIds.length) {
-        debugPrint(
-            '[TripGenerator] Kategorie-Fallback Daytrip: ${categoryIds.join(",")} -> ${expandedCategories.join(",")}');
-        if (hasDestination) {
-          availablePOIs = await _loadPOIsAlongCorridor(
-            start: startLocation,
-            end: endLocation,
-            bufferKm: radiusKm,
-            categoryFilter: expandedCategories,
-          );
-        } else {
-          availablePOIs = await _poiRepo.loadPOIsInRadius(
-            center: startLocation,
-            radiusKm: radiusKm,
-            categoryFilter: expandedCategories,
-          );
-        }
-      }
-    }
-
-    if (availablePOIs.isEmpty) {
-      debugPrint(
-          '[TripGenerator] Starte curated-only Fallback fuer Tagestrip...');
-      if (hasDestination) {
-        availablePOIs = await _loadPOIsAlongCorridor(
-          start: startLocation,
-          end: endLocation,
-          bufferKm: radiusKm,
-          categoryFilter: categoryIds,
-          includeWikipedia: false,
-          includeOverpass: false,
-        );
-      } else {
-        availablePOIs = await _poiRepo.loadPOIsInRadius(
-          center: startLocation,
-          radiusKm: radiusKm,
-          categoryFilter: categoryIds,
-          includeWikipedia: false,
-          includeOverpass: false,
-        );
-      }
-    }
-
     // v1.9.13: Hotels sind fuer Tagesausfluege nicht relevant
     availablePOIs =
         availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
@@ -197,12 +139,21 @@ class TripGeneratorRepository {
     }
 
     // 2. Zufällige POIs auswählen
-    final selectedPOIs = _poiSelector.selectRandomPOIs(
+    var selectedPOIs = _poiSelector.selectRandomPOIs(
       pois: availablePOIs,
       startLocation: startLocation,
       count: poiCount,
       preferredCategories: categories,
     );
+
+    if (selectedPOIs.isEmpty) {
+      selectedPOIs = _fallbackSelectPOIsForDayTrip(
+        availablePOIs: availablePOIs,
+        startLocation: startLocation,
+        endLocation: endLocation,
+        count: poiCount,
+      );
+    }
 
     if (selectedPOIs.isEmpty) {
       throw TripGenerationException('Keine passenden POIs gefunden');
@@ -303,6 +254,39 @@ class TripGeneratorRepository {
         routingPOIs = optimizedForRouting
             .where((poi) => poi.id != removedPoi.id)
             .toList();
+      }
+    }
+    if (route == null && routingPOIs.isNotEmpty) {
+      final singlePoiCandidates = [...routingPOIs]
+        ..sort((a, b) => _dayTripDetourScore(
+              poi: a,
+              startLocation: startLocation,
+              endLocation: endLocation,
+            ).compareTo(
+              _dayTripDetourScore(
+                poi: b,
+                startLocation: startLocation,
+                endLocation: endLocation,
+              ),
+            ));
+
+      for (final candidate in singlePoiCandidates) {
+        try {
+          route = await _routingRepo.calculateFastRoute(
+            start: startLocation,
+            end: endLocation,
+            waypoints: [candidate.location],
+            startAddress: startAddress,
+            endAddress: endAddress,
+          );
+          routingPOIs = [candidate];
+          debugPrint(
+            '[TripGenerator] Tagestrip Routing-Safety-Fallback erfolgreich mit 1 POI: ${candidate.name}',
+          );
+          break;
+        } on RoutingException {
+          continue;
+        }
       }
     }
 
@@ -1684,6 +1668,191 @@ class TripGeneratorRepository {
 
   /// Lädt POIs entlang eines Korridors (Start→Ziel mit Buffer)
   /// Berechnet eine Direct-Route und sucht POIs in der Bounding Box
+  Future<List<POI>> _loadDayTripPOIsWithFallbacks({
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required bool hasDestination,
+    required double radiusKm,
+    required List<String>? categoryIds,
+  }) async {
+    final attempts = <Future<List<POI>> Function()>[];
+    final expandedCategories = (categoryIds != null && categoryIds.isNotEmpty)
+        ? _expandCategoryIds(categoryIds)
+        : categoryIds;
+
+    if (hasDestination) {
+      attempts.add(
+        () => _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: radiusKm,
+          categoryFilter: categoryIds,
+        ),
+      );
+      if (expandedCategories != null &&
+          categoryIds != null &&
+          expandedCategories.length > categoryIds.length) {
+        attempts.add(
+          () => _loadPOIsAlongCorridor(
+            start: startLocation,
+            end: endLocation,
+            bufferKm: radiusKm,
+            categoryFilter: expandedCategories,
+          ),
+        );
+      }
+      attempts.add(
+        () => _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: radiusKm,
+          categoryFilter: categoryIds,
+          includeWikipedia: false,
+          includeOverpass: false,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsNearDayTripEndpoints(
+          start: startLocation,
+          end: endLocation,
+          radiusKm: radiusKm,
+          categoryFilter: categoryIds,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsNearDayTripEndpoints(
+          start: startLocation,
+          end: endLocation,
+          radiusKm: radiusKm,
+          categoryFilter: null,
+        ),
+      );
+    } else {
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: radiusKm,
+          categoryFilter: categoryIds,
+        ),
+      );
+      if (expandedCategories != null &&
+          categoryIds != null &&
+          expandedCategories.length > categoryIds.length) {
+        attempts.add(
+          () => _poiRepo.loadPOIsInRadius(
+            center: startLocation,
+            radiusKm: radiusKm,
+            categoryFilter: expandedCategories,
+          ),
+        );
+      }
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: radiusKm,
+          categoryFilter: categoryIds,
+          includeWikipedia: false,
+          includeOverpass: false,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: radiusKm,
+          categoryFilter: null,
+        ),
+      );
+    }
+
+    for (var i = 0; i < attempts.length; i++) {
+      final result = await attempts[i]();
+      if (result.isNotEmpty) {
+        debugPrint(
+          '[TripGenerator] Tagestrip-POI-Fallback erfolgreich in Versuch ${i + 1}: ${result.length} POIs',
+        );
+        return _dedupePOIsById(result);
+      }
+    }
+
+    return const [];
+  }
+
+  Future<List<POI>> _loadPOIsNearDayTripEndpoints({
+    required LatLng start,
+    required LatLng end,
+    required double radiusKm,
+    required List<String>? categoryFilter,
+  }) async {
+    final endpointRadiusKm = radiusKm.clamp(20.0, 160.0);
+    final results = await Future.wait([
+      _poiRepo.loadPOIsInRadius(
+        center: start,
+        radiusKm: endpointRadiusKm,
+        categoryFilter: categoryFilter,
+      ),
+      _poiRepo.loadPOIsInRadius(
+        center: end,
+        radiusKm: endpointRadiusKm,
+        categoryFilter: categoryFilter,
+      ),
+    ]);
+    final merged = _dedupePOIsById([...results[0], ...results[1]]);
+    if (merged.isEmpty) return merged;
+
+    final directDistance = GeoUtils.haversineDistance(start, end);
+    final allowedPathKm = directDistance + max(40.0, radiusKm * 1.2);
+    return merged.where((poi) {
+      final pathEstimate = GeoUtils.haversineDistance(start, poi.location) +
+          GeoUtils.haversineDistance(poi.location, end);
+      return pathEstimate <= allowedPathKm;
+    }).toList();
+  }
+
+  List<POI> _dedupePOIsById(List<POI> pois) {
+    final seen = <String>{};
+    final unique = <POI>[];
+    for (final poi in pois) {
+      if (seen.add(poi.id)) {
+        unique.add(poi);
+      }
+    }
+    return unique;
+  }
+
+  List<POI> _fallbackSelectPOIsForDayTrip({
+    required List<POI> availablePOIs,
+    required LatLng startLocation,
+    required LatLng endLocation,
+    required int count,
+  }) {
+    if (availablePOIs.isEmpty || count <= 0) return const [];
+    final sorted = [...availablePOIs]..sort((a, b) => _dayTripDetourScore(
+          poi: a,
+          startLocation: startLocation,
+          endLocation: endLocation,
+        ).compareTo(
+          _dayTripDetourScore(
+            poi: b,
+            startLocation: startLocation,
+            endLocation: endLocation,
+          ),
+        ));
+    final maxItems = min(count, sorted.length);
+    return sorted.take(maxItems).toList();
+  }
+
+  double _dayTripDetourScore({
+    required POI poi,
+    required LatLng startLocation,
+    required LatLng endLocation,
+  }) {
+    final detourKm = GeoUtils.haversineDistance(startLocation, poi.location) +
+        GeoUtils.haversineDistance(poi.location, endLocation) -
+        GeoUtils.haversineDistance(startLocation, endLocation);
+    final quality = (poi.effectiveScore ?? poi.score.toDouble()).clamp(1, 100);
+    return detourKm - (quality * 0.05);
+  }
+
   Future<List<POI>> _loadPOIsAlongCorridor({
     required LatLng start,
     required LatLng end,

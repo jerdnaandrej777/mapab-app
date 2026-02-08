@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.33 - Download</title>
+    <title>MapAB v1.10.34 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.33 (Build 216)</div>
-        <span class="release-tag">AI Euro Trip Stabilitaets-Update</span>
+        <div class="version">Version 1.10.34 (Build 217)</div>
+        <span class="release-tag">AI Daytrip Stabilitaet &amp; UI Konsistenz</span>
         <p class="subtitle">
-            Fixes fuer AI Euro Trip: 700-km-Hardlimit,<br>korrekte Tagesuebergabe und bessere Hotelvorschlaege.
+            Fixes fuer AI Tagestrip: robustere POI-Erkennung,<br>stabilere Routenberechnung und einheitliches Lade-Widget.
         </p>
 
         <div class="qr-container">
@@ -213,18 +213,18 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.33/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.34/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~124 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.33:</h3>
+            <h3>&#x2728; Neu in v1.10.34:</h3>
             <ul>
-                <li class="highlight">Hauptkarte zeigt nach Berechnung immer die komplette Route</li>
-                <li class="highlight">Generierung mit animierter Fortschrittsanzeige in Prozent</li>
-                <li>Lebendige Warte-UX mit wechselnden Status-Tipps waehrend Berechnung</li>
-                <li>Day-Editor: unterster POI nicht mehr abgeschnitten (dynamischer Bottom-Space)</li>
-                <li>Favoriten- und Wetter-Verbesserungen aus v1.10.29 bleiben enthalten</li>
+                <li class="highlight">AI Tagestrip erkennt POIs robuster durch mehrstufige Fallback-Logik</li>
+                <li class="highlight">Routenbau bleibt stabiler durch Endpoint-Radius- und Routing-Safety-Fallback</li>
+                <li class="highlight">Ladefortschritt laeuft jetzt sichtbar von 1% bis 100%</li>
+                <li>Lade-Widget sitzt auf gleicher Hoehe wie das AI-Trip-Panel fuer einheitliche UI</li>
+                <li>Bestehende Verbesserungen aus v1.10.33 bleiben enthalten</li>
             </ul>
         </div>
 
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.33/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.34/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
@@ -266,6 +266,10 @@
     </script>
 </body>
 </html>
+
+
+
+
 
 
 

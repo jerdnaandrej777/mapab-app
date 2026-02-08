@@ -16,10 +16,12 @@ import '../providers/random_trip_state.dart';
 /// ```
 class GenerationProgressIndicator extends ConsumerWidget {
   final bool compact;
+  final bool panelMode;
 
   const GenerationProgressIndicator({
     super.key,
     this.compact = false,
+    this.panelMode = false,
   });
 
   @override
@@ -35,6 +37,45 @@ class GenerationProgressIndicator extends ConsumerWidget {
 
     if (compact) {
       return _buildCompact(context, colorScheme, phase, progress, message);
+    }
+
+    if (panelMode) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth;
+          final cardWidth = maxWidth.clamp(320.0, 560.0);
+          return Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              width: cardWidth,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.30),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 28,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: _buildMainContent(
+                context: context,
+                colorScheme: colorScheme,
+                theme: theme,
+                phase: phase,
+                progress: progress,
+                message: message,
+              ),
+            ),
+          );
+        },
+      );
     }
 
     return LayoutBuilder(
@@ -76,65 +117,82 @@ class GenerationProgressIndicator extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _DominantLoadingCluster(
-                    progress: progress,
-                    phase: phase,
-                    colorScheme: colorScheme,
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        phase.emoji,
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          message,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 12,
-                      backgroundColor:
-                          colorScheme.primary.withValues(alpha: 0.18),
-                      valueColor: AlwaysStoppedAnimation(colorScheme.primary),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${(progress * 100).toStringAsFixed(0)}%',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _FunLoadingTicker(
-                    key: ValueKey(phase),
-                    phase: phase,
-                  ),
-                ],
+              child: _buildMainContent(
+                context: context,
+                colorScheme: colorScheme,
+                theme: theme,
+                phase: phase,
+                progress: progress,
+                message: message,
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMainContent({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required ThemeData theme,
+    required GenerationPhase phase,
+    required double progress,
+    required String message,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _DominantLoadingCluster(
+          progress: progress,
+          phase: phase,
+          colorScheme: colorScheme,
+        ),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              phase.emoji,
+              style: const TextStyle(fontSize: 24),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                message,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 12,
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.18),
+            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${(progress * 100).toStringAsFixed(0)}%',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _FunLoadingTicker(
+          key: ValueKey(phase),
+          phase: phase,
+        ),
+      ],
     );
   }
 

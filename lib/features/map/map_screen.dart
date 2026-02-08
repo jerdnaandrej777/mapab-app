@@ -328,9 +328,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ),
-          // Dominantes Vollbild-Ladeoverlay waehrend Routenberechnung
+          // Lade-Widget auf gleicher Hoehe wie das AI-Trip-Konfigurationspanel
           if (isGenerating)
-            const Positioned.fill(child: GenerationProgressIndicator()),
+            const SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: 12),
+                    GenerationProgressIndicator(panelMode: true),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

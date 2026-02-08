@@ -29,6 +29,7 @@ part 'random_trip_provider.g.dart';
 class RandomTripNotifier extends _$RandomTripNotifier {
   late TripGeneratorRepository _tripGenerator;
   late GeocodingRepository _geocodingRepo;
+  Timer? _generationProgressTicker;
 
   /// Atomares Lock um Race Conditions bei Doppel-Klick zu verhindern
   bool _isGenerating = false;
@@ -41,6 +42,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
   RandomTripState build() {
     _tripGenerator = ref.watch(tripGeneratorRepositoryProvider);
     _geocodingRepo = ref.watch(geocodingRepositoryProvider);
+    ref.onDispose(_stopGenerationProgressTicker);
     return RandomTripState(
       tripStartDate: DateTime.now(),
     );
@@ -295,8 +297,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       completedDays: {},
       selectedDay: 1,
       generationPhase: GenerationPhase.calculatingRoute,
-      generationProgress: GenerationPhase.calculatingRoute.baseProgress,
+      generationProgress: 0.01,
     );
+    _startGenerationProgressTicker();
 
     // Wenn kein Startpunkt gesetzt ist, automatisch GPS-Standort abfragen
     if (!state.hasValidStart) {
@@ -308,7 +311,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           step: RandomTripStep.config,
           isLoading: false,
           error: 'Bitte gib einen Startpunkt ein oder aktiviere GPS',
+          generationPhase: GenerationPhase.idle,
+          generationProgress: 0.0,
         );
+        _stopGenerationProgressTicker();
         _isGenerating = false;
         return;
       }
@@ -322,7 +328,10 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         step: RandomTripStep.config,
         isLoading: false,
         error: 'Startpunkt nicht verfuegbar. Bitte erneut eingeben.',
+        generationPhase: GenerationPhase.idle,
+        generationProgress: 0.0,
       );
+      _stopGenerationProgressTicker();
       _isGenerating = false;
       return;
     }
@@ -339,9 +348,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       GeneratedTrip result;
 
       // v1.10.23: Phase 2 - POIs suchen
-      state = state.copyWith(
-        generationPhase: GenerationPhase.searchingPOIs,
-        generationProgress: GenerationPhase.searchingPOIs.baseProgress,
+      _setGenerationPhase(
+        GenerationPhase.searchingPOIs,
+        minProgress: 0.18,
       );
 
       // Aktuelles Wetter fuer Score-Gewichtung
@@ -362,9 +371,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         );
       } else {
         // v1.10.23: Phase 3 - AI-Ranking (bei Euro Trips komplexer)
-        state = state.copyWith(
-          generationPhase: GenerationPhase.rankingWithAI,
-          generationProgress: GenerationPhase.rankingWithAI.baseProgress,
+        _setGenerationPhase(
+          GenerationPhase.rankingWithAI,
+          minProgress: 0.72,
         );
 
         // Euro Trip: Tage direkt übergeben, Radius für POI-Suche
@@ -390,9 +399,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       debugPrint('[RandomTrip] Trip erfolgreich! Setze step auf preview...');
 
       // v1.10.23: Phase 4 - Bilder laden
-      state = state.copyWith(
-        generationPhase: GenerationPhase.enrichingImages,
-        generationProgress: GenerationPhase.enrichingImages.baseProgress,
+      _setGenerationPhase(
+        GenerationPhase.enrichingImages,
+        minProgress: 0.90,
       );
 
       // v1.6.9: POIs enrichen für Foto-Anzeige in der Preview
@@ -409,8 +418,9 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         step: RandomTripStep.preview,
         isLoading: false,
         generationPhase: GenerationPhase.complete,
-        generationProgress: GenerationPhase.complete.baseProgress,
+        generationProgress: 1.0,
       );
+      _stopGenerationProgressTicker();
       _refreshRouteWeatherForGeneratedTrip(
         result,
         reason: 'initial generation',
@@ -427,6 +437,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         generationPhase: GenerationPhase.idle,
         generationProgress: 0.0,
       );
+      _stopGenerationProgressTicker();
     } on RoutingException catch (e, stackTrace) {
       debugPrint('[RandomTrip] RoutingException: ${e.message}');
       debugPrint('[RandomTrip] StackTrace: $stackTrace');
@@ -438,6 +449,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         generationPhase: GenerationPhase.idle,
         generationProgress: 0.0,
       );
+      _stopGenerationProgressTicker();
     } catch (e, stackTrace) {
       debugPrint('[RandomTrip] UNERWARTETER FEHLER: $e');
       debugPrint('[RandomTrip] Typ: ${e.runtimeType}');
@@ -449,9 +461,13 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         generationPhase: GenerationPhase.idle,
         generationProgress: 0.0,
       );
+      _stopGenerationProgressTicker();
     } finally {
       // Lock immer zuruecksetzen, egal ob Erfolg oder Fehler
       _isGenerating = false;
+      if (state.step != RandomTripStep.generating) {
+        _stopGenerationProgressTicker();
+      }
     }
   }
 
@@ -771,16 +787,94 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       step: RandomTripStep.config,
       generatedTrip: null,
       error: null,
+      generationPhase: GenerationPhase.idle,
+      generationProgress: 0.0,
     );
+    _stopGenerationProgressTicker();
   }
 
   /// Setzt den State zurück und löscht aktiven Trip
   void reset() {
     ref.read(activeTripServiceProvider).clearTrip();
     ref.read(activeTripNotifierProvider.notifier).refresh();
+    _stopGenerationProgressTicker();
     state = RandomTripState(
       tripStartDate: DateTime.now(),
     );
+  }
+
+  void _setGenerationPhase(
+    GenerationPhase phase, {
+    double? minProgress,
+  }) {
+    final nextMin = (minProgress ?? phase.baseProgress).clamp(0.0, 1.0);
+    final nextProgress =
+        state.generationProgress < nextMin ? nextMin : state.generationProgress;
+    state = state.copyWith(
+      generationPhase: phase,
+      generationProgress: nextProgress,
+    );
+  }
+
+  void _startGenerationProgressTicker() {
+    _stopGenerationProgressTicker();
+    _generationProgressTicker =
+        Timer.periodic(const Duration(milliseconds: 220), (_) {
+      if (state.step != RandomTripStep.generating) {
+        _stopGenerationProgressTicker();
+        return;
+      }
+
+      final phase = state.generationPhase;
+      if (phase == GenerationPhase.idle || phase == GenerationPhase.complete) {
+        return;
+      }
+
+      final ceiling = _phaseProgressCeiling(phase);
+      final current = state.generationProgress.clamp(0.0, 1.0);
+      if (current >= ceiling) return;
+
+      final next = (current + _phaseProgressStep(phase)).clamp(0.0, ceiling);
+      state = state.copyWith(generationProgress: next);
+    });
+  }
+
+  void _stopGenerationProgressTicker() {
+    _generationProgressTicker?.cancel();
+    _generationProgressTicker = null;
+  }
+
+  double _phaseProgressCeiling(GenerationPhase phase) {
+    switch (phase) {
+      case GenerationPhase.calculatingRoute:
+        return 0.28;
+      case GenerationPhase.searchingPOIs:
+        return 0.80;
+      case GenerationPhase.rankingWithAI:
+        return 0.90;
+      case GenerationPhase.enrichingImages:
+        return 0.98;
+      case GenerationPhase.complete:
+        return 1.0;
+      case GenerationPhase.idle:
+        return 0.0;
+    }
+  }
+
+  double _phaseProgressStep(GenerationPhase phase) {
+    switch (phase) {
+      case GenerationPhase.calculatingRoute:
+        return 0.018;
+      case GenerationPhase.searchingPOIs:
+        return 0.010;
+      case GenerationPhase.rankingWithAI:
+        return 0.007;
+      case GenerationPhase.enrichingImages:
+        return 0.004;
+      case GenerationPhase.complete:
+      case GenerationPhase.idle:
+        return 0.0;
+    }
   }
 
   /// Löscht Fehler

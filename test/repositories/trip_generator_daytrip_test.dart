@@ -44,6 +44,47 @@ class _FakePOIRepository extends POIRepository {
   }
 }
 
+class _SplitPOIRepository extends POIRepository {
+  _SplitPOIRepository({
+    this.radiusPOIs = const [],
+    this.boundsPOIs = const [],
+  });
+
+  final List<POI> radiusPOIs;
+  final List<POI> boundsPOIs;
+  int radiusCalls = 0;
+  int boundsCalls = 0;
+
+  @override
+  Future<List<POI>> loadPOIsInRadius({
+    required LatLng center,
+    required double radiusKm,
+    List<String>? categoryFilter,
+    bool includeCurated = true,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
+    bool useCache = true,
+    bool isFallbackAttempt = false,
+  }) async {
+    radiusCalls++;
+    return radiusPOIs;
+  }
+
+  @override
+  Future<List<POI>> loadPOIsInBounds({
+    required ({LatLng southwest, LatLng northeast}) bounds,
+    List<String>? categoryFilter,
+    bool includeCurated = true,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
+    int maxResults = 200,
+    bool isFallbackAttempt = false,
+  }) async {
+    boundsCalls++;
+    return boundsPOIs;
+  }
+}
+
 class _FakeRoutingRepository extends RoutingRepository {
   _FakeRoutingRepository({this.failWhenWaypoints = false});
 
@@ -78,8 +119,8 @@ class _FakeRoutingRepository extends RoutingRepository {
 
 void main() {
   group('TripGeneratorRepository daytrip stabilization', () {
-    final start = LatLng(50.9375, 6.9603);
-    final nearDestination = LatLng(50.9380, 6.9609); // << 3 km
+    const start = LatLng(50.9375, 6.9603);
+    const nearDestination = LatLng(50.9380, 6.9609); // << 3 km
     final samplePOI = POI(
       id: 'poi-1',
       name: 'Sample POI',
@@ -144,6 +185,34 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('falls back to endpoint-radius POIs when corridor bounds are empty',
+        () async {
+      const destination = LatLng(51.0500, 7.1500);
+      final poiRepo = _SplitPOIRepository(
+        boundsPOIs: const [],
+        radiusPOIs: [samplePOI],
+      );
+      final routingRepo = _FakeRoutingRepository();
+      final repo = TripGeneratorRepository(
+        poiRepo: poiRepo,
+        routingRepo: routingRepo,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        destinationLocation: destination,
+        destinationAddress: 'Bergisch Gladbach',
+        radiusKm: 120,
+        poiCount: 1,
+      );
+
+      expect(poiRepo.boundsCalls, greaterThan(0));
+      expect(poiRepo.radiusCalls, greaterThanOrEqualTo(2));
+      expect(result.selectedPOIs, isNotEmpty);
+      expect(result.trip.route.coordinates, isNotEmpty);
     });
   });
 }
