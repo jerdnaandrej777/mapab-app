@@ -10,6 +10,7 @@ import '../../data/repositories/geocoding_repo.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
+import '../random_trip/widgets/generation_progress_indicator.dart';
 import '../trip/widgets/day_editor_overlay.dart';
 import 'providers/app_ui_mode_provider.dart';
 import 'providers/map_controller_provider.dart';
@@ -96,12 +97,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Listener für AI Trip - wenn Trip generiert, Route auf Karte zoomen
       _subscriptions.add(
         ref.listenManual(randomTripNotifierProvider, (previous, next) {
-          debugPrint('[MapScreen] RandomTrip State changed: ${previous?.step} -> ${next.step}');
-          if (next.step == RandomTripStep.preview && previous?.step != RandomTripStep.preview) {
+          debugPrint(
+              '[MapScreen] RandomTrip State changed: ${previous?.step} -> ${next.step}');
+          if (next.step == RandomTripStep.preview &&
+              previous?.step != RandomTripStep.preview) {
             // Trip wurde generiert - Route auf Karte zoomen
             final aiRoute = next.generatedTrip?.trip.route;
-            debugPrint('[MapScreen] AI Trip generated! Route: ${aiRoute != null}, POIs: ${next.generatedTrip?.selectedPOIs.length ?? 0}');
-            debugPrint('[MapScreen] Route coords: ${aiRoute?.coordinates.length ?? 0}');
+            debugPrint(
+                '[MapScreen] AI Trip generated! Route: ${aiRoute != null}, POIs: ${next.generatedTrip?.selectedPOIs.length ?? 0}');
+            debugPrint(
+                '[MapScreen] Route coords: ${aiRoute?.coordinates.length ?? 0}');
             if (aiRoute != null && mounted) {
               _fitMapToRoute(aiRoute);
             }
@@ -109,7 +114,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             if (mounted) setState(() {});
           }
           // Wenn Trip bestätigt wurde, ebenfalls Route zoomen
-          if (next.step == RandomTripStep.confirmed && previous?.step != RandomTripStep.confirmed) {
+          if (next.step == RandomTripStep.confirmed &&
+              previous?.step != RandomTripStep.confirmed) {
             final tripState = ref.read(tripStateProvider);
             if (tripState.hasRoute && mounted) {
               _fitMapToRoute(tripState.route!);
@@ -117,7 +123,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           }
           // Fehler bei AI Trip anzeigen
           if (next.error != null && next.error != previous?.error && mounted) {
-            AppSnackbar.showError(context, context.l10n.errorTripGeneration(next.error!));
+            AppSnackbar.showError(
+                context, context.l10n.errorTripGeneration(next.error!));
           }
         }),
       );
@@ -165,7 +172,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     );
 
-    debugPrint('[Map] Route angezeigt: ${route.distanceKm.toStringAsFixed(0)} km');
+    debugPrint(
+        '[Map] Route angezeigt: ${route.distanceKm.toStringAsFixed(0)} km');
   }
 
   @override
@@ -224,7 +232,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final isConfigStep = randomTripState.step == RandomTripStep.config;
     final isGenerating = randomTripState.step == RandomTripStep.generating;
     final hasGeneratedTrip = (randomTripState.step == RandomTripStep.preview ||
-        randomTripState.step == RandomTripStep.confirmed) &&
+            randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null;
 
     return Scaffold(
@@ -277,7 +285,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   if (isConfigStep && !isGenerating)
                     ActiveTripResumeBanner(
                       onRestore: () {
-                        ref.read(appUIModeNotifierProvider.notifier)
+                        ref
+                            .read(appUIModeNotifierProvider.notifier)
                             .setMode(MapPlanMode.aiEuroTrip);
                       },
                     ),
@@ -288,12 +297,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     TripConfigPanel(
                       mode: ref.watch(appUIModeNotifierProvider),
                     ),
-                  ],
-
-                  // === LOADING (Trip wird generiert) ===
-                  if (isGenerating) ...[
-                    const SizedBox(height: 12),
-                    const GeneratingIndicator(),
                   ],
 
                   // === POST-GENERIERUNG: Kompakte Info-Leiste ===
@@ -321,13 +324,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       },
                     ),
                   ],
-
                 ],
               ),
             ),
           ),
-
-
+          // Dominantes Vollbild-Ladeoverlay waehrend Routenberechnung
+          if (isGenerating)
+            const Positioned.fill(child: GenerationProgressIndicator()),
         ],
       ),
     );
@@ -371,9 +374,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
 
     ref.read(locationWeatherNotifierProvider.notifier).loadWeatherForLocation(
-      location,
-      locationName: locationName,
-    );
+          location,
+          locationName: locationName,
+        );
   }
 
   /// Zeigt Europa-Zentrum als Fallback

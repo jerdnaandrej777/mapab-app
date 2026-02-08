@@ -5,7 +5,6 @@ class POIActionButtons extends StatelessWidget {
   final String poiId;
   final bool isLoading;
   final bool canDelete;
-  final VoidCallback? onPhotos;
   final VoidCallback onReroll;
   final VoidCallback onDelete;
 
@@ -14,7 +13,6 @@ class POIActionButtons extends StatelessWidget {
     required this.poiId,
     required this.isLoading,
     required this.canDelete,
-    this.onPhotos,
     required this.onReroll,
     required this.onDelete,
   });
@@ -26,16 +24,6 @@ class POIActionButtons extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (onPhotos != null)
-          _ActionButton(
-            icon: Icons.photo_library_outlined,
-            color: colorScheme.secondary,
-            isLoading: false,
-            isDisabled: isLoading,
-            onTap: onPhotos!,
-            tooltip: 'Fotos',
-          ),
-        if (onPhotos != null) const SizedBox(width: 4),
         // Delete Button
         if (canDelete)
           _ActionButton(

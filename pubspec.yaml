@@ -1,7 +1,7 @@
 ﻿name: travel_planner
 description: Eine europÃ¤ische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.10.32+215
+version: 1.10.33+216
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -108,5 +108,6 @@ flutter:
   assets:
     - assets/data/
     - assets/images/
+
 
 

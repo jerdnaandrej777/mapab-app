@@ -11,8 +11,10 @@ import '../../data/models/poi.dart';
 import '../../data/models/route.dart';
 import '../../data/providers/favorites_provider.dart';
 import '../../data/providers/poi_social_provider.dart';
+import '../../data/providers/auth_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../random_trip/providers/random_trip_state.dart';
+import '../social/widgets/publish_poi_sheet.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'providers/poi_state_provider.dart';
 import 'widgets/poi_rating_widget.dart';
@@ -80,7 +82,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                    Icon(Icons.error_outline,
+                        size: 48, color: colorScheme.error),
                     const SizedBox(height: 16),
                     Text(context.l10n.poiNotFound),
                     const SizedBox(height: 16),
@@ -228,6 +231,18 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               color: colorScheme.surface,
               shape: BoxShape.circle,
             ),
+            child: Icon(Icons.public, color: colorScheme.onSurface),
+          ),
+          tooltip: 'POI veroeffentlichen',
+          onPressed: () => _openPublishPoiSheet(poi),
+        ),
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              shape: BoxShape.circle,
+            ),
             child: Icon(Icons.share, color: colorScheme.onSurface),
           ),
           onPressed: () {
@@ -250,7 +265,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                     imageUrl: poi.imageUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => _buildImagePlaceholder(poi),
-                    errorWidget: (context, url, error) => _buildImagePlaceholder(poi),
+                    errorWidget: (context, url, error) =>
+                        _buildImagePlaceholder(poi),
                   )
                 : _buildImagePlaceholder(poi),
 
@@ -288,7 +304,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: 8),
-                      Text(context.l10n.poiLoadingDetails, style: const TextStyle(fontSize: 12)),
+                      Text(context.l10n.poiLoadingDetails,
+                          style: const TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -352,7 +369,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(h.icon, style: const TextStyle(fontSize: 10)),
+                              Text(h.icon,
+                                  style: const TextStyle(fontSize: 10)),
                               const SizedBox(width: 4),
                               Text(
                                 h.label,
@@ -376,7 +394,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   children: [
                     if (poi.foundedYear != null)
                       Chip(
-                        label: Text(context.l10n.poiFoundedYear(poi.foundedYear!)),
+                        label:
+                            Text(context.l10n.poiFoundedYear(poi.foundedYear!)),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: EdgeInsets.zero,
                         labelStyle: const TextStyle(fontSize: 12),
@@ -398,7 +417,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     );
   }
 
-  Widget _buildRatingSection(POI poi, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildRatingSection(
+      POI poi, ThemeData theme, ColorScheme colorScheme) {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
@@ -416,17 +436,22 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
               Row(
                 children: List.generate(5, (index) {
                   if (index < poi.starRating.floor()) {
-                    return const Icon(Icons.star, size: 20, color: Colors.amber);
+                    return const Icon(Icons.star,
+                        size: 20, color: Colors.amber);
                   } else if (index < poi.starRating) {
-                    return const Icon(Icons.star_half, size: 20, color: Colors.amber);
+                    return const Icon(Icons.star_half,
+                        size: 20, color: Colors.amber);
                   }
-                  return Icon(Icons.star_border, size: 20,
-                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade300);
+                  return Icon(Icons.star_border,
+                      size: 20,
+                      color:
+                          isDark ? Colors.grey.shade600 : Colors.grey.shade300);
                 }),
               ),
               const SizedBox(height: 4),
               Text(
-                context.l10n.poiRating(poi.starRating.toStringAsFixed(1), poi.reviewCount),
+                context.l10n.poiRating(
+                    poi.starRating.toStringAsFixed(1), poi.reviewCount),
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -449,7 +474,9 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
                   const Icon(Icons.verified, size: 16, color: Colors.green),
                   const SizedBox(width: 4),
                   Text(
-                    poi.isCurated ? context.l10n.poiCurated : context.l10n.poiVerified,
+                    poi.isCurated
+                        ? context.l10n.poiCurated
+                        : context.l10n.poiVerified,
                     style: const TextStyle(
                       color: Colors.green,
                       fontSize: 12,
@@ -537,7 +564,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     );
   }
 
-  Widget _buildDescriptionSection(POI poi, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildDescriptionSection(
+      POI poi, ThemeData theme, ColorScheme colorScheme) {
     final description = poi.description ?? poi.wikidataDescription;
     final hasDescription = description != null && description.isNotEmpty;
 
@@ -599,7 +627,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     );
   }
 
-  Widget _buildContactSection(POI poi, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildContactSection(
+      POI poi, ThemeData theme, ColorScheme colorScheme) {
     final hasContact = poi.openingHours != null ||
         poi.phone != null ||
         poi.website != null ||
@@ -684,7 +713,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         ),
       ),
       trailing: onTap != null
-          ? Icon(Icons.open_in_new, size: 18, color: colorScheme.onSurfaceVariant)
+          ? Icon(Icons.open_in_new,
+              size: 18, color: colorScheme.onSurfaceVariant)
           : null,
       onTap: onTap,
     );
@@ -713,7 +743,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       final randomTripState = ref.read(randomTripNotifierProvider);
       if (randomTripState.generatedTrip != null &&
           (randomTripState.step == RandomTripStep.preview ||
-           randomTripState.step == RandomTripStep.confirmed)) {
+              randomTripState.step == RandomTripStep.confirmed)) {
         aiRoute = randomTripState.generatedTrip!.trip.route;
         aiStops = randomTripState.generatedTrip!.selectedPOIs;
       }
@@ -789,7 +819,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         Row(
           children: [
             Icon(Icons.photo_library_outlined,
-                 size: 20, color: colorScheme.primary),
+                size: 20, color: colorScheme.primary),
             const SizedBox(width: 8),
             Text(
               context.l10n.poiPhotos,
@@ -821,6 +851,22 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _openPublishPoiSheet(POI poi) async {
+    final authState = ref.read(authNotifierProvider);
+    if (!authState.isAuthenticated) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte zuerst einloggen, um POIs zu veroeffentlichen.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await PublishPoiSheet.show(context, poi);
   }
 
   /// Bewertungs-Widget mit Sternen und "Bewerten"-Button
@@ -858,7 +904,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
         Row(
           children: [
             Icon(Icons.rate_review_outlined,
-                 size: 20, color: colorScheme.primary),
+                size: 20, color: colorScheme.primary),
             const SizedBox(width: 8),
             Text(
               context.l10n.poiReviews,
@@ -875,7 +921,9 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
           poiId: poi.id,
           reviews: socialState.reviews,
           onHelpfulTap: (reviewId) {
-            ref.read(pOISocialNotifierProvider(poi.id).notifier).voteHelpful(reviewId);
+            ref
+                .read(pOISocialNotifierProvider(poi.id).notifier)
+                .voteHelpful(reviewId);
           },
         ),
       ],

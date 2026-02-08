@@ -22,6 +22,8 @@ part 'trip_generator_repo.g.dart';
 /// Repository für die Generierung von Zufalls-Trips
 /// Kombiniert POI-Auswahl, Route-Optimierung und Tagesplanung
 class TripGeneratorRepository {
+  static const double _minDestinationDistanceKm = 3.0;
+
   final POIRepository _poiRepo;
   final RoutingRepository _routingRepo;
   final HotelService _hotelService;
@@ -64,9 +66,25 @@ class TripGeneratorRepository {
     String? destinationAddress,
     WeatherCondition? weatherCondition,
   }) async {
-    final hasDestination = destinationLocation != null;
-    final endLocation = destinationLocation ?? startLocation;
-    final endAddress = destinationAddress ?? startAddress;
+    final destinationDistanceKm = destinationLocation != null
+        ? GeoUtils.haversineDistance(startLocation, destinationLocation)
+        : 0.0;
+    final hasDestination = destinationLocation != null &&
+        destinationDistanceKm >= _minDestinationDistanceKm;
+    if (destinationLocation != null && !hasDestination) {
+      debugPrint(
+        '[TripGenerator] Tagestrip: Ziel zu nah '
+        '(${destinationDistanceKm.toStringAsFixed(2)}km < '
+        '${_minDestinationDistanceKm.toStringAsFixed(0)}km) -> Rundreise-Modus',
+      );
+    }
+    final endLocation = hasDestination ? destinationLocation : startLocation;
+    final endAddress =
+        hasDestination ? (destinationAddress ?? startAddress) : startAddress;
+    debugPrint(
+      '[TripGenerator] Tagestrip Modus: ${hasDestination ? 'Korridor' : 'Rundreise'} '
+      '(Ziel aktiv: ${destinationLocation != null}, effektiv: $hasDestination)',
+    );
 
     // 1. POIs laden — Korridor oder Radius
     final categoryIds = _normalizeCategoryIds(
@@ -74,20 +92,31 @@ class TripGeneratorRepository {
     );
 
     List<POI> availablePOIs;
-    if (hasDestination) {
-      debugPrint(
-          '[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
-      availablePOIs = await _loadPOIsAlongCorridor(
-        start: startLocation,
-        end: endLocation,
-        bufferKm: radiusKm,
-        categoryFilter: categoryIds,
+    try {
+      if (hasDestination) {
+        debugPrint(
+            '[TripGenerator] Tagestrip Korridor-Modus: $startAddress → $endAddress, ${radiusKm}km Breite');
+        availablePOIs = await _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: radiusKm,
+          categoryFilter: categoryIds,
+        );
+      } else {
+        availablePOIs = await _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: radiusKm,
+          categoryFilter: categoryIds,
+        );
+      }
+    } on RoutingException catch (e) {
+      throw TripGenerationException(
+        'POI-Suche fehlgeschlagen: Routenkorridor nicht verfuegbar. '
+        'Bitte Ziel pruefen oder ohne Ziel starten. (${e.message})',
       );
-    } else {
-      availablePOIs = await _poiRepo.loadPOIsInRadius(
-        center: startLocation,
-        radiusKm: radiusKm,
-        categoryFilter: categoryIds,
+    } catch (e) {
+      throw TripGenerationException(
+        'POI-Suche fehlgeschlagen. Bitte Einstellungen pruefen und erneut versuchen. ($e)',
       );
     }
 
@@ -1665,12 +1694,30 @@ class TripGeneratorRepository {
   }) async {
     // 1. Direct-Route berechnen (für genaue Korridor-Box)
     debugPrint('[TripGenerator] Berechne Direct-Route für Korridor...');
-    final directRoute = await _routingRepo.calculateFastRoute(
-      start: start,
-      end: end,
-      startAddress: '',
-      endAddress: '',
-    );
+    AppRoute directRoute;
+    try {
+      directRoute = await _routingRepo.calculateFastRoute(
+        start: start,
+        end: end,
+        startAddress: '',
+        endAddress: '',
+      );
+    } on RoutingException catch (e) {
+      final fallbackDistance = GeoUtils.haversineDistance(start, end);
+      debugPrint(
+        '[TripGenerator] Korridor Direct-Route fehlgeschlagen, geometrischer Fallback aktiv: ${e.message}',
+      );
+      directRoute = AppRoute(
+        start: start,
+        end: end,
+        startAddress: '',
+        endAddress: '',
+        coordinates: [start, end],
+        distanceKm: fallbackDistance,
+        durationMinutes: max(1, fallbackDistance.round()),
+        type: RouteType.fast,
+      );
+    }
 
     // 2. Bounding Box entlang der Route mit Buffer
     final bounds = GeoUtils.calculateBoundsWithBuffer(
@@ -1705,7 +1752,7 @@ class TripGeneratorRepository {
 
     debugPrint(
       '[TripGenerator] Korridor-Filter: ${poisInBounds.length} -> ${filtered.length} '
-      '(max Detour ${bufferKm.toStringAsFixed(0)}km)',
+      '(max Detour ${bufferKm.toStringAsFixed(0)}km, routePoints=${directRoute.coordinates.length})',
     );
 
     return filtered;

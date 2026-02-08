@@ -6,7 +6,6 @@ import '../../../core/constants/categories.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
 import '../../map/widgets/weather_badge_unified.dart';
-import '../../poi/widgets/poi_photo_actions.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/widgets/poi_reroll_button.dart';
 
@@ -140,7 +139,6 @@ class EditablePOICard extends ConsumerWidget {
                   poiId: stop.poiId,
                   isLoading: isLoading,
                   canDelete: canDelete,
-                  onPhotos: () => _openPhotoActions(context),
                   onReroll: onReroll,
                   onDelete: onDelete,
                 ),
@@ -197,17 +195,5 @@ class EditablePOICard extends ConsumerWidget {
       poiNotifier.addPOI(poi);
     }
     context.push('/poi/${stop.poiId}');
-  }
-
-  void _openPhotoActions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: POIPhotoActions(poiId: stop.poiId),
-      ),
-    );
   }
 }

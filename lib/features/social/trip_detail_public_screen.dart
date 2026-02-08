@@ -14,7 +14,6 @@ import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
-import '../poi/widgets/poi_photo_actions.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/trip_photo_gallery.dart';
 
@@ -491,15 +490,7 @@ class _TripDetailPublicScreenState
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: poiId == null
-          ? null
-          : SizedBox(
-              width: 92,
-              child: POIPhotoActions(
-                poiId: poiId,
-                compact: true,
-              ),
-            ),
+      trailing: null,
       onTap: poiId == null ? null : () => context.push('/poi/$poiId'),
     );
   }

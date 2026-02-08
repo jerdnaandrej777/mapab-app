@@ -10,6 +10,7 @@ import '../../../core/constants/trip_constants.dart';
 import '../../../data/providers/active_trip_provider.dart';
 import '../../../data/repositories/geocoding_repo.dart';
 import '../../../data/repositories/trip_generator_repo.dart';
+import '../../../data/repositories/routing_repo.dart';
 import '../../../data/services/active_trip_service.dart';
 import '../../../data/services/hotel_service.dart';
 import '../../map/providers/map_controller_provider.dart';
@@ -423,6 +424,17 @@ class RandomTripNotifier extends _$RandomTripNotifier {
         step: RandomTripStep.config,
         isLoading: false,
         error: e.message,
+        generationPhase: GenerationPhase.idle,
+        generationProgress: 0.0,
+      );
+    } on RoutingException catch (e, stackTrace) {
+      debugPrint('[RandomTrip] RoutingException: ${e.message}');
+      debugPrint('[RandomTrip] StackTrace: $stackTrace');
+      state = state.copyWith(
+        step: RandomTripStep.config,
+        isLoading: false,
+        error:
+            'Routenberechnung fehlgeschlagen. Bitte Radius/Ziel anpassen und erneut versuchen.',
         generationPhase: GenerationPhase.idle,
         generationProgress: 0.0,
       );

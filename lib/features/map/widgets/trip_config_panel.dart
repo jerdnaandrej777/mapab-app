@@ -75,7 +75,8 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
 
   void _selectSuggestion(GeocodingResult result) {
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    notifier.setStartLocation(result.location, result.shortName ?? result.displayName);
+    notifier.setStartLocation(
+        result.location, result.shortName ?? result.displayName);
     _addressController.text = result.shortName ?? result.displayName;
     setState(() => _suggestions = []);
     _focusNode.unfocus();
@@ -83,7 +84,24 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
 
   /// Suche für Ziel-Adresse
   Future<void> _searchDestination(String query) async {
+    final notifier = ref.read(randomTripNotifierProvider.notifier);
+    final tripState = ref.read(randomTripNotifierProvider);
+    final trimmed = query.trim();
+
+    if (trimmed.isEmpty) {
+      if (tripState.hasDestination) {
+        notifier.clearDestination();
+      }
+      setState(() => _destinationSuggestions = []);
+      return;
+    }
+
     if (query.length < 3) {
+      if (tripState.hasDestination &&
+          (tripState.destinationAddress ?? '').trim().toLowerCase() !=
+              trimmed.toLowerCase()) {
+        notifier.clearDestination();
+      }
       setState(() => _destinationSuggestions = []);
       return;
     }
@@ -107,7 +125,8 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
 
   void _selectDestinationSuggestion(GeocodingResult result) {
     final notifier = ref.read(randomTripNotifierProvider.notifier);
-    notifier.setDestination(result.location, result.shortName ?? result.displayName);
+    notifier.setDestination(
+        result.location, result.shortName ?? result.displayName);
     _destinationController.text = result.shortName ?? result.displayName;
     setState(() => _destinationSuggestions = []);
     _destinationFocusNode.unfocus();
@@ -121,24 +140,25 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     if (!serviceEnabled) {
       if (!mounted) return false;
       final shouldOpen = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(context.l10n.gpsDisabledTitle),
-          content: Text(
-            context.l10n.gpsDisabledMessage,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.no),
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(context.l10n.gpsDisabledTitle),
+              content: Text(
+                context.l10n.gpsDisabledMessage,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(context.l10n.no),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(context.l10n.openSettings),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.openSettings),
-            ),
-          ],
-        ),
-      ) ?? false;
+          ) ??
+          false;
       if (shouldOpen) {
         await LocationHelper.openSettings();
         await Future.delayed(const Duration(milliseconds: 500));
@@ -161,24 +181,25 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     if (permission == LocationPermission.deniedForever) {
       if (!mounted) return false;
       final shouldOpen = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(context.l10n.gpsPermissionDeniedForeverTitle),
-          content: Text(
-            context.l10n.gpsPermissionDeniedForeverMessage,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.cancel),
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(context.l10n.gpsPermissionDeniedForeverTitle),
+              content: Text(
+                context.l10n.gpsPermissionDeniedForeverMessage,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(context.l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(context.l10n.appSettingsButton),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.appSettingsButton),
-            ),
-          ],
-        ),
-      ) ?? false;
+          ) ??
+          false;
       if (shouldOpen) {
         await LocationHelper.openAppSettings();
       }
@@ -317,7 +338,8 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     if (state.startAddress != null && _addressController.text.isEmpty) {
       _addressController.text = state.startAddress!;
     }
-    if (state.destinationAddress != null && _destinationController.text.isEmpty) {
+    if (state.destinationAddress != null &&
+        _destinationController.text.isEmpty) {
       _destinationController.text = state.destinationAddress!;
     }
 
@@ -332,336 +354,348 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     }
 
     final content = Column(
-            mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Wetter-Widget (v1.7.20 - innerhalb des Panels, nutzt eigenes margin)
+        const UnifiedWeatherWidget(),
+
+        // Startadresse (kompakt mit inline GPS-Button)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          // Wetter-Widget (v1.7.20 - innerhalb des Panels, nutzt eigenes margin)
-          const UnifiedWeatherWidget(),
-
-          // Startadresse (kompakt mit inline GPS-Button)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Label + GPS-Button in einer Zeile
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: colorScheme.primary),
-                    const SizedBox(width: 6),
-                    Text(
-                      context.l10n.start,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: colorScheme.onSurface,
-                      ),
+              // Label + GPS-Button in einer Zeile
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 16, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    context.l10n.start,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: colorScheme.onSurface,
                     ),
-                    const Spacer(),
-                    // Kompakter GPS-Button inline
-                    InkWell(
-                      onTap: state.isLoading ? null : _handleGPSButtonTap,
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
+                  ),
+                  const Spacer(),
+                  // Kompakter GPS-Button inline
+                  InkWell(
+                    onTap: state.isLoading ? null : _handleGPSButtonTap,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: state.useGPS && state.hasValidStart
+                            ? colorScheme.primaryContainer
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
                           color: state.useGPS && state.hasValidStart
-                              ? colorScheme.primaryContainer
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: state.useGPS && state.hasValidStart
-                                ? colorScheme.primary
-                                : colorScheme.outline.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (state.isLoading && state.useGPS)
-                              SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.primary,
-                                ),
-                              )
-                            else
-                              Icon(
-                                Icons.my_location,
-                                size: 13,
-                                color: state.useGPS && state.hasValidStart
-                                    ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant,
-                              ),
-                            const SizedBox(width: 4),
-                            Text(
-                              state.useGPS && state.startAddress != null
-                                  ? state.startAddress!
-                                  : 'GPS',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: state.useGPS && state.hasValidStart
-                                    ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Adress-Eingabe
-                Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: state.hasValidStart && !state.useGPS
-                          ? colorScheme.primary
-                          : colorScheme.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _addressController,
-                        focusNode: _focusNode,
-                        style: const TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: context.l10n.mapCityOrAddress,
-                          hintStyle: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
-                          prefixIcon: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
-                          suffixIcon: _isSearching
-                              ? const Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                )
-                              : _addressController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 16),
-                                      onPressed: () {
-                                        _addressController.clear();
-                                        setState(() => _suggestions = []);
-                                      },
-                                    )
-                                  : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          isDense: true,
-                        ),
-                        onChanged: _searchAddress,
-                      ),
-                      // Vorschläge
-                      if (_suggestions.isNotEmpty)
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 150),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
-                            ),
-                          ),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: _suggestions.length,
-                            itemBuilder: (context, index) {
-                              final result = _suggestions[index];
-                              return InkWell(
-                                onTap: () => _selectSuggestion(result),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.location_on, size: 14, color: colorScheme.primary),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          result.shortName ?? result.displayName,
-                                          style: const TextStyle(fontSize: 12),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
-
-          // Ziel-Eingabe (kompakt - öffnet BottomSheet)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: InkWell(
-              onTap: () => _showDestinationSheet(context, state, notifier, colorScheme),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: state.hasDestination
-                        ? colorScheme.primary
-                        : colorScheme.outline.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.flag,
-                      size: 16,
-                      color: state.hasDestination
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        state.hasDestination
-                            ? state.destinationAddress!
-                            : context.l10n.mapAddDestination,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: state.hasDestination
-                              ? colorScheme.onSurface
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (state.hasDestination)
-                      GestureDetector(
-                        onTap: () {
-                          notifier.clearDestination();
-                          _destinationController.clear();
-                          setState(() => _destinationSuggestions = []);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Icon(Icons.close, size: 16, color: colorScheme.error),
-                        ),
-                      )
-                    else
-                      Icon(Icons.arrow_forward_ios, size: 14, color: colorScheme.onSurfaceVariant),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
-
-          // Radius Slider (kompakt)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: _CompactRadiusSlider(state: state, notifier: notifier),
-          ),
-
-          Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
-
-          // Kategorien (Modal-basiert, v1.7.20)
-          _CompactCategorySelector(
-            state: state,
-            notifier: notifier,
-          ),
-
-          // Generate Button oder Navigation starten (wenn Route aus Favoriten geladen)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: SizedBox(
-              width: double.infinity,
-              child: tripHasRoute
-                  // Navigation starten Button (wenn Route aus Favoriten geladen)
-                  ? FilledButton.icon(
-                      onPressed: () => context.push(
-                        '/navigation',
-                        extra: {
-                          'route': tripState.route,
-                          'stops': tripState.stops
-                              .asMap()
-                              .entries
-                              .map((e) => TripStop.fromPOI(e.value, order: e.key))
-                              .toList(),
-                        },
-                      ),
-                      icon: const Icon(Icons.navigation),
-                      label: Text(context.l10n.tripInfoStartNavigation),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    )
-                  // Überrasch mich! Button (wenn keine Route geladen)
-                  : ElevatedButton(
-                      onPressed: state.isLoading ? null : _handleGenerateTrip,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                              ? colorScheme.primary
+                              : colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🎲', style: TextStyle(fontSize: 16)),
-                          const SizedBox(width: 8),
-                          Text(
-                            context.l10n.mapSurpriseMe,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          if (state.isLoading && state.useGPS)
+                            SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colorScheme.primary,
+                              ),
+                            )
+                          else
+                            Icon(
+                              Icons.my_location,
+                              size: 13,
+                              color: state.useGPS && state.hasValidStart
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
                             ),
+                          const SizedBox(width: 4),
+                          Text(
+                            state.useGPS && state.startAddress != null
+                                ? state.startAddress!
+                                : 'GPS',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: state.useGPS && state.hasValidStart
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-            ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Adress-Eingabe
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: state.hasValidStart && !state.useGPS
+                        ? colorScheme.primary
+                        : colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _addressController,
+                      focusNode: _focusNode,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.mapCityOrAddress,
+                        hintStyle: TextStyle(
+                            fontSize: 13, color: colorScheme.onSurfaceVariant),
+                        prefixIcon: Icon(Icons.search,
+                            size: 18, color: colorScheme.onSurfaceVariant),
+                        suffixIcon: _isSearching
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : _addressController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    onPressed: () {
+                                      _addressController.clear();
+                                      setState(() => _suggestions = []);
+                                    },
+                                  )
+                                : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        isDense: true,
+                      ),
+                      onChanged: _searchAddress,
+                    ),
+                    // Vorschläge
+                    if (_suggestions.isNotEmpty)
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 150),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                                color:
+                                    colorScheme.outline.withValues(alpha: 0.2)),
+                          ),
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _suggestions.length,
+                          itemBuilder: (context, index) {
+                            final result = _suggestions[index];
+                            return InkWell(
+                              onTap: () => _selectSuggestion(result),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_on,
+                                        size: 14, color: colorScheme.primary),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        result.shortName ?? result.displayName,
+                                        style: const TextStyle(fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
 
-          // Route löschen Button (v1.7.25 - ins Panel verschoben, damit nicht abgeschnitten)
-          if (state.step == RandomTripStep.preview ||
-              state.step == RandomTripStep.confirmed ||
-              tripHasRoute) ...[
-            Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: RouteClearButton(
-                onClear: () {
-                  ref.read(randomTripNotifierProvider.notifier).reset();
-                  ref.read(routePlannerProvider.notifier).clearRoute();
-                  ref.read(tripStateProvider.notifier).clearAll();
-                },
+        Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
+
+        // Ziel-Eingabe (kompakt - öffnet BottomSheet)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: InkWell(
+            onTap: () =>
+                _showDestinationSheet(context, state, notifier, colorScheme),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: state.hasDestination
+                      ? colorScheme.primary
+                      : colorScheme.outline.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flag,
+                    size: 16,
+                    color: state.hasDestination
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state.hasDestination
+                          ? state.destinationAddress!
+                          : context.l10n.mapAddDestination,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: state.hasDestination
+                            ? colorScheme.onSurface
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (state.hasDestination)
+                    GestureDetector(
+                      onTap: () {
+                        notifier.clearDestination();
+                        _destinationController.clear();
+                        setState(() => _destinationSuggestions = []);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(Icons.close,
+                            size: 16, color: colorScheme.error),
+                      ),
+                    )
+                  else
+                    Icon(Icons.arrow_forward_ios,
+                        size: 14, color: colorScheme.onSurfaceVariant),
+                ],
               ),
             ),
-          ],
-            ],
-          );
+          ),
+        ),
+
+        Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
+
+        // Radius Slider (kompakt)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: _CompactRadiusSlider(state: state, notifier: notifier),
+        ),
+
+        Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
+
+        // Kategorien (Modal-basiert, v1.7.20)
+        _CompactCategorySelector(
+          state: state,
+          notifier: notifier,
+        ),
+
+        // Generate Button oder Navigation starten (wenn Route aus Favoriten geladen)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: SizedBox(
+            width: double.infinity,
+            child: tripHasRoute
+                // Navigation starten Button (wenn Route aus Favoriten geladen)
+                ? FilledButton.icon(
+                    onPressed: () => context.push(
+                      '/navigation',
+                      extra: {
+                        'route': tripState.route,
+                        'stops': tripState.stops
+                            .asMap()
+                            .entries
+                            .map((e) => TripStop.fromPOI(e.value, order: e.key))
+                            .toList(),
+                      },
+                    ),
+                    icon: const Icon(Icons.navigation),
+                    label: Text(context.l10n.tripInfoStartNavigation),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  )
+                // Überrasch mich! Button (wenn keine Route geladen)
+                : ElevatedButton(
+                    onPressed: state.isLoading ? null : _handleGenerateTrip,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('🎲', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Text(
+                          context.l10n.mapSurpriseMe,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+
+        // Route löschen Button (v1.7.25 - ins Panel verschoben, damit nicht abgeschnitten)
+        if (state.step == RandomTripStep.preview ||
+            state.step == RandomTripStep.confirmed ||
+            tripHasRoute) ...[
+          Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: RouteClearButton(
+              onClear: () {
+                ref.read(randomTripNotifierProvider.notifier).reset();
+                ref.read(routePlannerProvider.notifier).clearRoute();
+                ref.read(tripStateProvider.notifier).clearAll();
+              },
+            ),
+          ),
+        ],
+      ],
+    );
 
     // bare-Modus: Nur Column-Inhalt ohne Container/Scroll
     if (widget.bare) {
@@ -783,7 +817,8 @@ class _CompactRadiusSlider extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 16, color: colorScheme.primary),
+                Icon(Icons.calendar_today,
+                    size: 16, color: colorScheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   context.l10n.travelDuration,
@@ -838,7 +873,8 @@ class _CompactRadiusSlider extends StatelessWidget {
               value: currentDays.toDouble(),
               min: TripConstants.euroTripMinDays.toDouble(),
               max: TripConstants.euroTripMaxDays.toDouble(),
-              divisions: TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
+              divisions:
+                  TripConstants.euroTripMaxDays - TripConstants.euroTripMinDays,
               onChanged: (value) => notifier.setDays(value.round()),
               onChangeEnd: (value) => notifier.setEuroTripDays(value.round()),
             ),
@@ -854,10 +890,14 @@ class _CompactRadiusSlider extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
+                  color: isSelected
+                      ? colorScheme.primaryContainer
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isSelected ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.2),
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Text(
@@ -865,7 +905,9 @@ class _CompactRadiusSlider extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -952,10 +994,14 @@ class _CompactRadiusSlider extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
+                  color: isSelected
+                      ? colorScheme.primaryContainer
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isSelected ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.2),
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Text(
@@ -963,7 +1009,9 @@ class _CompactRadiusSlider extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -997,7 +1045,8 @@ class _CompactCategorySelector extends StatelessWidget {
   void _showCategoryModal(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final tripCategories = POICategory.values
-        .where((cat) => cat != POICategory.hotel && cat != POICategory.restaurant)
+        .where(
+            (cat) => cat != POICategory.hotel && cat != POICategory.restaurant)
         .toList();
 
     showModalBottomSheet(
@@ -1018,154 +1067,168 @@ class _CompactCategorySelector extends StatelessWidget {
             return Container(
               decoration: BoxDecoration(
                 color: colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: SingleChildScrollView(
                 controller: scrollController,
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.category, color: colorScheme.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          context.l10n.mapPoiCategories,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: colorScheme.onSurface,
-                          ),
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.category,
+                                color: colorScheme.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.mapPoiCategories,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (liveState.selectedCategories.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              liveNotifier.setCategories([]);
+                            },
+                            child: Text(context.l10n.mapResetAll),
+                          ),
                       ],
                     ),
-                    if (liveState.selectedCategories.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          liveNotifier.setCategories([]);
-                        },
-                        child: Text(context.l10n.mapResetAll),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  liveState.selectedCategories.isEmpty
-                      ? context.l10n.mapAllCategoriesSelected
-                      : context.l10n.mapCategoriesSelected('${liveState.selectedCategoryCount}', '${tripCategories.length}'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Kategorien Grid
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: tripCategories.map((category) {
-                    final isSelected = liveState.selectedCategories.contains(category);
-                    return Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        onTap: () => liveNotifier.toggleCategory(category),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 100),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? colorScheme.primary
-                                : colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : colorScheme.outline.withValues(alpha: 0.3),
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: colorScheme.primary.withValues(alpha: 0.3),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(category.icon, style: const TextStyle(fontSize: 16)),
-                              const SizedBox(width: 6),
-                              if (isSelected) ...[
-                                Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: colorScheme.onPrimary,
-                                ),
-                                const SizedBox(width: 2),
-                              ],
-                              Text(
-                                category.localizedLabel(context),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                // Schließen Button
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 4),
+                    Text(
+                      liveState.selectedCategories.isEmpty
+                          ? context.l10n.mapAllCategoriesSelected
+                          : context.l10n.mapCategoriesSelected(
+                              '${liveState.selectedCategoryCount}',
+                              '${tripCategories.length}'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    child: Text(context.l10n.done),
-                  ),
+                    const SizedBox(height: 20),
+                    // Kategorien Grid
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: tripCategories.map((category) {
+                        final isSelected =
+                            liveState.selectedCategories.contains(category);
+                        return Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            onTap: () => liveNotifier.toggleCategory(category),
+                            borderRadius: BorderRadius.circular(20),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 100),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? colorScheme.primary
+                                      : colorScheme.outline
+                                          .withValues(alpha: 0.3),
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: colorScheme.primary
+                                              .withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(category.icon,
+                                      style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 6),
+                                  if (isSelected) ...[
+                                    Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: colorScheme.onPrimary,
+                                    ),
+                                    const SizedBox(width: 2),
+                                  ],
+                                  Text(
+                                    category.localizedLabel(context),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? colorScheme.onPrimary
+                                          : colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    // Schließen Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(context.l10n.done),
+                      ),
+                    ),
+                    // Safe area padding
+                    SizedBox(height: MediaQuery.of(context).padding.bottom),
+                  ],
                 ),
-                // Safe area padding
-                SizedBox(height: MediaQuery.of(context).padding.bottom),
-              ],
-            ),
-          ),
-        );
-      },
-    ),
-  ),
-);
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -1197,7 +1260,8 @@ class _CompactCategorySelector extends StatelessWidget {
                   child: Text(
                     state.selectedCategories.isEmpty
                         ? context.l10n.all
-                        : context.l10n.selectedCount(state.selectedCategoryCount),
+                        : context.l10n
+                            .selectedCount(state.selectedCategoryCount),
                     style: TextStyle(
                       fontSize: 12,
                       color: colorScheme.onSurfaceVariant,
@@ -1288,7 +1352,9 @@ class _DestinationSheetContent extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onClear,
                     icon: Icon(Icons.close, size: 16, color: colorScheme.error),
-                    label: Text(context.l10n.remove, style: TextStyle(color: colorScheme.error, fontSize: 13)),
+                    label: Text(context.l10n.remove,
+                        style:
+                            TextStyle(color: colorScheme.error, fontSize: 13)),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.compact,
@@ -1315,12 +1381,17 @@ class _DestinationSheetContent extends StatelessWidget {
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: context.l10n.enterDestination,
-                  hintStyle: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
-                  prefixIcon: Icon(Icons.search, size: 20, color: colorScheme.onSurfaceVariant),
+                  hintStyle: TextStyle(
+                      fontSize: 14, color: colorScheme.onSurfaceVariant),
+                  prefixIcon: Icon(Icons.search,
+                      size: 20, color: colorScheme.onSurfaceVariant),
                   suffixIcon: isSearching
                       ? const Padding(
                           padding: EdgeInsets.all(10),
-                          child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2)),
                         )
                       : destinationController.text.isNotEmpty
                           ? IconButton(
@@ -1332,7 +1403,8 @@ class _DestinationSheetContent extends StatelessWidget {
                             )
                           : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   isDense: true,
                 ),
                 onChanged: onSearch,
@@ -1346,7 +1418,8 @@ class _DestinationSheetContent extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.2)),
                       ),
                       child: ListView.builder(
                         itemCount: suggestions.length,
@@ -1355,10 +1428,12 @@ class _DestinationSheetContent extends StatelessWidget {
                           return InkWell(
                             onTap: () => onSelect(result),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
                               child: Row(
                                 children: [
-                                  Icon(Icons.flag, size: 16, color: colorScheme.primary),
+                                  Icon(Icons.flag,
+                                      size: 16, color: colorScheme.primary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(

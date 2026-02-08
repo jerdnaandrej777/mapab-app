@@ -344,6 +344,38 @@ class SocialRepository {
     }
   }
 
+  /// POI-Post veroeffentlichen
+  Future<PublicPoiPost?> publishPOI({
+    required String poiId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    bool isMustSee = false,
+    String? coverPhotoPath,
+  }) async {
+    try {
+      final response = await _client.rpc('publish_poi_post', params: {
+        'p_poi_id': poiId,
+        'p_title': title,
+        'p_content': content,
+        'p_categories': categories ?? <String>[],
+        'p_is_must_see': isMustSee,
+        'p_cover_photo_path': coverPhotoPath,
+      });
+
+      if (response is List && response.isNotEmpty) {
+        return _parsePublicPoiRow(response.first as Map<String, dynamic>);
+      }
+      if (response is Map<String, dynamic>) {
+        return _parsePublicPoiRow(response);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[Social] POI Veroeffentlichen FEHLER: $e');
+      rethrow;
+    }
+  }
+
   /// Eigenen Trip loeschen
   Future<bool> deletePublishedTrip(String tripId) async {
     try {
