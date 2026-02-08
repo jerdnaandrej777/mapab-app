@@ -13,6 +13,7 @@ import '../../data/providers/gallery_provider.dart';
 import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
+import '../poi/providers/poi_state_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/trip_photo_gallery.dart';
@@ -414,29 +415,18 @@ class _TripDetailPublicScreenState
   }
 
   Widget _buildPoiPreviewSection(PublicTrip trip) {
-    final tripData = trip.tripData;
-    final dynamicStops = (tripData?['stops'] as List<dynamic>?) ?? const [];
-    if (dynamicStops.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final stops = dynamicStops
-        .whereType<Map<String, dynamic>>()
-        .where((s) => (s['categoryId'] ?? s['category_id']) != 'hotel')
+    final stops = _extractTripStops(trip.tripData)
+        .where((s) => _stopCategoryId(s) != 'hotel')
         .toList();
     if (stops.isEmpty) return const SizedBox.shrink();
 
     final byCategory = <String, List<Map<String, dynamic>>>{};
     for (final stop in stops) {
-      final category =
-          (stop['categoryId'] ?? stop['category_id'] ?? 'attraction')
-              .toString();
+      final category = _stopCategoryId(stop);
       byCategory.putIfAbsent(category, () => []).add(stop);
     }
 
-    final mustSee = stops
-        .where((s) => (s['isMustSee'] ?? s['is_must_see']) == true)
-        .toList();
+    final mustSee = stops.where(_stopIsMustSee).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,22 +466,31 @@ class _TripDetailPublicScreenState
   }
 
   Widget _buildPoiMiniTile(Map<String, dynamic> stop) {
-    final poiId = (stop['poiId'] ?? stop['poi_id'])?.toString();
+    final poiId = stop['poiId']?.toString();
     final name = (stop['name'] ?? 'POI').toString();
-    final category =
-        (stop['categoryId'] ?? stop['category_id'] ?? '').toString();
-    final score = (stop['score'] as num?)?.toDouble();
+    final category = _stopCategoryId(stop);
+    final score = _asDouble(stop['score']);
+    final isMustSee = _stopIsMustSee(stop);
+
+    final subtitleParts = <String>[category];
+    if (score != null) {
+      subtitleParts.add('Score ${score.toStringAsFixed(0)}');
+    }
+    if (isMustSee) {
+      subtitleParts.add('Must-See');
+    }
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.place_outlined),
       title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        score != null ? '$category • ⭐ ${score.toStringAsFixed(1)}' : category,
+        subtitleParts.join(' - '),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: null,
-      onTap: poiId == null ? null : () => context.push('/poi/$poiId'),
+      onTap: poiId == null ? null : () => _openPOIDetailFromStop(stop),
     );
   }
 
@@ -768,16 +767,12 @@ class _TripDetailPublicScreenState
 
       // Stops parsen
       final stopsData = tripData['stops'] as List<dynamic>? ?? [];
-      final stops = stopsData.map((s) {
-        final map = s as Map<String, dynamic>;
-        return POI(
-          id: map['poiId'] as String? ?? 'stop-${map.hashCode}',
-          name: map['name'] as String? ?? 'Stop',
-          latitude: (map['latitude'] as num).toDouble(),
-          longitude: (map['longitude'] as num).toDouble(),
-          categoryId: map['category'] as String? ?? 'attraction',
-        );
-      }).toList();
+      final stops = stopsData
+          .map(_normalizeTripStop)
+          .whereType<Map<String, dynamic>>()
+          .map(_poiFromStop)
+          .whereType<POI>()
+          .toList();
 
       // In tripStateProvider laden
       ref.read(tripStateProvider.notifier).setRouteAndStops(route, stops);
@@ -794,6 +789,116 @@ class _TripDetailPublicScreenState
       debugPrint('[TripDetail] Fehler beim Anzeigen auf Karte: $e');
       AppSnackbar.showError(context, context.l10n.galleryMapError);
     }
+  }
+
+  List<Map<String, dynamic>> _extractTripStops(Map<String, dynamic>? tripData) {
+    final dynamicStops = (tripData?['stops'] as List<dynamic>?) ?? const [];
+    return dynamicStops
+        .map(_normalizeTripStop)
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
+  Map<String, dynamic>? _normalizeTripStop(dynamic raw) {
+    if (raw is! Map) return null;
+    final map = Map<String, dynamic>.from(raw);
+
+    final poiId =
+        (map['poiId'] ?? map['poi_id'] ?? map['id'])?.toString().trim();
+    if (poiId == null || poiId.isEmpty) return null;
+
+    final latitude = _asDouble(map['latitude'] ?? map['lat']);
+    final longitude = _asDouble(map['longitude'] ?? map['lng'] ?? map['lon']);
+    final categoryId = (map['categoryId'] ??
+            map['category_id'] ??
+            map['category'] ??
+            'attraction')
+        .toString();
+    final tags = ((map['tags'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final isMustSee = _asBool(map['isMustSee'] ?? map['is_must_see']) ||
+        tags.contains('unesco');
+
+    return <String, dynamic>{
+      ...map,
+      'poiId': poiId,
+      'name': (map['name'] ?? map['title'] ?? 'POI').toString(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'categoryId': categoryId,
+      'score': _asDouble(map['score']),
+      'tags': tags,
+      'isMustSee': isMustSee,
+      'imageUrl': map['imageUrl'] ?? map['image_url'],
+      'thumbnailUrl': map['thumbnailUrl'] ?? map['thumbnail_url'],
+      'description': map['description'],
+      'isCurated': _asBool(map['isCurated'] ?? map['is_curated']),
+      'hasWikipedia': _asBool(map['hasWikipedia'] ?? map['has_wikipedia']),
+    };
+  }
+
+  String _stopCategoryId(Map<String, dynamic> stop) {
+    return (stop['categoryId'] ?? 'attraction').toString();
+  }
+
+  bool _stopIsMustSee(Map<String, dynamic> stop) {
+    return _asBool(stop['isMustSee']) || _stopTags(stop).contains('unesco');
+  }
+
+  List<String> _stopTags(Map<String, dynamic> stop) {
+    final tags = stop['tags'] as List?;
+    if (tags == null) return const <String>[];
+    return tags.map((e) => e.toString()).toList();
+  }
+
+  double? _asDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value == null) return false;
+    final normalized = value.toString().toLowerCase();
+    return normalized == 'true' || normalized == '1';
+  }
+
+  POI? _poiFromStop(Map<String, dynamic> stop) {
+    final poiId = stop['poiId']?.toString();
+    final latitude = _asDouble(stop['latitude']);
+    final longitude = _asDouble(stop['longitude']);
+    if (poiId == null || latitude == null || longitude == null) {
+      return null;
+    }
+
+    return POI(
+      id: poiId,
+      name: (stop['name'] ?? 'Stop').toString(),
+      latitude: latitude,
+      longitude: longitude,
+      categoryId: _stopCategoryId(stop),
+      score: (_asDouble(stop['score']) ?? 50).round(),
+      imageUrl: stop['imageUrl'] as String?,
+      thumbnailUrl: stop['thumbnailUrl'] as String?,
+      description: stop['description'] as String?,
+      isCurated: _asBool(stop['isCurated']),
+      hasWikipedia: _asBool(stop['hasWikipedia']),
+      tags: _stopTags(stop),
+    );
+  }
+
+  void _openPOIDetailFromStop(Map<String, dynamic> stop) {
+    final poi = _poiFromStop(stop);
+    if (poi != null) {
+      ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
+    }
+
+    final poiId = stop['poiId']?.toString();
+    if (poiId == null || poiId.isEmpty) return;
+    context.push('/poi/$poiId');
   }
 
   String _formatDate(DateTime date) {

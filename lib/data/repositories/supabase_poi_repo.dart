@@ -103,6 +103,19 @@ class SupabasePOIRepository {
     }
   }
 
+  /// Laedt einen einzelnen POI anhand seiner ID
+  Future<POI?> getPOIById(String poiId) async {
+    try {
+      final response =
+          await _client.from('pois').select().eq('id', poiId).maybeSingle();
+      if (response == null) return null;
+      return _parsePOIRow(Map<String, dynamic>.from(response));
+    } catch (e) {
+      debugPrint('[POI-Supabase] getPOIById FEHLER ($poiId): $e');
+      return null;
+    }
+  }
+
   List<String>? _normalizeCategoryFilter(List<String>? categoryFilter) {
     if (categoryFilter == null || categoryFilter.isEmpty) return null;
     const alias = <String, String>{

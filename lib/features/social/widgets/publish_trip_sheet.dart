@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../data/models/poi.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/providers/gamification_provider.dart';
 import '../../../data/repositories/social_repo.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../random_trip/providers/random_trip_provider.dart';
+import '../../trip/providers/trip_state_provider.dart';
 
 /// Sheet zum Veroeffentlichen eines Trips in der Galerie
 class PublishTripSheet extends ConsumerStatefulWidget {
@@ -344,7 +347,9 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
                         ),
                       )
                     : const Icon(Icons.publish),
-                label: Text(_isPublishing ? context.l10n.publishPublishing : context.l10n.publishButton),
+                label: Text(_isPublishing
+                    ? context.l10n.publishPublishing
+                    : context.l10n.publishButton),
               ),
             ),
           ),
@@ -360,6 +365,7 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
 
     try {
       final repo = ref.read(socialRepositoryProvider);
+      final sourcePOIs = _collectSourcePOIs(widget.trip);
 
       // Erst Trip veroeffentlichen
       final publicTrip = await repo.publishTrip(
@@ -369,6 +375,7 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
             ? null
             : _descriptionController.text.trim(),
         tags: _selectedTags.isEmpty ? null : _selectedTags,
+        sourcePOIs: sourcePOIs.isEmpty ? null : sourcePOIs,
       );
 
       if (!mounted) return;
@@ -397,6 +404,31 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
       setState(() => _isPublishing = false);
       AppSnackbar.showError(context, '${context.l10n.publishError}: $e');
     }
+  }
+
+  List<POI> _collectSourcePOIs(Trip trip) {
+    final stopIds = trip.stops.map((s) => s.poiId).toSet();
+    if (stopIds.isEmpty) return const <POI>[];
+
+    final byId = <String, POI>{};
+
+    final currentTripStops = ref.read(tripStateProvider).stops;
+    for (final poi in currentTripStops) {
+      if (stopIds.contains(poi.id)) {
+        byId[poi.id] = poi;
+      }
+    }
+
+    final generatedStops =
+        ref.read(randomTripNotifierProvider).generatedTrip?.selectedPOIs ??
+            const <POI>[];
+    for (final poi in generatedStops) {
+      if (stopIds.contains(poi.id)) {
+        byId.putIfAbsent(poi.id, () => poi);
+      }
+    }
+
+    return byId.values.toList();
   }
 
   /// Cover-Bild-Auswahl Section

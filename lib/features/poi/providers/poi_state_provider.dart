@@ -132,24 +132,27 @@ class POIState with _$POIState {
     // Route-Only-Modus: Nur POIs mit routePosition (auf der Route)
     if (routeOnlyMode) {
       result = result.where((poi) => poi.routePosition != null).toList();
-      debugPrint('[POIState] Filter routeOnlyMode: $initialCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter routeOnlyMode: $initialCount → ${result.length}');
     }
 
     // Kategorie-Filter
     if (selectedCategories.isNotEmpty) {
       final beforeCount = result.length;
       result = result
-          .where((poi) => selectedCategories
-              .any((cat) => cat.id == poi.categoryId))
+          .where((poi) =>
+              selectedCategories.any((cat) => cat.id == poi.categoryId))
           .toList();
-      debugPrint('[POIState] Filter Kategorien: $beforeCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter Kategorien: $beforeCount → ${result.length}');
     }
 
     // Must-See Filter
     if (mustSeeOnly) {
       final beforeCount = result.length;
       result = result.where((poi) => poi.isMustSee).toList();
-      debugPrint('[POIState] Filter mustSeeOnly: $beforeCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter mustSeeOnly: $beforeCount → ${result.length}');
     }
 
     // FIX v1.5.3: Umweg-Filter NUR wenn routeOnlyMode aktiv
@@ -157,10 +160,10 @@ class POIState with _$POIState {
     if (routeOnlyMode) {
       final beforeCount = result.length;
       result = result
-          .where((poi) =>
-              poi.detourKm == null || poi.detourKm! <= maxDetourKm)
+          .where((poi) => poi.detourKm == null || poi.detourKm! <= maxDetourKm)
           .toList();
-      debugPrint('[POIState] Filter detourKm (<= $maxDetourKm km): $beforeCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter detourKm (<= $maxDetourKm km): $beforeCount → ${result.length}');
     }
 
     // Indoor-Only Filter (bei schlechtem Wetter)
@@ -170,7 +173,8 @@ class POIState with _$POIState {
         final cat = POICategory.fromId(poi.categoryId);
         return cat?.isWeatherResilient ?? false;
       }).toList();
-      debugPrint('[POIState] Filter indoorOnly: $beforeCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter indoorOnly: $beforeCount → ${result.length}');
     }
 
     // Suchtext-Filter
@@ -183,10 +187,12 @@ class POIState with _$POIState {
               poi.categoryLabel.toLowerCase().contains(query) ||
               (poi.description?.toLowerCase().contains(query) ?? false))
           .toList();
-      debugPrint('[POIState] Filter Suche "$searchQuery": $beforeCount → ${result.length}');
+      debugPrint(
+          '[POIState] Filter Suche "$searchQuery": $beforeCount → ${result.length}');
     }
 
-    debugPrint('[POIState] filteredPOIs: $initialCount → ${result.length} (routeOnlyMode=$routeOnlyMode)');
+    debugPrint(
+        '[POIState] filteredPOIs: $initialCount → ${result.length} (routeOnlyMode=$routeOnlyMode)');
     return result;
   }
 
@@ -258,8 +264,10 @@ class POIStateNotifier extends _$POIStateNotifier {
     List<String>? categoryFilter,
     bool forceReload = false,
   }) async {
-    debugPrint('[POIState] loadPOIsInRadius: center=$center, radius=$radiusKm, forceReload=$forceReload');
-    debugPrint('[POIState] Aktueller State: ${state.pois.length} POIs, routeOnlyMode=${state.routeOnlyMode}');
+    debugPrint(
+        '[POIState] loadPOIsInRadius: center=$center, radius=$radiusKm, forceReload=$forceReload');
+    debugPrint(
+        '[POIState] Aktueller State: ${state.pois.length} POIs, routeOnlyMode=${state.routeOnlyMode}');
 
     // Prüfen ob bereits für diese Position geladen
     // FIX v1.5.2: Auch neu laden wenn keine POIs vorhanden sind
@@ -269,7 +277,8 @@ class POIStateNotifier extends _$POIStateNotifier {
         state.lastLoadedCenter != null &&
         state.lastLoadedRadius == radiusKm &&
         _isNearby(state.lastLoadedCenter!, center, 5)) {
-      debugPrint('[POIState] POIs bereits für diese Position geladen (${state.pois.length} POIs)');
+      debugPrint(
+          '[POIState] POIs bereits für diese Position geladen (${state.pois.length} POIs)');
       return;
     }
 
@@ -316,7 +325,8 @@ class POIStateNotifier extends _$POIStateNotifier {
         isLoading: false,
       );
 
-      debugPrint('[POIState] ${pois.length} POIs für Route geladen, routeOnlyMode=${state.routeOnlyMode}');
+      debugPrint(
+          '[POIState] ${pois.length} POIs für Route geladen, routeOnlyMode=${state.routeOnlyMode}');
     } catch (e) {
       debugPrint('[POIState] Fehler beim Laden der Route-POIs: $e');
       state = state.copyWith(
@@ -356,7 +366,10 @@ class POIStateNotifier extends _$POIStateNotifier {
     _enrichmentDebouncer = null;
 
     // Markiere alle als "in Arbeit"
-    final newEnrichingIds = {...state.enrichingPOIIds, ...unenrichedPOIs.map((p) => p.id)};
+    final newEnrichingIds = {
+      ...state.enrichingPOIIds,
+      ...unenrichedPOIs.map((p) => p.id)
+    };
     state = state.copyWith(
       isEnriching: true,
       enrichingPOIIds: newEnrichingIds,
@@ -407,7 +420,8 @@ class POIStateNotifier extends _$POIStateNotifier {
         enrichingPOIIds: remainingEnrichingIds,
       );
 
-      debugPrint('[POIState] Batch-Enrichment abgeschlossen: ${enrichedPOIs.length} POIs aktualisiert');
+      debugPrint(
+          '[POIState] Batch-Enrichment abgeschlossen: ${enrichedPOIs.length} POIs aktualisiert');
     } catch (e) {
       // FIX v1.10.4: Batch beenden bei Fehler
       _enrichmentBatchActive = false;
@@ -459,7 +473,8 @@ class POIStateNotifier extends _$POIStateNotifier {
       enrichingPOIIds: remainingIds,
     );
 
-    debugPrint('[POIState] Flushed ${enrichmentsToProcess.length} enriched POIs');
+    debugPrint(
+        '[POIState] Flushed ${enrichmentsToProcess.length} enriched POIs');
   }
 
   /// Reichert einen einzelnen POI an (on-demand)
@@ -501,7 +516,8 @@ class POIStateNotifier extends _$POIStateNotifier {
       debugPrint('[POIState] POI angereichert: ${poi.name}');
     } catch (e) {
       // Loading State entfernen auch bei Fehler
-      final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)..remove(poiId);
+      final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)
+        ..remove(poiId);
       state = state.copyWith(
         isEnriching: newEnrichingIds.isNotEmpty,
         enrichingPOIIds: newEnrichingIds,
@@ -517,12 +533,15 @@ class POIStateNotifier extends _$POIStateNotifier {
     final currentPOIs = state.pois;
     final currentIndex = currentPOIs.indexWhere((p) => p.id == poiId);
 
-    debugPrint('[POIState] _updatePOIInState: poiId=$poiId, currentIndex=$currentIndex, totalPOIs=${currentPOIs.length}');
+    debugPrint(
+        '[POIState] _updatePOIInState: poiId=$poiId, currentIndex=$currentIndex, totalPOIs=${currentPOIs.length}');
 
     if (currentIndex == -1) {
       // POI nicht mehr in der Liste - nur Loading State entfernen
-      debugPrint('[POIState] POI $poiId nicht mehr in Liste - nur Loading State entfernen');
-      final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)..remove(poiId);
+      debugPrint(
+          '[POIState] POI $poiId nicht mehr in Liste - nur Loading State entfernen');
+      final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)
+        ..remove(poiId);
       state = state.copyWith(
         isEnriching: newEnrichingIds.isNotEmpty,
         enrichingPOIIds: newEnrichingIds,
@@ -535,18 +554,19 @@ class POIStateNotifier extends _$POIStateNotifier {
     updatedPOIs[currentIndex] = updatedPOI;
 
     // Loading State entfernen
-    final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)..remove(poiId);
+    final newEnrichingIds = Set<String>.from(state.enrichingPOIIds)
+      ..remove(poiId);
 
-    debugPrint('[POIState] POI aktualisiert: ${updatedPOI.name}, neue Liste hat ${updatedPOIs.length} POIs');
+    debugPrint(
+        '[POIState] POI aktualisiert: ${updatedPOI.name}, neue Liste hat ${updatedPOIs.length} POIs');
 
     state = state.copyWith(
       pois: updatedPOIs,
       isEnriching: newEnrichingIds.isNotEmpty,
       enrichingPOIIds: newEnrichingIds,
       // Auch selectedPOI aktualisieren wenn es der gleiche ist
-      selectedPOI: state.selectedPOI?.id == poiId
-          ? updatedPOI
-          : state.selectedPOI,
+      selectedPOI:
+          state.selectedPOI?.id == poiId ? updatedPOI : state.selectedPOI,
     );
 
     debugPrint('[POIState] Nach Update: ${state.pois.length} POIs im State');
@@ -558,12 +578,43 @@ class POIStateNotifier extends _$POIStateNotifier {
   }
 
   /// POI nach ID finden und auswählen
-  void selectPOIById(String poiId) {
-    final poi = state.pois.firstWhere(
-      (p) => p.id == poiId,
-      orElse: () => throw Exception('POI nicht gefunden'),
-    );
+  bool selectPOIById(String poiId) {
+    final poi = state.pois.where((p) => p.id == poiId).firstOrNull;
+    if (poi == null) return false;
     selectPOI(poi);
+    return true;
+  }
+
+  /// Stellt sicher, dass ein POI per ID im State verfuegbar ist.
+  /// Laedt bei Bedarf aus dem Repository nach.
+  Future<POI?> ensurePOIById(String poiId) async {
+    POI? existing;
+    if (selectPOIById(poiId)) {
+      existing = state.selectedPOI;
+      final hasUsefulMeta = existing != null &&
+          (existing.isEnriched ||
+              existing.tags.isNotEmpty ||
+              existing.description != null ||
+              existing.imageUrl != null ||
+              existing.score != 50);
+      if (hasUsefulMeta) {
+        return existing;
+      }
+    }
+
+    try {
+      final repo = ref.read(poiRepositoryProvider);
+      final loaded = await repo.loadPOIById(poiId);
+      if (loaded != null) {
+        addPOI(loaded);
+        selectPOI(loaded);
+        return loaded;
+      }
+      return existing;
+    } catch (e) {
+      debugPrint('[POIState] ensurePOIById FEHLER ($poiId): $e');
+      return existing;
+    }
   }
 
   /// Filter: Kategorien setzen
@@ -655,7 +706,8 @@ class POIStateNotifier extends _$POIStateNotifier {
 
     // EIN State-Update statt N Updates
     state = state.copyWith(pois: updatedPOIs);
-    debugPrint('[POIState] Batch: $added hinzugefügt, $updated aktualisiert (gesamt: ${updatedPOIs.length})');
+    debugPrint(
+        '[POIState] Batch: $added hinzugefügt, $updated aktualisiert (gesamt: ${updatedPOIs.length})');
   }
 
   /// Prüft ob ein POI gerade enriched wird (für UI)

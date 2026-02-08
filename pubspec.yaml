@@ -1,7 +1,7 @@
 name: travel_planner
 description: Eine europäische Reiseplanungs-App mit AI-Integration
 publish_to: 'none'
-version: 1.10.34+217
+version: 1.10.35+218
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

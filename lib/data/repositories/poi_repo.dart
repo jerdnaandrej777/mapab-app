@@ -50,6 +50,7 @@ class POIRepository {
     required LatLng center,
     required double radiusKm,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
@@ -86,7 +87,7 @@ class POIRepository {
           longitude: center.longitude,
           radiusKm: radiusKm,
           categoryFilter: normalizedCategoryFilter,
-          minScore: minimumPOIScore,
+          minScore: minScore,
         );
 
         if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
@@ -200,9 +201,9 @@ class POIRepository {
     }).toList();
 
     final qualityFiltered =
-        distanceFiltered.where((poi) => poi.score >= minimumPOIScore).toList();
+        distanceFiltered.where((poi) => poi.score >= minScore).toList();
     debugPrint(
-        '[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minimumPOIScore Score)');
+        '[POI] Qualitätsfilter: ${distanceFiltered.length} → ${qualityFiltered.length} POIs (min. $minScore Score)');
 
     // Im Cache speichern (vor Kategorie-Filter)
     if (useCache && _cacheService != null && qualityFiltered.isNotEmpty) {
@@ -244,6 +245,7 @@ class POIRepository {
           center: center,
           radiusKm: radiusKm,
           categoryFilter: expanded,
+          minScore: minScore,
           includeCurated: includeCurated,
           includeWikipedia: includeWikipedia,
           includeOverpass: includeOverpass,
@@ -257,11 +259,47 @@ class POIRepository {
     return result;
   }
 
+  /// Laedt einen einzelnen POI anhand der ID.
+  /// Reihenfolge:
+  /// 1) Supabase (falls konfiguriert)
+  /// 2) Lokale Curated-Liste als Fallback
+  Future<POI?> loadPOIById(String poiId) async {
+    if (poiId.isEmpty) return null;
+
+    if (_supabaseRepo != null) {
+      try {
+        final poi = await _supabaseRepo.getPOIById(poiId);
+        if (poi != null) {
+          return poi;
+        }
+      } catch (e) {
+        debugPrint('[POI] loadPOIById Supabase FEHLER ($poiId): $e');
+      }
+    }
+
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/data/curated_pois.json');
+      final jsonData = json.decode(jsonString) as List<dynamic>;
+      for (final entry in jsonData) {
+        if (entry is! Map<String, dynamic>) continue;
+        if (entry['id']?.toString() == poiId) {
+          return _parseCuratedPOI(entry);
+        }
+      }
+    } catch (e) {
+      debugPrint('[POI] loadPOIById Curated-Fallback FEHLER ($poiId): $e');
+    }
+
+    return null;
+  }
+
   /// Lädt POIs innerhalb einer Bounding Box (für Korridor-basierte Suche)
   /// Analog zu loadPOIsInRadius, aber mit expliziten Bounds statt Radius
   Future<List<POI>> loadPOIsInBounds({
     required ({LatLng southwest, LatLng northeast}) bounds,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
@@ -278,7 +316,7 @@ class POIRepository {
           neLat: bounds.northeast.latitude,
           neLng: bounds.northeast.longitude,
           categoryFilter: normalizedCategoryFilter,
-          minScore: minimumPOIScore,
+          minScore: minScore,
         );
 
         if (supabasePOIs.length >= _supabaseMinPOIsThreshold) {
@@ -371,7 +409,7 @@ class POIRepository {
         '[POI] Korridor geladen in ${stopwatch.elapsedMilliseconds}ms: ${allPOIs.length} POIs');
 
     final qualityFiltered =
-        allPOIs.where((poi) => poi.score >= minimumPOIScore).toList();
+        allPOIs.where((poi) => poi.score >= minScore).toList();
 
     // Result-Limit: Verhindert POI-Explosion bei grossen Bounding-Boxes
     if (qualityFiltered.length > maxResults) {
@@ -403,6 +441,7 @@ class POIRepository {
           return loadPOIsInBounds(
             bounds: bounds,
             categoryFilter: expanded,
+            minScore: minScore,
             includeCurated: includeCurated,
             includeWikipedia: includeWikipedia,
             includeOverpass: includeOverpass,

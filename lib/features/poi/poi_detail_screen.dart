@@ -49,18 +49,21 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
   Future<void> _loadAndEnrichPOI() async {
     final notifier = ref.read(pOIStateNotifierProvider.notifier);
 
-    // POI auswählen
     try {
-      notifier.selectPOIById(widget.poiId);
+      // POI aus State nutzen oder bei direktem Deeplink/Browse aus Repository laden.
+      final poi = await notifier.ensurePOIById(widget.poiId);
+      if (poi == null) {
+        debugPrint('[POIDetail] POI nicht gefunden: ${widget.poiId}');
+        return;
+      }
 
       // FIX v1.6.7: Enrichment BLOCKIEREND warten
-      // Vorher: unawaited → UI zeigte ungereichterten POI (ohne Foto/Highlights)
-      // Nachher: await → UI zeigt Loading, dann vollständige Daten
-      final state = ref.read(pOIStateNotifierProvider);
-      if (state.selectedPOI != null && !state.selectedPOI!.isEnriched) {
+      // Vorher: unawaited -> UI zeigte unvollstaendigen POI
+      // Nachher: await -> UI zeigt Loading, dann vollstaendige Daten
+      if (!poi.isEnriched) {
         await notifier.enrichPOI(widget.poiId);
       }
-    } catch (e) {
+    } catch (_) {
       debugPrint('[POIDetail] POI nicht gefunden: ${widget.poiId}');
     }
   }

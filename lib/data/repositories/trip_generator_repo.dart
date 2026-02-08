@@ -1679,14 +1679,35 @@ class TripGeneratorRepository {
     final expandedCategories = (categoryIds != null && categoryIds.isNotEmpty)
         ? _expandCategoryIds(categoryIds)
         : categoryIds;
+    final midpoint = LatLng(
+      (startLocation.latitude + endLocation.latitude) / 2,
+      (startLocation.longitude + endLocation.longitude) / 2,
+    );
+
+    final baseRadiusKm = radiusKm.clamp(25.0, 220.0);
+    final expandedRadiusKm =
+        max(baseRadiusKm * 1.35, baseRadiusKm + 25.0).clamp(45.0, 280.0);
+    final rescueRadiusKm =
+        max(baseRadiusKm * 1.8, baseRadiusKm + 70.0).clamp(70.0, 360.0);
+
+    final baseBufferKm = radiusKm.clamp(20.0, 200.0);
+    final expandedBufferKm =
+        max(baseBufferKm * 1.35, baseBufferKm + 20.0).clamp(35.0, 280.0);
+    final rescueBufferKm =
+        max(baseBufferKm * 1.9, baseBufferKm + 60.0).clamp(60.0, 360.0);
+
+    const strictMinScore = minimumPOIScore;
+    const relaxedMinScore = 25;
+    const rescueMinScore = 15;
 
     if (hasDestination) {
       attempts.add(
         () => _loadPOIsAlongCorridor(
           start: startLocation,
           end: endLocation,
-          bufferKm: radiusKm,
+          bufferKm: baseBufferKm,
           categoryFilter: categoryIds,
+          minScore: strictMinScore,
         ),
       );
       if (expandedCategories != null &&
@@ -1696,8 +1717,9 @@ class TripGeneratorRepository {
           () => _loadPOIsAlongCorridor(
             start: startLocation,
             end: endLocation,
-            bufferKm: radiusKm,
+            bufferKm: baseBufferKm,
             categoryFilter: expandedCategories,
+            minScore: strictMinScore,
           ),
         );
       }
@@ -1705,34 +1727,94 @@ class TripGeneratorRepository {
         () => _loadPOIsAlongCorridor(
           start: startLocation,
           end: endLocation,
-          bufferKm: radiusKm,
+          bufferKm: baseBufferKm,
           categoryFilter: categoryIds,
           includeWikipedia: false,
           includeOverpass: false,
+          minScore: strictMinScore,
         ),
       );
       attempts.add(
         () => _loadPOIsNearDayTripEndpoints(
           start: startLocation,
           end: endLocation,
-          radiusKm: radiusKm,
+          radiusKm: baseRadiusKm,
           categoryFilter: categoryIds,
+          minScore: strictMinScore,
         ),
       );
       attempts.add(
         () => _loadPOIsNearDayTripEndpoints(
           start: startLocation,
           end: endLocation,
-          radiusKm: radiusKm,
+          radiusKm: baseRadiusKm,
           categoryFilter: null,
+          minScore: strictMinScore,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: expandedBufferKm,
+          categoryFilter: categoryIds,
+          minScore: relaxedMinScore,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: expandedBufferKm,
+          categoryFilter: null,
+          minScore: relaxedMinScore,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsNearDayTripEndpoints(
+          start: startLocation,
+          end: endLocation,
+          radiusKm: expandedRadiusKm,
+          categoryFilter: null,
+          minScore: relaxedMinScore,
+          useCache: false,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsAlongCorridor(
+          start: startLocation,
+          end: endLocation,
+          bufferKm: rescueBufferKm,
+          categoryFilter: null,
+          minScore: rescueMinScore,
+        ),
+      );
+      attempts.add(
+        () => _loadPOIsNearDayTripEndpoints(
+          start: startLocation,
+          end: endLocation,
+          radiusKm: rescueRadiusKm,
+          categoryFilter: null,
+          minScore: rescueMinScore,
+          useCache: false,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: midpoint,
+          radiusKm: rescueRadiusKm,
+          categoryFilter: null,
+          minScore: rescueMinScore,
+          useCache: false,
         ),
       );
     } else {
       attempts.add(
         () => _poiRepo.loadPOIsInRadius(
           center: startLocation,
-          radiusKm: radiusKm,
+          radiusKm: baseRadiusKm,
           categoryFilter: categoryIds,
+          minScore: strictMinScore,
         ),
       );
       if (expandedCategories != null &&
@@ -1741,25 +1823,55 @@ class TripGeneratorRepository {
         attempts.add(
           () => _poiRepo.loadPOIsInRadius(
             center: startLocation,
-            radiusKm: radiusKm,
+            radiusKm: baseRadiusKm,
             categoryFilter: expandedCategories,
+            minScore: strictMinScore,
           ),
         );
       }
       attempts.add(
         () => _poiRepo.loadPOIsInRadius(
           center: startLocation,
-          radiusKm: radiusKm,
+          radiusKm: baseRadiusKm,
           categoryFilter: categoryIds,
           includeWikipedia: false,
           includeOverpass: false,
+          minScore: strictMinScore,
         ),
       );
       attempts.add(
         () => _poiRepo.loadPOIsInRadius(
           center: startLocation,
-          radiusKm: radiusKm,
+          radiusKm: baseRadiusKm,
           categoryFilter: null,
+          minScore: strictMinScore,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: expandedRadiusKm,
+          categoryFilter: categoryIds,
+          minScore: relaxedMinScore,
+          useCache: false,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: expandedRadiusKm,
+          categoryFilter: null,
+          minScore: relaxedMinScore,
+          useCache: false,
+        ),
+      );
+      attempts.add(
+        () => _poiRepo.loadPOIsInRadius(
+          center: startLocation,
+          radiusKm: rescueRadiusKm,
+          categoryFilter: null,
+          minScore: rescueMinScore,
+          useCache: false,
         ),
       );
     }
@@ -1782,25 +1894,31 @@ class TripGeneratorRepository {
     required LatLng end,
     required double radiusKm,
     required List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
+    bool useCache = true,
   }) async {
-    final endpointRadiusKm = radiusKm.clamp(20.0, 160.0);
+    final endpointRadiusKm = radiusKm.clamp(30.0, 240.0);
     final results = await Future.wait([
       _poiRepo.loadPOIsInRadius(
         center: start,
         radiusKm: endpointRadiusKm,
         categoryFilter: categoryFilter,
+        minScore: minScore,
+        useCache: useCache,
       ),
       _poiRepo.loadPOIsInRadius(
         center: end,
         radiusKm: endpointRadiusKm,
         categoryFilter: categoryFilter,
+        minScore: minScore,
+        useCache: useCache,
       ),
     ]);
     final merged = _dedupePOIsById([...results[0], ...results[1]]);
     if (merged.isEmpty) return merged;
 
     final directDistance = GeoUtils.haversineDistance(start, end);
-    final allowedPathKm = directDistance + max(40.0, radiusKm * 1.2);
+    final allowedPathKm = directDistance + max(60.0, radiusKm * 1.6);
     return merged.where((poi) {
       final pathEstimate = GeoUtils.haversineDistance(start, poi.location) +
           GeoUtils.haversineDistance(poi.location, end);
@@ -1860,6 +1978,7 @@ class TripGeneratorRepository {
     List<String>? categoryFilter,
     bool includeWikipedia = true,
     bool includeOverpass = true,
+    int minScore = minimumPOIScore,
   }) async {
     // 1. Direct-Route berechnen (für genaue Korridor-Box)
     debugPrint('[TripGenerator] Berechne Direct-Route für Korridor...');
@@ -1901,6 +2020,7 @@ class TripGeneratorRepository {
     final poisInBounds = await _poiRepo.loadPOIsInBounds(
       bounds: bounds,
       categoryFilter: categoryFilter,
+      minScore: minScore,
       includeWikipedia: includeWikipedia,
       includeOverpass: includeOverpass,
     );
@@ -1909,19 +2029,20 @@ class TripGeneratorRepository {
 
     // 4. Harte Korridor-Filterung entlang der direkten Route
     // Verhindert Bounding-Box-Ausreißer weit weg von der eigentlichen Route.
+    final corridorToleranceKm = max(15.0, bufferKm * 1.25);
     final filtered = poisInBounds.where((poi) {
       if (!_isValidLatLng(poi.location)) return false;
       final closest = GeoUtils.findClosestPointOnRoute(
           poi.location, directRoute.coordinates);
-      if (closest.distance > bufferKm) return false;
+      if (closest.distance > corridorToleranceKm) return false;
       final progress = GeoUtils.calculateRoutePosition(
           poi.location, directRoute.coordinates);
-      return progress >= -0.02 && progress <= 1.02;
+      return progress >= -0.05 && progress <= 1.05;
     }).toList();
 
     debugPrint(
       '[TripGenerator] Korridor-Filter: ${poisInBounds.length} -> ${filtered.length} '
-      '(max Detour ${bufferKm.toStringAsFixed(0)}km, routePoints=${directRoute.coordinates.length})',
+      '(max Detour ${corridorToleranceKm.toStringAsFixed(0)}km, routePoints=${directRoute.coordinates.length}, minScore=$minScore)',
     );
 
     return filtered;

@@ -7,6 +7,51 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.35] - 2026-02-08
+
+### Social Publish + POI Preview + Daytrip Stabilisierung
+
+#### Behoben
+- **POI-Veroeffentlichung schlaegt nicht mehr wegen fehlender RPC fehl**
+  - Fallback auf direkten Insert in `poi_posts`, falls `publish_poi_post` in der Ziel-DB noch fehlt (`PGRST202`).
+  - Detail-Antwort wird weiterhin ueber `get_public_poi` aufgeloest, inklusive robustem Fallback.
+- **Veroeffentlichte Trips enthalten wieder vollstaendige Stop-Metadaten**
+  - Beim Publish werden Source-POIs aus aktuellem Trip/Random-Trip gesammelt und in `tripData.stops` mit Feldern wie `score`, `tags`, `highlights`, `isMustSee`, `imageUrl` persistiert.
+- **POI-Vorschau in oeffentlichen Trips ist korrekt verlinkt**
+  - Stop-Parsing normalisiert jetzt `poiId`/`poi_id`, `lat`/`latitude`, `lng`/`longitude`, Kategorie- und Must-See-Felder.
+  - Tap auf Mini-Tiles oeffnet den richtigen POI-Detailscreen; POI wird vorher in den lokalen State geladen.
+- **POI-Detail via Deeplink/Browse ohne vorhandenen POI-State funktioniert stabil**
+  - Neuer `ensurePOIById(...)` Flow laedt den POI bei Bedarf aus dem Repository nach und startet danach Enrichment.
+- **AI Tagestrip findet robuster POIs bei duennen Regionen**
+  - Mehrstufige Fallback-Kaskade (streng -> relaxed -> rescue) mit groesseren Radius-/Korridorgrenzen und abgesenktem Mindestscore.
+  - Endpoint- und Midpoint-Rescue-Queries sowie tolerantere Korridorfilter verhindern fruehe "keine POIs gefunden"-Abbrueche.
+
+#### Technisch
+- `lib/data/repositories/social_repo.dart`
+  - `publishTrip(..., sourcePOIs)` erweitert, `_tripToJson(...)` mit stopbezogenen Metadaten.
+  - `publishPOI(...)` mit `PostgrestException(PGRST202)`-Fallback `_publishPOIWithDirectInsert(...)`.
+- `lib/features/social/widgets/publish_trip_sheet.dart`
+  - Source-POIs aus `tripStateProvider` und `randomTripNotifierProvider` zusammengefuehrt und an Repo uebergeben.
+- `lib/features/social/trip_detail_public_screen.dart`
+  - Robuste Stop-Normalisierung + POI-Erzeugung fuer Vorschau, Import und Deep-Link-Verhalten.
+- `lib/features/poi/providers/poi_state_provider.dart`
+  - `selectPOIById(...)` liefert bool statt Exception; neues `ensurePOIById(...)`.
+- `lib/features/poi/poi_detail_screen.dart`
+  - Nutzt `ensurePOIById(...)` und enriched nur, wenn erforderlich.
+- `lib/data/repositories/poi_repo.dart`, `lib/data/repositories/supabase_poi_repo.dart`
+  - `loadPOIById(...)` ergaenzt (Supabase + curated Fallback).
+  - `loadPOIsInRadius(...)` / `loadPOIsInBounds(...)` um `minScore` erweitert.
+- `lib/data/repositories/trip_generator_repo.dart`
+  - Daytrip-Fallbacks, erweiterte Endpoint-Suche, toleranteste Korridorselektion.
+- `supabase/migrations/20260208103000_poi_publish_rpc_fix.sql`
+  - Definiert/aktualisiert `publish_poi_post(...)` und `get_public_poi(...)`.
+- `docs/guides/BACKEND-SETUP.md`
+  - Klarstellung: Migrationen `011` und `012` (bzw. neue CLI-Migration) sind fuer POI-Posts erforderlich.
+- `test/repositories/trip_generator_daytrip_test.dart`
+  - Test-Fakes an neue `minScore`-Signaturen angepasst.
+
+---
+
 ## [1.10.25] - 2026-02-07
 
 ### AI Euro Trip Stabilisierung

@@ -19,6 +19,7 @@ class _FakePOIRepository extends POIRepository {
     required LatLng center,
     required double radiusKm,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
@@ -33,6 +34,7 @@ class _FakePOIRepository extends POIRepository {
   Future<List<POI>> loadPOIsInBounds({
     required ({LatLng southwest, LatLng northeast}) bounds,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
@@ -60,6 +62,7 @@ class _SplitPOIRepository extends POIRepository {
     required LatLng center,
     required double radiusKm,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,
@@ -74,6 +77,7 @@ class _SplitPOIRepository extends POIRepository {
   Future<List<POI>> loadPOIsInBounds({
     required ({LatLng southwest, LatLng northeast}) bounds,
     List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
     bool includeCurated = true,
     bool includeWikipedia = true,
     bool includeOverpass = true,

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
@@ -8,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../models/poi.dart';
 import '../models/public_poi_post.dart';
 import '../models/public_trip.dart';
 import '../models/trip.dart';
@@ -301,16 +301,21 @@ class SocialRepository {
     String? region,
     String? countryCode,
     String? coverImagePath,
+    List<POI>? sourcePOIs,
   }) async {
     try {
       // Trip zu JSON konvertieren
-      final tripData = _tripToJson(trip);
+      final tripData = _tripToJson(trip, sourcePOIs: sourcePOIs);
 
       // Thumbnail aus erstem POI mit Bild
       String? thumbnailUrl;
+      final sourcePOIsById = {
+        for (final poi in sourcePOIs ?? const <POI>[]) poi.id: poi,
+      };
       for (final stop in trip.stops) {
-        if (stop.imageUrl != null) {
-          thumbnailUrl = stop.imageUrl;
+        final sourcePoi = sourcePOIsById[stop.poiId];
+        if (sourcePoi?.imageUrl != null) {
+          thumbnailUrl = sourcePoi!.imageUrl;
           break;
         }
       }
@@ -370,9 +375,77 @@ class SocialRepository {
         return _parsePublicPoiRow(response);
       }
       return null;
+    } on PostgrestException catch (e) {
+      // Fallback fuer Instanzen ohne Migration 012 (fehlende publish_poi_post RPC).
+      if (e.code != 'PGRST202') rethrow;
+      debugPrint(
+          '[Social] publish_poi_post fehlt, nutze Direct-Insert Fallback');
+      return _publishPOIWithDirectInsert(
+        poiId: poiId,
+        title: title,
+        content: content,
+        categories: categories,
+        isMustSee: isMustSee,
+        coverPhotoPath: coverPhotoPath,
+      );
     } catch (e) {
       debugPrint('[Social] POI Veroeffentlichen FEHLER: $e');
       rethrow;
+    }
+  }
+
+  Future<PublicPoiPost?> _publishPOIWithDirectInsert({
+    required String poiId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    bool isMustSee = false,
+    String? coverPhotoPath,
+  }) async {
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('Not authenticated');
+    }
+
+    try {
+      final inserted = await _client
+          .from('poi_posts')
+          .insert({
+            'poi_id': poiId,
+            'user_id': userId,
+            'title': title,
+            'content': content,
+            'categories': categories ?? const <String>[],
+            'is_must_see': isMustSee,
+            'cover_photo_path': coverPhotoPath,
+          })
+          .select()
+          .single();
+
+      final postId = inserted['id']?.toString();
+      if (postId != null) {
+        try {
+          final detail = await _client.rpc('get_public_poi', params: {
+            'p_post_id': postId,
+          });
+          if (detail is List && detail.isNotEmpty) {
+            return _parsePublicPoiRow(
+              Map<String, dynamic>.from(detail.first as Map),
+            );
+          }
+          if (detail is Map<String, dynamic>) {
+            return _parsePublicPoiRow(detail);
+          }
+        } catch (_) {
+          // Ignorieren: Insert-Row als Fallback zurueckgeben.
+        }
+      }
+
+      return _parsePublicPoiRow(Map<String, dynamic>.from(inserted));
+    } catch (e) {
+      throw Exception(
+        'POI-Publish Backend unvollstaendig. Bitte Supabase-Migrationen 011 und 012 ausfuehren. Fehler: $e',
+      );
     }
   }
 
@@ -424,7 +497,7 @@ class SocialRepository {
           .maybeSingle();
 
       if (response == null) return null;
-      return _parseUserProfile(response as Map<String, dynamic>);
+      return _parseUserProfile(Map<String, dynamic>.from(response));
     } catch (e) {
       debugPrint('[Social] Profil FEHLER: $e');
       return null;
@@ -448,7 +521,7 @@ class SocialRepository {
         'p_bio': null,
       });
 
-      return _parseUserProfile(response as Map<String, dynamic>);
+      return _parseUserProfile(Map<String, dynamic>.from(response));
     } catch (e) {
       debugPrint('[Social] Profil laden/erstellen FEHLER: $e');
       return null;
@@ -469,7 +542,7 @@ class SocialRepository {
       });
 
       debugPrint('[Social] Profil aktualisiert');
-      return _parseUserProfile(response as Map<String, dynamic>);
+      return _parseUserProfile(Map<String, dynamic>.from(response));
     } catch (e) {
       debugPrint('[Social] Profil aktualisieren FEHLER: $e');
       return null;
@@ -761,7 +834,11 @@ class SocialRepository {
     return PublicPoiPost.fromJson(row);
   }
 
-  Map<String, dynamic> _tripToJson(Trip trip) {
+  Map<String, dynamic> _tripToJson(Trip trip, {List<POI>? sourcePOIs}) {
+    final sourcePOIsById = {
+      for (final poi in sourcePOIs ?? const <POI>[]) poi.id: poi,
+    };
+
     return {
       'id': trip.id,
       'name': trip.name,
@@ -775,12 +852,33 @@ class SocialRepository {
         'durationMinutes': trip.route.durationMinutes,
       },
       'stops': trip.stops.map((s) {
+        final source = sourcePOIsById[s.poiId];
+        final categoryId = source?.categoryId ?? s.categoryId;
         return <String, dynamic>{
           'poiId': s.poiId,
+          'poi_id': s.poiId,
           'name': s.name,
           'latitude': s.latitude,
           'longitude': s.longitude,
-          'category': s.categoryId,
+          'lat': s.latitude,
+          'lng': s.longitude,
+          'category': categoryId,
+          'categoryId': categoryId,
+          'category_id': categoryId,
+          'score': source?.score,
+          'tags': source?.tags ?? const <String>[],
+          'highlights': source?.highlights.map((h) => h.name).toList() ??
+              const <String>[],
+          'isMustSee': source?.isMustSee ?? false,
+          'is_must_see': source?.isMustSee ?? false,
+          'imageUrl': source?.imageUrl,
+          'thumbnailUrl': source?.thumbnailUrl,
+          'description': source?.description ?? source?.wikidataDescription,
+          'isCurated': source?.isCurated ?? false,
+          'hasWikipedia': source?.hasWikipedia ?? false,
+          'routePosition': s.routePosition,
+          'detourKm': s.detourKm,
+          'detourMinutes': s.detourMinutes,
           'order': s.order,
           'day': s.day,
         };

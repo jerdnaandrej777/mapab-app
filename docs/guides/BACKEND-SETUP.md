@@ -77,8 +77,9 @@ Die Backend-URL wird ausgegeben (z.B. `https://mapab-backend.vercel.app`).
 ### 2.2 Datenbank-Schema anlegen
 
 1. Gehe zu SQL Editor
-2. Kopiere den Inhalt von `backend/supabase/migrations/001_initial_schema.sql`
-3. Führe das SQL aus
+2. Fuehre alle Dateien aus `backend/supabase/migrations/` in Reihenfolge aus
+3. Fuer POI-Posts muessen `011_poi_gallery_social.sql` und `012_poi_publish_rpc_fix.sql` enthalten sein
+4. Wenn du die Supabase CLI mit `supabase/migrations/` nutzt, ist der RPC-Fix in `20260208103000_poi_publish_rpc_fix.sql` enthalten
 
 ### 2.3 Auth konfigurieren
 
@@ -407,3 +408,4 @@ Siehe CLAUDE.md → "Geplante Laravel-Migration" für vollständige Details.
 | 1.1.0 | 2026-01-22 | Supabase vollständig konfiguriert, Auth aktiviert |
 | 1.2.0 | 2026-01-23 | Credentials-Sicherung mit --dart-define dokumentiert |
 | 1.3.0 | 2026-01-23 | Laravel-Migration geplant, Dokumentation erweitert |
+
