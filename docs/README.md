@@ -65,6 +65,7 @@ Nachschlagewerke und Hilfestellung.
 | [SECURITY](SECURITY.md) | Credentials und Sicherheit |
 | [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollstaendige Feature-Doku |
 | [LARAVEL-MIGRATION](LARAVEL-MIGRATION.md) | Geplante Backend-Migration |
+| [CHANGELOG (Unreleased)](../CHANGELOG.md#unreleased) | Aktuelle Stabilitaetsarbeiten: AI-Ziel-/Routenfokus + Journal-Timeline |
 | [CHANGELOG v1.10.53](../Dokumentation/CHANGELOG-v1.10.53.md) | Release-Details Public-Trip Kartenfluss + Journal-Shortcut + Korridor-POI-UI |
 
 ---
@@ -90,5 +91,5 @@ Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) fuer Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.53  
+**Version:** 1.10.53 (+ Unreleased Stabilitaetspaket)  
 **Stand:** Februar 2026

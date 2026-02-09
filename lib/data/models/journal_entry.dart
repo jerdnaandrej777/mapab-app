@@ -108,4 +108,45 @@ class TripJournal with _$TripJournal {
 
   /// Hat das Tagebuch Eintraege
   bool get isNotEmpty => entries.isNotEmpty;
+
+  /// Eintraege gruppiert nach Monat (Jahr+Monat als DateTime mit Tag=1).
+  Map<DateTime, List<JournalEntry>> get entriesByMonth {
+    final grouped = <DateTime, List<JournalEntry>>{};
+    for (final entry in entries) {
+      final key = DateTime(entry.createdAt.year, entry.createdAt.month);
+      grouped.putIfAbsent(key, () => <JournalEntry>[]).add(entry);
+    }
+    for (final list in grouped.values) {
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+    return grouped;
+  }
+
+  /// Eintraege gruppiert nach Jahr.
+  Map<int, List<JournalEntry>> get entriesByYear {
+    final grouped = <int, List<JournalEntry>>{};
+    for (final entry in entries) {
+      grouped
+          .putIfAbsent(entry.createdAt.year, () => <JournalEntry>[])
+          .add(entry);
+    }
+    for (final list in grouped.values) {
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+    return grouped;
+  }
+
+  /// Monate mit Eintraegen (absteigend).
+  List<DateTime> get monthsWithEntries {
+    final months = entriesByMonth.keys.toList();
+    months.sort((a, b) => b.compareTo(a));
+    return months;
+  }
+
+  /// Jahre mit Eintraegen (absteigend).
+  List<int> get yearsWithEntries {
+    final years = entriesByYear.keys.toList();
+    years.sort((a, b) => b.compareTo(a));
+    return years;
+  }
 }

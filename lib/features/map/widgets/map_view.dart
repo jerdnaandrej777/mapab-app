@@ -17,6 +17,8 @@ import '../../../data/providers/favorites_provider.dart';
 import '../../../core/constants/categories.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/models/poi.dart';
+import '../../../data/models/route.dart';
+import '../../../data/models/trip.dart';
 import 'route_weather_marker.dart';
 import 'weather_badge_unified.dart';
 
@@ -60,6 +62,7 @@ class MapView extends ConsumerStatefulWidget {
 class _MapViewState extends ConsumerState<MapView> {
   late final MapController _mapController;
   String? _selectedPOIId;
+  String? _lastRecommendationLoadKey;
   final List<ProviderSubscription<dynamic>> _subscriptions = [];
 
   // Standard-Zentrum: Europa (Deutschland)
@@ -194,10 +197,12 @@ class _MapViewState extends ConsumerState<MapView> {
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
     final advisorState = ref.watch(aITripAdvisorNotifierProvider);
 
-    // AI Trip Preview Route und POIs
+    // AI Trip Route und POIs
     final fullAIRoute = randomTripState.generatedTrip?.trip.route;
     final allAITripPOIs = randomTripState.generatedTrip?.selectedPOIs ?? [];
     final isAITripPreview = randomTripState.step == RandomTripStep.preview;
+    final isAITripActive = randomTripState.step == RandomTripStep.preview ||
+        randomTripState.step == RandomTripStep.confirmed;
     final aiTrip = randomTripState.generatedTrip?.trip;
     final isMultiDay = aiTrip != null && aiTrip.actualDays > 1;
     final selectedDay = randomTripState.selectedDay;
@@ -205,12 +210,69 @@ class _MapViewState extends ConsumerState<MapView> {
     // Auf der Hauptkarte immer die komplette AI-Route anzeigen (nicht tagesweise)
     final aiTripPOIs = allAITripPOIs;
     final aiRouteCoordinates = fullAIRoute?.coordinates ?? [];
-    final recommendedDayPOIs = advisorState.getRecommendedPOIsForDay(selectedDay);
-    final aiTripPoiIds = aiTripPOIs.map((p) => p.id).toSet();
+    final hasTripRoute = tripState.hasRoute && tripState.route != null;
+    final hasPlannerRoute = routePlanner.hasRoute && routePlanner.route != null;
+    final recommendationDay = isAITripActive ? selectedDay : 1;
+    final recommendedDayPOIs =
+        advisorState.getRecommendedPOIsForDay(recommendationDay);
+    final aiTripPoiIds = <String>{
+      ...aiTripPOIs.map((p) => p.id),
+      ...tripState.stops.map((p) => p.id),
+    };
     final overlayRecommendedPOIs = recommendedDayPOIs
         .where((p) => !aiTripPoiIds.contains(p.id))
         .take(8)
         .toList();
+
+    AppRoute? recommendationRoute;
+    List<TripStop> recommendationStops = const [];
+    if (isAITripActive && aiTrip != null) {
+      recommendationRoute = aiTrip.route;
+      recommendationStops = aiTrip.stops;
+    } else if (hasTripRoute) {
+      recommendationRoute = tripState.route;
+      recommendationStops = tripState.stops
+          .asMap()
+          .entries
+          .map((e) => TripStop.fromPOI(e.value, order: e.key))
+          .toList();
+    } else if (hasPlannerRoute) {
+      recommendationRoute = routePlanner.route;
+    }
+
+    final activeRecommendationRoute = recommendationRoute;
+    final recommendationKey = activeRecommendationRoute == null
+        ? null
+        : '${activeRecommendationRoute.hashCode}-$recommendationDay-${recommendationStops.length}';
+    if (recommendationKey == null) {
+      _lastRecommendationLoadKey = null;
+    } else if (activeRecommendationRoute != null &&
+        _lastRecommendationLoadKey != recommendationKey &&
+        !advisorState.isLoading &&
+        activeRecommendationRoute.coordinates.length >= 2) {
+      _lastRecommendationLoadKey = recommendationKey;
+      final recommendationTrip = Trip(
+        id: 'map-route-${activeRecommendationRoute.hashCode}',
+        name: 'Map Route',
+        type: TripType.daytrip,
+        route: activeRecommendationRoute,
+        stops: recommendationStops,
+        createdAt: DateTime.now(),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final advisorNotifier =
+            ref.read(aITripAdvisorNotifierProvider.notifier);
+        advisorNotifier.reset();
+        advisorNotifier.loadSmartRecommendations(
+          day: recommendationDay,
+          trip: recommendationTrip,
+          route: activeRecommendationRoute,
+          routeWeather: routeWeather,
+          existingStopIds: recommendationStops.map((s) => s.poiId).toSet(),
+        );
+      });
+    }
 
     // Wetter-Zustand für POI-Marker-Badges
     final weatherCondition =
@@ -241,7 +303,7 @@ class _MapViewState extends ConsumerState<MapView> {
         // WICHTIG: AI Trip Preview hat Priorität über andere Routen
         if (tripState.hasRoute ||
             routePlanner.route != null ||
-            (isAITripPreview && aiRouteCoordinates.isNotEmpty))
+            (isAITripActive && aiRouteCoordinates.isNotEmpty))
           PolylineLayer(
             polylines: [
               Polyline(
@@ -249,7 +311,7 @@ class _MapViewState extends ConsumerState<MapView> {
                 // Auf der Hauptkarte immer die komplette Route
                 // v1.10.2: Downsampling für lange Routen (ANR-Fix)
                 points: _downsampleCoordinates(
-                  (isAITripPreview && aiRouteCoordinates.isNotEmpty)
+                  (isAITripActive && aiRouteCoordinates.isNotEmpty)
                       ? aiRouteCoordinates
                       : (tripState.route?.coordinates ??
                           routePlanner.route?.coordinates ??
@@ -323,11 +385,14 @@ class _MapViewState extends ConsumerState<MapView> {
               // Wetter pro Stop-Tag fuer Multi-Day-Trips
               WeatherCondition? markerWeather;
               final previewTrip = aiTrip;
-              if (previewTrip != null && isMultiDay && routeWeather.hasForecast) {
+              if (previewTrip != null &&
+                  isMultiDay &&
+                  routeWeather.hasForecast) {
                 int stopDay = selectedDay;
                 for (int day = 1; day <= previewTrip.actualDays; day++) {
-                  final isStopInDay =
-                      previewTrip.getStopsForDay(day).any((s) => s.poiId == poi.id);
+                  final isStopInDay = previewTrip
+                      .getStopsForDay(day)
+                      .any((s) => s.poiId == poi.id);
                   if (isStopInDay) {
                     stopDay = day;
                     break;
@@ -356,7 +421,7 @@ class _MapViewState extends ConsumerState<MapView> {
           ),
 
         // AI-Empfehlungs-Overlay auf der Hauptkarte (anklickbar)
-        if (isAITripPreview && overlayRecommendedPOIs.isNotEmpty)
+        if (recommendationRoute != null && overlayRecommendedPOIs.isNotEmpty)
           MarkerLayer(
             markers: overlayRecommendedPOIs.map((poi) {
               return Marker(

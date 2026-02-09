@@ -7,6 +7,28 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [Unreleased]
+
+### AI-Empfehlungen + Journal-Timeline Stabilisierung
+
+#### Geaendert
+- **AI-Empfehlungen sind jetzt route-/zielorientiert statt startlastig**
+  - Suchpunkte werden aus Route-Ankern in der zweiten Streckenhaelfte plus Tagesziel aufgebaut.
+  - Startnahe Treffer werden gefiltert; Scoring bevorzugt Route-Fortschritt Richtung Ziel.
+  - Empfehlungen werden auch fuer geladene Routen (Trip/Favoriten/Planner) auf der Karte als Overlay angezeigt.
+- **Reisetagebuch um Monats- und Jahresansicht erweitert**
+  - Segmented Switcher fuer `Tag / Monat / Jahr`.
+  - Monat-/Jahr-Karten mit aggregierten Kennzahlen (Eintraege/Fotos/aktive Monate).
+  - Neue Modell-Helper in `TripJournal` fuer Gruppierung nach Monat/Jahr.
+- **Modal-Interaktion im Reisetagebuch verbessert**
+  - Wechsel von Monat-/Jahreslisten in Entry-Details ohne Sheet-Stacking.
+  - Entry-Detail-Sheet bietet direkte Aktionen `Auf Karte anzeigen` und `Details` (POI).
+  - Kartenfokus wird ueber `pendingMapCenterProvider` an die Hauptkarte uebergeben.
+
+#### Tests
+- Neue Unit-Tests in `test/models/journal_entry_test.dart` fuer Monats-/Jahres-Gruppierung.
+- `flutter test` (komplette Suite) erfolgreich (**345/345**).
+
 ## [1.10.53] - 2026-02-09
 
 ### Public-Trip Kartenfluss + Journal-Shortcut + POI-Listen-UI

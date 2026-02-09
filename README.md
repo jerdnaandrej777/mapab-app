@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### Unreleased - AI Ziel-/Routenfokus + Journal-Timeline Ausbau
+- **AI-Empfehlungen ohne Start-Bias** - Suchpunkte und Scoring fokussieren Route-Mitte bis Ziel, Start-nahe Treffer werden aktiv reduziert.
+- **AI-Overlay auch fuer geladene Routen** - Empfehlungen werden nicht nur im AI-Preview, sondern auch bei geladenen Trips/Favoriten auf der Karte sichtbar.
+- **Reisetagebuch erweitert** - Neue Umschaltung `Tag / Monat / Jahr` mit Monats-/Jahreskarten und aggregierten Kennzahlen.
+- **Modal-Interop verbessert** - Monat-/Jahreslisten oeffnen Entry-Details ohne Modal-Stack; aus Details sind `Auf Karte anzeigen` und `POI-Details` direkt moeglich.
+- **Tests ergaenzt** - Neue Unit-Tests fuer Journal-Monats-/Jahres-Gruppierung, komplette Test-Suite weiterhin gruen.
+
 ### v1.10.53 - Public-Trip Kartenfluss + Journal-Shortcut (9. Februar 2026)
 - **Public-Trip "Auf Karte" stabilisiert** - Vor dem Kartenwechsel werden alte Planungs-/AI-Zustaende zurueckgesetzt, damit ausgewaehlte Galerie-Trips inkl. POIs korrekt dargestellt werden.
 - **Footer-Konflikt reduziert** - Der veraltete AI-Preview-Kontext wird beim Public-Trip-Wechsel bereinigt, dadurch erscheinen keine unpassenden Footer-Aktionen mehr.
