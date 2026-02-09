@@ -2562,7 +2562,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         startAddress: address,
         radiusKm: days == 1 ? 100 : (days * 80).clamp(100, 300).toDouble(),
         categories: categories,
-        poiCount: (days * 3).clamp(3, 8),
+        poiCount: (days * 3).clamp(4, 9),
       );
 
       if (!mounted || !_isCurrentRequest(requestToken)) return;

@@ -7,6 +7,31 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.50] - 2026-02-09
+
+### POI-Dichte + Ladeperformance
+
+#### Geaendert
+- **Mehr POIs pro Tagesroute bei duennen Trefferlagen**
+  - Daytrip-Fallbacks sammeln und mergen Treffer jetzt ueber mehrere Versuche, statt beim ersten kleinen Treffer zu stoppen.
+  - Ein Mindest-Pool fuer den Tagestrip wird aktiv angestrebt, bevor die Auswahl startet.
+- **Kategorie-Limit dynamisch statt starr**
+  - `maxPerCategory` wird aus gewuenschter POI-Anzahl, verfuegbaren Kategorien und Poolgroesse berechnet.
+  - Dadurch entstehen in engen Kategorien weniger kuenstliche Unterbelegungen.
+- **POI-Zielmenge im Flow angehoben**
+  - Tagestrip-/AI-Requests nutzen jetzt konsistent `4..9` statt `3..8`, um real mehr Stops zu erhalten.
+- **Curated-POI Laden beschleunigt**
+  - Der Katalog `assets/data/curated_pois.json` wird lazy geladen und im Speicher gecacht.
+  - Wiederholte JSON-Reads/Decodes in Radius/Bounds/ById-Pfaden entfallen.
+- **Release-APK aktualisiert**
+  - Android Build auf **233** angehoben.
+
+#### Tests
+- Neue Regressionstests in `test/repositories/trip_generator_daytrip_test.dart`:
+  - Fallback-Merge bei zu kleinem Ersttreffer.
+  - Dynamisches `maxPerCategory` bei schmalen Kategorien.
+- `flutter test` (komplette Suite) erfolgreich.
+
 ## [1.10.49] - 2026-02-09
 
 ### Social-Ownership + Header-Hardening

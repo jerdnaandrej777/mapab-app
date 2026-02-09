@@ -64,7 +64,7 @@ Nachschlagewerke und Hilfestellung.
 | [SECURITY](SECURITY.md) | Credentials und Sicherheit |
 | [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollstaendige Feature-Doku |
 | [LARAVEL-MIGRATION](LARAVEL-MIGRATION.md) | Geplante Backend-Migration |
-| [CHANGELOG v1.10.49](../Dokumentation/CHANGELOG-v1.10.49.md) | Release-Details Social Owner Controls |
+| [CHANGELOG v1.10.50](../Dokumentation/CHANGELOG-v1.10.50.md) | Release-Details POI-Dichte + Ladeperformance |
 
 ---
 
@@ -89,5 +89,5 @@ Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) fuer Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.49  
+**Version:** 1.10.50  
 **Stand:** Februar 2026

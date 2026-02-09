@@ -34,6 +34,7 @@ class POIRepository {
   final Dio _dio;
   final POICacheService? _cacheService;
   final SupabasePOIRepository? _supabaseRepo;
+  static Future<List<POI>>? _curatedCatalogFuture;
 
   POIRepository(
       {Dio? dio,
@@ -278,14 +279,9 @@ class POIRepository {
     }
 
     try {
-      final jsonString =
-          await rootBundle.loadString('assets/data/curated_pois.json');
-      final jsonData = json.decode(jsonString) as List<dynamic>;
-      for (final entry in jsonData) {
-        if (entry is! Map<String, dynamic>) continue;
-        if (entry['id']?.toString() == poiId) {
-          return _parseCuratedPOI(entry);
-        }
+      final curated = await _loadCuratedCatalog();
+      for (final poi in curated) {
+        if (poi.id == poiId) return poi;
       }
     } catch (e) {
       debugPrint('[POI] loadPOIById Curated-Fallback FEHLER ($poiId): $e');
@@ -692,17 +688,42 @@ class POIRepository {
     ({LatLng southwest, LatLng northeast}) bounds,
   ) async {
     try {
-      final jsonString =
-          await rootBundle.loadString('assets/data/curated_pois.json');
-      final jsonData = json.decode(jsonString) as List;
-
-      return jsonData
-          .map((item) => _parseCuratedPOI(item))
+      final curatedCatalog = await _loadCuratedCatalog();
+      return curatedCatalog
           .where((poi) => _isInBounds(poi.location, bounds))
           .toList();
     } catch (e) {
       debugPrint('[POI] FEHLER Curated: $e');
       return [];
+    }
+  }
+
+  Future<List<POI>> _loadCuratedCatalog() async {
+    final cachedFuture = _curatedCatalogFuture;
+    if (cachedFuture != null) {
+      return cachedFuture;
+    }
+
+    final loadFuture = () async {
+      final jsonString =
+          await rootBundle.loadString('assets/data/curated_pois.json');
+      final jsonData = json.decode(jsonString) as List<dynamic>;
+
+      return jsonData
+          .whereType<Map>()
+          .map((item) => _parseCuratedPOI(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+    }();
+
+    _curatedCatalogFuture = loadFuture;
+    try {
+      return await loadFuture;
+    } catch (_) {
+      // Bei Ladefehler Cache loeschen, damit ein naechster Versuch moeglich ist.
+      if (identical(_curatedCatalogFuture, loadFuture)) {
+        _curatedCatalogFuture = null;
+      }
+      rethrow;
     }
   }
 

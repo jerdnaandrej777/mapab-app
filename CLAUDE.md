@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.49 - Social Owner-Controls + Header-Hardening | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.49)
+Version: 1.10.50 - POI-Dichte + Ladeperformance | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.50)
 
-- AI-Assistent aus Map-Header entfernt (Crash-Weg umgangen).
-- Public Trip Detail: Besitzer kann veroeffentlichte Trips direkt bearbeiten und loeschen.
-- POI-Galerie: Besitzer kann veroeffentlichte POI-Posts direkt bearbeiten und loeschen.
-- Social-Repository gehaertet: Update/Delete nur mit passender `user_id`.
-- Android Release aktualisiert: APK Build 232 (v1.10.49).
+- Daytrip-Fallbacks mergen POI-Treffer ueber mehrere Versuche (stabilere Mindestmenge).
+- Dynamisches `maxPerCategory` verhindert Unterbelegung bei engen Kategorien.
+- Daytrip-/AI-POI-Zielmenge auf `4..9` angehoben.
+- Curated-POI-Katalog wird lazy geladen und im Speicher gecacht.
+- Android Release aktualisiert: APK Build 233 (v1.10.50).
 
 
 ## Tech Stack

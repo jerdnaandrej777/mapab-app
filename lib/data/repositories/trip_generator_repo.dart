@@ -66,6 +66,13 @@ class TripGeneratorRepository {
     String? destinationAddress,
     WeatherCondition? weatherCondition,
   }) async {
+    final normalizedPoiCount =
+        poiCount.clamp(1, TripConstants.maxPoisPerDay).toInt();
+    final minDesiredPoiPoolSize = max(
+      normalizedPoiCount + 2,
+      normalizedPoiCount * 2,
+    );
+
     final destinationDistanceKm = destinationLocation != null
         ? GeoUtils.haversineDistance(startLocation, destinationLocation)
         : 0.0;
@@ -98,6 +105,7 @@ class TripGeneratorRepository {
         hasDestination: hasDestination,
         radiusKm: radiusKm,
         categoryIds: categoryIds,
+        minDesiredPoiCount: minDesiredPoiPoolSize,
       );
     } on RoutingException catch (e) {
       throw TripGenerationException(
@@ -145,7 +153,7 @@ class TripGeneratorRepository {
       availablePOIs: availablePOIs,
       startLocation: startLocation,
       endLocation: endLocation,
-      count: poiCount,
+      count: normalizedPoiCount,
       preferredCategories: categories,
     );
     if (selectionAttempts.isEmpty) {
@@ -575,6 +583,11 @@ class TripGeneratorRepository {
     required List<String>? categoryIds,
     required _TripFeasibilityEnvelope envelope,
   }) async {
+    final minimumPoolSize = max(
+      envelope.effectiveDays * TripConstants.minPoisPerDay,
+      envelope.effectiveDays + 2,
+    );
+
     List<POI> availablePOIs;
     if (hasDestination) {
       availablePOIs = await _loadPOIsAlongCorridor(
@@ -606,16 +619,17 @@ class TripGeneratorRepository {
       );
     }
 
-    if (availablePOIs.isNotEmpty) {
+    availablePOIs = _dedupePOIs(availablePOIs);
+    if (availablePOIs.length >= minimumPoolSize) {
       return availablePOIs;
     }
 
     debugPrint(
-        '[TripGenerator] Kein POI-Treffer im Constraint-Radius. Starte curated-only Rettungslauf...');
+        '[TripGenerator] POI-Pool zu klein (${availablePOIs.length}/$minimumPoolSize). Starte Rettungslauf...');
     if (hasDestination) {
       final rescueBufferKm =
           max(envelope.effectiveRadiusKm, max(requestedRadiusKm, 150.0));
-      return _loadPOIsAlongCorridor(
+      final rescuePOIs = await _loadPOIsAlongCorridor(
         start: startLocation,
         end: endLocation,
         bufferKm: rescueBufferKm,
@@ -626,11 +640,12 @@ class TripGeneratorRepository {
         const Duration(seconds: 45),
         onTimeout: () => <POI>[],
       );
+      return _dedupePOIs([...availablePOIs, ...rescuePOIs]);
     }
 
     final rescueRadiusKm = max(envelope.effectiveRadiusKm,
         max(requestedRadiusKm, envelope.totalBudgetKm));
-    return _poiRepo
+    final rescuePOIs = await _poiRepo
         .loadPOIsInRadius(
           center: startLocation,
           radiusKm: rescueRadiusKm,
@@ -642,6 +657,7 @@ class TripGeneratorRepository {
           const Duration(seconds: 45),
           onTimeout: () => <POI>[],
         );
+    return _dedupePOIs([...availablePOIs, ...rescuePOIs]);
   }
 
   _EuroTripPlanningResult? _attemptConstrainedEuroTripPlan({
@@ -681,12 +697,18 @@ class TripGeneratorRepository {
       final maxSegmentKm =
           envelope.maxDayHaversineKm * _maxSegmentFactorForAttempt(attempt);
       final selectionCount = min(desiredPoiCount, constrainedPool.length);
+      final dynamicMaxPerCategory = _calculateDynamicMaxPerCategory(
+        desiredSelectionCount: selectionCount,
+        preferredCategories: preferredCategories,
+        availablePOIs: constrainedPool,
+        minPerCategory: 3,
+      );
       final selectedPOIs = _dedupePOIs(_poiSelector.selectRandomPOIs(
         pois: constrainedPool,
         startLocation: startLocation,
         count: selectionCount,
         preferredCategories: preferredCategories,
-        maxPerCategory: 3,
+        maxPerCategory: dynamicMaxPerCategory,
         maxSegmentKm: maxSegmentKm,
         tripEndLocation: endLocation,
         remainingTripBudgetKm: envelope.totalBudgetKm * budgetFactor,
@@ -1652,8 +1674,10 @@ class TripGeneratorRepository {
     required bool hasDestination,
     required double radiusKm,
     required List<String>? categoryIds,
+    required int minDesiredPoiCount,
   }) async {
     final attempts = <Future<List<POI>> Function()>[];
+    var bestResult = <POI>[];
     final expandedCategories = (categoryIds != null && categoryIds.isNotEmpty)
         ? _expandCategoryIds(categoryIds)
         : categoryIds;
@@ -1874,16 +1898,39 @@ class TripGeneratorRepository {
     }
 
     for (var i = 0; i < attempts.length; i++) {
-      final result = await attempts[i]();
-      if (result.isNotEmpty) {
+      final result = await attempts[i]().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint(
+            '[TripGenerator] Tagestrip-POI-Fallback Versuch ${i + 1}: Timeout nach 10s',
+          );
+          return <POI>[];
+        },
+      );
+      if (result.isEmpty) continue;
+
+      final dedupedResult = _dedupePOIs(result);
+      final combined = _dedupePOIs([...bestResult, ...dedupedResult]);
+      bestResult = combined;
+
+      debugPrint(
+        '[TripGenerator] Tagestrip-POI-Fallback Versuch ${i + 1}: '
+        '+${dedupedResult.length} POIs, kombiniert ${bestResult.length}',
+      );
+
+      final targetPoolSize = min(
+        max(1, minDesiredPoiCount),
+        TripConstants.maxPoisPerDay * 3,
+      );
+      if (bestResult.length >= targetPoolSize) {
         debugPrint(
-          '[TripGenerator] Tagestrip-POI-Fallback erfolgreich in Versuch ${i + 1}: ${result.length} POIs',
+          '[TripGenerator] Tagestrip-POI-Pool ausreichend: ${bestResult.length}/$targetPoolSize',
         );
-        return _dedupePOIs(result);
+        return bestResult;
       }
     }
 
-    return const [];
+    return bestResult;
   }
 
   Future<List<POI>> _loadPOIsNearDayTripEndpoints({
@@ -2112,6 +2159,12 @@ class TripGeneratorRepository {
     if (availablePOIs.isEmpty || count <= 0) return const [];
 
     final normalizedCount = count.clamp(1, availablePOIs.length).toInt();
+    final dynamicMaxPerCategory = _calculateDynamicMaxPerCategory(
+      desiredSelectionCount: normalizedCount,
+      preferredCategories: preferredCategories,
+      availablePOIs: availablePOIs,
+      minPerCategory: 2,
+    );
     final attempts = <({String label, List<POI> pois})>[];
     final seenKeys = <String>{};
 
@@ -2129,6 +2182,7 @@ class TripGeneratorRepository {
       startLocation: startLocation,
       count: normalizedCount,
       preferredCategories: preferredCategories,
+      maxPerCategory: dynamicMaxPerCategory,
     );
     addAttempt('random_weighted', randomSelection);
 
@@ -2182,6 +2236,35 @@ class TripGeneratorRepository {
       pois: pois,
       startLocation: startLocation,
       returnToStart: true,
+    );
+  }
+
+  int _calculateDynamicMaxPerCategory({
+    required int desiredSelectionCount,
+    required List<POICategory> preferredCategories,
+    required List<POI> availablePOIs,
+    int minPerCategory = 2,
+  }) {
+    final preferredCategoryIds = preferredCategories
+        .map((category) => category.id)
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final effectiveCategoryCount = preferredCategoryIds.isNotEmpty
+        ? preferredCategoryIds.length
+        : availablePOIs
+            .map((poi) => poi.categoryId)
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .length
+            .clamp(1, 6);
+
+    final desiredPerCategory =
+        (desiredSelectionCount / max(1, effectiveCategoryCount)).ceil() + 1;
+
+    return desiredPerCategory.clamp(
+      minPerCategory,
+      TripConstants.maxPoisPerDay,
     );
   }
 

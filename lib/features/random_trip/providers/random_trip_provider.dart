@@ -364,7 +364,7 @@ class RandomTripNotifier extends _$RandomTripNotifier {
           startAddress: startAddr,
           radiusKm: state.radiusKm,
           categories: state.selectedCategories,
-          poiCount: (state.radiusKm / 20).clamp(3, 8).round(),
+          poiCount: (state.radiusKm / 20).clamp(4, 9).round(),
           destinationLocation: state.destinationLocation,
           destinationAddress: state.destinationAddress,
           weatherCondition: currentWeather,

@@ -91,6 +91,45 @@ class _SplitPOIRepository extends POIRepository {
   }
 }
 
+class _SequencedRadiusPOIRepository extends POIRepository {
+  _SequencedRadiusPOIRepository(this._radiusResponses);
+
+  final List<List<POI>> _radiusResponses;
+  int radiusCalls = 0;
+
+  @override
+  Future<List<POI>> loadPOIsInRadius({
+    required LatLng center,
+    required double radiusKm,
+    List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
+    bool includeCurated = true,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
+    bool useCache = true,
+    bool isFallbackAttempt = false,
+  }) async {
+    radiusCalls++;
+    if (_radiusResponses.isEmpty) return const [];
+    final idx = (radiusCalls - 1).clamp(0, _radiusResponses.length - 1);
+    return _radiusResponses[idx];
+  }
+
+  @override
+  Future<List<POI>> loadPOIsInBounds({
+    required ({LatLng southwest, LatLng northeast}) bounds,
+    List<String>? categoryFilter,
+    int minScore = minimumPOIScore,
+    bool includeCurated = true,
+    bool includeWikipedia = true,
+    bool includeOverpass = true,
+    int maxResults = 200,
+    bool isFallbackAttempt = false,
+  }) async {
+    return const [];
+  }
+}
+
 class _FakeRoutingRepository extends RoutingRepository {
   _FakeRoutingRepository({this.failWhenWaypoints = false});
 
@@ -228,6 +267,40 @@ class _ScriptedPOISelector extends RandomPOISelector {
           nextLocation: nextLocation,
           maxSegmentKm: maxSegmentKm,
         );
+  }
+}
+
+class _CapturingPOISelector extends RandomPOISelector {
+  _CapturingPOISelector();
+
+  int? lastMaxPerCategory;
+
+  @override
+  List<POI> selectRandomPOIs({
+    required List<POI> pois,
+    required LatLng startLocation,
+    required int count,
+    List<POICategory> preferredCategories = const [],
+    int maxPerCategory = 2,
+    double? maxSegmentKm,
+    LatLng? tripEndLocation,
+    double? remainingTripBudgetKm,
+    LatLng? currentAnchorLocation,
+    List<LatLng>? progressRouteCoordinates,
+  }) {
+    lastMaxPerCategory = maxPerCategory;
+    return super.selectRandomPOIs(
+      pois: pois,
+      startLocation: startLocation,
+      count: count,
+      preferredCategories: preferredCategories,
+      maxPerCategory: maxPerCategory,
+      maxSegmentKm: maxSegmentKm,
+      tripEndLocation: tripEndLocation,
+      remainingTripBudgetKm: remainingTripBudgetKm,
+      currentAnchorLocation: currentAnchorLocation,
+      progressRouteCoordinates: progressRouteCoordinates,
+    );
   }
 }
 
@@ -391,6 +464,76 @@ void main() {
       expect(poiRepo.radiusCalls, greaterThanOrEqualTo(2));
       expect(result.selectedPOIs, isNotEmpty);
       expect(result.trip.route.coordinates, isNotEmpty);
+    });
+
+    test(
+        'continues fallback attempts when first POI batch is too small and merges candidates',
+        () async {
+      final firstSmallBatch = <POI>[
+        _buildPOI('small-1', 50.9400, 6.9700, category: POICategory.castle),
+      ];
+      final secondLargerBatch = <POI>[
+        _buildPOI('large-1', 50.9420, 6.9720, category: POICategory.castle),
+        _buildPOI('large-2', 50.9440, 6.9740, category: POICategory.castle),
+        _buildPOI('large-3', 50.9460, 6.9760, category: POICategory.castle),
+        _buildPOI('large-4', 50.9480, 6.9780, category: POICategory.castle),
+        _buildPOI('large-5', 50.9500, 6.9800, category: POICategory.castle),
+      ];
+      final poiRepo = _SequencedRadiusPOIRepository([
+        firstSmallBatch,
+        secondLargerBatch,
+      ]);
+      final routingRepo = _FakeRoutingRepository();
+      final selector = _CapturingPOISelector();
+      final repo = TripGeneratorRepository(
+        poiRepo: poiRepo,
+        routingRepo: routingRepo,
+        poiSelector: selector,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        radiusKm: 120,
+        poiCount: 5,
+        categories: const [POICategory.castle],
+      );
+
+      expect(poiRepo.radiusCalls, greaterThan(1));
+      expect(result.availablePOIs.length, greaterThan(firstSmallBatch.length));
+      expect(result.selectedPOIs.length, greaterThanOrEqualTo(2));
+    });
+
+    test(
+        'uses dynamic maxPerCategory for daytrip selection with narrow categories',
+        () async {
+      final sameCategoryPool = List<POI>.generate(
+        8,
+        (index) => _buildPOI(
+          'castle-$index',
+          50.94 + (index * 0.002),
+          6.97 + (index * 0.002),
+          category: POICategory.castle,
+          score: 90 - index,
+        ),
+      );
+      final selector = _CapturingPOISelector();
+      final repo = TripGeneratorRepository(
+        poiRepo: _FakePOIRepository(sameCategoryPool),
+        routingRepo: _FakeRoutingRepository(),
+        poiSelector: selector,
+      );
+
+      await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        radiusKm: 150,
+        poiCount: 6,
+        categories: const [POICategory.castle],
+      );
+
+      expect(selector.lastMaxPerCategory, isNotNull);
+      expect(selector.lastMaxPerCategory, greaterThan(2));
     });
 
     test('does not enforce radius hard-limit when destination is set',

@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.50 - POI-Dichte + Ladeperformance (9. Februar 2026)
+- **Mehr POIs auf Tagesrouten** - Daytrip-Fallbacks sammeln und mergen POIs ueber mehrere Versuche, statt beim ersten kleinen Treffer zu stoppen.
+- **Dynamische Kategorien-Limits** - `maxPerCategory` wird aus Zielmenge und Verfuegbarkeit berechnet; dadurch weniger Unterbelegung bei engen Kategorien.
+- **Hoehere Standard-POI-Zielmenge** - Daytrip-/AI-Flows verwenden jetzt `4..9` POIs statt `3..8`.
+- **Schnelleres Curated-Laden** - `curated_pois.json` wird einmal lazy geladen und im Speicher gecacht.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 233.
+
 ### v1.10.49 - Social Owner-Controls + Header-Hardening (9. Februar 2026)
 - **AI-Assistent Header-Einstieg entfernt** - Der Header-Button wurde entfernt, um den bekannten Crash-Pfad zu vermeiden.
 - **Trip-Galerie erweitert** - Eigene veroeffentlichte Trips koennen im Public-Detail direkt bearbeitet und geloescht werden.
@@ -467,6 +474,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.10.48
+**Version:** 1.10.50
 **Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙

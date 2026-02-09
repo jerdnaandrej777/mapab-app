@@ -301,7 +301,7 @@ class TripConfig {
   /// Empfohlene POI-Anzahl basierend auf Radius und Tagen
   int get recommendedPOICount {
     if (isDayTrip) {
-      return (radiusKm / 20).clamp(3, 8).round();
+      return (radiusKm / 20).clamp(4, 9).round();
     }
     return (days * 4).clamp(4, 20);
   }
