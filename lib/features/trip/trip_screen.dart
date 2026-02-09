@@ -37,6 +37,8 @@ class TripScreen extends ConsumerStatefulWidget {
 }
 
 class _TripScreenState extends ConsumerState<TripScreen> {
+  bool _elevationExpanded = false;
+
   @override
   Widget build(BuildContext context) {
     final tripState = ref.watch(tripStateProvider);
@@ -51,6 +53,16 @@ class _TripScreenState extends ConsumerState<TripScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         title: Text(_getTitle(context, tripState, randomTripState)),
         actions: [
           // Speichern-Button (normale Route oder AI Trip) - dominant
@@ -544,11 +556,77 @@ $mapsUrl
 
         const SizedBox(height: 8),
 
-        // Hoehenprofil (wenn geladen)
+        // Hoehenprofil (aufklappbar)
         if (elevationState.hasProfile) ...[
-          ElevationChart(profile: elevationState.profile!),
-          const SizedBox(height: 8),
-          TripStatisticsCard(profile: elevationState.profile!),
+          InkWell(
+            onTap: () =>
+                setState(() => _elevationExpanded = !_elevationExpanded),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.terrain, size: 18, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Höhenprofil',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_upward,
+                      size: 12, color: colorScheme.tertiary),
+                  const SizedBox(width: 2),
+                  Text(
+                    elevationState.profile!.formattedAscent,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.tertiary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.arrow_downward,
+                      size: 12, color: colorScheme.error),
+                  const SizedBox(width: 2),
+                  Text(
+                    elevationState.profile!.formattedDescent,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _elevationExpanded
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                    size: 20,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _elevationExpanded
+                ? Column(
+                    children: [
+                      ElevationChart(profile: elevationState.profile!),
+                      const SizedBox(height: 8),
+                      TripStatisticsCard(
+                          profile: elevationState.profile!),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
           const SizedBox(height: 8),
         ] else if (elevationState.isLoading) ...[
           Padding(
@@ -685,46 +763,43 @@ $mapsUrl
                     label: Text(context.l10n.showOnMap),
                   ),
                 ),
+                const SizedBox(height: 8),
                 // POIs entdecken Button
-                if (route != null && route.coordinates.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => CorridorBrowserSheet.show(
-                          context: context,
-                          route: route,
-                          existingStopIds:
-                              tripState.stops.map((s) => s.id).toSet(),
-                        ),
-                        icon: const Icon(Icons.add_location_alt_rounded),
-                        label: Text(context.l10n.tripConfigPoisAlongRoute),
+                if (route != null && route.coordinates.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => CorridorBrowserSheet.show(
+                        context: context,
+                        route: route,
+                        existingStopIds:
+                            tripState.stops.map((s) => s.id).toSet(),
                       ),
+                      icon: const Icon(Icons.add_location_alt_rounded),
+                      label: Text(context.l10n.tripConfigPoisAlongRoute),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                ],
                 // In-App Navigation starten
                 if (route != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => context.push(
-                          '/navigation',
-                          extra: {
-                            'route': route,
-                            'stops': tripState.stops
-                                .asMap()
-                                .entries
-                                .map((e) =>
-                                    TripStop.fromPOI(e.value, order: e.key))
-                                .toList(),
-                          },
-                        ),
-                        icon: const Icon(Icons.navigation),
-                        label: Text(context.l10n.tripInfoStartNavigation),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => context.push(
+                        '/navigation',
+                        extra: {
+                          'route': route,
+                          'stops': tripState.stops
+                              .asMap()
+                              .entries
+                              .map((e) =>
+                                  TripStop.fromPOI(e.value, order: e.key))
+                              .toList(),
+                        },
                       ),
+                      icon: const Icon(Icons.navigation),
+                      label: Text(context.l10n.tripInfoStartNavigation),
                     ),
                   ),
               ],
