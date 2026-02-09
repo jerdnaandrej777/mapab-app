@@ -56,11 +56,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
+            if (hasRoute) {
+              ref.read(shouldFitToRouteProvider.notifier).state = true;
+              ref.read(mapRouteFocusModeProvider.notifier).state = true;
             }
+            context.go('/');
           },
         ),
         title: Text(_getTitle(context, tripState, randomTripState)),

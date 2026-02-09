@@ -374,7 +374,16 @@ class SocialRepository {
       if (response is Map<String, dynamic>) {
         return _parsePublicPoiRow(response);
       }
-      return null;
+      // INSERT hat funktioniert (RPC wirft sonst), aber View-Abfrage leer
+      debugPrint(
+          '[Social] publish_poi_post: POST erstellt, aber View-Abfrage leer');
+      return PublicPoiPost(
+        id: '',
+        poiId: poiId,
+        userId: '',
+        title: title,
+        createdAt: DateTime.now(),
+      );
     } on PostgrestException catch (e) {
       // Fallback fuer Instanzen ohne Migration 012 (fehlende publish_poi_post RPC).
       if (e.code != 'PGRST202') rethrow;

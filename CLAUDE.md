@@ -5,20 +5,13 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.55 - Erinnerungspunkt + Journal-Persistenz + UX-Fixes | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.55)
+Version: 1.10.56 - POI-Publish-Fix + Journal-Box-Fix + Route-Fokus-Modal | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.56)
 
-- Erinnerungspunkt auf der Karte: Journal-Eintraege mit "Auf Karte anzeigen" zeigen Marker + Footer mit "Zurueck" und "Erneut besuchen" (Route ab GPS-Standort).
-- Journal-Persistenz gefixt: Hive-Boxen `journals`/`journal_entries` werden beim App-Start pre-opened, JournalService-Provider keepAlive.
-- Foto-Upload im Reisetagebuch repariert (ensureJournalExists vor Kamera/Galerie-Zugriff).
-- Doppelter "Eintrag hinzufuegen"-Button im leeren Journal entfernt (FAB nur bei vorhandenen Eintraegen).
-- Hoehenprofil: keine doppelte Ueberschrift/Stats mehr im aufgeklappten Zustand (showHeader-Parameter).
-- AI-Empfehlungen priorisieren Route/Ziel statt Startbereich (Suchpunkte + Scoring + Start-Filter).
-- Karten-Overlay fuer AI-Empfehlungen funktioniert auch mit geladenen Routen (Trip/Favoriten/Planner).
-- Reisetagebuch mit periodischen Ansichten `Tag / Monat / Jahr` und Aggregationskarten.
-- Journal-Modalfluss: aus Monats-/Jahreslisten direkt in Entry-Details inkl. Karte/POI-Interaktion.
-- TripScreen aufklappbares Hoehenprofil, konsistente 8px Button-Abstaende, Zurueck-Button.
-- Android Release aktualisiert: APK Build 239 (v1.10.55).
+- POI-Veroeffentlichung repariert: Leere RPC-Antwort wird als Erfolg behandelt statt Fehler, null-Check im PublishPoiSheet entfernt.
+- Journal Hive-Box-Typ-Fix: `Box<Map>` durch `Box` (dynamic) ersetzt in journal_service.dart, behebt Typ-Mismatch mit main.dart Box-Oeffnung.
+- TripScreen Zurueck-Button aktiviert Route-Fokus-Modus: shouldFitToRoute + mapRouteFocusMode werden gesetzt, Map zeigt Fokus-Footer mit 3 Aktionen.
+- Android Release aktualisiert: APK Build 240 (v1.10.56).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -518,6 +511,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.56.md` (POI-Publish-Fix leere RPC-Antwort, Journal Hive-Box-Typ-Mismatch behoben, TripScreen Back-Button mit Route-Fokus-Modal)
 - `Dokumentation/CHANGELOG-v1.10.55.md` (Erinnerungspunkt auf Karte mit Revisit-Route, Journal-Persistenz-Fix, Foto-Upload-Fix, Hoehenprofil ohne doppelten Header, doppelter Journal-Button entfernt)
 - `Dokumentation/CHANGELOG-v1.10.53.md` (Public-Trip Kartenfluss stabilisiert: stale State Reset vor "Auf Karte"/Standort-Start, Journal-Shortcut im Header, Korridor-POI-Karten im Modal-Stil, Elevation-Request-Deduplizierung)
 - `Dokumentation/CHANGELOG-v1.10.52.md` (Routenfokus-Modal: "Auf Karte anzeigen" mit reduziertem Kartenmodus, nur 3 Fokus-Aktionen im Footer, Entfernen von Google-Maps/Teilen im "Deine Route"-Modal, Favoriten-Routen mit identischem Fokus-Flow)

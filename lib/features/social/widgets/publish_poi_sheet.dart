@@ -272,9 +272,6 @@ class _PublishPoiSheetState extends ConsumerState<PublishPoiSheet> {
       );
 
       if (!mounted) return;
-      if (result == null) {
-        throw Exception(context.l10n.publishError);
-      }
 
       AppSnackbar.showSuccess(context, context.l10n.publishSuccess);
       Navigator.pop(context, true);

@@ -10,8 +10,8 @@ import '../models/journal_entry.dart';
 class JournalService {
   static const String _boxName = 'journals';
   static const String _entriesBoxName = 'journal_entries';
-  late Box<Map> _journalsBox;
-  late Box<Map> _entriesBox;
+  late Box _journalsBox;
+  late Box _entriesBox;
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _isInitialized = false;
@@ -22,18 +22,18 @@ class JournalService {
 
     // Nutze pre-opened Boxen aus main.dart, Fallback auf lazy open
     if (Hive.isBoxOpen(_boxName)) {
-      _journalsBox = Hive.box<Map>(_boxName);
+      _journalsBox = Hive.box(_boxName);
     } else {
       debugPrint('[Journal] Box "$_boxName" nicht pre-opened, oeffne lazy');
-      _journalsBox = await Hive.openBox<Map>(_boxName);
+      _journalsBox = await Hive.openBox(_boxName);
     }
 
     if (Hive.isBoxOpen(_entriesBoxName)) {
-      _entriesBox = Hive.box<Map>(_entriesBoxName);
+      _entriesBox = Hive.box(_entriesBoxName);
     } else {
       debugPrint(
           '[Journal] Box "$_entriesBoxName" nicht pre-opened, oeffne lazy');
-      _entriesBox = await Hive.openBox<Map>(_entriesBoxName);
+      _entriesBox = await Hive.openBox(_entriesBoxName);
     }
 
     _isInitialized = true;
