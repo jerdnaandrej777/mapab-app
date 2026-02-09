@@ -491,6 +491,53 @@ void main() {
       expect(result.selectedPOIs.first.id, rescue.id);
     });
 
+    test('dedupes semantically identical POIs with different ids', () async {
+      final dupA = POI(
+        id: 'altstadt-a',
+        name: 'Luebecker Altstadt',
+        latitude: 50.9400,
+        longitude: 6.9700,
+        categoryId: POICategory.unesco.id,
+        score: 78,
+      );
+      final dupB = POI(
+        id: 'altstadt-b',
+        name: 'Altstadt Luebeck',
+        latitude: 50.9401,
+        longitude: 6.9701,
+        categoryId: POICategory.unesco.id,
+        score: 82,
+      );
+      final other = _buildPOI('other', 50.9520, 7.0050, score: 75);
+
+      final selector = _ScriptedPOISelector(
+        selections: [
+          [dupA, dupB, other],
+        ],
+      );
+      final repo = TripGeneratorRepository(
+        poiRepo: _FakePOIRepository([dupA, dupB, other]),
+        routingRepo: _FakeRoutingRepository(),
+        poiSelector: selector,
+      );
+
+      final result = await repo.generateDayTrip(
+        startLocation: start,
+        startAddress: 'Koeln',
+        radiusKm: 150,
+        poiCount: 3,
+      );
+
+      final altstadtStops = result.selectedPOIs
+          .where((poi) => poi.name.toLowerCase().contains('altstadt'))
+          .toList();
+      expect(altstadtStops.length, 1);
+      expect(
+        result.selectedPOIs.map((poi) => poi.id).toSet().length,
+        result.selectedPOIs.length,
+      );
+    });
+
     test('keeps destination endpoint in single-day removePOI', () async {
       const destination = LatLng(50.9950, 7.1200);
       final p1 = _buildPOI('p1', 50.9450, 6.9800);

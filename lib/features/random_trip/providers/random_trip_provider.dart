@@ -807,7 +807,8 @@ class RandomTripNotifier extends _$RandomTripNotifier {
     GenerationPhase phase, {
     double? minProgress,
   }) {
-    final nextMin = (minProgress ?? phase.baseProgress).clamp(0.0, 1.0);
+    final minFloor = phase == GenerationPhase.idle ? 0.0 : 0.01;
+    final nextMin = (minProgress ?? phase.baseProgress).clamp(minFloor, 1.0);
     final nextProgress =
         state.generationProgress < nextMin ? nextMin : state.generationProgress;
     state = state.copyWith(
@@ -831,10 +832,14 @@ class RandomTripNotifier extends _$RandomTripNotifier {
       }
 
       final ceiling = _phaseProgressCeiling(phase);
-      final current = state.generationProgress.clamp(0.0, 1.0);
+      final current = state.generationProgress.clamp(0.01, 1.0);
+      if (state.generationProgress < 0.01) {
+        state = state.copyWith(generationProgress: current);
+        return;
+      }
       if (current >= ceiling) return;
 
-      final next = (current + _phaseProgressStep(phase)).clamp(0.0, ceiling);
+      final next = (current + _phaseProgressStep(phase)).clamp(0.01, ceiling);
       state = state.copyWith(generationProgress: next);
     });
   }

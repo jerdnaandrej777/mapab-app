@@ -351,32 +351,63 @@ List<LatLng> extractRouteSegment(
   LatLng segStart,
   LatLng segEnd,
 ) {
-  if (fullRoute.isEmpty) return [];
+  return extractRouteSegmentThroughWaypoints(
+    fullRoute,
+    [segStart, segEnd],
+  );
+}
 
-  // Finde den nächsten Punkt auf der Route für Start und Ende
-  int startIndex = _findClosestPointIndex(fullRoute, segStart);
-  int endIndex = _findClosestPointIndex(fullRoute, segEnd);
+/// Extrahiert ein Segment entlang geordneter Wegpunkte.
+/// Die Suchindizes laufen strikt vorwaerts, damit bei Rundreisen der
+/// spaetere Route-Abschnitt gewaehlt wird.
+List<LatLng> extractRouteSegmentThroughWaypoints(
+  List<LatLng> fullRoute,
+  List<LatLng> waypoints,
+) {
+  if (fullRoute.isEmpty || waypoints.isEmpty) return const [];
 
-  // Sicherstellen dass Start vor Ende liegt
-  if (startIndex > endIndex) {
-    final temp = startIndex;
-    startIndex = endIndex;
-    endIndex = temp;
+  final cleanedWaypoints = _dedupeConsecutiveWaypoints(waypoints);
+  if (cleanedWaypoints.isEmpty) return const [];
+
+  final indices = <int>[];
+  var searchStartIndex = 0;
+  for (final waypoint in cleanedWaypoints) {
+    final index = _findClosestPointIndexFrom(
+      fullRoute,
+      waypoint,
+      startIndex: searchStartIndex,
+    );
+    indices.add(index);
+    searchStartIndex = index;
   }
 
-  // Segment extrahieren (inklusive Start und Ende)
-  if (endIndex >= fullRoute.length) {
-    endIndex = fullRoute.length - 1;
-  }
-
+  final startIndex = indices.first.clamp(0, fullRoute.length - 1);
+  final endIndex = indices.last.clamp(startIndex, fullRoute.length - 1);
   return fullRoute.sublist(startIndex, endIndex + 1);
 }
 
-int _findClosestPointIndex(List<LatLng> points, LatLng target) {
+List<LatLng> _dedupeConsecutiveWaypoints(List<LatLng> waypoints) {
+  if (waypoints.isEmpty) return const [];
+  final result = <LatLng>[waypoints.first];
+  for (int i = 1; i < waypoints.length; i++) {
+    if (_haversineDistance(result.last, waypoints[i]) > 0.01) {
+      result.add(waypoints[i]);
+    }
+  }
+  return result;
+}
+
+int _findClosestPointIndexFrom(
+  List<LatLng> points,
+  LatLng target, {
+  required int startIndex,
+}) {
+  if (points.isEmpty) return 0;
+  final clampedStart = startIndex.clamp(0, points.length - 1);
   int closestIndex = 0;
   double minDistance = double.infinity;
 
-  for (int i = 0; i < points.length; i++) {
+  for (int i = clampedStart; i < points.length; i++) {
     final distance = _haversineDistance(points[i], target);
     if (distance < minDistance) {
       minDistance = distance;

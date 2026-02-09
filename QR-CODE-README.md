@@ -2,8 +2,8 @@
 
 ## Aktueller Download-Link
 
-- GitHub Release: https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.10.46
-- Direkter APK-Download: https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.46/app-release.apk
+- GitHub Release: https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.10.47
+- Direkter APK-Download: https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.47/app-release.apk
 
 ## Verfuegbare HTML-Seiten
 
@@ -22,11 +22,11 @@
 3. Installation aus unbekannten Quellen temporaer erlauben.
 4. APK installieren und App starten.
 
-## Release-Hinweise (v1.10.46)
+## Release-Hinweise (v1.10.47)
 
-- Social-Flows stabilisiert (POI-Kommentare/Replies, Public-Profile Navigation).
-- Sharing und QR-Scanning auf konsistente Gallery-Links vereinheitlicht.
-- Navigation-Lifecycle und Background-Flow robuster gegen Resume/Stop-Races.
+- Day-Editor Segment-Routing fuer letzten Tag stabilisiert (Route folgt wieder den Tages-POIs).
+- Semantische POI-Deduplizierung reduziert Doppeleintraege in Tageslisten.
+- Ladeanimationen fuer AI Tagestrip/Euro Trip optimiert, Progress bleibt strikt 1% bis 100%.
 
 ## Support
 
@@ -35,6 +35,6 @@
 
 ---
 
-Version: 1.10.46
+Version: 1.10.47
 Build-Datum: 9. Februar 2026
 Flutter SDK: 3.38.7+

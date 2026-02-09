@@ -10,6 +10,24 @@ import 'package:travel_planner/features/trip/widgets/day_mini_map.dart';
 import '../helpers/test_factories.dart';
 
 void main() {
+  group('extractRouteSegmentThroughWaypoints', () {
+    test('uses forward waypoint matching for roundtrip tail segments', () {
+      const a = LatLng(53.5511, 9.9937);
+      const b = LatLng(53.60, 10.05);
+      const c = LatLng(53.65, 10.10);
+      const d = LatLng(53.70, 10.15);
+      const e = LatLng(53.75, 10.20);
+      final fullRoute = [a, b, c, d, e, a];
+
+      final segment = extractRouteSegmentThroughWaypoints(
+        fullRoute,
+        const [d, e, a],
+      );
+
+      expect(segment, [d, e, a]);
+    });
+  });
+
   group('DayMiniMap', () {
     testWidgets('recommended marker ist tappable und liefert den korrekten POI',
         (tester) async {

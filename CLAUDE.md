@@ -5,15 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.46 - Social-Flow + Navigation-Lifecycle stabilisiert | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.46)
+Version: 1.10.47 - Routing-/POI-Stabilisierung + Ladeanimationen gehaertet | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.47)
 
-- POI-Social startet im Detailscreen deterministisch (`loadAll()`), Review-Aktion ist direkt angebunden.
-- Reply-Moderation korrigiert: Delete/Flag arbeiten jetzt mit der echten Reply-ID statt Parent-Callback.
-- Public Profile Routing erweitert: `/profile/:userId` ist direkt aufrufbar und nicht vom Auth-Guard blockiert.
-- Sharing auf stabile Public-Links vereinheitlicht (`/gallery/{id}`) inkl. Legacy-Parsing fuer alte `/trip/{id}`-Links.
-- QR-Scanner und Public-Trip-Detail verbessert (konsistenter Link-Flow + echte QR-Render-Ausgabe).
-- Navigation-Background-Lifecycle gehaertet, inkl. robusterem Resume-/Stop-Verhalten.
+- Day-Editor Routing stabilisiert: Segment-Extraktion folgt geordneten Wegpunkten und bleibt auch am letzten Tag korrekt.
+- POI-Deduplizierung erweitert: semantisch + geographisch statt nur ID-basiert.
+- Progress-Animationen optimiert: getrennte Visuals fuer AI Tagestrip und Euro Trip, konsistenter 1% -> 100% Verlauf.
+- Trip-Generator und Day-Edit-Flows verhindern Re-Introduktion von Near-Duplicate-POIs.
+- Neuer CI-Workflow aktiviert (Flutter Test/Analyze + Backend Typecheck/Lint).
 
 
 ## Tech Stack
@@ -196,7 +195,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
 | `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
 | `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) |
-| `lib/features/navigation/services/navigation_background_service.dart` | Plattformabstraktion fuer Hintergrund-Navigation (Android/iOS/Noop): Start/Stop, Notification-Resume und Lifecycle-sicheres State-Management (v1.10.46) |
+| `lib/features/navigation/services/navigation_background_service.dart` | Plattformabstraktion fuer Hintergrund-Navigation (Android/iOS/Noop): Start/Stop, Notification-Resume und Lifecycle-sicheres State-Management (v1.10.47) |
 
 ### Daten
 
@@ -215,7 +214,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/repositories/leaderboard_repo.dart` | Leaderboard Repository: getLeaderboard() mit Sortierung (XP/km/Trips/Likes), getMyPosition(), Pagination (v1.10.23) |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS -> Client-Fallback -> Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) + Wikipedia-Grid 4er-Batches mit 200ms Pause + 8s Timeout + 200-POI-Cap, globaler 20s Future.wait-Timeout (v1.9.28) + minScore-Parameter in Radius/Bounds sowie loadPOIById() (Supabase+curated Fallback) (v1.10.35) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |
-| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage->Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) + lastResult Null-Check statt force-unwrap, Post-Validierung Max-Tage-Cap 2x (v1.9.28) + Daytrip-POI-Rescue-Strategie (strict/relaxed/rescue), erweiterte Endpoint-Radien und tolerantere Korridorfilter (v1.10.35) + Emergency-Fallbacks (minScore 0), groesserer Radius/Buffer-Rescue und robustere Treffer in duennen Regionen (v1.10.37) + Retry-basierte Daytrip-Auswahl, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und A->B-Endpunkt-Erhalt in remove/add/reroll (v1.10.38) |
+| `lib/data/repositories/trip_generator_repo.dart` | Trip-Generierung mit Tage->Radius Berechnung (v1.7.38) + Richtungs-Optimierung + dynamische Tagesanzahl (v1.8.1) + Tag-beschraenkte POI-Bearbeitung bei Multi-Day Trips (v1.8.3) + Post-Validierung 700km Display-Limit (v1.9.5) + addPOIToTrip/addPOIToDay fuer POI-Hinzufuegen im DayEditor (v1.9.5+152) + _addPOIToDay() Exception statt Warning bei >700km, generateEuroTrip() Re-Split (v1.9.9) + Post-Validierung 3-fach Schleife statt einmalig (v1.9.11) + WeatherCondition-Parameter fuer wetter-gewichtete POI-Auswahl via ScoringUtils (v1.9.12) + Hotel-Filter: Hotels aus Tagestrip/EuroTrip POI-Auswahl entfernt (v1.9.13) + lastResult Null-Check statt force-unwrap, Post-Validierung Max-Tage-Cap 2x (v1.9.28) + Daytrip-POI-Rescue-Strategie (strict/relaxed/rescue), erweiterte Endpoint-Radien und tolerantere Korridorfilter (v1.10.35) + Emergency-Fallbacks (minScore 0), groesserer Radius/Buffer-Rescue und robustere Treffer in duennen Regionen (v1.10.37) + Retry-basierte Daytrip-Auswahl, zentrales Routing-Backoff mit erweitertem Single-POI-Rescue und A->B-Endpunkt-Erhalt in remove/add/reroll (v1.10.38) + semantische POI-Deduplizierung (Name+Distanz) ueber Load/Selection/Edit-Pfade (v1.10.47) |
 | `lib/core/algorithms/route_optimizer.dart` | Nearest-Neighbor + 2-opt TSP + Richtungs-optimierte Aâ†’B Routen (v1.8.1) + 2-opt Skip bei >50 POIs, reduzierte Iterationen 20-50 POIs (v1.9.28) |
 | `lib/core/utils/navigation_instruction_generator.dart` | OSRM Maneuver â†’ Lokalisierte Instruktionen mit l10n-Parameter (Abbiegen, Kreisverkehr, Auffahrt, etc.) (v1.9.0, v1.10.3: AppLocalizations l10n Parameter, 35 neue ARB-Keys) |
 | `lib/core/algorithms/day_planner.dart` | Distanz-basierte Tagesaufteilung 200-700km/Tag (v1.8.1, vorher 9-POI-Limit v1.5.7) + Display-basiertes Splitting, Merge-Guard, _splitLastDayIfOverLimit (v1.9.5) + _splitOverlimitDays() Safety-Split fuer Tage die trotz Clustering >700km sind (v1.9.11) + Absolute Iterations-Obergrenze min(clusters*2, 50) (v1.9.28) |
@@ -506,7 +505,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
-- `Dokumentation/CHANGELOG-v1.10.46.md` (Social + Navigation Stabilisierung: POI-Social Initial-Load, Reply-ID Fix fuer Delete/Flag, oeffentliches Profil-Routing `/profile/:userId`, Gallery-Link-Standardisierung fuer Sharing/QR, robustere Navigation-Lifecycle-Flows)
+- `Dokumentation/CHANGELOG-v1.10.47.md` (Routing-/POI-Stabilisierung: waypoint-basierte Tagessegment-Extraktion, semantische POI-Deduplizierung, optimierte Ladeanimationen, CI-Gates)
 - `Dokumentation/CHANGELOG-v1.10.43.md` (Favoriten-Route wie AI-Route mit `Trip bearbeiten`+`Navigation starten`, Trip-Bearbeiten-Button `POIs hinzufügen`, konsistentes POI-Hinzufuegen-Modal und AI-Assistent-Crash-Haertung)
 - `Dokumentation/CHANGELOG-v1.10.42.md` (AI-Assistent: robuste lokale Restaurant-Erkennung, direkte `Zur Route`-Aktion aus AI-POI-Karten, Route/Trip-Intent im Chat und vereinheitlichte Bottom-Sheet-Hoehen in den betroffenen Flows)
 - `Dokumentation/CHANGELOG-v1.10.41.md` (Trip-Bearbeiten vereinfacht: Footer mit `Weitere POIs hinzufügen` + `Fertig`, neuer Übersichts-Modal mit Karte/Stats und Abschlussaktionen, dynamisches Google-Maps-Label für Tagestrip vs. Euro Trip)

@@ -1,19 +1,18 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/random_trip_provider.dart';
 import '../providers/random_trip_state.dart';
 
-/// Fortschrittsanzeige für AI Trip Generierung
-/// v1.10.23: Zeigt aktuelle Phase und Fortschritt
+/// Fortschrittsanzeige fuer AI Trip Generierung.
 ///
-/// Verwendung:
-/// ```dart
-/// if (randomTripState.step == RandomTripStep.generating) {
-///   GenerationProgressIndicator()
-/// }
-/// ```
+/// Ziele:
+/// - Prozentanzeige laeuft sichtbar von 1% bis 100%
+/// - weniger visuelle Unruhe (keine Icon-Flut)
+/// - unterschiedliche Animationen fuer Tagestrip und Euro Trip
 class GenerationProgressIndicator extends ConsumerWidget {
   final bool compact;
   final bool panelMode;
@@ -31,12 +30,22 @@ class GenerationProgressIndicator extends ConsumerWidget {
     final theme = Theme.of(context);
 
     final phase = state.generationPhase;
-    final progress = state.generationProgress;
+    final progress = _normalizeProgress(state.generationProgress);
+    final percent = _toPercent(progress);
+    final mode = state.mode;
+
     final languageCode = Localizations.localeOf(context).languageCode;
     final message = phase.getLocalizedMessage(languageCode);
 
     if (compact) {
-      return _buildCompact(context, colorScheme, phase, progress, message);
+      return _buildCompact(
+        context,
+        colorScheme,
+        mode,
+        message,
+        progress,
+        percent,
+      );
     }
 
     if (panelMode) {
@@ -69,7 +78,9 @@ class GenerationProgressIndicator extends ConsumerWidget {
                 colorScheme: colorScheme,
                 theme: theme,
                 phase: phase,
+                mode: mode,
                 progress: progress,
+                percent: percent,
                 message: message,
               ),
             ),
@@ -122,7 +133,9 @@ class GenerationProgressIndicator extends ConsumerWidget {
                 colorScheme: colorScheme,
                 theme: theme,
                 phase: phase,
+                mode: mode,
                 progress: progress,
+                percent: percent,
                 message: message,
               ),
             ),
@@ -132,42 +145,45 @@ class GenerationProgressIndicator extends ConsumerWidget {
     );
   }
 
+  double _normalizeProgress(double rawProgress) {
+    final bounded = rawProgress.clamp(0.0, 1.0);
+    if (bounded >= 1.0) return 1.0;
+    if (bounded <= 0.0) return 0.01;
+    return bounded < 0.01 ? 0.01 : bounded;
+  }
+
+  int _toPercent(double progress) {
+    final value = (progress * 100).round();
+    return value.clamp(1, 100);
+  }
+
   Widget _buildMainContent({
     required BuildContext context,
     required ColorScheme colorScheme,
     required ThemeData theme,
     required GenerationPhase phase,
+    required RandomTripMode mode,
     required double progress,
+    required int percent,
     required String message,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _DominantLoadingCluster(
+        _ModeLoadingHero(
           progress: progress,
-          phase: phase,
+          percent: percent,
+          mode: mode,
           colorScheme: colorScheme,
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              phase.emoji,
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                message,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 14),
         ClipRRect(
@@ -181,7 +197,7 @@ class GenerationProgressIndicator extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '${(progress * 100).toStringAsFixed(0)}%',
+          '$percent%',
           style: theme.textTheme.titleLarge?.copyWith(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.w900,
@@ -189,8 +205,9 @@ class GenerationProgressIndicator extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         _FunLoadingTicker(
-          key: ValueKey(phase),
+          key: ValueKey('${mode.name}-${phase.name}'),
           phase: phase,
+          mode: mode,
         ),
       ],
     );
@@ -199,12 +216,13 @@ class GenerationProgressIndicator extends ConsumerWidget {
   Widget _buildCompact(
     BuildContext context,
     ColorScheme colorScheme,
-    GenerationPhase phase,
-    double progress,
+    RandomTripMode mode,
     String message,
+    double progress,
+    int percent,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -212,40 +230,45 @@ class GenerationProgressIndicator extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: Stack(
-              alignment: Alignment.center,
+          Icon(
+            mode == RandomTripMode.daytrip
+                ? Icons.directions_car_rounded
+                : Icons.flight_rounded,
+            size: 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 3,
-                  backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                Text(
+                  message,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor:
+                        colorScheme.primary.withValues(alpha: 0.18),
+                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Text(
-            phase.emoji,
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onPrimaryContainer,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${(progress * 100).toInt()}%',
+            '$percent%',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -260,10 +283,12 @@ class GenerationProgressIndicator extends ConsumerWidget {
 
 class _FunLoadingTicker extends StatefulWidget {
   final GenerationPhase phase;
+  final RandomTripMode mode;
 
   const _FunLoadingTicker({
     super.key,
     required this.phase,
+    required this.mode,
   });
 
   @override
@@ -275,29 +300,42 @@ class _FunLoadingTickerState extends State<_FunLoadingTicker> {
   int _index = 0;
 
   List<String> get _messages {
+    final isEuro = widget.mode == RandomTripMode.eurotrip;
+
     switch (widget.phase) {
       case GenerationPhase.calculatingRoute:
-        return const [
-          'Route wird intelligent berechnet...',
-          'Schnellste Fahrstrecke wird gesucht...',
-          'Tagesgrenzen werden geprüft...',
-        ];
+        return isEuro
+            ? const [
+                'Etappen fuer den Euro Trip werden geplant...',
+                'Lange Route wird in sinnvolle Abschnitte geteilt...',
+              ]
+            : const [
+                'Route fuer den Tagestrip wird berechnet...',
+                'Fahrzeit und Distanz werden abgestimmt...',
+              ];
       case GenerationPhase.searchingPOIs:
-        return const [
-          'Spannende POIs werden gesammelt...',
-          'Highlights in Reichweite werden priorisiert...',
-          'Verfügbare Orte werden gefiltert...',
-        ];
+        return isEuro
+            ? const [
+                'POIs entlang der Gesamtstrecke werden gesucht...',
+                'Highlights pro Reisetag werden gesammelt...',
+              ]
+            : const [
+                'Spannende POIs in deiner Reichweite werden gesucht...',
+                'Tagestrip-Highlights werden gefiltert...',
+              ];
       case GenerationPhase.rankingWithAI:
-        return const [
-          'AI sortiert die besten Zwischenstopps...',
-          'Route wird mit POIs sinnvoll kombiniert...',
-          'Reihenfolge wird für dich optimiert...',
-        ];
+        return isEuro
+            ? const [
+                'AI verteilt Stops auf die Reisetage...',
+                'Abfolge der Etappen wird optimiert...',
+              ]
+            : const [
+                'AI sortiert die besten Zwischenstopps...',
+                'Reihenfolge fuer den Tagestrip wird optimiert...',
+              ];
       case GenerationPhase.enrichingImages:
         return const [
-          'Bilder und Details werden ergänzt...',
-          'Infos für die Vorschau werden aufbereitet...',
+          'Bilder und Details werden vorbereitet...',
           'Fast fertig...',
         ];
       case GenerationPhase.complete:
@@ -316,6 +354,7 @@ class _FunLoadingTickerState extends State<_FunLoadingTicker> {
   void _startTicker() {
     final messages = _messages;
     if (messages.length <= 1) return;
+
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (!mounted) return;
       setState(() {
@@ -349,7 +388,7 @@ class _FunLoadingTickerState extends State<_FunLoadingTicker> {
       ),
       child: Text(
         messages[_index],
-        key: ValueKey('${widget.phase.name}-$_index'),
+        key: ValueKey('${widget.mode.name}-${widget.phase.name}-$_index'),
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 12,
@@ -361,72 +400,51 @@ class _FunLoadingTickerState extends State<_FunLoadingTicker> {
   }
 }
 
-/// Animierter Fortschrittsring
-class _AnimatedProgressRing extends StatefulWidget {
-  final double progress;
-  final GenerationPhase phase;
-  final ColorScheme colorScheme;
-
-  const _AnimatedProgressRing({
+class _ModeLoadingHero extends StatefulWidget {
+  const _ModeLoadingHero({
     required this.progress,
-    required this.phase,
-    required this.colorScheme,
-  });
-
-  @override
-  State<_AnimatedProgressRing> createState() => _AnimatedProgressRingState();
-}
-
-class _DominantLoadingCluster extends StatefulWidget {
-  const _DominantLoadingCluster({
-    required this.progress,
-    required this.phase,
+    required this.percent,
+    required this.mode,
     required this.colorScheme,
   });
 
   final double progress;
-  final GenerationPhase phase;
+  final int percent;
+  final RandomTripMode mode;
   final ColorScheme colorScheme;
 
   @override
-  State<_DominantLoadingCluster> createState() =>
-      _DominantLoadingClusterState();
+  State<_ModeLoadingHero> createState() => _ModeLoadingHeroState();
 }
 
-class _DominantLoadingClusterState extends State<_DominantLoadingCluster>
+class _ModeLoadingHeroState extends State<_ModeLoadingHero>
     with TickerProviderStateMixin {
-  late final AnimationController _clockController;
-  late final AnimationController _diceController;
+  late final AnimationController _travelController;
   late final AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _clockController = AnimationController(
+    _travelController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(milliseconds: 2200),
     )..repeat();
-    _diceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    )..repeat(reverse: true);
+
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _clockController.dispose();
-    _diceController.dispose();
+    _travelController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = widget.colorScheme;
     return SizedBox(
       height: 170,
       child: Stack(
@@ -434,76 +452,106 @@ class _DominantLoadingClusterState extends State<_DominantLoadingCluster>
         children: [
           _AnimatedProgressRing(
             progress: widget.progress,
-            phase: widget.phase,
-            colorScheme: cs,
+            percent: widget.percent,
+            colorScheme: widget.colorScheme,
           ),
-          Positioned(
-            left: 22,
-            top: 30,
-            child: AnimatedBuilder(
-              animation: _clockController,
+          if (widget.mode == RandomTripMode.daytrip)
+            _buildDayTripAnimation(widget.colorScheme)
+          else
+            _buildEuroTripAnimation(widget.colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayTripAnimation(ColorScheme colorScheme) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SizedBox(
+        width: 128,
+        height: 52,
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 10,
+              child: Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            AnimatedBuilder(
+              animation:
+                  Listenable.merge([_travelController, _pulseController]),
               builder: (context, _) {
-                return Transform.rotate(
-                  angle: _clockController.value * 6.28,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
+                final t = Curves.easeInOut.transform(_travelController.value);
+                final dx = -46 + (t * 92);
+                final bob = math.sin(t * math.pi) * 3;
+                final scale = 0.94 + (_pulseController.value * 0.10);
+
+                return Transform.translate(
+                  offset: Offset(dx, -bob),
+                  child: Transform.scale(
+                    scale: scale,
                     child: Icon(
-                      Icons.schedule_rounded,
-                      color: cs.onPrimaryContainer,
+                      Icons.directions_car_rounded,
+                      size: 22,
+                      color: colorScheme.primary,
                     ),
                   ),
                 );
               },
             ),
-          ),
-          Positioned(
-            right: 18,
-            top: 48,
-            child: AnimatedBuilder(
-              animation: _diceController,
-              builder: (context, _) {
-                final t = (_diceController.value - 0.5) * 0.24;
-                return Transform.rotate(
-                  angle: t,
-                  child: Transform.translate(
-                    offset: Offset(0, -8 * _diceController.value),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: cs.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.casino_rounded,
-                        color: cs.onTertiaryContainer,
-                      ),
-                    ),
-                  ),
-                );
-              },
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEuroTripAnimation(ColorScheme colorScheme) {
+    return SizedBox(
+      width: 132,
+      height: 132,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.20),
+                width: 2,
+              ),
             ),
           ),
-          Positioned(
-            bottom: 4,
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, _) {
-                return Opacity(
-                  opacity: 0.55 + (_pulseController.value * 0.45),
+          AnimatedBuilder(
+            animation: _travelController,
+            builder: (context, _) {
+              final angle =
+                  (_travelController.value * 2 * math.pi) - (math.pi / 2);
+              const radius = 44.0;
+              final dx = math.cos(angle) * radius;
+              final dy = math.sin(angle) * radius;
+
+              return Transform.translate(
+                offset: Offset(dx, dy),
+                child: Transform.rotate(
+                  angle: angle + (math.pi / 2),
                   child: Icon(
-                    Icons.auto_awesome_rounded,
-                    color: cs.primary,
-                    size: 24 + (_pulseController.value * 8),
+                    Icons.flight_rounded,
+                    size: 22,
+                    color: colorScheme.primary,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -511,71 +559,46 @@ class _DominantLoadingClusterState extends State<_DominantLoadingCluster>
   }
 }
 
-class _AnimatedProgressRingState extends State<_AnimatedProgressRing>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _AnimatedProgressRing extends StatelessWidget {
+  const _AnimatedProgressRing({
+    required this.progress,
+    required this.percent,
+    required this.colorScheme,
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final double progress;
+  final int percent;
+  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 100,
-      height: 100,
+      width: 104,
+      height: 104,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Hintergrund-Ring
           CircularProgressIndicator(
             value: 1.0,
             strokeWidth: 8,
-            backgroundColor: widget.colorScheme.primary.withValues(alpha: 0.1),
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation(
-              widget.colorScheme.primary.withValues(alpha: 0.1),
+              colorScheme.primary.withValues(alpha: 0.1),
             ),
           ),
-
-          // Fortschritts-Ring
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: widget.progress),
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOut,
-            builder: (context, value, child) {
-              return CircularProgressIndicator(
-                value: value,
-                strokeWidth: 8,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation(widget.colorScheme.primary),
-              );
-            },
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 8,
+            backgroundColor: Colors.transparent,
+            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
           ),
-
-          // Pulsierendes Emoji
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final scale = 1.0 + (0.1 * _controller.value);
-              return Transform.scale(
-                scale: scale,
-                child: Text(
-                  widget.phase.emoji,
-                  style: const TextStyle(fontSize: 32),
-                ),
-              );
-            },
+          Text(
+            '$percent%',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: colorScheme.onSurface,
+            ),
           ),
         ],
       ),

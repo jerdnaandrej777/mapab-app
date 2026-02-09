@@ -112,6 +112,7 @@ class TripGeneratorRepository {
     // v1.9.13: Hotels sind fuer Tagesausfluege nicht relevant
     availablePOIs =
         availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+    availablePOIs = _dedupePOIs(availablePOIs);
 
     if (availablePOIs.isEmpty) {
       final categoryHint = categoryIds != null && categoryIds.isNotEmpty
@@ -137,6 +138,7 @@ class TripGeneratorRepository {
         return poi.copyWith(effectiveScore: adjusted);
       }).toList();
     }
+    availablePOIs = _dedupePOIs(availablePOIs);
 
     // 2. POI-Auswahl mit Retry-Strategie
     final selectionAttempts = _buildDayTripSelectionAttempts(
@@ -161,20 +163,20 @@ class TripGeneratorRepository {
         '${attempt.label} (${attempt.pois.length} POIs)',
       );
 
-      final optimizedPOIs = _optimizeDayTripPOIsForRoute(
+      final optimizedPOIs = _dedupePOIs(_optimizeDayTripPOIsForRoute(
         pois: attempt.pois,
         startLocation: startLocation,
         endLocation: endLocation,
         hasDestination: hasDestination,
-      );
+      ));
       final constrainedPOIs = hasDestination
           ? optimizedPOIs
-          : _routeOptimizer.trimRouteToMaxDistance(
+          : _dedupePOIs(_routeOptimizer.trimRouteToMaxDistance(
               pois: optimizedPOIs,
               startLocation: startLocation,
               maxDistanceKm: radiusKm,
               returnToStart: true,
-            );
+            ));
 
       debugPrint(
         '[TripGenerator] Tagestrip Versuch ${i + 1}: '
@@ -235,6 +237,7 @@ class TripGeneratorRepository {
             'Bitte Radius/Kategorien anpassen.',
           );
     }
+    routingPOIs = _dedupePOIs(routingPOIs);
 
     // 6. Trip erstellen
     final trip = Trip(
@@ -341,6 +344,7 @@ class TripGeneratorRepository {
 
     availablePOIs =
         availablePOIs.where((poi) => poi.categoryId != 'hotel').toList();
+    availablePOIs = _dedupePOIs(availablePOIs);
 
     if (availablePOIs.isEmpty) {
       throw TripGenerationException(
@@ -363,6 +367,7 @@ class TripGeneratorRepository {
         return poi.copyWith(effectiveScore: adjusted);
       }).toList();
     }
+    availablePOIs = _dedupePOIs(availablePOIs);
 
     debugPrint(
         '[TripGenerator] SCHRITT 2-4: Constraint-Auswahl + Optimierung + Tagesplanung (${envelope.effectiveDays} Tage)...');
@@ -676,7 +681,7 @@ class TripGeneratorRepository {
       final maxSegmentKm =
           envelope.maxDayHaversineKm * _maxSegmentFactorForAttempt(attempt);
       final selectionCount = min(desiredPoiCount, constrainedPool.length);
-      final selectedPOIs = _poiSelector.selectRandomPOIs(
+      final selectedPOIs = _dedupePOIs(_poiSelector.selectRandomPOIs(
         pois: constrainedPool,
         startLocation: startLocation,
         count: selectionCount,
@@ -687,13 +692,13 @@ class TripGeneratorRepository {
         remainingTripBudgetKm: envelope.totalBudgetKm * budgetFactor,
         currentAnchorLocation: startLocation,
         progressRouteCoordinates: progressRouteCoordinates,
-      );
+      ));
       if (selectedPOIs.isEmpty) {
         debugPrint('[TripGenerator] Versuch $attempt: keine selektierten POIs');
         continue;
       }
 
-      final optimizedPOIs = hasDestination
+      final optimizedPOIs = _dedupePOIs(hasDestination
           ? _routeOptimizer.optimizeDirectionalRoute(
               pois: selectedPOIs,
               startLocation: startLocation,
@@ -703,7 +708,7 @@ class TripGeneratorRepository {
               pois: selectedPOIs,
               startLocation: startLocation,
               returnToStart: true,
-            );
+            ));
 
       final tripDays = _dayPlanner.planDays(
         pois: optimizedPOIs,
@@ -969,7 +974,7 @@ class TripGeneratorRepository {
     }
 
     // Single-Day: Re-Optimierung mit konsistentem Endpunkt
-    final newSelectedPOIs = [...currentTrip.selectedPOIs, newPOI];
+    final newSelectedPOIs = _dedupePOIs([...currentTrip.selectedPOIs, newPOI]);
     final endPoints = _resolveSingleDayEditEndPoints(
       currentTrip: currentTrip,
       startLocation: startLocation,
@@ -1153,9 +1158,9 @@ class TripGeneratorRepository {
       triedPOIIds.add(newPOI.id);
 
       // Neue POI-Liste erstellen
-      final newSelectedPOIs = currentTrip.selectedPOIs.map((p) {
+      final newSelectedPOIs = _dedupePOIs(currentTrip.selectedPOIs.map((p) {
         return p.id == poiIdToReroll ? newPOI : p;
-      }).toList();
+      }).toList());
 
       // Route neu optimieren
       final optimizedPOIs = endPoints.isRoundTrip
@@ -1256,10 +1261,10 @@ class TripGeneratorRepository {
     );
 
     // selectedPOIs aus geordneten Stops rekonstruieren
-    final newSelectedPOIs = sortedStops
+    final newSelectedPOIs = _dedupePOIs(sortedStops
         .where((s) => !s.isOvernightStop && s.categoryId != 'hotel')
         .map((s) => s.toPOI())
-        .toList();
+        .toList());
 
     final updatedTrip = currentTrip.trip.copyWith(
       route: route,
@@ -1374,10 +1379,10 @@ class TripGeneratorRepository {
         '[TripGenerator] AddPOI Tag $targetDay: Fuege ${newPOI.name} hinzu');
 
     // Alle Day-POIs inkl. neuem POI
-    final allDayPOIs = [
+    final allDayPOIs = _dedupePOIs([
       ...dayStops.map((s) => s.toPOI()),
       newPOI,
-    ];
+    ]);
 
     // Tag re-optimieren (Nearest-Neighbor + 2-opt)
     final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
@@ -1491,9 +1496,9 @@ class TripGeneratorRepository {
       triedPOIIds.add(newPOI.id);
 
       // POI nur in diesem Tag ersetzen
-      final modifiedDayPOIs = dayStops.map((s) {
+      final modifiedDayPOIs = _dedupePOIs(dayStops.map((s) {
         return s.poiId == poiIdToReroll ? newPOI : s.toPOI();
-      }).toList();
+      }).toList());
 
       // Nur diesen Tag re-optimieren
       final optimizedDayPOIs = _routeOptimizer.optimizeRoute(
@@ -1874,7 +1879,7 @@ class TripGeneratorRepository {
         debugPrint(
           '[TripGenerator] Tagestrip-POI-Fallback erfolgreich in Versuch ${i + 1}: ${result.length} POIs',
         );
-        return _dedupePOIsById(result);
+        return _dedupePOIs(result);
       }
     }
 
@@ -1906,7 +1911,7 @@ class TripGeneratorRepository {
         useCache: useCache,
       ),
     ]);
-    final merged = _dedupePOIsById([...results[0], ...results[1]]);
+    final merged = _dedupePOIs([...results[0], ...results[1]]);
     if (merged.isEmpty) return merged;
 
     final directDistance = GeoUtils.haversineDistance(start, end);
@@ -1918,15 +1923,149 @@ class TripGeneratorRepository {
     }).toList();
   }
 
-  List<POI> _dedupePOIsById(List<POI> pois) {
-    final seen = <String>{};
+  static const double _semanticDuplicateRadiusKm = 0.35;
+  static const double _veryCloseDuplicateRadiusKm = 0.08;
+  static final RegExp _poiNameTokenRegex = RegExp(r'[a-z0-9]+');
+  static const Set<String> _genericPoiNameTokens = {
+    'der',
+    'die',
+    'das',
+    'dem',
+    'den',
+    'des',
+    'und',
+    'the',
+    'of',
+    'de',
+    'la',
+    'le',
+    'du',
+    'am',
+    'an',
+    'in',
+    'im',
+    'zum',
+    'zur',
+    'zu',
+    'bei',
+  };
+
+  List<POI> _dedupePOIs(List<POI> pois) {
     final unique = <POI>[];
     for (final poi in pois) {
-      if (seen.add(poi.id)) {
+      final duplicateIndex = unique.indexWhere(
+        (existing) => _isLikelyDuplicatePOI(existing, poi),
+      );
+      if (duplicateIndex < 0) {
         unique.add(poi);
+        continue;
       }
+
+      unique[duplicateIndex] = _pickPreferredPOI(unique[duplicateIndex], poi);
     }
     return unique;
+  }
+
+  bool _isLikelyDuplicatePOI(POI a, POI b) {
+    if (a.id == b.id) return true;
+    if (a.wikidataId != null &&
+        b.wikidataId != null &&
+        a.wikidataId == b.wikidataId) {
+      return true;
+    }
+
+    final distanceKm = GeoUtils.haversineDistance(a.location, b.location);
+    if (distanceKm > _semanticDuplicateRadiusKm) {
+      return false;
+    }
+
+    if (_arePOINamesEquivalent(a.name, b.name)) return true;
+    if (distanceKm <= _veryCloseDuplicateRadiusKm &&
+        a.categoryId == b.categoryId) {
+      return true;
+    }
+    return false;
+  }
+
+  POI _pickPreferredPOI(POI current, POI candidate) {
+    return _poiQualityScore(candidate) > _poiQualityScore(current)
+        ? candidate
+        : current;
+  }
+
+  double _poiQualityScore(POI poi) {
+    final baseScore = poi.effectiveScore ?? poi.score.toDouble();
+    final curatedBonus = poi.isCurated ? 15.0 : 0.0;
+    final wikiBonus = poi.hasWikipedia ? 8.0 : 0.0;
+    final imageBonus = poi.imageUrl == null ? 0.0 : 2.0;
+    return baseScore + curatedBonus + wikiBonus + imageBonus;
+  }
+
+  bool _arePOINamesEquivalent(String a, String b) {
+    final normalizedA = _normalizePoiName(a);
+    final normalizedB = _normalizePoiName(b);
+    if (normalizedA.isEmpty || normalizedB.isEmpty) return false;
+    if (normalizedA == normalizedB) return true;
+    if (normalizedA.contains(normalizedB) ||
+        normalizedB.contains(normalizedA)) {
+      return true;
+    }
+
+    final tokensA = _poiNameTokens(normalizedA);
+    final tokensB = _poiNameTokens(normalizedB);
+    if (tokensA.isEmpty || tokensB.isEmpty) return false;
+
+    final intersection = tokensA.intersection(tokensB).length;
+    final union = tokensA.union(tokensB).length;
+    if (union == 0) return false;
+    return (intersection / union) >= 0.67;
+  }
+
+  String _normalizePoiName(String input) {
+    if (input.trim().isEmpty) return '';
+    final folded = _foldUmlauts(input.toLowerCase());
+    final buffer = StringBuffer();
+    for (final match in _poiNameTokenRegex.allMatches(folded)) {
+      final token = _stemPoiToken(match.group(0)!);
+      if (token.length < 3 || _genericPoiNameTokens.contains(token)) continue;
+      if (buffer.isNotEmpty) buffer.write(' ');
+      buffer.write(token);
+    }
+    return buffer.toString().trim();
+  }
+
+  Set<String> _poiNameTokens(String normalizedName) {
+    return normalizedName
+        .split(' ')
+        .where((token) => token.length >= 3)
+        .toSet();
+  }
+
+  String _foldUmlauts(String value) {
+    return value
+        .replaceAll('\u00E4', 'a')
+        .replaceAll('\u00F6', 'o')
+        .replaceAll('\u00FC', 'u')
+        .replaceAll('\u00DF', 'ss');
+  }
+
+  String _stemPoiToken(String token) {
+    var stem = token;
+    if (stem.length > 5 && stem.endsWith('ern')) {
+      stem = stem.substring(0, stem.length - 3);
+    }
+    if (stem.length > 4 &&
+        (stem.endsWith('er') ||
+            stem.endsWith('en') ||
+            stem.endsWith('es') ||
+            stem.endsWith('em'))) {
+      stem = stem.substring(0, stem.length - 2);
+    }
+    if (stem.length > 4 &&
+        (stem.endsWith('e') || stem.endsWith('n') || stem.endsWith('s'))) {
+      stem = stem.substring(0, stem.length - 1);
+    }
+    return stem;
   }
 
   List<POI> _fallbackSelectPOIsForDayTrip({
@@ -1978,13 +2117,7 @@ class TripGeneratorRepository {
 
     void addAttempt(String label, List<POI> pois) {
       if (pois.isEmpty) return;
-      final deduped = <POI>[];
-      final seenIds = <String>{};
-      for (final poi in pois) {
-        if (seenIds.add(poi.id)) {
-          deduped.add(poi);
-        }
-      }
+      final deduped = _dedupePOIs(pois);
       if (deduped.isEmpty) return;
       final key = deduped.map((poi) => poi.id).join('|');
       if (!seenKeys.add(key)) return;

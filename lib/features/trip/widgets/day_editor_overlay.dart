@@ -58,6 +58,18 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     });
   }
 
+  List<LatLng> _buildDayRouteWaypoints({
+    required LatLng origin,
+    required LatLng destination,
+    required List<TripStop> stopsForDay,
+  }) {
+    return [
+      origin,
+      ...stopsForDay.map((stop) => stop.location),
+      destination,
+    ];
+  }
+
   @override
   void dispose() {
     _footerExpandTimer?.cancel();
@@ -119,10 +131,13 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     if (stopsForDay.isNotEmpty) {
       final segStart = trip.getDayStartLocation(selectedDay);
       final segEnd = trip.getDayEndLocation(selectedDay);
-      routeSegment = extractRouteSegment(
+      routeSegment = extractRouteSegmentThroughWaypoints(
         fullRoute.coordinates,
-        segStart,
-        segEnd,
+        _buildDayRouteWaypoints(
+          origin: segStart,
+          destination: segEnd,
+          stopsForDay: stopsForDay,
+        ),
       );
     }
 
@@ -177,7 +192,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
         children: [
           // Tages-Tabs (nur bei Mehrtages-Trips)
           if (isMultiDay)
-            Padding(
+            const Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: const DayTabSelector(),
             ),
@@ -1109,6 +1124,18 @@ class _BottomActions extends ConsumerWidget {
     this.onPublishTrip,
   });
 
+  List<LatLng> _buildDayRouteWaypoints({
+    required LatLng origin,
+    required LatLng destination,
+    required List<TripStop> stopsForDay,
+  }) {
+    return [
+      origin,
+      ...stopsForDay.map((stop) => stop.location),
+      destination,
+    ];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1201,10 +1228,13 @@ class _BottomActions extends ConsumerWidget {
         ? context.l10n.dayEditorDayInGoogleMaps(selectedDay)
         : 'Tagestrip in Google Maps';
 
-    final routeSegment = extractRouteSegment(
+    final routeSegment = extractRouteSegmentThroughWaypoints(
       trip.route.coordinates,
-      origin,
-      destination,
+      _buildDayRouteWaypoints(
+        origin: origin,
+        destination: destination,
+        stopsForDay: stopsForDay,
+      ),
     );
 
     showModalBottomSheet<void>(

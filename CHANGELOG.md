@@ -7,6 +7,35 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.47] - 2026-02-09
+
+### Routing- und UI-Stabilisierung
+
+#### Behoben
+- **Duplizierte POIs im Trip-Flow reduziert**
+  - Die POI-Deduplizierung arbeitet jetzt nicht nur ueber IDs, sondern auch semantisch ueber Name + Distanz.
+  - Near-Duplicates wie mehrere "Altstadt"-Varianten werden bei Auswahl/Optimierung konsolidiert.
+- **Tagesrouten-Segment fuer letzten Tag korrigiert**
+  - Segment-Extraktion im Day-Editor nutzt jetzt geordnete Wegpunkte statt globaler Start/End-Naehe.
+  - Dadurch laeuft die dargestellte Tagesroute wieder ueber die POIs und greift bei Rundreisen nicht auf den falschen Fruehabschnitt.
+- **Trip-Generierung und Day-Edit robuster gegen Re-Introduktion von Duplikaten**
+  - Dedupe greift in Load-, Auswahl-, Optimierungs- und Edit-Pfaden (`add`, `reroll`, Rebuild).
+
+#### Geaendert
+- **Lade-Animationen im AI-Trip-Flow ueberarbeitet**
+  - Fortschritt bleibt strikt von 1% bis 100%.
+  - Weniger Icon-Rauschen, klarere visuelle Trennung zwischen AI-Tagestrip und Euro-Trip.
+
+#### CI/Qualitaet
+- **Neuer GitHub CI-Workflow fuer PRs/Push**
+  - Flutter Tests + Analyze sowie Backend Typecheck + Lint sind als Gate definiert.
+
+#### Tests
+- Neue Regressionstests:
+  - `test/widgets/day_mini_map_test.dart` (roundtrip/last-day segment extraction)
+  - `test/repositories/trip_generator_daytrip_test.dart` (semantische POI-Deduplizierung)
+- `flutter test` (komplette Suite) gruen.
+
 ## [1.10.46] - 2026-02-09
 
 ### Social-Flow + Navigation-Lifecycle Stabilisierung

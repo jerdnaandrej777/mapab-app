@@ -158,7 +158,14 @@ flutter test integration_test/
 flutter test
 ```
 
-## Recent Updates (Januar 2026)
+## Recent Updates (Februar 2026)
+
+### v1.10.47 - Routing-/POI-Stabilisierung + Progress-Animationen (9. Februar 2026)
+- **Day-Editor Routing stabilisiert** - Tagessegment wird ueber geordnete Wegpunkte extrahiert und laeuft auch am letzten Tag wieder ueber die POIs.
+- **POI-Duplikate reduziert** - Deduplizierung arbeitet jetzt semantisch (Name + Distanz), nicht nur ueber IDs.
+- **Ladeanimationen optimiert** - Weniger visuelles Rauschen, getrennte Animationen fuer AI Tagestrip und Euro Trip.
+- **Progress garantiert 1% bis 100%** - Ladebalken startet sicher bei 1 und endet konsistent bei 100.
+- **CI erweitert** - PR-Gates fuer Flutter Tests/Analyze und Backend Typecheck/Lint.
 
 ### v1.7.21 - Unified Panel Design (31. Januar 2026)
 - **📜 Scrollbares Panel in beiden Modi** - Schnell & AI Trip nutzen gleiches Design (max 65% Höhe)
@@ -446,6 +453,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.10.46
+**Version:** 1.10.47
 **Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙
