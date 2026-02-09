@@ -2544,6 +2544,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get journalNoJournals => 'Noch keine Tagebücher vorhanden';
 
   @override
+  String get journalMemoryPoint => 'Erinnerungspunkt';
+
+  @override
+  String get journalRevisit => 'Erneut besuchen';
+
+  @override
+  String get journalBack => 'Zurück';
+
+  @override
   String get galleryTitle => 'Trip-Galerie';
 
   @override

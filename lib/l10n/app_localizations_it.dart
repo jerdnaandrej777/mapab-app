@@ -2540,6 +2540,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String get journalNoJournals => 'Nessun diario ancora';
 
   @override
+  String get journalMemoryPoint => 'Punto ricordo';
+
+  @override
+  String get journalRevisit => 'Rivisitare';
+
+  @override
+  String get journalBack => 'Indietro';
+
+  @override
   String get galleryTitle => 'Galleria trip';
 
   @override

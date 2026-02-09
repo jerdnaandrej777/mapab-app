@@ -5,25 +5,24 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.53 - Public-Trip Kartenfluss + Journal-Shortcut | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.53)
+Version: 1.10.55 - Erinnerungspunkt + Journal-Persistenz + UX-Fixes | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.55)
 
-- Public Trips aus der Galerie laden beim "Auf Karte"-Flow jetzt deterministisch Route + POIs ohne stale AI/Planungszustand.
-- Footer-/Overlay-Konflikte nach Public-Trip-Wechsel wurden reduziert, da alte Preview-States vorab zurueckgesetzt werden.
-- Map-Header hat jetzt einen direkten Reisetagebuch-Shortcut als eigenes Icon.
-- Korridor-POI-Liste wurde auf groesseres Kartenlayout im Stil des Trip-Modals umgestellt.
-- Elevation-Requests werden fuer dieselbe Route waehrend laufender Ladung dedupliziert.
-- Android Release aktualisiert: APK Build 236 (v1.10.53).
+- Erinnerungspunkt auf der Karte: Journal-Eintraege mit "Auf Karte anzeigen" zeigen Marker + Footer mit "Zurueck" und "Erneut besuchen" (Route ab GPS-Standort).
+- Journal-Persistenz gefixt: Hive-Boxen `journals`/`journal_entries` werden beim App-Start pre-opened, JournalService-Provider keepAlive.
+- Foto-Upload im Reisetagebuch repariert (ensureJournalExists vor Kamera/Galerie-Zugriff).
+- Doppelter "Eintrag hinzufuegen"-Button im leeren Journal entfernt (FAB nur bei vorhandenen Eintraegen).
+- Hoehenprofil: keine doppelte Ueberschrift/Stats mehr im aufgeklappten Zustand (showHeader-Parameter).
+- AI-Empfehlungen priorisieren Route/Ziel statt Startbereich (Suchpunkte + Scoring + Start-Filter).
+- Karten-Overlay fuer AI-Empfehlungen funktioniert auch mit geladenen Routen (Trip/Favoriten/Planner).
+- Reisetagebuch mit periodischen Ansichten `Tag / Monat / Jahr` und Aggregationskarten.
+- Journal-Modalfluss: aus Monats-/Jahreslisten direkt in Entry-Details inkl. Karte/POI-Interaktion.
+- TripScreen aufklappbares Hoehenprofil, konsistente 8px Button-Abstaende, Zurueck-Button.
+- Android Release aktualisiert: APK Build 239 (v1.10.55).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
-- AI-Empfehlungen priorisieren Route/Ziel statt Startbereich (Suchpunkte + Scoring + Start-Filter).
-- Karten-Overlay fuer AI-Empfehlungen funktioniert auch mit geladenen Routen (Trip/Favoriten/Planner), nicht nur im AI-Preview.
-- Reisetagebuch hat jetzt periodische Ansichten `Tag / Monat / Jahr` mit Aggregationskarten.
-- Journal-Modalfluss wurde verbunden: aus Monats-/Jahreslisten direkt in Entry-Details ohne Sheet-Stacking, inkl. Aktionen zu Karte/POI-Details.
-- TripScreen Hoehenprofil ist aufklappbar (default: zugeklappt), POI-Liste nicht mehr verdeckt.
-- TripScreen Button-Abstaende (Auf Karte/POIs/Navigation) vereinheitlicht auf 8px.
-- TripScreen hat jetzt einen Zurueck-Button in der AppBar.
+(Keine unreleased Aenderungen)
 
 
 ## Tech Stack
@@ -184,6 +183,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/providers/navigation_provider.dart` | Navigation State Machine: GPS-Stream (distanceFilter 1m), Route-Matching, Rerouting, POI-Erkennung (keepAlive, v1.9.0) + Doppel-Stream-Guard in startNavigation(), arrivedAtWaypoint Re-Entry Guard, Reroute Null-Check, GPS-Verfuegbarkeits-Pruefung (v1.9.23) + Step-Index-Cache (_stepRouteIndices) eliminiert O(n*m) pro GPS-Tick, gecachter nextStepRouteIndex (v1.9.25) + Foreground-Service-Integration: _startForegroundService, _onBackgroundData GPS-Callback, Benachrichtigungs-Updates (v1.9.29) + gpsDistanceFilter 2mâ†’1m fuer haeufigere Updates (v1.10.20) |
 | `lib/features/navigation/providers/navigation_poi_discovery_provider.dart` | Must-See POI-Entdeckung entlang der Route: ref.listen auf GPS-Stream, dismissed/announced Sets, goldene Card + TTS (v1.9.14, keepAlive v1.9.27) |
 | `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) + Silent-Catch Logging (v1.9.27) + _l10n Getter via lookupAppLocalizations, VoiceService.setLocale() bei Sprachwechsel, Must-See Announcement lokalisiert (v1.10.3) |
+| `lib/features/map/providers/memory_point_provider.dart` | Erinnerungspunkt-State: MemoryPointData (entryId, tripId, location, poiName, imagePath, note), StateProvider fuer Journal-auf-Karte-Flow mit Revisit-Route (v1.10.55) |
 | `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) |
 | `lib/data/providers/gallery_provider.dart` | Trip-Galerie-State (keepAlive): GalleryNotifier (Trips, Featured, Filter, Suche, Pagination), TripDetailNotifier (Detail-Ansicht, Import, Update/Delete eigener Trips), ProfileNotifier, MyProfileNotifier (v1.10.0, v1.10.49) |
 | `lib/data/providers/leaderboard_provider.dart` | Leaderboard-State (keepAlive): LeaderboardNotifier mit 4 Sortierkriterien (XP/km/Trips/Likes), eigene Position, Pagination (v1.10.23) |
@@ -517,7 +517,8 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
-- `CHANGELOG.md` -> Abschnitt `[Unreleased]` (AI-Ziel-/Routenfokus, Journal Monat/Jahr, modaler Drilldown und Interop-Verbesserungen)
+- `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.55.md` (Erinnerungspunkt auf Karte mit Revisit-Route, Journal-Persistenz-Fix, Foto-Upload-Fix, Hoehenprofil ohne doppelten Header, doppelter Journal-Button entfernt)
 - `Dokumentation/CHANGELOG-v1.10.53.md` (Public-Trip Kartenfluss stabilisiert: stale State Reset vor "Auf Karte"/Standort-Start, Journal-Shortcut im Header, Korridor-POI-Karten im Modal-Stil, Elevation-Request-Deduplizierung)
 - `Dokumentation/CHANGELOG-v1.10.52.md` (Routenfokus-Modal: "Auf Karte anzeigen" mit reduziertem Kartenmodus, nur 3 Fokus-Aktionen im Footer, Entfernen von Google-Maps/Teilen im "Deine Route"-Modal, Favoriten-Routen mit identischem Fokus-Flow)
 - `Dokumentation/CHANGELOG-v1.10.48.md` (AI-Assistant Stabilisierung: Freeze-Fixes via Timeouts/Finalisierung, Hotel+Restaurant Intent/Filter-Ausbau, Textbereinigung in Vorschlaegen/Fallbacks, aktualisierte Release-APK Build 231)

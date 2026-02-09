@@ -61,6 +61,8 @@ const _requiredHiveBoxes = <_HiveBoxConfig>[
     encrypted: true,
     allowUnencryptedFallback: true,
   ),
+  _HiveBoxConfig(name: 'journals', encrypted: false),
+  _HiveBoxConfig(name: 'journal_entries', encrypted: false),
 ];
 
 /// Laedt oder generiert den Hive-Verschluesselungs-Key

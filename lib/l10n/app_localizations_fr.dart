@@ -2551,6 +2551,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get journalNoJournals => 'Aucun carnet encore';
 
   @override
+  String get journalMemoryPoint => 'Point souvenir';
+
+  @override
+  String get journalRevisit => 'Revisiter';
+
+  @override
+  String get journalBack => 'Retour';
+
+  @override
   String get galleryTitle => 'Galerie de trips';
 
   @override

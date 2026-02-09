@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/journal_entry.dart';
 import '../../data/providers/journal_provider.dart';
 import '../map/providers/map_controller_provider.dart';
+import '../map/providers/memory_point_provider.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/add_journal_entry_sheet.dart';
 
@@ -74,11 +75,13 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
               ? _buildEmptyState(context, colorScheme, l10n)
               : _buildJournalContent(
                   context, journal, journalState, colorScheme, l10n),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddEntrySheet(context),
-        icon: const Icon(Icons.add_a_photo),
-        label: Text(l10n.journalAddEntry),
-      ),
+      floatingActionButton: journal != null && journal.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddEntrySheet(context),
+              icon: const Icon(Icons.add_a_photo),
+              label: Text(l10n.journalAddEntry),
+            )
+          : null,
     );
   }
 
@@ -513,6 +516,7 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
       useSafeArea: true,
       builder: (context) => AddJournalEntrySheet(
         tripId: widget.tripId,
+        tripName: widget.tripName,
       ),
     );
   }
@@ -527,6 +531,16 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
         onShowOnMap: entry.location == null
             ? null
             : () {
+                ref.read(memoryPointProvider.notifier).state = MemoryPointData(
+                  entryId: entry.id,
+                  tripId: entry.tripId,
+                  tripName: widget.tripName,
+                  location: entry.location!,
+                  poiName: entry.poiName,
+                  imagePath: entry.imagePath,
+                  note: entry.note,
+                  createdAt: entry.createdAt,
+                );
                 ref.read(pendingMapCenterProvider.notifier).state =
                     entry.location;
                 this.context.go('/');

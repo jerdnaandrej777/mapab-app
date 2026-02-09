@@ -772,6 +772,9 @@
   "journalOpenJournal": "Open journal",
   "journalAllJournals": "All journals",
   "journalNoJournals": "No journals yet",
+  "journalMemoryPoint": "Memory Point",
+  "journalRevisit": "Revisit",
+  "journalBack": "Back",
 
   "galleryTitle": "Trip Gallery",
   "gallerySearch": "Search trips...",

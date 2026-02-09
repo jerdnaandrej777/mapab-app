@@ -19,6 +19,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/trip.dart';
+import '../providers/memory_point_provider.dart';
 import 'route_weather_marker.dart';
 import 'weather_badge_unified.dart';
 
@@ -500,6 +501,19 @@ class _MapViewState extends ConsumerState<MapView> {
                 ),
               );
             }).toList(),
+          ),
+
+        // Erinnerungspunkt-Marker (aus Reisetagebuch)
+        if (ref.watch(memoryPointProvider) != null)
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: ref.watch(memoryPointProvider)!.location,
+                width: 52,
+                height: 52,
+                child: const _MemoryPointMarker(),
+              ),
+            ],
           ),
       ],
     );
@@ -1219,6 +1233,42 @@ class _AITripStopMarker extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Erinnerungspunkt-Marker fuer Journal-Eintraege auf der Karte
+class _MemoryPointMarker extends StatelessWidget {
+  const _MemoryPointMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: colorScheme.tertiary,
+        shape: BoxShape.circle,
+        border: Border.all(color: colorScheme.surface, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.tertiary.withValues(alpha: 0.4),
+            blurRadius: 12,
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.auto_stories,
+        size: 24,
+        color: colorScheme.onTertiary,
       ),
     );
   }

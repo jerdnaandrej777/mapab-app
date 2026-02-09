@@ -9,6 +9,7 @@ import '../../../data/providers/journal_provider.dart';
 /// Bottom Sheet zum Hinzufuegen eines neuen Tagebuch-Eintrags
 class AddJournalEntrySheet extends ConsumerStatefulWidget {
   final String tripId;
+  final String tripName;
   final String? poiId;
   final String? poiName;
   final int? dayNumber;
@@ -16,6 +17,7 @@ class AddJournalEntrySheet extends ConsumerStatefulWidget {
   const AddJournalEntrySheet({
     super.key,
     required this.tripId,
+    required this.tripName,
     this.poiId,
     this.poiName,
     this.dayNumber,
@@ -224,10 +226,21 @@ class _AddJournalEntrySheetState extends ConsumerState<AddJournalEntrySheet> {
     );
   }
 
+  Future<void> _ensureJournalExists() async {
+    final state = ref.read(journalNotifierProvider);
+    if (state.activeJournal == null) {
+      await ref.read(journalNotifierProvider.notifier).getOrCreateJournal(
+            tripId: widget.tripId,
+            tripName: widget.tripName,
+          );
+    }
+  }
+
   Future<void> _addPhotoEntry({required bool fromCamera}) async {
     setState(() => _isLoading = true);
 
     try {
+      await _ensureJournalExists();
       final notifier = ref.read(journalNotifierProvider.notifier);
       final entry = fromCamera
           ? await notifier.addPhotoFromCamera(
@@ -270,6 +283,7 @@ class _AddJournalEntrySheetState extends ConsumerState<AddJournalEntrySheet> {
     setState(() => _isLoading = true);
 
     try {
+      await _ensureJournalExists();
       final notifier = ref.read(journalNotifierProvider.notifier);
       final entry = await notifier.addTextEntry(
         note: _noteController.text,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/utils/location_helper.dart';
+import '../../data/models/poi.dart';
 import '../../data/models/route.dart';
 import '../../data/models/trip.dart';
 import '../../data/repositories/geocoding_repo.dart';
@@ -15,6 +16,7 @@ import '../random_trip/widgets/generation_progress_indicator.dart';
 import '../trip/widgets/day_editor_overlay.dart';
 import 'providers/app_ui_mode_provider.dart';
 import 'providers/map_controller_provider.dart';
+import 'providers/memory_point_provider.dart';
 import 'providers/route_planner_provider.dart';
 import 'providers/weather_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
@@ -252,11 +254,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final activeRoute =
         _resolveActiveRoute(routePlanner, tripState, randomTripState);
     final activeStops = _resolveActiveStops(tripState, randomTripState);
+    final memoryPoint = ref.watch(memoryPointProvider);
 
     if (mapRouteFocusMode && !hasAnyRouteLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ref.read(mapRouteFocusModeProvider.notifier).state = false;
+      });
+    }
+
+    // Memory-Point aufraumen wenn anderer Modus aktiv wird
+    if (memoryPoint != null && mapRouteFocusMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(memoryPointProvider.notifier).state = null;
       });
     }
 
@@ -306,7 +317,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           const MapView(),
 
           // Such-Header (kein SafeArea top noetig - AppBar uebernimmt)
-          if (!mapRouteFocusMode)
+          if (!mapRouteFocusMode && memoryPoint == null)
             SafeArea(
               top: false,
               child: Padding(
@@ -362,7 +373,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           // Lade-Widget auf gleicher Hoehe wie das AI-Trip-Konfigurationspanel
-          if (isGenerating && !mapRouteFocusMode)
+          if (isGenerating && !mapRouteFocusMode && memoryPoint == null)
             const SafeArea(
               top: false,
               child: Padding(
@@ -403,6 +414,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ref.read(routePlannerProvider.notifier).clearRoute();
                   ref.read(tripStateProvider.notifier).clearAll();
                 },
+              ),
+            ),
+
+          // Erinnerungspunkt-Footer (aus Reisetagebuch)
+          if (memoryPoint != null)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: _MemoryPointFooter(
+                memoryPoint: memoryPoint,
+                onBack: () {
+                  final tripId = memoryPoint.tripId;
+                  final tripName = memoryPoint.tripName;
+                  ref.read(memoryPointProvider.notifier).state = null;
+                  context.push(
+                      '/journal/$tripId?name=${Uri.encodeComponent(tripName)}');
+                },
+                onRevisit: () => _handleRevisitMemoryPoint(memoryPoint),
               ),
             ),
         ],
@@ -502,6 +530,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         builder: (_) => const DayEditorOverlay(),
       ),
     );
+  }
+
+  /// Baut Route von GPS zum Erinnerungspunkt und navigiert zum TripScreen
+  Future<void> _handleRevisitMemoryPoint(MemoryPointData memoryPoint) async {
+    // Stale State zuruecksetzen
+    ref.read(randomTripNotifierProvider.notifier).reset();
+    ref.read(routePlannerProvider.notifier).clearRoute();
+    ref.read(tripStateProvider.notifier).clearAll();
+
+    // Synthetischen POI erstellen
+    final poi = POI(
+      id: 'memory-${memoryPoint.entryId}',
+      name: memoryPoint.poiName ?? context.l10n.journalMemoryPoint,
+      latitude: memoryPoint.location.latitude,
+      longitude: memoryPoint.location.longitude,
+      categoryId: 'attraction',
+    );
+
+    // Route berechnen von GPS zum Ziel
+    final result = await ref
+        .read(tripStateProvider.notifier)
+        .addStopWithAutoRoute(poi);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      ref.read(memoryPointProvider.notifier).state = null;
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
+      context.go('/trip');
+    } else if (result.isGpsDisabled) {
+      await LocationHelper.showGpsDialog(context);
+    } else {
+      AppSnackbar.showError(
+        context,
+        result.error ?? context.l10n.errorRouteCalculation,
+      );
+    }
   }
 
   /// Oeffnet das Reisetagebuch direkt aus dem Map-Header.
@@ -605,5 +670,117 @@ class _RouteFocusFooter extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Footer fuer Erinnerungspunkt aus dem Reisetagebuch
+class _MemoryPointFooter extends StatelessWidget {
+  final MemoryPointData memoryPoint;
+  final VoidCallback onBack;
+  final VoidCallback onRevisit;
+
+  const _MemoryPointFooter({
+    required this.memoryPoint,
+    required this.onBack,
+    required this.onRevisit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Info-Zeile
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_stories,
+                    size: 20,
+                    color: colorScheme.onTertiaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        memoryPoint.poiName ?? l10n.journalMemoryPoint,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _formatDate(memoryPoint.createdAt),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: Text(l10n.journalBack),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onRevisit,
+                    icon: const Icon(Icons.route, size: 18),
+                    label: Text(l10n.journalRevisit),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year;
+    return '$day.$month.$year';
   }
 }

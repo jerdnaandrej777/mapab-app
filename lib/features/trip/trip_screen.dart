@@ -619,7 +619,10 @@ $mapsUrl
             child: _elevationExpanded
                 ? Column(
                     children: [
-                      ElevationChart(profile: elevationState.profile!),
+                      ElevationChart(
+                        profile: elevationState.profile!,
+                        showHeader: false,
+                      ),
                       const SizedBox(height: 8),
                       TripStatisticsCard(
                           profile: elevationState.profile!),

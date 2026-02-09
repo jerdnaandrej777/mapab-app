@@ -4484,6 +4484,24 @@ abstract class AppLocalizations {
   /// **'Noch keine Tagebücher vorhanden'**
   String get journalNoJournals;
 
+  /// No description provided for @journalMemoryPoint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erinnerungspunkt'**
+  String get journalMemoryPoint;
+
+  /// No description provided for @journalRevisit.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut besuchen'**
+  String get journalRevisit;
+
+  /// No description provided for @journalBack.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurück'**
+  String get journalBack;
+
   /// No description provided for @galleryTitle.
   ///
   /// In de, this message translates to:

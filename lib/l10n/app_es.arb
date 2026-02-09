@@ -772,6 +772,9 @@
   "journalOpenJournal": "Abrir diario",
   "journalAllJournals": "Todos los diarios",
   "journalNoJournals": "Ningún diario todavía",
+  "journalMemoryPoint": "Punto de recuerdo",
+  "journalRevisit": "Revisitar",
+  "journalBack": "Volver",
 
   "galleryTitle": "Galería de trips",
   "gallerySearch": "Buscar trips...",

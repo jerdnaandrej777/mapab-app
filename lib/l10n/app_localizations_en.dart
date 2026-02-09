@@ -2532,6 +2532,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get journalNoJournals => 'No journals yet';
 
   @override
+  String get journalMemoryPoint => 'Memory Point';
+
+  @override
+  String get journalRevisit => 'Revisit';
+
+  @override
+  String get journalBack => 'Back';
+
+  @override
   String get galleryTitle => 'Trip Gallery';
 
   @override

@@ -772,6 +772,9 @@
   "journalOpenJournal": "Ouvrir le carnet",
   "journalAllJournals": "Tous les carnets",
   "journalNoJournals": "Aucun carnet encore",
+  "journalMemoryPoint": "Point souvenir",
+  "journalRevisit": "Revisiter",
+  "journalBack": "Retour",
 
   "galleryTitle": "Galerie de trips",
   "gallerySearch": "Rechercher des trips...",

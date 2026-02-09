@@ -8,7 +8,7 @@ import 'gamification_provider.dart';
 part 'journal_provider.g.dart';
 
 /// Provider fuer den JournalService
-@riverpod
+@Riverpod(keepAlive: true)
 JournalService journalService(Ref ref) {
   return JournalService();
 }

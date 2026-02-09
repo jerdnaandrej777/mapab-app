@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.53 - Download</title>
+    <title>MapAB v1.10.55 - Download</title>
     <style>
         * {
             margin: 0;
@@ -208,10 +208,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.54 (Build 237)</div>
-        <span class="release-tag">AI-Routenfokus + Journal-Timeline + Trip-UX</span>
+        <div class="version">Version 1.10.55 (Build 239)</div>
+        <span class="release-tag">Erinnerungspunkt + Journal-Persistenz + UX-Fixes</span>
         <p class="subtitle">
-            AI-Empfehlungen fokussieren jetzt Route und Ziel, das Reisetagebuch bietet Monats-/Jahresuebersichten mit direkter Karten-Interaktion, und der Trip-Screen wurde mit aufklappbarem Hoehenprofil und konsistenter Navigation verbessert.
+            Journal-Eintraege mit "Auf Karte anzeigen" werden als Erinnerungspunkt mit Revisit-Route dargestellt. Tagebuch-Persistenz gefixt, Foto-Upload repariert, Hoehenprofil ohne doppelte Header und kein doppelter Button mehr im Journal.
         </p>
 
         <div class="qr-container">
@@ -219,21 +219,21 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.53.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.55.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~126.6 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.54:</h3>
+            <h3>&#x2728; Neu in v1.10.55:</h3>
             <ul>
-                <li class="highlight">AI-Empfehlungen fokussieren Route und Ziel statt Startbereich</li>
-                <li class="highlight">AI-Overlay fuer Empfehlungen bei allen Routentypen (Trip/Favoriten/Planner)</li>
-                <li class="highlight">Reisetagebuch mit Tag-/Monats-/Jahresuebersicht und Aggregationskarten</li>
-                <li>Journal-Modal-Flow: direkte Interaktion zu Karte und POI-Details</li>
-                <li>Hoehenprofil aufklappbar (default zugeklappt) – POI-Liste nicht mehr verdeckt</li>
-                <li>Button-Abstaende im Trip-Screen vereinheitlicht (8px)</li>
-                <li>Zurueck-Button in der Trip-AppBar</li>
-                <li>Release-APK auf Build 237 aktualisiert</li>
+                <li class="highlight">Erinnerungspunkt auf Karte: Journal-Eintraege mit Marker + Zurueck/Erneut-besuchen-Aktionen</li>
+                <li class="highlight">Journal-Persistenz gefixt: Eintraege bleiben nach Verlassen des Screens erhalten</li>
+                <li>Foto-Upload im Reisetagebuch repariert (Ersten Eintrag erstellen)</li>
+                <li>Doppelter Eintrag-hinzufuegen-Button im leeren Journal entfernt</li>
+                <li>Hoehenprofil: keine doppelte Ueberschrift mehr im aufgeklappten Zustand</li>
+                <li>Hive-Boxen journals/journal_entries beim App-Start pre-opened</li>
+                <li>JournalService-Provider keepAlive fuer stabile Persistenz</li>
+                <li>Release-APK auf Build 239 aktualisiert</li>
             </ul>
         </div>
 
@@ -247,7 +247,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">236</div>
+                <div class="stat-value">239</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -264,7 +264,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.53.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.55.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

@@ -20,10 +20,25 @@ class JournalService {
   Future<void> init() async {
     if (_isInitialized) return;
 
-    _journalsBox = await Hive.openBox<Map>(_boxName);
-    _entriesBox = await Hive.openBox<Map>(_entriesBoxName);
+    // Nutze pre-opened Boxen aus main.dart, Fallback auf lazy open
+    if (Hive.isBoxOpen(_boxName)) {
+      _journalsBox = Hive.box<Map>(_boxName);
+    } else {
+      debugPrint('[Journal] Box "$_boxName" nicht pre-opened, oeffne lazy');
+      _journalsBox = await Hive.openBox<Map>(_boxName);
+    }
+
+    if (Hive.isBoxOpen(_entriesBoxName)) {
+      _entriesBox = Hive.box<Map>(_entriesBoxName);
+    } else {
+      debugPrint(
+          '[Journal] Box "$_entriesBoxName" nicht pre-opened, oeffne lazy');
+      _entriesBox = await Hive.openBox<Map>(_entriesBoxName);
+    }
+
     _isInitialized = true;
-    debugPrint('[Journal] Service initialisiert');
+    debugPrint('[Journal] Service initialisiert '
+        '(journals: ${_journalsBox.length}, entries: ${_entriesBox.length})');
   }
 
   /// Erstellt ein neues Tagebuch fuer einen Trip
@@ -50,14 +65,19 @@ class JournalService {
   Future<TripJournal?> getJournal(String tripId) async {
     await init();
 
-    final data = _journalsBox.get(tripId);
-    if (data == null) return null;
+    try {
+      final data = _journalsBox.get(tripId);
+      if (data == null) return null;
 
-    final entries = await _getEntriesForTrip(tripId);
-    final json = Map<String, dynamic>.from(data);
-    json['entries'] = entries.map((e) => e.toJson()).toList();
+      final entries = await _getEntriesForTrip(tripId);
+      final json = Map<String, dynamic>.from(data);
+      json['entries'] = entries.map((e) => e.toJson()).toList();
 
-    return TripJournal.fromJson(json);
+      return TripJournal.fromJson(json);
+    } catch (e) {
+      debugPrint('[Journal] Fehler beim Laden von Journal "$tripId": $e');
+      return null;
+    }
   }
 
   /// Laedt alle Tagebuecher
@@ -200,12 +220,15 @@ class JournalService {
     final entries = <JournalEntry>[];
 
     for (final key in _entriesBox.keys) {
-      final data = _entriesBox.get(key);
-      if (data != null) {
+      try {
+        final data = _entriesBox.get(key);
+        if (data == null) continue;
         final json = Map<String, dynamic>.from(data);
         if (json['tripId'] == tripId) {
           entries.add(JournalEntry.fromJson(json));
         }
+      } catch (e) {
+        debugPrint('[Journal] Fehler beim Laden von Eintrag "$key": $e');
       }
     }
 

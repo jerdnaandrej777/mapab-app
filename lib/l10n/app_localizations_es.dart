@@ -2546,6 +2546,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get journalNoJournals => 'Ningún diario todavía';
 
   @override
+  String get journalMemoryPoint => 'Punto de recuerdo';
+
+  @override
+  String get journalRevisit => 'Revisitar';
+
+  @override
+  String get journalBack => 'Volver';
+
+  @override
   String get galleryTitle => 'Galería de trips';
 
   @override

@@ -9,11 +9,13 @@ import '../../../data/models/elevation.dart';
 class ElevationChart extends StatelessWidget {
   final ElevationProfile profile;
   final double? highlightDistanceKm;
+  final bool showHeader;
 
   const ElevationChart({
     super.key,
     required this.profile,
     this.highlightDistanceKm,
+    this.showHeader = true,
   });
 
   @override
@@ -59,41 +61,42 @@ class ElevationChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 12),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.terrain,
-                  size: 18,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Hoehenprofil',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+          // Header (optional - ausblenden wenn extern angezeigt)
+          if (showHeader)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.terrain,
+                    size: 18,
+                    color: colorScheme.primary,
                   ),
-                ),
-                const Spacer(),
-                // Kompakte Stats
-                _StatChip(
-                  icon: Icons.arrow_upward,
-                  label: profile.formattedAscent,
-                  color: colorScheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-                _StatChip(
-                  icon: Icons.arrow_downward,
-                  label: profile.formattedDescent,
-                  color: colorScheme.error,
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    'Hoehenprofil',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Kompakte Stats
+                  _StatChip(
+                    icon: Icons.arrow_upward,
+                    label: profile.formattedAscent,
+                    color: colorScheme.tertiary,
+                  ),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                    icon: Icons.arrow_downward,
+                    label: profile.formattedDescent,
+                    color: colorScheme.error,
+                  ),
+                ],
+              ),
             ),
-          ),
 
           // Chart
           SizedBox(

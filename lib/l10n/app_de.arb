@@ -916,6 +916,9 @@
   "journalOpenJournal": "Tagebuch öffnen",
   "journalAllJournals": "Alle Tagebücher",
   "journalNoJournals": "Noch keine Tagebücher vorhanden",
+  "journalMemoryPoint": "Erinnerungspunkt",
+  "journalRevisit": "Erneut besuchen",
+  "journalBack": "Zurück",
 
   "@@_SOCIAL": "--- Social / Galerie ---",
   "galleryTitle": "Trip-Galerie",
