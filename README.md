@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.49 - Social Owner-Controls + Header-Hardening (9. Februar 2026)
+- **AI-Assistent Header-Einstieg entfernt** - Der Header-Button wurde entfernt, um den bekannten Crash-Pfad zu vermeiden.
+- **Trip-Galerie erweitert** - Eigene veroeffentlichte Trips koennen im Public-Detail direkt bearbeitet und geloescht werden.
+- **POI-Galerie erweitert** - Eigene veroeffentlichte POI-Posts koennen direkt in der Galerie bearbeitet und geloescht werden.
+- **Owner-Schutz serverseitig gehaertet** - Update/Delete-Operationen fuer Social-Inhalte sind strikt an den Besitzer (`user_id`) gebunden.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 232.
+
 ### v1.10.48 - AI Assistant Stabilitaet + Hotel/Restaurant Ausbau (9. Februar 2026)
 - **AI-Assistant Freeze-Fix** - Timeouts und robustere Request-Finalisierung verhindern haengende Ladezustaende.
 - **Restaurant + Hotel Suche erweitert** - Intent-Erkennung und Nearby-Filter liefern konsistentere Treffer fuer Unterkuenfte und Essen.

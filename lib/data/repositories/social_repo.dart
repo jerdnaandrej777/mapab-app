@@ -451,12 +451,104 @@ class SocialRepository {
 
   /// Eigenen Trip loeschen
   Future<bool> deletePublishedTrip(String tripId) async {
+    final userId = _currentUserId;
+    if (userId == null) return false;
+
     try {
-      await _client.from('trips').delete().eq('id', tripId);
+      await _client
+          .from('trips')
+          .delete()
+          .eq('id', tripId)
+          .eq('user_id', userId);
       debugPrint('[Social] Trip geloescht: $tripId');
       return true;
     } catch (e) {
       debugPrint('[Social] Loeschen FEHLER: $e');
+      return false;
+    }
+  }
+
+  /// Eigenen veroeffentlichten Trip bearbeiten (Meta-Daten)
+  Future<PublicTrip?> updatePublishedTrip({
+    required String tripId,
+    required String tripName,
+    String? description,
+    List<String>? tags,
+  }) async {
+    final userId = _currentUserId;
+    if (userId == null) return null;
+
+    try {
+      final updated = await _client
+          .from('trips')
+          .update({
+            'trip_name': tripName.trim(),
+            'description': description?.trim().isEmpty == true
+                ? null
+                : description?.trim(),
+            'tags': tags ?? const <String>[],
+          })
+          .eq('id', tripId)
+          .eq('user_id', userId)
+          .select()
+          .maybeSingle();
+
+      if (updated == null) return null;
+      return await getPublicTrip(tripId);
+    } catch (e) {
+      debugPrint('[Social] Trip bearbeiten FEHLER: $e');
+      return null;
+    }
+  }
+
+  /// Eigenen veroeffentlichten POI-Post bearbeiten
+  Future<PublicPoiPost?> updatePublishedPOI({
+    required String postId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    bool isMustSee = false,
+  }) async {
+    final userId = _currentUserId;
+    if (userId == null) return null;
+
+    try {
+      final updated = await _client
+          .from('poi_posts')
+          .update({
+            'title': title.trim(),
+            'content': content?.trim().isEmpty == true ? null : content?.trim(),
+            'categories': categories ?? const <String>[],
+            'is_must_see': isMustSee,
+          })
+          .eq('id', postId)
+          .eq('user_id', userId)
+          .select()
+          .maybeSingle();
+
+      if (updated == null) return null;
+      return await getPublicPOI(postId);
+    } catch (e) {
+      debugPrint('[Social] POI bearbeiten FEHLER: $e');
+      return null;
+    }
+  }
+
+  /// Eigenen veroeffentlichten POI-Post loeschen
+  Future<bool> deletePublishedPOI(String postId) async {
+    final userId = _currentUserId;
+    if (userId == null) return false;
+
+    try {
+      await _client
+          .from('poi_posts')
+          .delete()
+          .eq('id', postId)
+          .eq('user_id', userId);
+      debugPrint('[Social] POI-Post geloescht: $postId');
+      return true;
+    } catch (e) {
+      debugPrint('[Social] POI loeschen FEHLER: $e');
       return false;
     }
   }
@@ -511,7 +603,7 @@ class SocialRepository {
 
     try {
       // Versuche Profil zu laden
-      var profile = await loadUserProfile(userId);
+      final profile = await loadUserProfile(userId);
       if (profile != null) return profile;
 
       // Erstelle neues Profil
@@ -972,6 +1064,28 @@ class _UnavailableSocialRepository extends SocialRepository {
 
   @override
   Future<bool> deletePublishedTrip(String tripId) async => false;
+
+  @override
+  Future<PublicTrip?> updatePublishedTrip({
+    required String tripId,
+    required String tripName,
+    String? description,
+    List<String>? tags,
+  }) async =>
+      null;
+
+  @override
+  Future<PublicPoiPost?> updatePublishedPOI({
+    required String postId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    bool isMustSee = false,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deletePublishedPOI(String postId) async => false;
 
   @override
   Future<List<PublicTrip>> loadMyPublishedTrips() async => const [];

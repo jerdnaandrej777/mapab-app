@@ -89,6 +89,9 @@ class _TripDetailPublicScreenState
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
+    final authState = ref.watch(authNotifierProvider);
+    final isOwnTrip = authState.user?.id == trip.userId;
+
     return CustomScrollView(
       slivers: [
         // Hero Image + AppBar
@@ -131,6 +134,26 @@ class _TripDetailPublicScreenState
             ),
           ),
           actions: [
+            if (isOwnTrip)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _editTrip(trip);
+                  } else if (value == 'delete') {
+                    _deleteTrip();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Trip bearbeiten'),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Trip loeschen'),
+                  ),
+                ],
+              ),
             // Like Button
             IconButton(
               icon: Icon(
@@ -933,6 +956,121 @@ class _TripDetailPublicScreenState
 
   String _formatDate(DateTime date) {
     return '${date.day}.${date.month}.${date.year}';
+  }
+
+  Future<void> _editTrip(PublicTrip trip) async {
+    final nameController = TextEditingController(text: trip.tripName);
+    final descriptionController =
+        TextEditingController(text: trip.description ?? '');
+    final tagsController = TextEditingController(text: trip.tags.join(', '));
+
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Trip bearbeiten'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Titel'),
+                maxLength: 80,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: 'Beschreibung'),
+                minLines: 2,
+                maxLines: 5,
+                maxLength: 400,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (kommagetrennt)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) return;
+              Navigator.pop(context, true);
+            },
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+
+    if (save != true || !mounted) return;
+
+    final ok = await ref
+        .read(tripDetailNotifierProvider(widget.tripId).notifier)
+        .updateTripMeta(
+          tripName: nameController.text.trim(),
+          description: descriptionController.text.trim(),
+          tags: _splitCsv(tagsController.text),
+        );
+
+    if (!mounted) return;
+    if (ok) {
+      AppSnackbar.showSuccess(context, 'Trip aktualisiert');
+    } else {
+      AppSnackbar.showError(context, 'Trip konnte nicht aktualisiert werden');
+    }
+  }
+
+  Future<void> _deleteTrip() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Trip loeschen?'),
+        content: const Text(
+          'Dieser veroeffentlichte Trip wird dauerhaft geloescht.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Loeschen'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final ok = await ref
+        .read(tripDetailNotifierProvider(widget.tripId).notifier)
+        .deleteTrip();
+    if (!mounted) return;
+    if (ok) {
+      AppSnackbar.showSuccess(context, 'Trip geloescht');
+      context.pop();
+    } else {
+      AppSnackbar.showError(context, 'Trip konnte nicht geloescht werden');
+    }
+  }
+
+  List<String> _splitCsv(String raw) {
+    return raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
   }
 }
 

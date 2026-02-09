@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.48 - AI Assistant Stabilitaet + Hotel/Restaurant Ausbau | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.48)
+Version: 1.10.49 - Social Owner-Controls + Header-Hardening | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.49)
 
-- AI-Assistant stabilisiert: Request-Timeouts und robustere Finalisierung verhindern haengende Ladezustaende.
-- Nearby-Suche erweitert: Restaurants und Hotels werden intent-basiert und konsistent gefiltert.
-- Chat-Texte bereinigt: fehlerhafte Sonderzeichen/Mojibake in Vorschlaegen und Fallbacks entfernt.
-- Suggestion-Flow verbessert: direkte Hotel-Aktionen + stabilere standortbasierte Anfragepfade.
-- Android Release aktualisiert: APK Build 231 (v1.10.48).
+- AI-Assistent aus Map-Header entfernt (Crash-Weg umgangen).
+- Public Trip Detail: Besitzer kann veroeffentlichte Trips direkt bearbeiten und loeschen.
+- POI-Galerie: Besitzer kann veroeffentlichte POI-Posts direkt bearbeiten und loeschen.
+- Social-Repository gehaertet: Update/Delete nur mit passender `user_id`.
+- Android Release aktualisiert: APK Build 232 (v1.10.49).
 
 
 ## Tech Stack
@@ -145,9 +145,9 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/journal/widgets/add_journal_entry_sheet.dart` | BottomSheet zum Hinzufuegen: Kamera/Galerie Buttons, Notiz-TextField, Standort-Toggle (v1.9.29) |
 | `lib/features/sharing/qr_scanner_screen.dart` | QR-Code-Scanner fuer Trip-Import: mobile_scanner Integration, mapab:// + https://mapab.app/trip/ Deep-Link-Parsing, automatische Routen-Berechnung via OSRM (v1.9.30) |
 | `lib/features/templates/trip_templates_screen.dart` | Trip-Vorlagen-Auswahl: 12 vordefinierte Reisetypen, Zielgruppen-Filter (Alle/Paare/Familien/etc.), Tage-Stepper, direkte AI-Trip-Generierung (v1.9.30) |
-| `lib/features/social/gallery_screen.dart` | Oeffentliche Trip-Galerie: Featured-Trips horizontal, Grid-Ansicht, Filter-Sheet (Vollbild, v1.10.0), Suche, Sortierung (Beliebt/Neueste/Likes), Trip-Typ-Filter, Tags, Infinite Scroll (v1.10.0) + FilterChip/ChoiceChip explizite Textfarben colorScheme.onPrimary/onSurface (v1.10.1) + _FilterSheet ref.watch() statt state-Parameter fuer sofortige Button-Updates (v1.10.7) |
+| `lib/features/social/gallery_screen.dart` | Oeffentliche Trip-Galerie: Featured-Trips horizontal, Grid-Ansicht, Filter-Sheet (Vollbild, v1.10.0), Suche, Sortierung (Beliebt/Neueste/Likes), Trip-Typ-Filter, Tags, Infinite Scroll (v1.10.0) + FilterChip/ChoiceChip explizite Textfarben colorScheme.onPrimary/onSurface (v1.10.1) + _FilterSheet ref.watch() statt state-Parameter fuer sofortige Button-Updates (v1.10.7) + Owner-Aktionen fuer POI-Posts (Bearbeiten/Loeschen) direkt in der Galerie (v1.10.49) |
 | `lib/features/social/widgets/public_trip_card.dart` | Trip-Karte in Galerie: Thumbnail, Statistiken, Like-Button, Author-Info (v1.10.0) |
-| `lib/features/social/trip_detail_public_screen.dart` | Trip-Detail-Ansicht: Route auf Karte, Stops, Author-Profil, Like/Import-Buttons (v1.10.0) + "Auf Karte"-Button zeigt Trip auf Hauptkarte: Route-Parsing aus tripData, POI-Erstellung, tripStateProvider.setRouteAndStops(), Auto-Zoom (v1.10.17) + robuste Stop-Normalisierung (poiId/lat/lng/category/tags), klickbare POI-Vorschau mit korrektem Detail-Linking (v1.10.35) + Highlight-Mapping (highlights -> tags), Must-See-Erkennung und Highlight-Anzeige in POI-Vorschau (v1.10.37) |
+| `lib/features/social/trip_detail_public_screen.dart` | Trip-Detail-Ansicht: Route auf Karte, Stops, Author-Profil, Like/Import-Buttons (v1.10.0) + "Auf Karte"-Button zeigt Trip auf Hauptkarte: Route-Parsing aus tripData, POI-Erstellung, tripStateProvider.setRouteAndStops(), Auto-Zoom (v1.10.17) + robuste Stop-Normalisierung (poiId/lat/lng/category/tags), klickbare POI-Vorschau mit korrektem Detail-Linking (v1.10.35) + Highlight-Mapping (highlights -> tags), Must-See-Erkennung und Highlight-Anzeige in POI-Vorschau (v1.10.37) + Owner-Menue fuer Bearbeiten/Loeschen des veroeffentlichten Trips (v1.10.49) |
 | `lib/features/social/widgets/publish_trip_sheet.dart` | Bottom Sheet zum Veroeffentlichen: Name, Beschreibung, Tags, Sichtbarkeit (v1.10.0) + FilterChip-Farben-Fix: explizite labelStyle/selectedColor/backgroundColor/checkmarkColor fuer sichtbare Tag-Buttons (v1.10.16) + Source-POI-Merge aus tripState/randomTrip fuer vollstaendige Publish-Stopdaten (v1.10.35) |
 | `lib/features/leaderboard/leaderboard_screen.dart` | Globale Rangliste: 4 Sortieroptionen (XP/km/Trips/Likes), eigene Position immer sichtbar, Gold/Silber/Bronze Badges, Streak-Anzeige, Pagination (v1.10.23) |
 | `lib/features/challenges/challenges_screen.dart` | WÃ¶chentliche Challenges: 9 Challenge-Typen, Streak-Karte mit Flammen-Gradient, Fortschrittsbalken, XP-Belohnungen, HIGHLIGHT-Badges, Timer bis Ablauf (v1.10.23) |
@@ -173,7 +173,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/providers/navigation_poi_discovery_provider.dart` | Must-See POI-Entdeckung entlang der Route: ref.listen auf GPS-Stream, dismissed/announced Sets, goldene Card + TTS (v1.9.14, keepAlive v1.9.27) |
 | `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) + Silent-Catch Logging (v1.9.27) + _l10n Getter via lookupAppLocalizations, VoiceService.setLocale() bei Sprachwechsel, Must-See Announcement lokalisiert (v1.10.3) |
 | `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) |
-| `lib/data/providers/gallery_provider.dart` | Trip-Galerie-State (keepAlive): GalleryNotifier (Trips, Featured, Filter, Suche, Pagination), TripDetailNotifier (Detail-Ansicht, Import), ProfileNotifier, MyProfileNotifier (v1.10.0) |
+| `lib/data/providers/gallery_provider.dart` | Trip-Galerie-State (keepAlive): GalleryNotifier (Trips, Featured, Filter, Suche, Pagination), TripDetailNotifier (Detail-Ansicht, Import, Update/Delete eigener Trips), ProfileNotifier, MyProfileNotifier (v1.10.0, v1.10.49) |
 | `lib/data/providers/leaderboard_provider.dart` | Leaderboard-State (keepAlive): LeaderboardNotifier mit 4 Sortierkriterien (XP/km/Trips/Likes), eigene Position, Pagination (v1.10.23) |
 | `lib/data/providers/challenges_provider.dart` | Challenges-State (keepAlive): ChallengesNotifier mit 9 Challenge-Typen, Streak-Tracking, wÃ¶chentliche Challenges, XP-Belohnungen (v1.10.23) |
 
@@ -210,7 +210,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/trip_template.dart` | TripTemplate Model (Freezed): 12 vordefinierte Reisevorlagen mit id, name, description, emoji, recommendedDays, categories, tags, targetAudience + TripTemplates.all statische Liste + forAudience()/findById() Helper (v1.9.30) |
 | `lib/data/models/public_trip.dart` | PublicTrip + UserProfile Models (Freezed): Oeffentliche Trip-Daten mit Author-Info, Statistiken, Like-Status + GallerySortBy/GalleryTripTypeFilter Enums (v1.10.0) |
 | `lib/data/models/challenge.dart` | Challenge Model (Freezed): ChallengeType (9 Typen), ChallengeFrequency, UserChallenge, UserStreak + XP-Belohnungen (v1.10.23) |
-| `lib/data/repositories/social_repo.dart` | Social Features Repository: loadFeaturedTrips, searchPublicTrips, likeTrip, loadUserProfile, publishTrip, importTrip - Supabase RPC Integration (v1.10.0) + Tabellenname-Fix public_trips->trips (v1.10.1) + POI Publish RPC-Fallback (PGRST202) via Direct-Insert und angereicherte tripData.stops beim Publish (v1.10.35) |
+| `lib/data/repositories/social_repo.dart` | Social Features Repository: loadFeaturedTrips, searchPublicTrips, likeTrip, loadUserProfile, publishTrip, importTrip - Supabase RPC Integration (v1.10.0) + Tabellenname-Fix public_trips->trips (v1.10.1) + POI Publish RPC-Fallback (PGRST202) via Direct-Insert und angereicherte tripData.stops beim Publish (v1.10.35) + Owner-gebundene Update/Delete-Methoden fuer Trips und POI-Posts (v1.10.49) |
 | `lib/data/repositories/leaderboard_repo.dart` | Leaderboard Repository: getLeaderboard() mit Sortierung (XP/km/Trips/Likes), getMyPosition(), Pagination (v1.10.23) |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS -> Client-Fallback -> Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) + Wikipedia-Grid 4er-Batches mit 200ms Pause + 8s Timeout + 200-POI-Cap, globaler 20s Future.wait-Timeout (v1.9.28) + minScore-Parameter in Radius/Bounds sowie loadPOIById() (Supabase+curated Fallback) (v1.10.35) |
 | `lib/data/repositories/routing_repo.dart` | OSRM Fast/Scenic Routing + calculateNavigationRoute() mit steps=true fuer Turn-by-Turn (v1.9.0) |

@@ -368,6 +368,39 @@ class TripDetailNotifier extends _$TripDetailNotifier {
 
     return tripData;
   }
+
+  Future<bool> updateTripMeta({
+    required String tripName,
+    String? description,
+    List<String>? tags,
+  }) async {
+    final current = state.trip;
+    if (current == null) return false;
+
+    final repo = ref.read(socialRepositoryProvider);
+    final updated = await repo.updatePublishedTrip(
+      tripId: current.id,
+      tripName: tripName,
+      description: description,
+      tags: tags,
+    );
+
+    if (updated == null) return false;
+    state = state.copyWith(trip: updated);
+    return true;
+  }
+
+  Future<bool> deleteTrip() async {
+    final current = state.trip;
+    if (current == null) return false;
+
+    final repo = ref.read(socialRepositoryProvider);
+    final ok = await repo.deletePublishedTrip(current.id);
+    if (!ok) return false;
+
+    state = state.copyWith(trip: null);
+    return true;
+  }
 }
 
 /// State fuer User-Profil

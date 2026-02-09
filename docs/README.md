@@ -1,4 +1,4 @@
-# MapAB Dokumentation
+﻿# MapAB Dokumentation
 
 Willkommen zur MapAB Flutter App Dokumentation.
 
@@ -6,7 +6,7 @@ Willkommen zur MapAB Flutter App Dokumentation.
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [README](../README.md) | Projekt-Übersicht und Setup |
+| [README](../README.md) | Projekt-Uebersicht und Setup |
 | [CONTRIBUTING](../CONTRIBUTING.md) | Entwickler-Workflow |
 | [CHANGELOG](../CHANGELOG.md) | Versionshistorie |
 
@@ -25,12 +25,13 @@ Technische Dokumentation zur App-Architektur.
 
 ## Guides
 
-Anleitungen für spezifische Themen.
+Anleitungen fuer spezifische Themen.
 
 | Dokument | Beschreibung |
 |----------|--------------|
 | [DARK-MODE](guides/DARK-MODE.md) | Theme-Implementierung |
 | [BACKEND-SETUP](guides/BACKEND-SETUP.md) | Vercel + Supabase Konfiguration |
+| [SOCIAL-OWNER-CONTROLS](guides/SOCIAL-OWNER-CONTROLS.md) | Owner-Rechte fuer Bearbeiten/Loeschen in Galerie und Trip-Detail |
 
 ---
 
@@ -50,7 +51,7 @@ Nachschlagewerke und Hilfestellung.
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [FAQ](reference/FAQ.md) | Häufige Fragen |
+| [FAQ](reference/FAQ.md) | Haeufige Fragen |
 | [TROUBLESHOOTING](reference/TROUBLESHOOTING.md) | Fehlerbehebung |
 | [FEATURES](reference/FEATURES.md) | Feature-Matrix |
 
@@ -61,14 +62,15 @@ Nachschlagewerke und Hilfestellung.
 | Dokument | Beschreibung |
 |----------|--------------|
 | [SECURITY](SECURITY.md) | Credentials und Sicherheit |
-| [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollständige Feature-Doku |
+| [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollstaendige Feature-Doku |
 | [LARAVEL-MIGRATION](LARAVEL-MIGRATION.md) | Geplante Backend-Migration |
+| [CHANGELOG v1.10.49](../Dokumentation/CHANGELOG-v1.10.49.md) | Release-Details Social Owner Controls |
 
 ---
 
 ## Archiv
 
-Ältere Changelogs sind unter `archive/changelogs/` verfügbar.
+Aeltere Changelogs sind unter `archive/changelogs/` verfuegbar.
 
 ---
 
@@ -83,9 +85,9 @@ Nachschlagewerke und Hilfestellung.
 
 ## Beitragen
 
-Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) für Informationen zum Mitwirken.
+Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) fuer Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.48
+**Version:** 1.10.49  
 **Stand:** Februar 2026

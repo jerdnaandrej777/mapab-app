@@ -253,11 +253,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         backgroundColor: colorScheme.surface,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.smart_toy_outlined),
-            onPressed: () => context.push('/ai-assistant'),
-            tooltip: context.l10n.chatTitle,
-          ),
           // Galerie-Button
           IconButton(
             icon: const Icon(Icons.explore_outlined),

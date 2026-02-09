@@ -7,6 +7,28 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.49] - 2026-02-09
+
+### Social-Ownership + Header-Hardening
+
+#### Geaendert
+- **AI-Assistent aus dem Header entfernt**
+  - Der Header-Einstieg auf der Map wurde entfernt, um den bekannten Crash-Pfad zu umgehen.
+- **Trip-Galerie: Owner kann eigene veroeffentlichte Trips direkt bearbeiten und loeschen**
+  - In der oeffentlichen Trip-Detailansicht gibt es fuer den Besitzer jetzt ein Aktionsmenue mit Bearbeiten/Loeschen.
+  - Bearbeitung umfasst Titel, Beschreibung und Tags.
+- **POI-Galerie: Owner kann eigene veroeffentlichte POI-Posts direkt bearbeiten und loeschen**
+  - In POI-Karten gibt es fuer den Besitzer ein Aktionsmenue mit Bearbeiten/Loeschen.
+  - Bearbeitung umfasst Titel, Beschreibung, Kategorien und Must-See-Status.
+
+#### Stabilitaet/Sicherheit
+- **Owner-Checks im Backend-Zugriff verschaerft**
+  - Delete/Update fuer Trips und POI-Posts sind jetzt strikt an `user_id` gebunden.
+  - Offline-Fallback-Repository wurde auf die neuen Methoden erweitert.
+
+#### Tests
+- `flutter test` (komplette Suite) erfolgreich.
+
 ## [1.10.47] - 2026-02-09
 
 ### Routing- und UI-Stabilisierung

@@ -249,6 +249,81 @@ class POIGalleryNotifier extends StateNotifier<POIGalleryState> {
     );
     state = state.copyWith(items: next);
   }
+
+  Future<bool> updatePost({
+    required String postId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    required bool isMustSee,
+  }) async {
+    final index = state.items.indexWhere((e) => e.id == postId);
+    if (index < 0) return false;
+
+    final current = state.items[index];
+    final updated = PublicPoiPost(
+      id: current.id,
+      poiId: current.poiId,
+      userId: current.userId,
+      title: title.trim(),
+      content: content?.trim().isEmpty == true ? null : content?.trim(),
+      categories: categories ?? const <String>[],
+      isMustSee: isMustSee,
+      ratingAvg: current.ratingAvg,
+      ratingCount: current.ratingCount,
+      voteScore: current.voteScore,
+      likesCount: current.likesCount,
+      commentCount: current.commentCount,
+      photoCount: current.photoCount,
+      coverPhotoPath: current.coverPhotoPath,
+      authorName: current.authorName,
+      authorAvatar: current.authorAvatar,
+      isLikedByMe: current.isLikedByMe,
+      createdAt: current.createdAt,
+    );
+
+    final next = [...state.items];
+    next[index] = updated;
+    state = state.copyWith(items: next);
+
+    final repo = _read.read(socialRepositoryProvider);
+    final persisted = await repo.updatePublishedPOI(
+      postId: postId,
+      title: title,
+      content: content,
+      categories: categories,
+      isMustSee: isMustSee,
+    );
+
+    if (persisted == null) {
+      next[index] = current;
+      state = state.copyWith(items: next);
+      return false;
+    }
+
+    next[index] = persisted;
+    state = state.copyWith(items: next);
+    return true;
+  }
+
+  Future<bool> deletePost(String postId) async {
+    final index = state.items.indexWhere((e) => e.id == postId);
+    if (index < 0) return false;
+
+    final current = state.items[index];
+    final next = [...state.items]..removeAt(index);
+    state = state.copyWith(items: next);
+
+    final repo = _read.read(socialRepositoryProvider);
+    final ok = await repo.deletePublishedPOI(postId);
+    if (!ok) {
+      final rollback = [...state.items];
+      rollback.insert(index, current);
+      state = state.copyWith(items: rollback);
+      return false;
+    }
+    return true;
+  }
 }
 
 final poiGalleryNotifierProvider =

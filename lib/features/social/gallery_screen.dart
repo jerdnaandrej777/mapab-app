@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/l10n/l10n.dart';
 import '../../data/models/public_poi_post.dart';
+import '../../data/providers/auth_provider.dart';
 import '../../data/providers/poi_gallery_provider.dart';
 import '../../data/models/public_trip.dart';
 import '../../data/providers/gallery_provider.dart';
+import '../../shared/widgets/app_snackbar.dart';
 import 'widgets/public_trip_card.dart';
 
 /// Oeffentliche Trip-Galerie
@@ -57,6 +59,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(galleryNotifierProvider);
     final poiState = ref.watch(poiGalleryNotifierProvider);
+    final authState = ref.watch(authNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -528,10 +531,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final post = poiState.items[index];
+                      final isOwner = authState.user?.id == post.userId;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _PublicPoiCard(
                           post: post,
+                          isOwner: isOwner,
                           onLike: () => ref
                               .read(poiGalleryNotifierProvider.notifier)
                               .toggleLike(post.id),
@@ -542,6 +547,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                               .read(poiGalleryNotifierProvider.notifier)
                               .vote(post.id, -1),
                           onOpen: () => context.push('/poi/${post.poiId}'),
+                          onEdit: isOwner ? () => _editPoiPost(post) : null,
+                          onDelete: isOwner ? () => _deletePoiPost(post) : null,
                         ),
                       );
                     },
@@ -574,6 +581,135 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
 
   void _openTripDetail(PublicTrip trip) {
     context.push('/gallery/${trip.id}');
+  }
+
+  Future<void> _editPoiPost(PublicPoiPost post) async {
+    final titleController = TextEditingController(text: post.title);
+    final contentController = TextEditingController(text: post.content ?? '');
+    final categoriesController =
+        TextEditingController(text: post.categories.join(', '));
+    bool isMustSee = post.isMustSee;
+
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('POI-Post bearbeiten'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: 'Titel'),
+                      maxLength: 80,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: contentController,
+                      decoration:
+                          const InputDecoration(labelText: 'Beschreibung'),
+                      minLines: 2,
+                      maxLines: 4,
+                      maxLength: 280,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: categoriesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategorien (kommagetrennt)',
+                      ),
+                    ),
+                    CheckboxListTile(
+                      value: isMustSee,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(context.l10n.poiOnlyMustSee),
+                      onChanged: (value) {
+                        setDialogState(() => isMustSee = value ?? false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(context.l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (titleController.text.trim().isEmpty) return;
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Speichern'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (save != true || !mounted) return;
+
+    final ok = await ref.read(poiGalleryNotifierProvider.notifier).updatePost(
+          postId: post.id,
+          title: titleController.text.trim(),
+          content: contentController.text.trim(),
+          categories: _splitCsv(categoriesController.text),
+          isMustSee: isMustSee,
+        );
+    if (!mounted) return;
+    if (ok) {
+      AppSnackbar.showSuccess(context, 'POI-Post aktualisiert');
+    } else {
+      AppSnackbar.showError(
+          context, 'POI-Post konnte nicht aktualisiert werden');
+    }
+  }
+
+  Future<void> _deletePoiPost(PublicPoiPost post) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('POI-Post loeschen?'),
+        content: const Text(
+          'Der veroeffentlichte POI-Post wird dauerhaft entfernt.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Loeschen'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final ok =
+        await ref.read(poiGalleryNotifierProvider.notifier).deletePost(post.id);
+    if (!mounted) return;
+    if (ok) {
+      AppSnackbar.showSuccess(context, 'POI-Post geloescht');
+    } else {
+      AppSnackbar.showError(context, 'POI-Post konnte nicht geloescht werden');
+    }
+  }
+
+  List<String> _splitCsv(String raw) {
+    return raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
   }
 
   void _showFilterSheet(BuildContext context, GalleryState state) {
@@ -801,17 +937,23 @@ class _FilterSheet extends ConsumerWidget {
 class _PublicPoiCard extends StatelessWidget {
   const _PublicPoiCard({
     required this.post,
+    required this.isOwner,
     required this.onLike,
     required this.onVoteUp,
     required this.onVoteDown,
     required this.onOpen,
+    this.onEdit,
+    this.onDelete,
   });
 
   final PublicPoiPost post;
+  final bool isOwner;
   final VoidCallback onLike;
   final VoidCallback onVoteUp;
   final VoidCallback onVoteDown;
   final VoidCallback onOpen;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -854,6 +996,24 @@ class _PublicPoiCard extends StatelessWidget {
                           fontSize: 12,
                         ),
                       ),
+                    ),
+                  if (isOwner)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) {
+                        if (value == 'edit') onEdit?.call();
+                        if (value == 'delete') onDelete?.call();
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text('Bearbeiten'),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Loeschen'),
+                        ),
+                      ],
                     ),
                 ],
               ),
