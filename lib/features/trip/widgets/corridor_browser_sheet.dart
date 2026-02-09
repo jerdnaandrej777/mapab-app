@@ -64,8 +64,9 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
-      initialChildSize: widget.initialChildSize,
-      minChildSize: 0.4,
+      initialChildSize:
+          widget.initialChildSize < 0.9 ? 0.9 : widget.initialChildSize,
+      minChildSize: 0.9,
       maxChildSize: 1.0,
       builder: (context, scrollController) {
         return Container(
@@ -92,7 +93,8 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
                     width: 32,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -181,9 +183,10 @@ class _CorridorBrowserContentState
     // Weather einmal lesen und an Sub-Methoden durchreichen (Fix 3)
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
     final locationWeather = ref.watch(locationWeatherNotifierProvider);
-    final weatherCondition = routeWeather.overallCondition != WeatherCondition.unknown
-        ? routeWeather.overallCondition
-        : locationWeather.condition;
+    final weatherCondition =
+        routeWeather.overallCondition != WeatherCondition.unknown
+            ? routeWeather.overallCondition
+            : locationWeather.condition;
 
     return Column(
       children: [
@@ -401,12 +404,14 @@ class _CorridorBrowserContentState
                   decoration: BoxDecoration(
                     color: isIndoorActive
                         ? colorScheme.tertiary
-                        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        : colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: isIndoorActive
                         ? [
                             BoxShadow(
-                              color: colorScheme.tertiary.withValues(alpha: 0.3),
+                              color:
+                                  colorScheme.tertiary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),
@@ -463,7 +468,8 @@ class _CorridorBrowserContentState
                 decoration: BoxDecoration(
                   color: isSelected
                       ? colorScheme.primary
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      : colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: isSelected
                       ? [
@@ -627,7 +633,8 @@ class _CorridorBrowserContentState
           _sortedPOIsCacheCondition == weatherCondition) {
         sortedPOIs = _sortedPOIsCache!;
       } else {
-        sortedPOIs = WeatherPOIUtils.sortByWeatherRelevance(filteredPOIs, weatherCondition);
+        sortedPOIs = WeatherPOIUtils.sortByWeatherRelevance(
+            filteredPOIs, weatherCondition);
         _sortedPOIsCache = sortedPOIs;
         _sortedPOIsInput = filteredPOIs;
         _sortedPOIsCacheCondition = weatherCondition;
@@ -648,7 +655,8 @@ class _CorridorBrowserContentState
         final isAdded = state.addedPOIIds.contains(poi.id);
 
         return CompactPOICard(
-          key: ValueKey(poi.id), // Fix 4: Stabiles Recycling bei Sortier-Aenderungen
+          key: ValueKey(
+              poi.id), // Fix 4: Stabiles Recycling bei Sortier-Aenderungen
           name: poi.name,
           category: poi.category,
           detourKm: poi.detourKm != null
@@ -677,9 +685,7 @@ class _CorridorBrowserContentState
     if (widget.onAddPOI != null) {
       final success = await widget.onAddPOI!(poi);
       if (success && mounted) {
-        ref
-            .read(corridorBrowserNotifierProvider.notifier)
-            .markAsAdded(poi.id);
+        ref.read(corridorBrowserNotifierProvider.notifier).markAsAdded(poi.id);
       }
     } else {
       await POITripHelper.addPOIWithFeedback(
@@ -688,9 +694,7 @@ class _CorridorBrowserContentState
         poi: poi,
       );
       if (mounted) {
-        ref
-            .read(corridorBrowserNotifierProvider.notifier)
-            .markAsAdded(poi.id);
+        ref.read(corridorBrowserNotifierProvider.notifier).markAsAdded(poi.id);
       }
     }
   }
@@ -723,9 +727,7 @@ class _CorridorBrowserContentState
 
     final success = await widget.onRemovePOI!(poi);
     if (success && mounted) {
-      ref
-          .read(corridorBrowserNotifierProvider.notifier)
-          .markAsRemoved(poi.id);
+      ref.read(corridorBrowserNotifierProvider.notifier).markAsRemoved(poi.id);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('"${poi.name}" entfernt'),

@@ -548,9 +548,9 @@ class _TripDetailPublicScreenState
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.4,
-        minChildSize: 0.3,
-        maxChildSize: 0.5,
+        initialChildSize: 1.0,
+        minChildSize: 0.9,
+        maxChildSize: 1.0,
         expand: false,
         builder: (context, scrollController) {
           final colorScheme = Theme.of(context).colorScheme;

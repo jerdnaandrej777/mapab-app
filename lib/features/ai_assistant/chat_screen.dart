@@ -33,7 +33,7 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-/// Message-Typ für unterschiedliche Chat-Inhalte
+/// Message-Typ fÃ¼r unterschiedliche Chat-Inhalte
 enum ChatMessageType { text, poiList }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
@@ -56,7 +56,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return state.hasWeather ? state.condition : null;
   }
 
-  // Chat-Nachrichten mit History für Backend
+  // Chat-Nachrichten mit History fÃ¼r Backend
   // Erweitert um POI-Liste Support
   final List<Map<String, dynamic>> _messages = [];
   bool _welcomeMessageAdded = false;
@@ -67,25 +67,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (condition == WeatherCondition.bad ||
         condition == WeatherCondition.danger) {
       return [
-        '🏛️ ${context.l10n.chatIndoorTips}',
-        '📍 ${context.l10n.chatPoisNearMe}',
-        '🏰 ${context.l10n.chatAttractions}',
-        '🍽️ ${context.l10n.chatRestaurants}',
+        'ðŸ›ï¸ ${context.l10n.chatIndoorTips}',
+        'ðŸ“ ${context.l10n.chatPoisNearMe}',
+        'ðŸ° ${context.l10n.chatAttractions}',
+        'ðŸ½ï¸ ${context.l10n.chatRestaurants}',
       ];
     }
     if (condition == WeatherCondition.good) {
       return [
-        '☀️ ${context.l10n.chatOutdoorHighlights}',
-        '📍 ${context.l10n.chatPoisNearMe}',
-        '🌲 ${context.l10n.chatNatureParks}',
-        '🏰 ${context.l10n.chatAttractions}',
+        'â˜€ï¸ ${context.l10n.chatOutdoorHighlights}',
+        'ðŸ“ ${context.l10n.chatPoisNearMe}',
+        'ðŸŒ² ${context.l10n.chatNatureParks}',
+        'ðŸ° ${context.l10n.chatAttractions}',
       ];
     }
     return [
-      '📍 ${context.l10n.chatPoisNearMe}',
-      '🏰 ${context.l10n.chatAttractions}',
-      '🌲 ${context.l10n.chatNatureParks}',
-      '🍽️ ${context.l10n.chatRestaurants}',
+      'ðŸ“ ${context.l10n.chatPoisNearMe}',
+      'ðŸ° ${context.l10n.chatAttractions}',
+      'ðŸŒ² ${context.l10n.chatNatureParks}',
+      'ðŸ½ï¸ ${context.l10n.chatRestaurants}',
     ];
   }
 
@@ -119,7 +119,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       final location = result.position!;
 
-      // Reverse Geocoding für Ortsname
+      // Reverse Geocoding fÃ¼r Ortsname
       String? locationName;
       try {
         final geocodingRepo = ref.read(geocodingRepositoryProvider);
@@ -215,7 +215,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Status Banner (nur wenn Backend nicht verfügbar)
+          // Status Banner (nur wenn Backend nicht verfÃ¼gbar)
           _buildStatusBanner(colorScheme),
 
           // Location Header mit Standort und Radius
@@ -276,7 +276,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
           ),
 
-          // Vorschläge
+          // VorschlÃ¤ge
           if (_messages.length <= 2)
             SuggestionChips(
               suggestions: _getSuggestions(context),
@@ -293,7 +293,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildStatusBanner(ColorScheme colorScheme) {
     if (_backendAvailable) return const SizedBox.shrink();
 
-    // Prüfe ob Backend überhaupt konfiguriert ist
+    // PrÃ¼fe ob Backend Ã¼berhaupt konfiguriert ist
     final isConfigured = ApiConfig.isConfigured;
     final message = isConfigured
         ? context.l10n.chatDemoBackendNotReachable
@@ -656,7 +656,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header-Text (z.B. "📍 POIs in deiner Nähe:")
+        // Header-Text (z.B. "ðŸ“ POIs in deiner NÃ¤he:")
         if (headerText != null && headerText.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -948,18 +948,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Row(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
                 children: [
                   TextButton.icon(
                     onPressed: () => _navigateToPOI(poi),
                     icon: const Icon(Icons.info_outline, size: 16),
                     label: Text(context.l10n.mapDetails),
                   ),
-                  const SizedBox(width: 6),
                   TextButton.icon(
                     onPressed: () => _showOnMap(poi),
                     icon: const Icon(Icons.map_outlined, size: 16),
                     label: Text(context.l10n.showOnMap),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _addPoiToRoute(poi),
+                    icon: const Icon(Icons.route_rounded, size: 16),
+                    label: Text(context.l10n.poiAddToRoute),
                   ),
                 ],
               ),
@@ -970,7 +976,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  /// Icon für POI-Kategorie
+  /// Icon fÃ¼r POI-Kategorie
   IconData _getCategoryIcon(String categoryId) {
     switch (categoryId) {
       case 'museum':
@@ -1002,7 +1008,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Navigation zu POI-Details
   void _navigateToPOI(POI poi) {
-    // POI zum State hinzufügen (damit POI-Detail-Screen ihn findet)
+    // POI zum State hinzufÃ¼gen (damit POI-Detail-Screen ihn findet)
     ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
 
     // Enrichment starten falls kein Bild
@@ -1022,14 +1028,87 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     context.go('/');
   }
 
-  /// Prüft ob die Anfrage standortbasiert ist
+  Future<void> _addPoiToRoute(POI poi) async {
+    final tripNotifier = ref.read(tripStateProvider.notifier);
+    final result = await tripNotifier.addStopWithAutoRoute(poi);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.poiAddedToRoute(poi.name)),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.go('/trip');
+      return;
+    }
+
+    final fallbackError =
+        result.message ?? context.l10n.chatPoisSearchErrorMessage;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(fallbackError),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _normalizeText(String input) {
+    return input.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  bool _containsAnyToken(String text, List<String> tokens) {
+    return tokens.any(text.contains);
+  }
+
+  bool _isRestaurantIntent(String query) {
+    final normalized = _normalizeText(query);
+    return _containsAnyToken(normalized, const [
+      'restaurant',
+      'essen',
+      'food',
+      'mittagessen',
+      'abendessen',
+      'fruehstueck',
+      'fruhstueck',
+      'dinner',
+      'lunch',
+      'cafe',
+      'bar',
+      'bistro',
+      'pizza',
+      'burger',
+      'kueche',
+      'kuchen',
+    ]);
+  }
+
+  bool _isRouteCreationIntent(String query) {
+    final normalized = _normalizeText(query);
+    return _containsAnyToken(normalized, const [
+      'route bauen',
+      'route erstellen',
+      'route planen',
+      'trip bauen',
+      'trip erstellen',
+      'trip planen',
+      'roadtrip',
+      'itinerary',
+      'tour planen',
+      'tagestrip',
+    ]);
+  }
+
+  /// PrÃ¼ft ob die Anfrage standortbasiert ist
   bool _isLocationBasedQuery(String query) {
     final lowerQuery = query.toLowerCase();
     final locationKeywords = [
-      'in meiner nähe',
+      'in meiner nÃ¤he',
       'um mich',
       'hier',
-      'in der nähe',
+      'in der nÃ¤he',
       'nearby',
       'nahegelegene',
       'pois in',
@@ -1053,10 +1132,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Gueltige IDs: castle, nature, museum, viewpoint, lake, coast, park,
     //               city, activity, hotel, restaurant, unesco, church, monument, attraction
     final categoryMapping = <String, List<String>>{
-      'sehenswürd': ['museum', 'monument', 'castle', 'viewpoint', 'unesco'],
+      'sehenswÃ¼rd': ['museum', 'monument', 'castle', 'viewpoint', 'unesco'],
       'museum': ['museum'],
       'schloss': ['castle'],
-      'schlösser': ['castle'],
+      'schlÃ¶sser': ['castle'],
       'burg': ['castle'],
       'kirche': ['church'],
       'natur': ['nature', 'park', 'lake', 'coast'],
@@ -1065,12 +1144,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       'restaurant': ['restaurant'],
       'essen': ['restaurant'],
       'hotel': ['hotel'],
-      'übernacht': ['hotel'],
+      'Ã¼bernacht': ['hotel'],
       'aussicht': ['viewpoint'],
       'kultur': ['museum', 'monument', 'church', 'castle', 'unesco'],
       'strand': ['coast'],
-      'küste': ['coast'],
-      'aktivität': ['activity'],
+      'kÃ¼ste': ['coast'],
+      'aktivitÃ¤t': ['activity'],
       'sport': ['activity'],
       'wandern': ['nature', 'viewpoint', 'park'],
       'familie': ['activity', 'park', 'museum'],
@@ -1157,12 +1236,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           '[AI-Chat] Suche POIs um ${currentLocation.latitude}, ${currentLocation.longitude} mit Radius ${_searchRadius}km');
 
       final categories = _getCategoriesFromQuery(query);
+      final isRestaurantQuery = _isRestaurantIntent(query);
       final poiRepo = ref.read(poiRepositoryProvider);
-      final pois = await poiRepo.loadPOIsInRadius(
+      var pois = await poiRepo.loadPOIsInRadius(
         center: currentLocation,
         radiusKm: _searchRadius,
         categoryFilter: categories,
       );
+
+      if (isRestaurantQuery && pois.isEmpty) {
+        final fallbackPois = await poiRepo.loadPOIsInRadius(
+          center: currentLocation,
+          radiusKm: _searchRadius,
+          categoryFilter: null,
+        );
+        pois = fallbackPois.where((poi) {
+          final normalizedPoiText = _normalizeText(
+            '${poi.name} ${poi.categoryLabel} ${poi.shortDescription} ${poi.description ?? ''}',
+          );
+          return poi.categoryId == 'restaurant' ||
+              _containsAnyToken(normalizedPoiText, const [
+                'restaurant',
+                'essen',
+                'food',
+                'cafe',
+                'bar',
+                'bistro',
+                'pizza',
+                'burger',
+              ]);
+        }).toList();
+      }
 
       if (!mounted) return;
       debugPrint('[AI-Chat] ${pois.length} POIs gefunden');
@@ -1423,6 +1527,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (text.trim().isEmpty) return;
 
     final userMessage = text.trim();
+    final normalizedMessage = _normalizeText(userMessage);
+
+    if (_isRouteCreationIntent(normalizedMessage)) {
+      setState(() {
+        _messages.add({
+          'content': userMessage,
+          'isUser': true,
+          'type': ChatMessageType.text,
+        });
+        _messages.add({
+          'content':
+              'Ich öffne den Routen-Generator. Gib dort Ziel/Start ein und ich übergebe die Route direkt an deine Planung.',
+          'isUser': false,
+          'type': ChatMessageType.text,
+        });
+      });
+      _messageController.clear();
+      _scrollToBottom();
+      _showTripGeneratorDialog();
+      return;
+    }
+
+    if (_isRestaurantIntent(normalizedMessage)) {
+      final localRestaurantQuery = _isLocationBasedQuery(userMessage)
+          ? userMessage
+          : '$userMessage in meiner Nähe';
+      await _handleLocationBasedQuery(localRestaurantQuery);
+      return;
+    }
 
     // Prüfe ob standortbasierte Anfrage
     if (_isLocationBasedQuery(userMessage)) {
@@ -1519,29 +1652,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  /// Intelligente Demo-Antworten basierend auf Schlüsselwörtern
+  /// Intelligente Demo-Antworten basierend auf SchlÃ¼sselwÃ¶rtern
   String _generateSmartDemoResponse(String query) {
     final lowerQuery = query.toLowerCase();
 
-    // Sehenswürdigkeiten
-    if (lowerQuery.contains('sehenswürd') ||
+    // SehenswÃ¼rdigkeiten
+    if (lowerQuery.contains('sehenswÃ¼rd') ||
         lowerQuery.contains('sightseeing') ||
         lowerQuery.contains('besichtigen')) {
       final tripState = ref.read(tripStateProvider);
       if (tripState.hasRoute && tripState.stops.isNotEmpty) {
         final stopList = tripState.stops
             .take(5)
-            .map((s) => '• ${s.name} (${s.categoryLabel})')
+            .map((s) => 'â€¢ ${s.name} (${s.categoryLabel})')
             .join('\n');
-        return '📍 **Sehenswürdigkeiten auf deiner Route:**\n\n'
+        return 'ðŸ“ **SehenswÃ¼rdigkeiten auf deiner Route:**\n\n'
             '$stopList\n\n'
-            'Tippe auf einen Stop im Trip-Screen für Details!';
+            'Tippe auf einen Stop im Trip-Screen fÃ¼r Details!';
       }
-      return '🗺️ **Top Sehenswürdigkeiten:**\n\n'
-          '• 🏰 Schloss Neuschwanstein - Bayerns Märchenschloss\n'
-          '• 🏔️ Zugspitze - Deutschlands höchster Gipfel\n'
-          '• 🌲 Partnachklamm - Beeindruckende Schlucht\n'
-          '• 🏛️ Marienplatz München - Historisches Zentrum\n\n'
+      return 'ðŸ—ºï¸ **Top SehenswÃ¼rdigkeiten:**\n\n'
+          'â€¢ ðŸ° Schloss Neuschwanstein - Bayerns MÃ¤rchenschloss\n'
+          'â€¢ ðŸ”ï¸ Zugspitze - Deutschlands hÃ¶chster Gipfel\n'
+          'â€¢ ðŸŒ² Partnachklamm - Beeindruckende Schlucht\n'
+          'â€¢ ðŸ›ï¸ Marienplatz MÃ¼nchen - Historisches Zentrum\n\n'
           'Erstelle eine Route, um personalisierte Empfehlungen zu erhalten!';
     }
 
@@ -1550,34 +1683,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('park') ||
         lowerQuery.contains('wald') ||
         lowerQuery.contains('see')) {
-      return '🌲 **Naturhighlights:**\n\n'
-          '• 🏞️ **Königssee** - Kristallklarer Bergsee\n'
-          '• 🌲 **Nationalpark Berchtesgaden** - Unberührte Natur\n'
-          '• 🏔️ **Partnachklamm** - Spektakuläre Schlucht\n'
-          '• 🌳 **Englischer Garten** - Münchens grüne Oase\n\n'
-          'Wähle "🤖 AI-Trip generieren" mit Interesse "Natur" für eine personalisierte Route!';
+      return 'ðŸŒ² **Naturhighlights:**\n\n'
+          'â€¢ ðŸžï¸ **KÃ¶nigssee** - Kristallklarer Bergsee\n'
+          'â€¢ ðŸŒ² **Nationalpark Berchtesgaden** - UnberÃ¼hrte Natur\n'
+          'â€¢ ðŸ”ï¸ **Partnachklamm** - SpektakulÃ¤re Schlucht\n'
+          'â€¢ ðŸŒ³ **Englischer Garten** - MÃ¼nchens grÃ¼ne Oase\n\n'
+          'WÃ¤hle "ðŸ¤– AI-Trip generieren" mit Interesse "Natur" fÃ¼r eine personalisierte Route!';
     }
 
     // Restaurants
     if (lowerQuery.contains('restaurant') ||
         lowerQuery.contains('essen') ||
         lowerQuery.contains('imbiss') ||
-        lowerQuery.contains('küche')) {
-      return '🍽️ **Restaurant-Empfehlungen:**\n\n'
-          '• 🥨 **Hofbräuhaus München** - Bayerische Klassiker (4.5★)\n'
-          '• 🍖 **Augustiner Bräustuben** - Traditionell & gemütlich (4.4★)\n'
-          '• 🥗 **Prinz Myshkin** - Vegetarisch & modern (4.3★)\n\n'
-          'Tipp: Nutze die POI-Liste mit Filter "Restaurant" für mehr Optionen!';
+        lowerQuery.contains('kÃ¼che')) {
+      return 'ðŸ½ï¸ **Restaurant-Empfehlungen:**\n\n'
+          'â€¢ ðŸ¥¨ **HofbrÃ¤uhaus MÃ¼nchen** - Bayerische Klassiker (4.5â˜…)\n'
+          'â€¢ ðŸ– **Augustiner BrÃ¤ustuben** - Traditionell & gemÃ¼tlich (4.4â˜…)\n'
+          'â€¢ ðŸ¥— **Prinz Myshkin** - Vegetarisch & modern (4.3â˜…)\n\n'
+          'Tipp: Nutze die POI-Liste mit Filter "Restaurant" fÃ¼r mehr Optionen!';
     }
 
     // Hotels
     if (lowerQuery.contains('hotel') ||
-        lowerQuery.contains('übernacht') ||
+        lowerQuery.contains('Ã¼bernacht') ||
         lowerQuery.contains('schlafen')) {
-      return '🏨 **Unterkunft-Tipps:**\n\n'
-          '• 🏨 Hotels findest du über die POI-Suche\n'
-          '• 💡 Filtere nach "Hotel" in der POI-Liste\n'
-          '• 📍 Auf der Karte siehst du Hotels in der Nähe\n\n'
+      return 'ðŸ¨ **Unterkunft-Tipps:**\n\n'
+          'â€¢ ðŸ¨ Hotels findest du Ã¼ber die POI-Suche\n'
+          'â€¢ ðŸ’¡ Filtere nach "Hotel" in der POI-Liste\n'
+          'â€¢ ðŸ“ Auf der Karte siehst du Hotels in der NÃ¤he\n\n'
           'Erstelle erst deine Route, dann zeige ich dir Hotels entlang des Weges!';
     }
 
@@ -1585,10 +1718,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (lowerQuery.contains('wetter') ||
         lowerQuery.contains('regen') ||
         lowerQuery.contains('sonne')) {
-      return '☀️ **Wetter-Info:**\n\n'
+      return 'â˜€ï¸ **Wetter-Info:**\n\n'
           'Aktuelle Wetterdaten siehst du:\n'
-          '• 🗺️ Auf dem Map-Screen oben\n'
-          '• 🎯 Bei POIs mit Outdoor-Aktivitäten\n\n'
+          'â€¢ ðŸ—ºï¸ Auf dem Map-Screen oben\n'
+          'â€¢ ðŸŽ¯ Bei POIs mit Outdoor-AktivitÃ¤ten\n\n'
           'Tipp: Bei Regen empfehle ich Museen und Indoor-Attraktionen!';
     }
 
@@ -1598,18 +1731,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('weg')) {
       final tripState = ref.read(tripStateProvider);
       if (tripState.hasRoute) {
-        return '🛣️ **Deine aktuelle Route:**\n\n'
-            '📍 Start: ${tripState.route!.startAddress}\n'
-            '🎯 Ziel: ${tripState.route!.endAddress}\n'
-            '📏 Distanz: ${tripState.route!.distanceKm.toStringAsFixed(0)} km\n'
-            '⏱️ Fahrzeit: ${(tripState.route!.durationMinutes / 60).toStringAsFixed(1)}h\n'
-            '🎯 Stops: ${tripState.stops.length}\n\n'
-            'Gehe zum Trip-Screen für Details!';
+        return 'ðŸ›£ï¸ **Deine aktuelle Route:**\n\n'
+            'ðŸ“ Start: ${tripState.route!.startAddress}\n'
+            'ðŸŽ¯ Ziel: ${tripState.route!.endAddress}\n'
+            'ðŸ“ Distanz: ${tripState.route!.distanceKm.toStringAsFixed(0)} km\n'
+            'â±ï¸ Fahrzeit: ${(tripState.route!.durationMinutes / 60).toStringAsFixed(1)}h\n'
+            'ðŸŽ¯ Stops: ${tripState.stops.length}\n\n'
+            'Gehe zum Trip-Screen fÃ¼r Details!';
       }
-      return '🗺️ **Route erstellen:**\n\n'
-          '1. Gehe zum 🗺️ Karten-Screen\n'
+      return 'ðŸ—ºï¸ **Route erstellen:**\n\n'
+          '1. Gehe zum ðŸ—ºï¸ Karten-Screen\n'
           '2. Tippe auf Start- und Zielpunkt\n'
-          '3. Oder nutze "🤖 AI-Trip generieren"\n\n'
+          '3. Oder nutze "ðŸ¤– AI-Trip generieren"\n\n'
           'Dann kann ich dir Empfehlungen entlang der Route geben!';
     }
 
@@ -1618,45 +1751,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('help') ||
         lowerQuery.contains('kannst du') ||
         lowerQuery.contains('was kann')) {
-      return '🤖 **Was ich kann:**\n\n'
-          '• 🗺️ Routen-Infos geben\n'
-          '• 📍 Sehenswürdigkeiten empfehlen\n'
-          '• 🌲 Naturhighlights zeigen\n'
-          '• 🍽️ Restaurants vorschlagen\n'
-          '• 🤖 AI-Trips generieren\n\n'
-          'Frag mich einfach oder wähle einen Vorschlag unten!';
+      return 'ðŸ¤– **Was ich kann:**\n\n'
+          'â€¢ ðŸ—ºï¸ Routen-Infos geben\n'
+          'â€¢ ðŸ“ SehenswÃ¼rdigkeiten empfehlen\n'
+          'â€¢ ðŸŒ² Naturhighlights zeigen\n'
+          'â€¢ ðŸ½ï¸ Restaurants vorschlagen\n'
+          'â€¢ ðŸ¤– AI-Trips generieren\n\n'
+          'Frag mich einfach oder wÃ¤hle einen Vorschlag unten!';
     }
 
-    // Städte-spezifisch
+    // StÃ¤dte-spezifisch
     final cities = [
-      'münchen',
+      'mÃ¼nchen',
       'berlin',
       'hamburg',
-      'köln',
+      'kÃ¶ln',
       'prag',
       'wien',
       'salzburg'
     ];
     for (final city in cities) {
       if (lowerQuery.contains(city)) {
-        return '🏙️ **$city erkunden:**\n\n'
-            'Nutze "🤖 AI-Trip generieren" und gib "$city" als Ziel ein!\n\n'
+        return 'ðŸ™ï¸ **$city erkunden:**\n\n'
+            'Nutze "ðŸ¤– AI-Trip generieren" und gib "$city" als Ziel ein!\n\n'
             'Dort kannst du:\n'
-            '• 📅 Anzahl der Tage wählen\n'
-            '• ❤️ Interessen angeben (Kultur, Natur, Essen...)\n'
-            '• 🚗 Eine optimierte Route erhalten\n\n'
+            'â€¢ ðŸ“… Anzahl der Tage wÃ¤hlen\n'
+            'â€¢ â¤ï¸ Interessen angeben (Kultur, Natur, Essen...)\n'
+            'â€¢ ðŸš— Eine optimierte Route erhalten\n\n'
             'Oder gehe zur POI-Liste und suche nach "$city"!';
       }
     }
 
     // Default-Antwort
-    return '🤔 **Interessante Frage!**\n\n'
-        'Im vollständigen Modus mit Backend-Verbindung kann ich dir hier eine detaillierte Antwort geben.\n\n'
+    return 'ðŸ¤” **Interessante Frage!**\n\n'
+        'Im vollstÃ¤ndigen Modus mit Backend-Verbindung kann ich dir hier eine detaillierte Antwort geben.\n\n'
         '**Probiere diese Funktionen:**\n'
-        '• 🤖 AI-Trip generieren (Button unten)\n'
-        '• 🗺️ Route auf der Karte erstellen\n'
-        '• 📍 POI-Liste durchsuchen\n\n'
-        '_Tipp: Frage nach Sehenswürdigkeiten, Restaurants oder Natur!_';
+        'â€¢ ðŸ¤– AI-Trip generieren (Button unten)\n'
+        'â€¢ ðŸ—ºï¸ Route auf der Karte erstellen\n'
+        'â€¢ ðŸ“ POI-Liste durchsuchen\n\n'
+        '_Tipp: Frage nach SehenswÃ¼rdigkeiten, Restaurants oder Natur!_';
   }
 
   void _scrollToBottom() {
@@ -1705,18 +1838,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _handleSuggestionTap(String suggestion) {
     final l10n = context.l10n;
     if (suggestion.contains(l10n.chatPoisNearMe)) {
-      _handleLocationBasedQuery('Zeig mir POIs in meiner Nähe');
+      _handleLocationBasedQuery('Zeig mir POIs in meiner NÃ¤he');
     } else if (suggestion.contains(l10n.chatAttractions)) {
-      _handleLocationBasedQuery('Zeig mir Sehenswürdigkeiten in meiner Nähe');
+      _handleLocationBasedQuery('Zeig mir SehenswÃ¼rdigkeiten in meiner NÃ¤he');
     } else if (suggestion.contains(l10n.chatNatureParks)) {
-      _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner Nähe');
+      _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner NÃ¤he');
     } else if (suggestion.contains(l10n.chatRestaurants)) {
-      _handleLocationBasedQuery('Zeig mir Restaurants in meiner Nähe');
+      _handleLocationBasedQuery('Zeig mir Restaurants in meiner NÃ¤he');
     } else if (suggestion.contains(l10n.chatIndoorTips)) {
       _handleLocationBasedQuery(
-          'Zeig mir Indoor-Tipps bei Regen in meiner Nähe');
+          'Zeig mir Indoor-Tipps bei Regen in meiner NÃ¤he');
     } else if (suggestion.contains(l10n.chatOutdoorHighlights)) {
-      _handleLocationBasedQuery('Zeig mir Outdoor-Highlights in meiner Nähe');
+      _handleLocationBasedQuery('Zeig mir Outdoor-Highlights in meiner NÃ¤he');
     } else {
       _sendMessage(suggestion);
     }
@@ -1728,18 +1861,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (tripState.hasRoute && tripState.stops.isNotEmpty) {
       // Zeige aktuelle Stops
       final stopList = tripState.stops
-          .map((s) => '• **${s.name}** (${s.categoryLabel})')
+          .map((s) => 'â€¢ **${s.name}** (${s.categoryLabel})')
           .join('\n');
 
       setState(() {
         _messages.add({
-          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'content': 'ðŸ—ºï¸ Zeige mir SehenswÃ¼rdigkeiten auf meiner Route',
           'isUser': true,
         });
         _messages.add({
-          'content': '📍 **Sehenswürdigkeiten auf deiner Route:**\n\n'
+          'content': 'ðŸ“ **SehenswÃ¼rdigkeiten auf deiner Route:**\n\n'
               '$stopList\n\n'
-              '💡 Gehe zum Trip-Screen für Details oder tippe auf einen POI!',
+              'ðŸ’¡ Gehe zum Trip-Screen fÃ¼r Details oder tippe auf einen POI!',
           'isUser': false,
         });
       });
@@ -1748,15 +1881,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // Route vorhanden, aber keine Stops
       setState(() {
         _messages.add({
-          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'content': 'ðŸ—ºï¸ Zeige mir SehenswÃ¼rdigkeiten auf meiner Route',
           'isUser': true,
         });
         _messages.add({
-          'content': '📍 **Noch keine Stops auf deiner Route!**\n\n'
+          'content': 'ðŸ“ **Noch keine Stops auf deiner Route!**\n\n'
               'Deine Route:\n'
-              '• Start: ${tripState.route!.startAddress}\n'
-              '• Ziel: ${tripState.route!.endAddress}\n\n'
-              '💡 Gehe zur POI-Liste und füge Sehenswürdigkeiten hinzu!',
+              'â€¢ Start: ${tripState.route!.startAddress}\n'
+              'â€¢ Ziel: ${tripState.route!.endAddress}\n\n'
+              'ðŸ’¡ Gehe zur POI-Liste und fÃ¼ge SehenswÃ¼rdigkeiten hinzu!',
           'isUser': false,
         });
       });
@@ -1765,15 +1898,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // Keine Route
       setState(() {
         _messages.add({
-          'content': '🗺️ Zeige mir Sehenswürdigkeiten auf meiner Route',
+          'content': 'ðŸ—ºï¸ Zeige mir SehenswÃ¼rdigkeiten auf meiner Route',
           'isUser': true,
         });
         _messages.add({
-          'content': '🗺️ **Erstelle zuerst eine Route!**\n\n'
-              '1. Gehe zum Karten-Screen 🗺️\n'
-              '2. Wähle Start- und Zielpunkt\n'
-              '3. Oder nutze "🤖 AI-Trip generieren"\n\n'
-              'Dann zeige ich dir alle Sehenswürdigkeiten entlang deiner Route!',
+          'content': 'ðŸ—ºï¸ **Erstelle zuerst eine Route!**\n\n'
+              '1. Gehe zum Karten-Screen ðŸ—ºï¸\n'
+              '2. WÃ¤hle Start- und Zielpunkt\n'
+              '3. Oder nutze "ðŸ¤– AI-Trip generieren"\n\n'
+              'Dann zeige ich dir alle SehenswÃ¼rdigkeiten entlang deiner Route!',
           'isUser': false,
         });
       });
@@ -1784,17 +1917,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _handleNaturhighlightsRequest() {
     setState(() {
       _messages.add({
-        'content': '🌲 Zeige mir Naturhighlights',
+        'content': 'ðŸŒ² Zeige mir Naturhighlights',
         'isUser': true,
       });
       _messages.add({
-        'content': '🌲 **Naturhighlights entdecken:**\n\n'
+        'content': 'ðŸŒ² **Naturhighlights entdecken:**\n\n'
             '**Top Empfehlungen:**\n'
-            '• 🏞️ Königssee - Kristallklarer Bergsee\n'
-            '• 🏔️ Partnachklamm - Spektakuläre Schlucht\n'
-            '• 🌳 Nationalpark Berchtesgaden\n'
-            '• 🏔️ Zugspitze - Deutschlands höchster Gipfel\n\n'
-            '💡 **Tipp:** Gehe zur POI-Liste und filtere nach "Natur" 🌲\n\n'
+            'â€¢ ðŸžï¸ KÃ¶nigssee - Kristallklarer Bergsee\n'
+            'â€¢ ðŸ”ï¸ Partnachklamm - SpektakulÃ¤re Schlucht\n'
+            'â€¢ ðŸŒ³ Nationalpark Berchtesgaden\n'
+            'â€¢ ðŸ”ï¸ Zugspitze - Deutschlands hÃ¶chster Gipfel\n\n'
+            'ðŸ’¡ **Tipp:** Gehe zur POI-Liste und filtere nach "Natur" ðŸŒ²\n\n'
             'Oder generiere einen AI-Trip mit Interesse "Natur"!',
         'isUser': false,
       });
@@ -1805,19 +1938,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _handleRestaurantRequest() {
     setState(() {
       _messages.add({
-        'content': '🍽️ Empfehle mir Restaurants',
+        'content': 'ðŸ½ï¸ Empfehle mir Restaurants',
         'isUser': true,
       });
       _messages.add({
-        'content': '🍽️ **Restaurant-Empfehlungen:**\n\n'
+        'content': 'ðŸ½ï¸ **Restaurant-Empfehlungen:**\n\n'
             '**Bayerische Klassiker:**\n'
-            '• 🥨 Hofbräuhaus München (4.5★)\n'
-            '• 🍖 Augustiner Bräustuben (4.4★)\n\n'
+            'â€¢ ðŸ¥¨ HofbrÃ¤uhaus MÃ¼nchen (4.5â˜…)\n'
+            'â€¢ ðŸ– Augustiner BrÃ¤ustuben (4.4â˜…)\n\n'
             '**Modern & International:**\n'
-            '• 🥗 Prinz Myshkin - Vegetarisch (4.3★)\n'
-            '• 🍝 Brenner - Italienisch (4.2★)\n\n'
-            '💡 **Tipp:** Nutze die POI-Liste mit Filter "Restaurant" für Lokale auf deiner Route!\n\n'
-            'Oder frag mich nach einem bestimmten Küchenstil!',
+            'â€¢ ðŸ¥— Prinz Myshkin - Vegetarisch (4.3â˜…)\n'
+            'â€¢ ðŸ Brenner - Italienisch (4.2â˜…)\n\n'
+            'ðŸ’¡ **Tipp:** Nutze die POI-Liste mit Filter "Restaurant" fÃ¼r Lokale auf deiner Route!\n\n'
+            'Oder frag mich nach einem bestimmten KÃ¼chenstil!',
         'isUser': false,
       });
     });
@@ -1846,13 +1979,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('🤖 ${l10n.chatGenerateAiTrip}'),
+          title: Text('ðŸ¤– ${l10n.chatGenerateAiTrip}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Ziel (optional für Random Route)
+                // Ziel (optional fÃ¼r Random Route)
                 TextField(
                   controller: destinationController,
                   decoration: InputDecoration(
@@ -1951,12 +2084,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 final interestsList = selectedInterests.toList();
                 final daysInt = days.round();
 
-                // Dialog schließen
+                // Dialog schlieÃŸen
                 Navigator.pop(context);
 
                 // HYBRID-LOGIK:
-                // Wenn Ziel angegeben → AI-Text-Plan (wie bisher)
-                // Wenn Ziel leer → Random Route um Startpunkt/GPS
+                // Wenn Ziel angegeben â†’ AI-Text-Plan (wie bisher)
+                // Wenn Ziel leer â†’ Random Route um Startpunkt/GPS
 
                 if (destination.isNotEmpty) {
                   // ============ MIT ZIEL: AI-Text-Plan ============
@@ -1977,7 +2110,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Fehler wurde bereits in _getLocationIfNeeded angezeigt
                     setState(() {
                       _messages.add({
-                        'content': '❌ Konnte keinen Standort ermitteln.\n\n'
+                        'content': 'âŒ Konnte keinen Standort ermitteln.\n\n'
                             'Bitte gib einen Startpunkt ein oder aktiviere GPS.',
                         'isUser': false,
                       });
@@ -2012,7 +2145,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<String> interests,
     String? startLocation,
   }) async {
-    // User-Nachricht hinzufügen
+    // User-Nachricht hinzufÃ¼gen
     setState(() {
       _messages.add({
         'content':
@@ -2054,7 +2187,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       // Formatiere den Plan
       final planText = StringBuffer();
-      planText.writeln('🗺️ ${plan.title}\n');
+      planText.writeln('ðŸ—ºï¸ ${plan.title}\n');
       if (plan.description != null && plan.description!.isNotEmpty) {
         planText.writeln('${plan.description}\n');
       }
@@ -2066,7 +2199,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }
         for (var stop in day.stops) {
           planText.writeln(
-              '• ${stop.name} ${stop.duration != null ? "(${stop.duration})" : ""}');
+              'â€¢ ${stop.name} ${stop.duration != null ? "(${stop.duration})" : ""}');
           if (stop.description != null) {
             planText.writeln('  ${stop.description}');
           }
@@ -2100,7 +2233,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  /// GPS-Standort oder Geocoding für manuelle Eingabe abrufen
+  /// GPS-Standort oder Geocoding fÃ¼r manuelle Eingabe abrufen
   Future<({double lat, double lng, String address})?> _getLocationIfNeeded(
       String? startText) async {
     // Wenn manueller Text eingegeben, Geocoding verwenden
@@ -2138,7 +2271,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final position = gpsResult.position!;
 
-    // Reverse Geocoding für Adresse
+    // Reverse Geocoding fÃ¼r Adresse
     String address = context.l10n.chatMyLocation;
     try {
       final geocodingRepo = ref.read(geocodingRepositoryProvider);
@@ -2173,7 +2306,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     }
 
-    // Wenn keine Interessen gewählt, alle Kategorien verwenden (außer Hotel)
+    // Wenn keine Interessen gewÃ¤hlt, alle Kategorien verwenden (auÃŸer Hotel)
     if (categoryIds.isEmpty) {
       return POICategory.values.where((c) => c != POICategory.hotel).toList();
     }
@@ -2181,7 +2314,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return POICategory.values.where((c) => categoryIds.contains(c.id)).toList();
   }
 
-  /// Random Trip generieren und an Trip-Screen übergeben
+  /// Random Trip generieren und an Trip-Screen Ã¼bergeben
   Future<void> _generateRandomTripFromLocation({
     required double lat,
     required double lng,
@@ -2189,10 +2322,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<String> interests,
     required int days,
   }) async {
-    // User-Nachricht hinzufügen
+    // User-Nachricht hinzufÃ¼gen
     setState(() {
       _messages.add({
-        'content': '🎲 Generiere zufällige Route um "$address"\n'
+        'content': 'ðŸŽ² Generiere zufÃ¤llige Route um "$address"\n'
             '${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : "Alle Kategorien"}',
         'isUser': true,
       });
@@ -2220,23 +2353,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _isLoading = false;
         _messages.add({
-          'content': '✅ Route generiert!\n\n'
-              '📍 **${result.trip.name}**\n'
-              '📏 ${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
-              '⏱️ ${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
-              '🎯 ${result.selectedPOIs.length} Stops\n\n'
-              'Öffne Trip-Screen...',
+          'content': 'âœ… Route generiert!\n\n'
+              'ðŸ“ **${result.trip.name}**\n'
+              'ðŸ“ ${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
+              'â±ï¸ ${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
+              'ðŸŽ¯ ${result.selectedPOIs.length} Stops\n\n'
+              'Ã–ffne Trip-Screen...',
           'isUser': false,
         });
       });
       _scrollToBottom();
 
-      // Alte Route-Session stoppen und POIs löschen
+      // Alte Route-Session stoppen und POIs lÃ¶schen
       ref.read(routeSessionProvider.notifier).stopRoute();
       ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
-      debugPrint('[AI-Chat] Alte Route-Session und POIs gelöscht');
+      debugPrint('[AI-Chat] Alte Route-Session und POIs gelÃ¶scht');
 
-      // Route an TripStateProvider übergeben
+      // Route an TripStateProvider Ã¼bergeben
       final tripState = ref.read(tripStateProvider.notifier);
       tripState.setRoute(result.trip.route);
       tripState.setStops(result.selectedPOIs);
@@ -2254,7 +2387,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       setState(() {
         _isLoading = false;
         _messages.add({
-          'content': '❌ Fehler beim Generieren der Route:\n$e\n\n'
+          'content': 'âŒ Fehler beim Generieren der Route:\n$e\n\n'
               'Bitte versuche es erneut oder gib ein konkretes Ziel ein.',
           'isUser': false,
         });
@@ -2269,18 +2402,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? 'Basierend auf deinen Interessen (${interests.join(', ')}):\n\n'
         : '';
 
-    return '🗺️ **$days Tage in $destination**\n\n'
+    return 'ðŸ—ºï¸ **$days Tage in $destination**\n\n'
         '$interestsText'
         '**Tag 1: Ankunft & Stadterkundung**\n'
-        '• Hauptbahnhof (1h) - Ankunft und Check-in\n'
-        '• Altstadt (2h) - Historisches Zentrum erkunden\n'
-        '• Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
-        '**Tag 2: Kultur & Sehenswürdigkeiten**\n'
-        '• Schloss/Burg (2h) - Wahrzeichen der Stadt\n'
-        '• Kunstgalerie (1.5h) - Lokale Kunstszene\n'
-        '• Lokales Restaurant (1h) - Traditionelle Küche\n\n'
-        '${days > 2 ? "**Tag 3: Natur & Entspannung**\n• Park/Garten (2h) - Grüne Oase\n• Aussichtspunkt (1h) - Panoramablick\n• Café (1h) - Kaffee und Kuchen\n\n" : ""}'
-        '💡 _Dies ist ein Demo-Plan. Mit Backend-Verbindung erhältst du personalisierte Empfehlungen!_\n\n'
-        '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel für eine echte Route mit POIs!';
+        'â€¢ Hauptbahnhof (1h) - Ankunft und Check-in\n'
+        'â€¢ Altstadt (2h) - Historisches Zentrum erkunden\n'
+        'â€¢ Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
+        '**Tag 2: Kultur & SehenswÃ¼rdigkeiten**\n'
+        'â€¢ Schloss/Burg (2h) - Wahrzeichen der Stadt\n'
+        'â€¢ Kunstgalerie (1.5h) - Lokale Kunstszene\n'
+        'â€¢ Lokales Restaurant (1h) - Traditionelle KÃ¼che\n\n'
+        '${days > 2 ? "**Tag 3: Natur & Entspannung**\nâ€¢ Park/Garten (2h) - GrÃ¼ne Oase\nâ€¢ Aussichtspunkt (1h) - Panoramablick\nâ€¢ CafÃ© (1h) - Kaffee und Kuchen\n\n" : ""}'
+        'ðŸ’¡ _Dies ist ein Demo-Plan. Mit Backend-Verbindung erhÃ¤ltst du personalisierte Empfehlungen!_\n\n'
+        '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel fÃ¼r eine echte Route mit POIs!';
   }
 }

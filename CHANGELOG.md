@@ -7,6 +7,29 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.42] - 2026-02-09
+
+### AI-Assistent verbessert + Bottom-Sheet Konsistenz
+
+#### Geaendert
+- **Lokale Restaurant-Suche im AI-Chat robuster**
+  - Restaurant-Intents werden jetzt priorisiert als Nearby-Anfrage behandelt.
+  - Fallback-Suche greift bei leeren Treffern auf lokale POIs ohne Kategorie-Filter zurueck und filtert gezielt nach Restaurant-Indikatoren.
+- **AI-POI-Karten koennen direkt zur Route hinzugefuegt werden**
+  - Neue Aktion `Zur Route` in der AI-Chat-POI-Karte.
+  - POIs werden direkt an aktive Route uebergeben oder starten eine neue Route (Auto-Route aus Standort).
+- **Routen-Intent im Chat verbessert**
+  - Bei Route/Trip-Planungsanfragen oeffnet der AI-Assistent direkt den Routen-Generator.
+- **Bottom-Sheet Hoehen vereinheitlicht**
+  - Alle verbleibenden abweichenden Bottom-Sheets in den betroffenen Flows nutzen jetzt denselben Hoehenvertrag wie das POI-Kategorien-Modal (`1.0 / 0.9 / 1.0`).
+
+#### Technisch
+- Geaenderte Dateien:
+  - `lib/features/ai_assistant/chat_screen.dart`
+  - `lib/features/trip/widgets/day_editor_overlay.dart`
+  - `lib/features/trip/widgets/corridor_browser_sheet.dart`
+  - `lib/features/social/trip_detail_public_screen.dart`
+
 ## [1.10.41] - 2026-02-08
 
 ### Trip-Bearbeiten UX vereinfacht

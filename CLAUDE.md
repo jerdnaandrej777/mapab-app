@@ -5,13 +5,13 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.41 - Trip-Bearbeiten UX vereinfacht (Footer + Fertig-Modal) | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.41)
+Version: 1.10.42 - AI-Assistent lokal/intenter + Bottom-Sheet Konsistenz | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.42)
 
-- Footer im Trip-Bearbeiten Modal auf 2 Aktionen reduziert: `Weitere POIs hinzufügen` + `Fertig`.
-- Neuer `Fertig`-Modal zeigt Übersichtskarte + Stats (Stops, Distanz, Fahrzeit, Wetter).
-- Abschlussaktionen gebündelt im neuen Modal: Navigation, Route speichern (Favoriten), Veröffentlichen, Google Maps.
-- Google-Maps-Label ist jetzt modusabhängig: Tagestrip `Tagestrip in Google Maps`, AI Euro Trip `Tag in Google Maps`.
+- AI-Assistent erkennt Restaurant-Anfragen robuster und zeigt lokale Treffer im Standort-Radius.
+- AI-POI-Karten haben neue Aktion `Zur Route` (Uebergabe an aktive oder neue Route).
+- Route/Trip-Planungsintents im Chat oeffnen direkt den Routen-Generator.
+- Bottom-up Modale in den betroffenen Flows nutzen einheitlich den POI-Kategorien-Hoehenvertrag (`1.0/0.9/1.0`).
 
 
 ## Tech Stack
@@ -504,6 +504,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.42.md` (AI-Assistent: robuste lokale Restaurant-Erkennung, direkte `Zur Route`-Aktion aus AI-POI-Karten, Route/Trip-Intent im Chat und vereinheitlichte Bottom-Sheet-Hoehen in den betroffenen Flows)
 - `Dokumentation/CHANGELOG-v1.10.41.md` (Trip-Bearbeiten vereinfacht: Footer mit `Weitere POIs hinzufügen` + `Fertig`, neuer Übersichts-Modal mit Karte/Stats und Abschlussaktionen, dynamisches Google-Maps-Label für Tagestrip vs. Euro Trip)
 - `Dokumentation/CHANGELOG-v1.10.40.md` (UI-Refactor Modale: Theme-Kontrast vereinheitlicht, lesbare AI-Radius/POI-Filter-Chips, Trip-Bearbeiten Header entschlackt und alle 6 Aktionen im priorisierten Sticky-Footer)
 - `Dokumentation/CHANGELOG-v1.10.39.md` (AI-POI-Erlebnis erweitert: strukturierte AI-Vorschlaege, klickbare AI-POIs in allen AI-Flaechen, mehr Vorschlaege mit longDescription/Highlights/Fotos, neue Routen `'/ai-assistant'` und `'/pois'`)

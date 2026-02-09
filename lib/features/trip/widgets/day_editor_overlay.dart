@@ -1187,9 +1187,9 @@ class _BottomActions extends ConsumerWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (modalContext) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.92,
-          minChildSize: 0.65,
-          maxChildSize: 0.95,
+          initialChildSize: 1.0,
+          minChildSize: 0.9,
+          maxChildSize: 1.0,
           expand: false,
           builder: (context, scrollController) {
             return Column(
