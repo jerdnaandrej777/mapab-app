@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.52 - Download</title>
+    <title>MapAB v1.10.53 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.52 (Build 235)</div>
-        <span class="release-tag">Routenfokus + Modal-UX</span>
+        <div class="version">Version 1.10.53 (Build 236)</div>
+        <span class="release-tag">Social-Map Flow + Journal</span>
         <p class="subtitle">
-            Dieses Release vereinfacht den Kartenfluss fuer fertige Trips: fokussierte Kartenansicht, reduzierte Aktionen und einheitliches Verhalten fuer Favoriten-Routen.
+            Dieses Release stabilisiert den Kartenfluss fuer veroeffentlichte Trips, beschleunigt das Hoehenprofil-Laden und erweitert den Schnellzugriff auf das Reisetagebuch.
         </p>
 
         <div class="qr-container">
@@ -213,24 +213,25 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.52.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.53.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~126.4 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.52:</h3>
+            <h3>&#x2728; Neu in v1.10.53:</h3>
             <ul>
-                <li class="highlight">"Auf Karte anzeigen" oeffnet einen fokussierten Kartenmodus</li>
-                <li class="highlight">Footer im Fokusmodus: Trip bearbeiten, Navigation starten, Route loeschen</li>
-                <li class="highlight">Google Maps + Route teilen aus "Deine Route" entfernt</li>
-                <li>Favoriten-Routen verwenden denselben Fokus-Flow inklusive Auto-Zoom</li>
-                <li>Release-APK auf Build 235 aktualisiert</li>
+                <li class="highlight">Public Trips aus der Galerie werden auf der Karte inkl. POIs stabil dargestellt</li>
+                <li class="highlight">Stale AI-/Planungszustand wird vor "Auf Karte" und Standort-Start bereinigt</li>
+                <li class="highlight">Neues Journal-Icon direkt im Map-Header</li>
+                <li>POI-Liste entlang der Route im groesseren Modal-Layout</li>
+                <li>Hoehenprofil-Requests fuer gleiche Route werden dedupliziert</li>
+                <li>Release-APK auf Build 236 aktualisiert</li>
             </ul>
         </div>
 
         <div class="stats">
             <div class="stat">
-                <div class="stat-value">5</div>
+                <div class="stat-value">6</div>
                 <div class="stat-label">Kernflows</div>
             </div>
             <div class="stat">
@@ -238,7 +239,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">235</div>
+                <div class="stat-value">236</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +256,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.52.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.53.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
@@ -266,27 +267,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

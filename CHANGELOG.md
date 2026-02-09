@@ -7,6 +7,36 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.53] - 2026-02-09
+
+### Public-Trip Kartenfluss + Journal-Shortcut + POI-Listen-UI
+
+#### Geaendert
+- **Trip-Galerie "Auf Karte" laedt jetzt deterministisch den ausgewaehlten Trip**
+  - Vor dem Laden eines Public-Trips werden alte Planungs-/AI-Zustaende zurueckgesetzt.
+  - Route + POIs des ausgewaehlten Trips werden konsistent auf der Hauptkarte dargestellt.
+- **Starten ab aktuellem Standort gehaertet**
+  - Auch fuer "Trip starten" und "POI starten" aus dem Public-Detail werden stale States vorab bereinigt.
+- **Reisetagebuch direkt im Header erreichbar**
+  - `MapScreen` hat jetzt ein eigenes Journal-Icon in der AppBar fuer den Schnellzugriff.
+- **POI-Liste "entlang der Route" visuell vereinheitlicht**
+  - Korridor-Browser nutzt jetzt groessere Karten im Stil des Trip-Modals inkl. Bild-Caching und klarerer Add/Remove-Interaktion.
+
+#### Behoben
+- **Falscher Footer/Overlay-Kontext nach Public-Trip-Import reduziert**
+  - Beim Wechsel aus der Trip-Galerie bleibt kein alter AI-Preview-UI-Zustand mehr haengen.
+- **Hoehenprofil-Loading stabilisiert**
+  - Deduplizierung verhindert doppelte Requests fuer dieselbe Route waehrend laufender Ladung.
+
+#### Release
+- **Release-APK aktualisiert**
+  - Android Build auf **236** angehoben.
+  - Neue Datei: `docs/mapab-v1.10.53.apk`.
+
+#### Tests
+- `dart analyze lib/features/social/trip_detail_public_screen.dart lib/features/map/map_screen.dart lib/features/trip/providers/elevation_provider.dart lib/features/trip/widgets/corridor_browser_sheet.dart` erfolgreich (nur bestehende Info-Lints).
+- `flutter test` (komplette Suite) erfolgreich.
+
 ## [1.10.52] - 2026-02-09
 
 ### Route-Fokus-Modal + Favoriten-Konsistenz

@@ -20,8 +20,10 @@ import '../../data/repositories/routing_repo.dart';
 import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
+import '../map/providers/route_planner_provider.dart';
 import '../poi/providers/poi_state_provider.dart';
 import '../poi/widgets/poi_comments_section.dart';
+import '../random_trip/providers/random_trip_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import 'widgets/trip_photo_gallery.dart';
 
@@ -823,6 +825,10 @@ class _TripDetailPublicScreenState
       final stops =
           parsedTrip.stops.map(_poiFromStop).whereType<POI>().toList();
 
+      // Reset stale planning/AI state so gallery trip + POIs are rendered.
+      ref.read(routePlannerProvider.notifier).clearRoute();
+      ref.read(randomTripNotifierProvider.notifier).reset();
+
       // In tripStateProvider laden
       ref
           .read(tripStateProvider.notifier)
@@ -830,6 +836,7 @@ class _TripDetailPublicScreenState
 
       // Flag setzen für Auto-Zoom
       ref.read(shouldFitToRouteProvider.notifier).state = true;
+      ref.read(mapRouteFocusModeProvider.notifier).state = true;
 
       debugPrint(
           '[TripDetail] Route auf Karte geladen: ${parsedTrip.route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
@@ -918,6 +925,10 @@ class _TripDetailPublicScreenState
 
     final stops = parsedTrip.stops.map(_poiFromStop).whereType<POI>().toList();
 
+    // Reset stale planning/AI state before opening a published trip.
+    ref.read(routePlannerProvider.notifier).clearRoute();
+    ref.read(randomTripNotifierProvider.notifier).reset();
+
     ref.read(tripStateProvider.notifier).setRouteAndStops(routeToLoad, stops);
     ref.read(shouldFitToRouteProvider.notifier).state = true;
 
@@ -932,6 +943,8 @@ class _TripDetailPublicScreenState
       return;
     }
 
+    ref.read(routePlannerProvider.notifier).clearRoute();
+    ref.read(randomTripNotifierProvider.notifier).reset();
     final tripNotifier = ref.read(tripStateProvider.notifier);
     tripNotifier.clearAll();
 

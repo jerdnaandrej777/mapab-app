@@ -160,6 +160,14 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.53 - Public-Trip Kartenfluss + Journal-Shortcut (9. Februar 2026)
+- **Public-Trip "Auf Karte" stabilisiert** - Vor dem Kartenwechsel werden alte Planungs-/AI-Zustaende zurueckgesetzt, damit ausgewaehlte Galerie-Trips inkl. POIs korrekt dargestellt werden.
+- **Footer-Konflikt reduziert** - Der veraltete AI-Preview-Kontext wird beim Public-Trip-Wechsel bereinigt, dadurch erscheinen keine unpassenden Footer-Aktionen mehr.
+- **Reisetagebuch im Header** - Neues Journal-Icon im Map-Header oeffnet das Reisetagebuch direkt.
+- **POI-Liste entlang der Route ueberarbeitet** - Korridor-POI-Karten nutzen jetzt das groessere Modal-Layout mit besserer Lesbarkeit und klaren Add/Remove-Aktionen.
+- **Hoehenprofil stabilisiert** - Doppelte Elevation-Requests fuer identische Routen werden waehrend laufender Ladung dedupliziert.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 236.
+
 ### v1.10.52 - Routenfokus im Karten-Modal (9. Februar 2026)
 - **Fokussierte Kartenansicht fuer "Auf Karte anzeigen"** - Die Karte zeigt im Routenmodus nur noch die Route ohne planungsbezogene Overlays.
 - **Footer vereinfacht** - Im Fokusmodus sind nur `Trip bearbeiten`, `Navigation starten` und `Route loeschen` sichtbar.
@@ -488,6 +496,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.10.52
+**Version:** 1.10.53
 **Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙

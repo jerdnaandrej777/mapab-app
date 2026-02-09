@@ -279,6 +279,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             onPressed: () => context.push('/favorites'),
             tooltip: context.l10n.mapFavorites,
           ),
+          // Reisetagebuch-Button
+          IconButton(
+            icon: const Icon(Icons.auto_stories_outlined),
+            onPressed: () =>
+                _openJournalFromMap(routePlanner, tripState, randomTripState),
+            tooltip: context.l10n.journalTitle,
+          ),
           // Profil-Button
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -495,6 +502,37 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         builder: (_) => const DayEditorOverlay(),
       ),
     );
+  }
+
+  /// Oeffnet das Reisetagebuch direkt aus dem Map-Header.
+  void _openJournalFromMap(
+    RoutePlannerData routePlanner,
+    TripStateData tripState,
+    RandomTripState randomTripState,
+  ) {
+    String tripId;
+    String tripName;
+
+    if ((randomTripState.step == RandomTripStep.preview ||
+            randomTripState.step == RandomTripStep.confirmed) &&
+        randomTripState.generatedTrip != null) {
+      final trip = randomTripState.generatedTrip!.trip;
+      tripId = trip.id;
+      tripName = trip.name;
+    } else if (tripState.hasRoute && tripState.route != null) {
+      final route = tripState.route!;
+      tripId = 'route-${route.hashCode}';
+      tripName = '${route.startAddress} -> ${route.endAddress}';
+    } else if (routePlanner.hasRoute && routePlanner.route != null) {
+      final route = routePlanner.route!;
+      tripId = 'route-${route.hashCode}';
+      tripName = '${route.startAddress} -> ${route.endAddress}';
+    } else {
+      tripId = 'journal-home';
+      tripName = context.l10n.journalTitle;
+    }
+
+    context.push('/journal/$tripId?name=${Uri.encodeComponent(tripName)}');
   }
 }
 

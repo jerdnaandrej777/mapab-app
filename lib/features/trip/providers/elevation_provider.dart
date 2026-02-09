@@ -77,6 +77,14 @@ class ElevationNotifier extends _$ElevationNotifier {
   Future<void> loadElevation(List<LatLng> routeCoordinates) async {
     if (routeCoordinates.length < 2) return;
 
+    final routeHash = ElevationState._computeRouteHash(routeCoordinates);
+
+    // Verhindert Request-Storms durch wiederholte build()-Aufrufe, solange
+    // dieselbe Route bereits geladen wird.
+    if (state.isLoading && state._routeHash == routeHash) {
+      return;
+    }
+
     // Cache-Check: Profil fuer diese Route bereits geladen?
     if (state.isCacheValidFor(routeCoordinates)) {
       debugPrint('[Elevation] Cache gueltig, ueberspringe');
@@ -84,7 +92,6 @@ class ElevationNotifier extends _$ElevationNotifier {
     }
 
     final requestId = ++_loadRequestId;
-    final routeHash = ElevationState._computeRouteHash(routeCoordinates);
 
     state = state.copyWith(
       isLoading: true,

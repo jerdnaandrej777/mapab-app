@@ -2,18 +2,18 @@
 
 ## Aktueller Download-Link
 
-- GitHub Release: https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.10.47
-- Direkter APK-Download: https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.47/app-release.apk
+- Direkter APK-Download: https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.53.apk
+- Download-Seite: https://jerdnaandrej777.github.io/mapab-app/qr-code-download.html
 
 ## Verfuegbare HTML-Seiten
 
 ### 1) `qr-code-download.html`
 - Vollstaendige Download-Seite mit Versionsinfos und Changelog-Highlights.
-- Generiert den QR-Code direkt fuer den aktuellen Release-Download.
+- Generiert den QR-Code direkt fuer den aktuellen APK-Link.
 
 ### 2) `docs/qr-code-download.html`
 - Spiegel der Download-Seite fuer die Dokumentationsstruktur.
-- Verwendet denselben Release-Link wie die Root-Variante.
+- Verwendet denselben Download-Link wie die Root-Variante.
 
 ## Android-Installation
 
@@ -22,11 +22,12 @@
 3. Installation aus unbekannten Quellen temporaer erlauben.
 4. APK installieren und App starten.
 
-## Release-Hinweise (v1.10.47)
+## Release-Hinweise (v1.10.53)
 
-- Day-Editor Segment-Routing fuer letzten Tag stabilisiert (Route folgt wieder den Tages-POIs).
-- Semantische POI-Deduplizierung reduziert Doppeleintraege in Tageslisten.
-- Ladeanimationen fuer AI Tagestrip/Euro Trip optimiert, Progress bleibt strikt 1% bis 100%.
+- Public Trips aus der Galerie werden beim "Auf Karte"-Flow jetzt inkl. POIs deterministisch auf der Hauptkarte dargestellt.
+- Reisetagebuch ist direkt ueber ein eigenes Header-Icon auf der Startkarte erreichbar.
+- POI-Liste entlang der Route wurde auf groessere Karten im Modal-Stil umgestellt.
+- Hoehenprofil-Laden dedupliziert gleiche Requests und reagiert stabiler.
 
 ## Support
 
@@ -35,6 +36,6 @@
 
 ---
 
-Version: 1.10.47
+Version: 1.10.53
 Build-Datum: 9. Februar 2026
 Flutter SDK: 3.38.7+

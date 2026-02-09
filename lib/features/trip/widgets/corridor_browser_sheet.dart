@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +9,7 @@ import '../../../data/models/poi.dart';
 import '../../../data/models/route.dart';
 import '../../map/providers/weather_provider.dart';
 import '../../map/utils/poi_trip_helper.dart';
-import '../../map/widgets/compact_poi_card.dart';
+import '../../map/widgets/weather_badge_unified.dart';
 import '../../poi/providers/poi_state_provider.dart';
 import '../providers/corridor_browser_provider.dart';
 
@@ -653,15 +654,10 @@ class _CorridorBrowserContentState
         final poi = sortedPOIs[index];
         final isAdded = state.addedPOIIds.contains(poi.id);
 
-        return CompactPOICard(
+        return _CorridorPOICard(
           key: ValueKey(
               poi.id), // Fix 4: Stabiles Recycling bei Sortier-Aenderungen
-          name: poi.name,
-          category: poi.category,
-          detourKm: poi.detourKm != null
-              ? '+${poi.detourKm!.toStringAsFixed(1)} km'
-              : null,
-          imageUrl: poi.imageUrl,
+          poi: poi,
           isAdded: isAdded,
           weatherCondition: weatherCondition,
           onTap: () => _navigateToPOI(poi),
@@ -752,6 +748,198 @@ class _CorridorBrowserContentState
       poiNotifier.enrichPOI(poi.id);
     }
     context.push('/poi/${poi.id}');
+  }
+}
+
+class _CorridorPOICard extends StatelessWidget {
+  final POI poi;
+  final bool isAdded;
+  final WeatherCondition? weatherCondition;
+  final VoidCallback onTap;
+  final VoidCallback? onAdd;
+  final VoidCallback? onRemove;
+
+  static const double _cardHeight = 96.0;
+  static const double _imageWidth = 80.0;
+
+  const _CorridorPOICard({
+    super.key,
+    required this.poi,
+    required this.isAdded,
+    required this.weatherCondition,
+    required this.onTap,
+    this.onAdd,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final category = poi.category ?? POICategory.attraction;
+    final actionColor = isAdded
+        ? (onRemove != null
+            ? colorScheme.errorContainer.withValues(alpha: 0.35)
+            : colorScheme.primaryContainer.withValues(alpha: 0.35))
+        : colorScheme.primaryContainer.withValues(alpha: 0.5);
+    final actionIconColor = isAdded
+        ? (onRemove != null ? colorScheme.error : colorScheme.primary)
+        : colorScheme.primary;
+    final actionIcon = isAdded
+        ? (onRemove != null ? Icons.remove_rounded : Icons.check_rounded)
+        : Icons.add_rounded;
+    final actionCallback = isAdded ? onRemove : onAdd;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isAdded
+              ? colorScheme.primary.withValues(alpha: 0.35)
+              : colorScheme.outline.withValues(alpha: 0.15),
+          width: isAdded ? 1.5 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: _cardHeight,
+          child: Row(
+            children: [
+              _buildImage(colorScheme),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        poi.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            category.icon,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              category.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (weatherCondition != null &&
+                              weatherCondition != WeatherCondition.unknown &&
+                              weatherCondition != WeatherCondition.mixed) ...[
+                            const SizedBox(width: 6),
+                            WeatherBadgeUnified.fromCategory(
+                              condition: weatherCondition!,
+                              category: category,
+                              size: WeatherBadgeSize.inline,
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (poi.detourKm != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '+${poi.detourKm!.toStringAsFixed(1)} km Umweg',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: actionCallback,
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 100),
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: actionColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        actionIcon,
+                        size: 18,
+                        color: actionIconColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(ColorScheme colorScheme) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(12),
+        bottomLeft: Radius.circular(12),
+      ),
+      child: SizedBox(
+        width: _imageWidth,
+        height: _cardHeight,
+        child: poi.imageUrl != null
+            ? CachedNetworkImage(
+                imageUrl: poi.imageUrl!,
+                fit: BoxFit.cover,
+                memCacheWidth: 160,
+                memCacheHeight: 192,
+                fadeInDuration: const Duration(milliseconds: 150),
+                fadeOutDuration: const Duration(milliseconds: 100),
+                placeholder: (context, url) =>
+                    _buildImagePlaceholder(colorScheme),
+                errorWidget: (context, url, error) =>
+                    _buildImagePlaceholder(colorScheme),
+              )
+            : _buildImagePlaceholder(colorScheme),
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder(ColorScheme colorScheme) {
+    final category = poi.category ?? POICategory.attraction;
+    return Container(
+      color: Color(category.colorValue).withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          category.icon,
+          style: const TextStyle(fontSize: 28),
+        ),
+      ),
+    );
   }
 }
 

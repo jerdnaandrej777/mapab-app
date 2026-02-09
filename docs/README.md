@@ -32,6 +32,7 @@ Anleitungen fuer spezifische Themen.
 | [DARK-MODE](guides/DARK-MODE.md) | Theme-Implementierung |
 | [BACKEND-SETUP](guides/BACKEND-SETUP.md) | Vercel + Supabase Konfiguration |
 | [SOCIAL-OWNER-CONTROLS](guides/SOCIAL-OWNER-CONTROLS.md) | Owner-Rechte fuer Bearbeiten/Loeschen in Galerie und Trip-Detail |
+| [PUBLIC-TRIP-MAP-FLOW](guides/PUBLIC-TRIP-MAP-FLOW.md) | Stabiler "Auf Karte"-Flow fuer veroeffentlichte Trips inkl. Journal-Shortcut |
 
 ---
 
@@ -64,7 +65,7 @@ Nachschlagewerke und Hilfestellung.
 | [SECURITY](SECURITY.md) | Credentials und Sicherheit |
 | [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollstaendige Feature-Doku |
 | [LARAVEL-MIGRATION](LARAVEL-MIGRATION.md) | Geplante Backend-Migration |
-| [CHANGELOG v1.10.52](../Dokumentation/CHANGELOG-v1.10.52.md) | Release-Details Routenfokus-Modal + Favoriten-Konsistenz |
+| [CHANGELOG v1.10.53](../Dokumentation/CHANGELOG-v1.10.53.md) | Release-Details Public-Trip Kartenfluss + Journal-Shortcut + Korridor-POI-UI |
 
 ---
 
@@ -89,5 +90,5 @@ Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) fuer Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.52  
+**Version:** 1.10.53  
 **Stand:** Februar 2026
