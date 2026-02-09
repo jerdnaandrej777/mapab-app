@@ -5,103 +5,98 @@ import 'package:travel_planner/data/services/ai_service.dart';
 
 void main() {
   group('AIException', () {
-    test('hat message und isRetryable default false', () {
-      final ex = AIException('Test-Fehler');
-      expect(ex.message, 'Test-Fehler');
+    test('has message and default flags', () {
+      final ex = AIException('Test error');
+      expect(ex.message, 'Test error');
       expect(ex.isRetryable, isFalse);
+      expect(ex.code, 'UNKNOWN_ERROR');
+      expect(ex.traceId, isNull);
     });
 
-    test('isRetryable kann explizit gesetzt werden', () {
-      final ex = AIException('Timeout', isRetryable: true);
-      expect(ex.message, 'Timeout');
+    test('supports code and traceId', () {
+      final ex = AIException(
+        'Timeout',
+        isRetryable: true,
+        code: 'TIMEOUT',
+        traceId: 'trace-123',
+      );
       expect(ex.isRetryable, isTrue);
+      expect(ex.code, 'TIMEOUT');
+      expect(ex.traceId, 'trace-123');
     });
 
-    test('toString formatiert korrekt', () {
-      final ex = AIException('Server-Fehler');
-      expect(ex.toString(), 'AIException: Server-Fehler');
+    test('toString includes key fields', () {
+      final ex = AIException('Server error', code: 'SERVER_ERROR');
+      expect(ex.toString(), contains('SERVER_ERROR'));
+      expect(ex.toString(), contains('Server error'));
     });
 
-    test('ist eine Exception', () {
+    test('is Exception', () {
       final ex = AIException('Test');
       expect(ex, isA<Exception>());
     });
-
-    test('nicht-retryable Fehler: Rate-Limit', () {
-      // 429 Tageslimit ist nicht retryable (muss morgen erneut versucht werden)
-      final ex = AIException('Tageslimit erreicht');
-      expect(ex.isRetryable, isFalse);
-    });
-
-    test('retryable Fehler: Timeout', () {
-      final ex = AIException('Zeitüberschreitung', isRetryable: true);
-      expect(ex.isRetryable, isTrue);
-    });
-
-    test('retryable Fehler: 503 Service Unavailable', () {
-      final ex = AIException('Vorübergehend nicht verfügbar', isRetryable: true);
-      expect(ex.isRetryable, isTrue);
-    });
   });
 
-  group('AIService Konfiguration', () {
-    test('isConfigured ist immer true (Backend-Proxy)', () {
+  group('AIService config', () {
+    test('isConfigured stays true with backend proxy', () {
       final service = AIService();
       expect(service.isConfigured, isTrue);
     });
   });
 
   group('TripContext', () {
-    test('Standard-Kontext hat keine Location', () {
+    test('default context has no location', () {
       final ctx = TripContext();
       expect(ctx.hasUserLocation, isFalse);
       expect(ctx.hasWeatherInfo, isFalse);
       expect(ctx.stops, isEmpty);
     });
 
-    test('hasUserLocation ist true mit lat/lng', () {
+    test('hasUserLocation true with lat/lng', () {
       final ctx = TripContext(
         userLatitude: 48.0,
         userLongitude: 11.0,
-        userLocationName: 'München',
+        userLocationName: 'Munich',
       );
       expect(ctx.hasUserLocation, isTrue);
     });
 
-    test('hasUserLocation ist false mit nur lat', () {
+    test('hasUserLocation false with only lat', () {
       final ctx = TripContext(userLatitude: 48.0);
       expect(ctx.hasUserLocation, isFalse);
     });
 
-    test('hasWeatherInfo ist true mit overallWeather', () {
+    test('hasWeatherInfo true with overallWeather', () {
       final ctx = TripContext(overallWeather: 'good');
       expect(ctx.hasWeatherInfo, isTrue);
     });
 
-    test('hasWeatherInfo ist true mit dayWeather', () {
+    test('hasWeatherInfo true with dayWeather', () {
       final ctx = TripContext(dayWeather: {1: 'bad', 2: 'good'});
       expect(ctx.hasWeatherInfo, isTrue);
     });
   });
 
   group('ChatMessage', () {
-    test('hat content und isUser', () {
-      final msg = ChatMessage(content: 'Hallo', isUser: true);
-      expect(msg.content, 'Hallo');
+    test('has content and isUser', () {
+      final msg = ChatMessage(content: 'Hello', isUser: true);
+      expect(msg.content, 'Hello');
       expect(msg.isUser, isTrue);
       expect(msg.timestamp, isNotNull);
     });
 
-    test('timestamp wird automatisch gesetzt', () {
+    test('timestamp is auto-set', () {
       final before = DateTime.now();
       final msg = ChatMessage(content: 'Test', isUser: false);
       final after = DateTime.now();
 
-      expect(msg.timestamp.isAfter(before.subtract(const Duration(seconds: 1))), isTrue);
-      expect(msg.timestamp.isBefore(after.add(const Duration(seconds: 1))), isTrue);
+      expect(msg.timestamp.isAfter(before.subtract(const Duration(seconds: 1))),
+          isTrue);
+      expect(msg.timestamp.isBefore(after.add(const Duration(seconds: 1))),
+          isTrue);
     });
 
-    test('custom timestamp wird uebernommen', () {
+    test('custom timestamp is used', () {
       final custom = DateTime(2024, 1, 15);
       final msg = ChatMessage(content: 'Test', isUser: true, timestamp: custom);
       expect(msg.timestamp, custom);
@@ -109,7 +104,7 @@ void main() {
   });
 
   group('UserPreferences', () {
-    test('Defaults', () {
+    test('defaults', () {
       final prefs = UserPreferences();
       expect(prefs.preferredCategories, isEmpty);
       expect(prefs.maxDetourKm, 45);
@@ -130,8 +125,8 @@ void main() {
   });
 
   group('AIPoiSuggestion models', () {
-    test('AIPoiSuggestionRequest serialisiert chat_nearby korrekt', () {
-      final poi = POI(
+    test('AIPoiSuggestionRequest serializes chat_nearby', () {
+      const poi = POI(
         id: 'poi-1',
         name: 'Test Castle',
         latitude: 48.1,
@@ -166,19 +161,20 @@ void main() {
       expect((json['candidates'] as List).first['id'], 'poi-1');
     });
 
-    test('AIPoiSuggestionResponse parsed und relevance wird geclamped', () {
+    test('AIPoiSuggestionResponse parses and clamps relevance', () {
       final response = AIPoiSuggestionResponse.fromJson({
         'summary': 'Top picks',
         'source': 'ai',
         'tokensUsed': 123,
+        'traceId': 'trace-xyz',
         'suggestions': [
           {
             'poiId': 'poi-1',
             'action': 'add',
-            'reason': 'Passt perfekt',
+            'reason': 'Perfect fit',
             'relevance': 3.8,
             'highlights': ['Must-See', 'UNESCO'],
-            'longDescription': 'Lange Beschreibung',
+            'longDescription': 'Long description',
           },
         ],
       });
@@ -186,6 +182,7 @@ void main() {
       expect(response.summary, 'Top picks');
       expect(response.source, 'ai');
       expect(response.tokensUsed, 123);
+      expect(response.traceId, 'trace-xyz');
       expect(response.suggestions, hasLength(1));
       expect(response.suggestions.first.poiId, 'poi-1');
       expect(response.suggestions.first.relevance, 1.0);

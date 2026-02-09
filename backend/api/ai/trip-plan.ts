@@ -1,53 +1,137 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { TripPlanRequestSchema } from '../../lib/types';
-import { getOpenAIClient, TRIP_PLAN_SYSTEM_PROMPT, buildTripPlanPrompt } from '../../lib/openai';
-import { rateLimitMiddleware } from '../../lib/middleware/rateLimit';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { randomUUID } from "node:crypto";
+import { TripPlanRequestSchema } from "../../lib/types";
+import {
+  getOpenAIClient,
+  TRIP_PLAN_SYSTEM_PROMPT,
+  buildTripPlanPrompt,
+} from "../../lib/openai";
+import { rateLimitMiddleware } from "../../lib/middleware/rateLimit";
+
+const ENDPOINT = "/api/ai/trip-plan";
+const MODEL = "gpt-4o-mini";
+
+function logRequest(params: {
+  traceId: string;
+  status: number;
+  durationMs: number;
+  fallback: boolean;
+  model: string;
+}) {
+  console.log(
+    "[AI API]",
+    JSON.stringify({
+      endpoint: ENDPOINT,
+      traceId: params.traceId,
+      status: params.status,
+      durationMs: params.durationMs,
+      fallback: params.fallback,
+      model: params.model,
+    }),
+  );
+}
+
+function sendError(
+  res: VercelResponse,
+  status: number,
+  traceId: string,
+  code: string,
+  message: string,
+  details?: string,
+) {
+  return res.status(status).json({
+    error: {
+      message,
+      code,
+    },
+    message,
+    code,
+    traceId,
+    ...(details ? { details } : {}),
+  });
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
+  const traceId = randomUUID();
+  const startedAt = Date.now();
+
+  if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // Nur POST erlauben
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed',
-      code: 'METHOD_NOT_ALLOWED',
+  if (req.method !== "POST") {
+    logRequest({
+      traceId,
+      status: 405,
+      durationMs: Date.now() - startedAt,
+      fallback: false,
+      model: MODEL,
     });
+    return sendError(
+      res,
+      405,
+      traceId,
+      "METHOD_NOT_ALLOWED",
+      "Method not allowed",
+    );
   }
 
-  // Rate Limiting prüfen (Trip-Pläne verbrauchen mehr Tokens, also strenger limitieren)
-  if (!rateLimitMiddleware(req, res, { maxRequests: 20 })) {
-    return; // Response wurde bereits gesendet
+  if (!rateLimitMiddleware(req, res, { maxRequests: 20, traceId })) {
+    logRequest({
+      traceId,
+      status: 429,
+      durationMs: Date.now() - startedAt,
+      fallback: false,
+      model: MODEL,
+    });
+    return;
   }
 
   try {
-    // Request validieren
     const parseResult = TripPlanRequestSchema.safeParse(req.body);
 
     if (!parseResult.success) {
-      return res.status(400).json({
-        error: 'Invalid request body',
-        code: 'VALIDATION_ERROR',
-        details: parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '),
+      const details = parseResult.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ");
+      logRequest({
+        traceId,
+        status: 400,
+        durationMs: Date.now() - startedAt,
+        fallback: false,
+        model: MODEL,
       });
+      return sendError(
+        res,
+        400,
+        traceId,
+        "VALIDATION_ERROR",
+        "Invalid request body",
+        details,
+      );
     }
 
     const { destination, startLocation, days, interests } = parseResult.data;
 
-    // Mindestens Ziel oder Start muss angegeben sein
     if (!destination && !startLocation) {
-      return res.status(400).json({
-        error: 'Either destination or startLocation must be provided',
-        code: 'MISSING_LOCATION',
+      logRequest({
+        traceId,
+        status: 400,
+        durationMs: Date.now() - startedAt,
+        fallback: false,
+        model: MODEL,
       });
+      return sendError(
+        res,
+        400,
+        traceId,
+        "MISSING_LOCATION",
+        "Either destination or startLocation must be provided",
+      );
     }
 
-    // OpenAI Client
     const openai = getOpenAIClient();
 
-    // User Prompt erstellen
     const userPrompt = buildTripPlanPrompt({
       destination,
       startLocation,
@@ -55,61 +139,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       interests,
     });
 
-    // OpenAI Request
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: MODEL,
       messages: [
         {
-          role: 'system',
+          role: "system",
           content: TRIP_PLAN_SYSTEM_PROMPT,
         },
         {
-          role: 'user',
+          role: "user",
           content: userPrompt,
         },
       ],
-      max_tokens: 2000, // Mehr Tokens für detaillierte Pläne
-      temperature: 0.8, // Etwas kreativer
+      max_tokens: 2000,
+      temperature: 0.8,
     });
 
     const planContent = completion.choices[0]?.message?.content;
 
     if (!planContent) {
-      return res.status(500).json({
-        error: 'No response from AI',
-        code: 'AI_NO_RESPONSE',
+      logRequest({
+        traceId,
+        status: 500,
+        durationMs: Date.now() - startedAt,
+        fallback: false,
+        model: MODEL,
       });
+      return sendError(
+        res,
+        500,
+        traceId,
+        "AI_NO_RESPONSE",
+        "No response from AI",
+      );
     }
 
-    // Erfolgreiche Antwort
+    logRequest({
+      traceId,
+      status: 200,
+      durationMs: Date.now() - startedAt,
+      fallback: false,
+      model: MODEL,
+    });
     return res.status(200).json({
       plan: planContent,
       tokensUsed: completion.usage?.total_tokens,
+      traceId,
+      source: "ai",
     });
-
   } catch (error) {
-    console.error('[AI Trip-Plan Error]', error);
+    console.error("[AI Trip-Plan Error]", error);
 
-    // OpenAI-spezifische Fehler
     if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        return res.status(500).json({
-          error: 'AI service configuration error',
-          code: 'AI_CONFIG_ERROR',
+      if (error.message.includes("API key")) {
+        logRequest({
+          traceId,
+          status: 500,
+          durationMs: Date.now() - startedAt,
+          fallback: false,
+          model: MODEL,
         });
+        return sendError(
+          res,
+          500,
+          traceId,
+          "AI_CONFIG_ERROR",
+          "AI service configuration error",
+        );
       }
 
-      if (error.message.includes('quota') || error.message.includes('rate')) {
-        return res.status(503).json({
-          error: 'AI service temporarily unavailable',
-          code: 'AI_RATE_LIMITED',
+      if (error.message.includes("quota") || error.message.includes("rate")) {
+        logRequest({
+          traceId,
+          status: 503,
+          durationMs: Date.now() - startedAt,
+          fallback: false,
+          model: MODEL,
         });
+        return sendError(
+          res,
+          503,
+          traceId,
+          "AI_RATE_LIMITED",
+          "AI service temporarily unavailable",
+        );
       }
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      code: 'INTERNAL_ERROR',
+    logRequest({
+      traceId,
+      status: 500,
+      durationMs: Date.now() - startedAt,
+      fallback: false,
+      model: MODEL,
     });
+    return sendError(
+      res,
+      500,
+      traceId,
+      "INTERNAL_ERROR",
+      "Internal server error",
+    );
   }
 }

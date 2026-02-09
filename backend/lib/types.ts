@@ -1,42 +1,59 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ============================================
 // Chat Request/Response Types
 // ============================================
 
 export const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'assistant', 'system']),
+  role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
 });
 
-export const TripContextSchema = z.object({
-  userLocation: z.object({
-    lat: z.number(),
-    lng: z.number(),
-    name: z.string().optional(),
-  }).optional(),
-  routeStart: z.string().optional(),
-  routeEnd: z.string().optional(),
-  distanceKm: z.number().optional(),
-  durationMinutes: z.number().optional(),
-  stops: z.array(z.object({
-    id: z.string().optional(),
-    name: z.string(),
-    category: z.string().optional(),
-    day: z.number().int().optional(),
-  })).optional(),
-  responseLanguage: z.string().min(2).max(10).optional(),
-  overallWeather: z.string().optional(),
-  dayWeather: z.record(z.string(), z.string()).optional(),
-  selectedDay: z.number().int().optional(),
-  totalDays: z.number().int().optional(),
-  preferredCategories: z.array(z.string()).optional(),
-}).optional();
+export const ClientMetaSchema = z
+  .object({
+    build: z.string().min(1).max(64).optional(),
+    platform: z.string().min(1).max(32).optional(),
+    sessionId: z.string().min(1).max(128).optional(),
+  })
+  .optional();
+
+export const TripContextSchema = z
+  .object({
+    userLocation: z
+      .object({
+        lat: z.number(),
+        lng: z.number(),
+        name: z.string().optional(),
+      })
+      .optional(),
+    routeStart: z.string().optional(),
+    routeEnd: z.string().optional(),
+    distanceKm: z.number().optional(),
+    durationMinutes: z.number().optional(),
+    stops: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          name: z.string(),
+          category: z.string().optional(),
+          day: z.number().int().optional(),
+        }),
+      )
+      .optional(),
+    responseLanguage: z.string().min(2).max(10).optional(),
+    overallWeather: z.string().optional(),
+    dayWeather: z.record(z.string(), z.string()).optional(),
+    selectedDay: z.number().int().optional(),
+    totalDays: z.number().int().optional(),
+    preferredCategories: z.array(z.string()).optional(),
+  })
+  .optional();
 
 export const ChatRequestSchema = z.object({
   message: z.string().min(1).max(4000),
   context: TripContextSchema,
   history: z.array(ChatMessageSchema).max(20).optional(),
+  clientMeta: ClientMetaSchema,
 });
 
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
@@ -44,6 +61,8 @@ export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export interface ChatResponse {
   message: string;
   tokensUsed?: number;
+  traceId?: string;
+  source?: "ai" | "fallback";
 }
 
 // ============================================
@@ -57,6 +76,7 @@ export const TripPlanRequestSchema = z.object({
   interests: z.array(z.string()).min(1).max(10),
   startLat: z.number().optional(),
   startLng: z.number().optional(),
+  clientMeta: ClientMetaSchema,
 });
 
 export type TripPlanRequest = z.infer<typeof TripPlanRequestSchema>;
@@ -64,38 +84,52 @@ export type TripPlanRequest = z.infer<typeof TripPlanRequestSchema>;
 export interface TripPlanResponse {
   plan: string;
   tokensUsed?: number;
+  traceId?: string;
+  source?: "ai" | "fallback";
 }
 
 // ============================================
 // Structured POI Suggestions
 // ============================================
 
-export const PoiSuggestionModeSchema = z.enum(['day_editor', 'chat_nearby']);
+export const PoiSuggestionModeSchema = z.enum(["day_editor", "chat_nearby"]);
 
-export const PoiSuggestionUserContextSchema = z.object({
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  locationName: z.string().optional(),
-  weatherCondition: z.enum(['good', 'mixed', 'bad', 'danger', 'unknown']).optional(),
-  selectedDay: z.number().int().optional(),
-  totalDays: z.number().int().optional(),
-}).optional();
+export const PoiSuggestionUserContextSchema = z
+  .object({
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+    locationName: z.string().optional(),
+    weatherCondition: z
+      .enum(["good", "mixed", "bad", "danger", "unknown"])
+      .optional(),
+    selectedDay: z.number().int().optional(),
+    totalDays: z.number().int().optional(),
+  })
+  .optional();
 
-export const PoiSuggestionTripContextSchema = z.object({
-  routeStart: z.string().optional(),
-  routeEnd: z.string().optional(),
-  stops: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    categoryId: z.string().optional(),
-    day: z.number().int().optional(),
-  })).optional(),
-}).optional();
+export const PoiSuggestionTripContextSchema = z
+  .object({
+    routeStart: z.string().optional(),
+    routeEnd: z.string().optional(),
+    stops: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          categoryId: z.string().optional(),
+          day: z.number().int().optional(),
+        }),
+      )
+      .optional(),
+  })
+  .optional();
 
-export const PoiSuggestionConstraintsSchema = z.object({
-  maxSuggestions: z.number().int().min(1).max(12).optional(),
-  allowSwap: z.boolean().optional(),
-}).optional();
+export const PoiSuggestionConstraintsSchema = z
+  .object({
+    maxSuggestions: z.number().int().min(1).max(12).optional(),
+    allowSwap: z.boolean().optional(),
+  })
+  .optional();
 
 export const PoiSuggestionCandidateSchema = z.object({
   id: z.string().min(1),
@@ -122,35 +156,40 @@ export const PoiSuggestionsRequestSchema = z.object({
   tripContext: PoiSuggestionTripContextSchema,
   constraints: PoiSuggestionConstraintsSchema,
   candidates: z.array(PoiSuggestionCandidateSchema).min(1).max(60),
+  clientMeta: ClientMetaSchema,
 });
 
-export const PoiSuggestionActionSchema = z.enum(['add', 'swap']);
+export const PoiSuggestionActionSchema = z.enum(["add", "swap"]);
 
-export const PoiSuggestionSchema = z.object({
-  poiId: z.string().min(1),
-  action: PoiSuggestionActionSchema,
-  targetPoiId: z.string().optional(),
-  reason: z.string().min(1),
-  relevance: z.number().min(0).max(1),
-  highlights: z.array(z.string()).default([]),
-  longDescription: z.string().min(1),
-}).superRefine((value, ctx) => {
-  if (value.action === 'swap' && !value.targetPoiId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'targetPoiId is required when action is swap',
-      path: ['targetPoiId'],
-    });
-  }
-});
+export const PoiSuggestionSchema = z
+  .object({
+    poiId: z.string().min(1),
+    action: PoiSuggestionActionSchema,
+    targetPoiId: z.string().optional(),
+    reason: z.string().min(1),
+    relevance: z.number().min(0).max(1),
+    highlights: z.array(z.string()).default([]),
+    longDescription: z.string().min(1),
+  })
+  .superRefine((value, ctx) => {
+    if (value.action === "swap" && !value.targetPoiId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "targetPoiId is required when action is swap",
+        path: ["targetPoiId"],
+      });
+    }
+  });
 
 export const PoiSuggestionsResponseSchema = z.object({
-  summary: z.string().default(''),
+  summary: z.string().default(""),
   suggestions: z.array(PoiSuggestionSchema).default([]),
 });
 
 export type PoiSuggestionsRequest = z.infer<typeof PoiSuggestionsRequestSchema>;
-export type PoiSuggestionsResponse = z.infer<typeof PoiSuggestionsResponseSchema>;
+export type PoiSuggestionsResponse = z.infer<
+  typeof PoiSuggestionsResponseSchema
+>;
 
 // ============================================
 // Hotel Search Request/Response Types
@@ -161,8 +200,14 @@ export const HotelSearchRequestSchema = z.object({
   lng: z.number().gte(-180).lte(180),
   radiusKm: z.number().gt(0).lte(20).default(20),
   limit: z.number().int().min(1).max(20).default(8).optional(),
-  checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  checkInDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  checkOutDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   language: z.string().min(2).max(5).optional(),
   dayIndex: z.number().int().min(1).max(30).optional(),
 });
@@ -197,8 +242,8 @@ export interface HotelSearchResponseItem {
   phone?: string;
   website?: string;
   bookingUrl?: string;
-  source: 'google_places';
-  dataQuality: 'verified' | 'few_or_no_reviews' | 'limited';
+  source: "google_places";
+  dataQuality: "verified" | "few_or_no_reviews" | "limited";
 }
 
 // ============================================

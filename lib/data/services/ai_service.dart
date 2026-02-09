@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/constants/categories.dart';
 import '../models/poi.dart';
@@ -14,6 +15,9 @@ part 'ai_service.g.dart';
 /// Der API-Key ist sicher auf dem Server gespeichert
 class AIService {
   final Dio _dio;
+  static const String _build =
+      String.fromEnvironment('APP_BUILD', defaultValue: 'unknown');
+  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
   AIService({Dio? dio})
       : _dio = dio ??
@@ -29,6 +33,111 @@ class AIService {
   /// Service ist jetzt immer "konfiguriert" da der Key im Backend liegt
   bool get isConfigured => true;
 
+  Map<String, dynamic> get _clientMeta => {
+        'build': _build,
+        'platform': defaultTargetPlatform.name,
+        'sessionId': _sessionId,
+      };
+
+  Map<String, dynamic> _requireResponseMap(dynamic data,
+      {required String endpoint}) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    throw AIException(
+      'Ungueltige Antwort vom Backend ($endpoint).',
+      code: 'BACKEND_RESPONSE_INVALID',
+    );
+  }
+
+  String _requireNonEmptyString(
+    Map<String, dynamic> data,
+    String key, {
+    required String endpoint,
+  }) {
+    final value = data[key];
+    if (value is String && value.trim().isNotEmpty) return value;
+    throw AIException(
+      'Pflichtfeld "$key" fehlt in Backend-Antwort ($endpoint).',
+      code: 'BACKEND_RESPONSE_INVALID',
+      traceId: _extractTraceId(data),
+    );
+  }
+
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
+  }
+
+  String? _extractTraceId(dynamic payload) {
+    if (payload is! Map) return null;
+    final traceId = payload['traceId'];
+    if (traceId is String && traceId.trim().isNotEmpty) {
+      return traceId.trim();
+    }
+    return null;
+  }
+
+  String? _extractErrorCode(dynamic payload) {
+    if (payload is! Map) return null;
+    final directCode = payload['code'];
+    if (directCode is String && directCode.trim().isNotEmpty) {
+      return directCode.trim();
+    }
+    final error = payload['error'];
+    if (error is Map) {
+      final nestedCode = error['code'];
+      if (nestedCode is String && nestedCode.trim().isNotEmpty) {
+        return nestedCode.trim();
+      }
+    }
+    return null;
+  }
+
+  String? _extractErrorMessage(dynamic payload) {
+    if (payload is! Map) return null;
+    final error = payload['error'];
+    if (error is String && error.trim().isNotEmpty) {
+      return error.trim();
+    }
+    if (error is Map) {
+      final nestedMessage = error['message'];
+      if (nestedMessage is String && nestedMessage.trim().isNotEmpty) {
+        return nestedMessage.trim();
+      }
+    }
+    final message = payload['message'];
+    if (message is String && message.trim().isNotEmpty) {
+      return message.trim();
+    }
+    return null;
+  }
+
+  void _addRequestBreadcrumb({
+    required String stage,
+    required String requestKind,
+    String? traceId,
+    String? errorCode,
+  }) {
+    Sentry.addBreadcrumb(
+      Breadcrumb(
+        category: 'ai.request',
+        type: 'http',
+        level: stage == 'error' ? SentryLevel.error : SentryLevel.info,
+        message: '$stage:$requestKind',
+        data: <String, dynamic>{
+          'stage': stage,
+          'requestKind': requestKind,
+          'build': _build,
+          if (traceId != null) 'traceId': traceId,
+          if (errorCode != null) 'errorCode': errorCode,
+        },
+      ),
+    );
+  }
+
   /// Chatbot für natürlichsprachige Interaktion
   Future<String> chat({
     required String message,
@@ -37,12 +146,11 @@ class AIService {
     String? language,
   }) async {
     debugPrint('[AI] Sende Chat-Anfrage an Backend...');
+    _addRequestBreadcrumb(stage: 'start', requestKind: 'chat');
 
     try {
-      // Kontext für Backend aufbereiten
       final contextData = <String, dynamic>{};
 
-      // Standort-Informationen hinzufügen (NEU)
       if (context.hasUserLocation) {
         contextData['userLocation'] = {
           'lat': context.userLatitude,
@@ -57,12 +165,15 @@ class AIService {
         contextData['distanceKm'] = context.route!.distanceKm;
         contextData['durationMinutes'] = context.route!.durationMinutes;
       }
+
       if (context.stops.isNotEmpty) {
         contextData['stops'] = context.stops
-            .map((s) => {
-                  'name': s.name,
-                  'category': s.categoryId,
-                })
+            .map(
+              (s) => {
+                'name': s.name,
+                'category': s.categoryId,
+              },
+            )
             .toList();
       }
 
@@ -90,16 +201,18 @@ class AIService {
 
       if (context.preferredCategories != null &&
           context.preferredCategories!.isNotEmpty) {
-        contextData['preferredCategories'] = context.preferredCategories!.toList();
+        contextData['preferredCategories'] =
+            context.preferredCategories!.toList();
       }
 
-      // History für Backend aufbereiten
       final historyData = history
               ?.take(20)
-              .map((msg) => {
-                    'role': msg.isUser ? 'user' : 'assistant',
-                    'content': msg.content,
-                  })
+              .map(
+                (msg) => {
+                  'role': msg.isUser ? 'user' : 'assistant',
+                  'content': msg.content,
+                },
+              )
               .toList() ??
           [];
 
@@ -109,26 +222,63 @@ class AIService {
           'message': message,
           'context': contextData.isNotEmpty ? contextData : null,
           'history': historyData,
+          'clientMeta': _clientMeta,
         },
       );
 
-      debugPrint('[AI] ✓ Chat-Antwort erhalten, Status: ${response.statusCode}');
+      debugPrint('[AI] Chat-Antwort erhalten, Status: ${response.statusCode}');
 
-      final responseMessage = response.data['message'] as String?;
-      final tokensUsed = response.data['tokensUsed'] as int?;
+      final responseData = _requireResponseMap(
+        response.data,
+        endpoint: ApiConfig.aiChatEndpoint,
+      );
+      final responseMessage = _requireNonEmptyString(
+        responseData,
+        'message',
+        endpoint: ApiConfig.aiChatEndpoint,
+      );
+      final tokensUsed = _asInt(responseData['tokensUsed']);
+      final traceId = _extractTraceId(responseData);
 
       debugPrint('[AI] Tokens verwendet: $tokensUsed');
+      _addRequestBreadcrumb(
+        stage: 'end',
+        requestKind: 'chat',
+        traceId: traceId,
+      );
 
-      return responseMessage ?? '';
+      return responseMessage;
     } on DioException catch (e) {
-      debugPrint('[AI] ✗ FEHLER: ${e.type}');
+      debugPrint('[AI] FEHLER: ${e.type}');
       debugPrint('[AI] Status-Code: ${e.response?.statusCode}');
       debugPrint('[AI] Response: ${e.response?.data}');
-
-      _handleDioError(e);
+      try {
+        _handleDioError(e);
+      } on AIException catch (error) {
+        _addRequestBreadcrumb(
+          stage: 'error',
+          requestKind: 'chat',
+          traceId: error.traceId,
+          errorCode: error.code,
+        );
+        rethrow;
+      }
+    } on AIException catch (e) {
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'chat',
+        traceId: e.traceId,
+        errorCode: e.code,
+      );
+      rethrow;
     } catch (e) {
-      debugPrint('[AI] ✗ Unerwarteter Fehler: $e');
-      throw AIException('Unerwarteter Fehler: $e');
+      debugPrint('[AI] Unerwarteter Fehler: $e');
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'chat',
+        errorCode: 'UNEXPECTED_ERROR',
+      );
+      throw AIException('Unerwarteter Fehler: $e', code: 'UNEXPECTED_ERROR');
     }
   }
 
@@ -142,6 +292,7 @@ class AIService {
   }) async {
     debugPrint('[AI] Sende Trip-Plan-Anfrage an Backend...');
     debugPrint('[AI] Ziel: $destination, Tage: $days');
+    _addRequestBreadcrumb(stage: 'start', requestKind: 'tripPlan');
 
     try {
       final response = await _dio.post(
@@ -152,26 +303,63 @@ class AIService {
           'days': days,
           'interests': interests,
           if (language != null) 'language': language,
+          'clientMeta': _clientMeta,
         },
       );
 
-      debugPrint('[AI] ✓ Trip-Plan erhalten, Status: ${response.statusCode}');
+      debugPrint('[AI] Trip-Plan erhalten, Status: ${response.statusCode}');
 
-      final plan = response.data['plan'] as String?;
-      final tokensUsed = response.data['tokensUsed'] as int?;
+      final responseData = _requireResponseMap(
+        response.data,
+        endpoint: ApiConfig.aiTripPlanEndpoint,
+      );
+      final plan = _requireNonEmptyString(
+        responseData,
+        'plan',
+        endpoint: ApiConfig.aiTripPlanEndpoint,
+      );
+      final tokensUsed = _asInt(responseData['tokensUsed']);
+      final traceId = _extractTraceId(responseData);
 
       debugPrint('[AI] Tokens verwendet: $tokensUsed');
+      _addRequestBreadcrumb(
+        stage: 'end',
+        requestKind: 'tripPlan',
+        traceId: traceId,
+      );
 
-      return plan ?? '';
+      return plan;
     } on DioException catch (e) {
-      debugPrint('[AI] ✗ FEHLER: ${e.type}');
+      debugPrint('[AI] FEHLER: ${e.type}');
       debugPrint('[AI] Status-Code: ${e.response?.statusCode}');
       debugPrint('[AI] Response: ${e.response?.data}');
-
-      _handleDioError(e);
+      try {
+        _handleDioError(e);
+      } on AIException catch (error) {
+        _addRequestBreadcrumb(
+          stage: 'error',
+          requestKind: 'tripPlan',
+          traceId: error.traceId,
+          errorCode: error.code,
+        );
+        rethrow;
+      }
+    } on AIException catch (e) {
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'tripPlan',
+        traceId: e.traceId,
+        errorCode: e.code,
+      );
+      rethrow;
     } catch (e) {
-      debugPrint('[AI] ✗ Unerwarteter Fehler: $e');
-      throw AIException('Unerwarteter Fehler: $e');
+      debugPrint('[AI] Unerwarteter Fehler: $e');
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'tripPlan',
+        errorCode: 'UNEXPECTED_ERROR',
+      );
+      throw AIException('Unerwarteter Fehler: $e', code: 'UNEXPECTED_ERROR');
     }
   }
 
@@ -271,13 +459,12 @@ Antworte als JSON-Array: [{"name": "POI-Name", "reason": "Begründung"}]
     debugPrint('[AI] Sende Trip-Optimierung an Backend...');
 
     // Erstelle Prompt für Optimierung
-    final stopsInfo = trip.stops.map((s) =>
-      '${s.name} (${s.categoryId}, Tag ${s.day ?? "?"})'
-    ).join(', ');
+    final stopsInfo = trip.stops
+        .map((s) => '${s.name} (${s.categoryId}, Tag ${s.day})')
+        .join(', ');
 
-    final weatherInfo = dayWeather.entries.map((e) =>
-      'Tag ${e.key}: ${e.value}'
-    ).join(', ');
+    final weatherInfo =
+        dayWeather.entries.map((e) => 'Tag ${e.key}: ${e.value}').join(', ');
 
     try {
       final response = await chat(
@@ -314,12 +501,13 @@ Antworte als JSON:
         if (jsonMatch != null) {
           final data = json.decode(jsonMatch.group(0)!) as Map<String, dynamic>;
           final suggestions = (data['suggestions'] as List?)
-              ?.map((s) => AIOptimizationSuggestion(
-                    message: s['message'] ?? '',
-                    type: s['type'] ?? 'general',
-                    dayNumber: s['dayNumber'] as int?,
-                  ))
-              .toList() ?? [];
+                  ?.map((s) => AIOptimizationSuggestion(
+                        message: s['message'] ?? '',
+                        type: s['type'] ?? 'general',
+                        dayNumber: s['dayNumber'] as int?,
+                      ))
+                  .toList() ??
+              [];
           return AITripOptimization(
             suggestions: suggestions,
             summary: data['summary'] ?? '',
@@ -344,44 +532,86 @@ Antworte als JSON:
     required AIPoiSuggestionRequest request,
   }) async {
     debugPrint('[AI] Sende strukturierte POI-Suggestions an Backend...');
+    _addRequestBreadcrumb(stage: 'start', requestKind: 'nearby');
 
     try {
       final response = await _dio.post(
         ApiConfig.aiPoiSuggestionsEndpoint,
-        data: request.toJson(),
+        data: {
+          ...request.toJson(),
+          'clientMeta': _clientMeta,
+        },
       );
 
-      final data = response.data;
-      if (data is! Map<String, dynamic>) {
-        throw AIException('Ungueltige Antwort vom AI-Suggestions-Endpunkt');
-      }
+      final data = _requireResponseMap(
+        response.data,
+        endpoint: ApiConfig.aiPoiSuggestionsEndpoint,
+      );
 
       final parsed = AIPoiSuggestionResponse.fromJson(data);
+      final traceId = _extractTraceId(data);
+
       debugPrint(
         '[AI] Strukturierte POI-Suggestions erhalten: ${parsed.suggestions.length} '
         '(Quelle: ${parsed.source ?? "unknown"})',
       );
+      _addRequestBreadcrumb(
+        stage: 'end',
+        requestKind: 'nearby',
+        traceId: traceId,
+      );
       return parsed;
     } on DioException catch (e) {
-      debugPrint('[AI] Strukturierte POI-Suggestions Fehler: ${e.response?.data}');
-      _handleDioError(e);
+      debugPrint(
+          '[AI] Strukturierte POI-Suggestions Fehler: ${e.response?.data}');
+      try {
+        _handleDioError(e);
+      } on AIException catch (error) {
+        _addRequestBreadcrumb(
+          stage: 'error',
+          requestKind: 'nearby',
+          traceId: error.traceId,
+          errorCode: error.code,
+        );
+        rethrow;
+      }
+    } on AIException catch (e) {
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'nearby',
+        traceId: e.traceId,
+        errorCode: e.code,
+      );
+      rethrow;
     } catch (e) {
       debugPrint('[AI] Strukturierte POI-Suggestions unerwarteter Fehler: $e');
-      throw AIException('POI-Suggestions konnten nicht geladen werden: $e');
+      _addRequestBreadcrumb(
+        stage: 'error',
+        requestKind: 'nearby',
+        errorCode: 'UNEXPECTED_ERROR',
+      );
+      throw AIException(
+        'POI-Suggestions konnten nicht geladen werden: $e',
+        code: 'UNEXPECTED_ERROR',
+      );
     }
   }
 
   /// Health-Check für Backend
   Future<bool> checkHealth() async {
-    // Zuerst prüfen ob Backend-URL konfiguriert ist
     if (!ApiConfig.isConfigured) {
-      debugPrint('[AI] Backend nicht konfiguriert (BACKEND_URL fehlt in --dart-define)');
+      debugPrint(
+          '[AI] Backend nicht konfiguriert (BACKEND_URL fehlt in --dart-define)');
       return false;
     }
 
     try {
       final response = await _dio.get(ApiConfig.healthEndpoint);
-      return response.statusCode == 200 && response.data['status'] == 'ok';
+      final data = _requireResponseMap(
+        response.data,
+        endpoint: ApiConfig.healthEndpoint,
+      );
+      return response.statusCode == 200 && data['status'] == 'ok';
     } catch (e) {
       debugPrint('[AI] Backend Health-Check fehlgeschlagen: $e');
       return false;
@@ -392,44 +622,68 @@ Antworte als JSON:
   Never _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     final errorData = e.response?.data;
-    final errorCode = errorData is Map ? errorData['code'] : null;
-    final errorMessage = errorData is Map ? errorData['error'] : null;
+    final traceId = _extractTraceId(errorData);
+    final errorCode = _extractErrorCode(errorData);
+    final errorMessage = _extractErrorMessage(errorData);
 
     switch (statusCode) {
       case 400:
-        throw AIException('Ungültige Anfrage: ${errorMessage ?? "Bitte überprüfe deine Eingabe"}');
+        throw AIException(
+          'Ungueltige Anfrage: ${errorMessage ?? "Bitte pruefe deine Eingabe"}',
+          code: errorCode ?? 'VALIDATION_ERROR',
+          traceId: traceId,
+        );
       case 429:
         throw AIException(
-            'Tageslimit erreicht. Bitte versuche es morgen wieder. '
-            '(${errorMessage ?? ""})');
+          'Tageslimit erreicht. Bitte versuche es spaeter erneut. ${errorMessage ?? ""}'
+              .trim(),
+          code: errorCode ?? 'RATE_LIMITED',
+          traceId: traceId,
+        );
       case 500:
         if (errorCode == 'AI_CONFIG_ERROR') {
-          throw AIException('AI-Service ist nicht konfiguriert. Bitte kontaktiere den Support.');
+          throw AIException(
+            'AI-Service ist nicht konfiguriert. Bitte kontaktiere den Support.',
+            code: 'AI_CONFIG_ERROR',
+            traceId: traceId,
+          );
         }
         throw AIException(
-          'Server-Fehler: ${errorMessage ?? "Bitte versuche es später erneut"}',
+          'Server-Fehler: ${errorMessage ?? "Bitte versuche es spaeter erneut"}',
           isRetryable: true,
+          code: errorCode ?? 'SERVER_ERROR',
+          traceId: traceId,
         );
       case 503:
         throw AIException(
-          'AI-Service vorübergehend nicht verfügbar. Bitte warte kurz.',
+          'AI-Service voruebergehend nicht verfuegbar. Bitte warte kurz.',
           isRetryable: true,
+          code: errorCode ?? 'SERVICE_UNAVAILABLE',
+          traceId: traceId,
         );
       default:
         if (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout) {
           throw AIException(
-            'Zeitüberschreitung. Bitte prüfe deine Internetverbindung.',
+            'Zeitueberschreitung. Bitte pruefe deine Internetverbindung.',
             isRetryable: true,
+            code: 'TIMEOUT',
+            traceId: traceId,
           );
         }
         if (e.type == DioExceptionType.connectionError) {
           throw AIException(
-            'Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung.',
+            'Keine Verbindung zum Server. Bitte pruefe deine Internetverbindung.',
             isRetryable: true,
+            code: 'CONNECTION_ERROR',
+            traceId: traceId,
           );
         }
-        throw AIException('Verbindungsfehler: ${e.message ?? "Unbekannter Fehler"}');
+        throw AIException(
+          'Verbindungsfehler: ${e.message ?? "Unbekannter Fehler"}',
+          code: errorCode ?? 'NETWORK_ERROR',
+          traceId: traceId,
+        );
     }
   }
 }
@@ -515,13 +769,21 @@ class ChatMessage {
 class AIException implements Exception {
   final String message;
 
-  /// Ob der Fehler vorübergehend ist und ein Retry sinnvoll wäre
+  /// Ob der Fehler voruebergehend ist und ein Retry sinnvoll waere
   final bool isRetryable;
+  final String code;
+  final String? traceId;
 
-  AIException(this.message, {this.isRetryable = false});
+  AIException(
+    this.message, {
+    this.isRetryable = false,
+    this.code = 'UNKNOWN_ERROR',
+    this.traceId,
+  });
 
   @override
-  String toString() => 'AIException: $message';
+  String toString() =>
+      'AIException(code: $code, traceId: ${traceId ?? "n/a"}, message: $message)';
 }
 
 /// Strukturierter Trip-Plan (für Rückwärtskompatibilität)
@@ -821,12 +1083,14 @@ class AIPoiSuggestionResponse {
   final List<AIPoiSuggestion> suggestions;
   final String? source;
   final int? tokensUsed;
+  final String? traceId;
 
   AIPoiSuggestionResponse({
     required this.summary,
     required this.suggestions,
     this.source,
     this.tokensUsed,
+    this.traceId,
   });
 
   factory AIPoiSuggestionResponse.fromJson(Map<String, dynamic> json) {
@@ -839,6 +1103,7 @@ class AIPoiSuggestionResponse {
           .toList(),
       source: json['source']?.toString(),
       tokensUsed: (json['tokensUsed'] as num?)?.toInt(),
+      traceId: json['traceId']?.toString(),
     );
   }
 }
@@ -858,6 +1123,7 @@ class AIPoiSuggestionBundle {
 /// Riverpod Provider für AIService
 @riverpod
 AIService aiService(AiServiceRef ref) {
-  debugPrint('[AI] AIService initialisiert (Backend-Proxy: ${ApiConfig.backendBaseUrl})');
+  debugPrint(
+      '[AI] AIService initialisiert (Backend-Proxy: ${ApiConfig.backendBaseUrl})');
   return AIService();
 }

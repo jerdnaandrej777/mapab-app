@@ -4,14 +4,16 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 
 ## ProjektÃ¼bersicht
 
-Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.43 - Favoriten/Trip-Bearbeiten vereinheitlicht + AI-Stabilisiert | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.43)
+Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
+Version: 1.10.45 - AI-Assistent stabilisiert + AI-Reise-Copilot + Backend-Resilienz | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.45)
 
-- Favoriten-Routen zeigen im Trip-Panel jetzt `Trip bearbeiten` und `Navigation starten`.
-- Trip-Bearbeiten Footer nutzt den Button `POIs hinzufügen` (statt `Weitere POIs hinzufügen`).
-- `POIs hinzufügen` oeffnet den Korridor-Browser als konsistentes Bottom-Sheet-Modal im selben UI-Konzept.
-- AI-Assistent gegen Crash-Pfade gehaertet (Sende-Guard, mounted-Checks, robustere Umlaute/Intent-Normalisierung).
+- AI-Assistent auf getypte Chat-Modelle umgestellt (`ChatUiMessage`, `PoiListMessage`, `SystemMessage`) fuer robustere UI-States.
+- Request-Token-Guard + Stale-Response-Schutz in Chat/Nearby/Trip-Generator gegen Mehrfachstarts und setState-after-dispose.
+- Distanzanzeige auf POI-Karten korrigiert (km-Berechnung).
+- AI-Service gehaertet: Response-Validation, `AIException(code, traceId)`, strukturiertes Error-Mapping und Sentry-Breadcrumbs.
+- Backend `/api/ai/*` erweitert um `traceId`, konsistente Error-Codes, strukturierte Request-Logs und optionales `clientMeta`.
+- AI-Reise-Copilot MVP: Proaktive Copilot-Karten, Quick-Actions, "Warum diese Empfehlung?" und trip-bezogener Kurzzeit-Kontext.
 
 
 ## Tech Stack

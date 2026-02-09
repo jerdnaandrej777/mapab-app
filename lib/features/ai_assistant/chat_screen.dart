@@ -22,6 +22,7 @@ import '../../features/map/providers/map_controller_provider.dart';
 import '../../features/map/widgets/weather_badge_unified.dart';
 import '../../features/poi/providers/poi_state_provider.dart';
 import '../../features/trip/providers/trip_state_provider.dart';
+import 'chat_models.dart';
 import 'widgets/chat_message.dart';
 import 'widgets/suggestion_chips.dart';
 
@@ -33,14 +34,15 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-/// Message-Typ fÃƒÂ¼r unterschiedliche Chat-Inhalte
-enum ChatMessageType { text, poiList }
-
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isLoading = false;
   bool _backendAvailable = true;
+  int _requestCounter = 0;
+  ChatRequestToken? _activeRequest;
+  final Map<String, List<ChatMessage>> _tripScopedHistory = {};
+  int _healthFailureCount = 0;
 
   // GPS-Standort State
   LatLng? _currentLocation;
@@ -56,9 +58,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return state.hasWeather ? state.condition : null;
   }
 
-  // Chat-Nachrichten mit History fÃƒÂ¼r Backend
+  // Chat-Nachrichten mit History fÃÆÃÂ¼r Backend
   // Erweitert um POI-Liste Support
-  final List<Map<String, dynamic>> _messages = [];
+  final List<ChatUiMessage> _messages = [];
   bool _welcomeMessageAdded = false;
 
   List<String> _getSuggestions(BuildContext context) {
@@ -67,26 +69,160 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (condition == WeatherCondition.bad ||
         condition == WeatherCondition.danger) {
       return [
-        'Ã°Å¸Ââ€ºÃ¯Â¸Â ${context.l10n.chatIndoorTips}',
-        'Ã°Å¸â€œÂ ${context.l10n.chatPoisNearMe}',
-        'Ã°Å¸ÂÂ° ${context.l10n.chatAttractions}',
-        'Ã°Å¸ÂÂ½Ã¯Â¸Â ${context.l10n.chatRestaurants}',
+        'ÃÂ°ÃÂ¸ÃÂÃ¢â¬ÂºÃÂ¯ÃÂ¸ÃÂ ${context.l10n.chatIndoorTips}',
+        'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ ${context.l10n.chatPoisNearMe}',
+        'ÃÂ°ÃÂ¸ÃÂÃÂ° ${context.l10n.chatAttractions}',
+        'ÃÂ°ÃÂ¸ÃÂÃÂ½ÃÂ¯ÃÂ¸ÃÂ ${context.l10n.chatRestaurants}',
       ];
     }
     if (condition == WeatherCondition.good) {
       return [
-        'Ã¢Ëœâ‚¬Ã¯Â¸Â ${context.l10n.chatOutdoorHighlights}',
-        'Ã°Å¸â€œÂ ${context.l10n.chatPoisNearMe}',
-        'Ã°Å¸Å’Â² ${context.l10n.chatNatureParks}',
-        'Ã°Å¸ÂÂ° ${context.l10n.chatAttractions}',
+        'ÃÂ¢ÃÅÃ¢âÂ¬ÃÂ¯ÃÂ¸ÃÂ ${context.l10n.chatOutdoorHighlights}',
+        'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ ${context.l10n.chatPoisNearMe}',
+        'ÃÂ°ÃÂ¸ÃâÃÂ² ${context.l10n.chatNatureParks}',
+        'ÃÂ°ÃÂ¸ÃÂÃÂ° ${context.l10n.chatAttractions}',
       ];
     }
     return [
-      'Ã°Å¸â€œÂ ${context.l10n.chatPoisNearMe}',
-      'Ã°Å¸ÂÂ° ${context.l10n.chatAttractions}',
-      'Ã°Å¸Å’Â² ${context.l10n.chatNatureParks}',
-      'Ã°Å¸ÂÂ½Ã¯Â¸Â ${context.l10n.chatRestaurants}',
+      'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ ${context.l10n.chatPoisNearMe}',
+      'ÃÂ°ÃÂ¸ÃÂÃÂ° ${context.l10n.chatAttractions}',
+      'ÃÂ°ÃÂ¸ÃâÃÂ² ${context.l10n.chatNatureParks}',
+      'ÃÂ°ÃÂ¸ÃÂÃÂ½ÃÂ¯ÃÂ¸ÃÂ ${context.l10n.chatRestaurants}',
     ];
+  }
+
+  ChatRequestToken _startRequest(ChatRequestKind kind) {
+    final token = ChatRequestToken(id: ++_requestCounter, kind: kind);
+    _activeRequest = token;
+    return token;
+  }
+
+  bool _isCurrentRequest(ChatRequestToken token) {
+    return _activeRequest?.id == token.id;
+  }
+
+  void _finishRequest(ChatRequestToken token) {
+    if (_isCurrentRequest(token)) {
+      _activeRequest = null;
+    }
+  }
+
+  String _activeTripKey() {
+    final tripState = ref.read(tripStateProvider);
+    if (!tripState.hasRoute || tripState.route == null) {
+      return 'no_route';
+    }
+
+    final route = tripState.route!;
+    final stopIds = tripState.stops.take(15).map((s) => s.id).join(',');
+    return '${route.startAddress}|${route.endAddress}|$stopIds';
+  }
+
+  void _rememberTripMessage({
+    required String content,
+    required bool isUser,
+  }) {
+    final normalized = content.trim();
+    if (normalized.isEmpty) return;
+
+    final key = _activeTripKey();
+    final history = _tripScopedHistory.putIfAbsent(key, () => <ChatMessage>[]);
+    history.add(ChatMessage(content: normalized, isUser: isUser));
+    if (history.length > 20) {
+      history.removeRange(0, history.length - 20);
+    }
+  }
+
+  void _addTextMessage({
+    required String content,
+    required bool isUser,
+  }) {
+    _messages.add(TextMessage(content: content, isUser: isUser));
+  }
+
+  void _addSystemMessage({
+    required String content,
+    List<CopilotAction> actions = const [],
+  }) {
+    _messages.add(SystemMessage(content: content, actions: actions));
+  }
+
+  void _addPoiListMessage({
+    required String content,
+    required List<POI> pois,
+    Map<String, AiPoiMeta> aiMeta = const {},
+  }) {
+    _messages.add(PoiListMessage(content: content, pois: pois, aiMeta: aiMeta));
+  }
+
+  void _maybeAddCopilotCard({
+    required String sourceQuery,
+    List<POI> suggestedPOIs = const [],
+  }) {
+    final weatherState = ref.read(locationWeatherNotifierProvider);
+    final tripState = ref.read(tripStateProvider);
+    final lower = _normalizeText(sourceQuery);
+
+    if (weatherState.condition == WeatherCondition.bad ||
+        weatherState.condition == WeatherCondition.danger) {
+      _addSystemMessage(
+        content:
+            'Schlechtes Wetter erkannt. Ich kann dir eine Indoor-Alternative fuer die naechsten Stops anzeigen.',
+        actions: const [
+          CopilotAction(
+              id: 'indoor_alternatives', label: 'Indoor-Alternativen'),
+          CopilotAction(id: 'shorter_day', label: 'Kuerzere Tagesetappe'),
+        ],
+      );
+      return;
+    }
+
+    if (tripState.hasRoute && tripState.route!.durationMinutes >= 360) {
+      _addSystemMessage(
+        content:
+            'Die aktuelle Route ist lang. Ich kann die Etappe kuerzen oder einen Essensstopp entlang der Route vorschlagen.',
+        actions: const [
+          CopilotAction(id: 'shorter_day', label: 'Etappe kuerzen'),
+          CopilotAction(id: 'food_stop_30km', label: 'Essensstopp in 30 km'),
+        ],
+      );
+      return;
+    }
+
+    if (suggestedPOIs.isNotEmpty && !lower.contains('alternative')) {
+      _addSystemMessage(
+        content:
+            'Willst du statt der aktuellen Vorschlaege auch alternative Highlights vergleichen?',
+        actions: const [
+          CopilotAction(
+              id: 'compare_alternatives', label: 'Alternativen vergleichen'),
+        ],
+      );
+    }
+  }
+
+  Future<void> _runCopilotAction(String actionId) async {
+    switch (actionId) {
+      case 'indoor_alternatives':
+        await _handleLocationBasedQuery(
+            'Zeig mir Indoor-Tipps bei Regen in meiner Naehe');
+        break;
+      case 'shorter_day':
+        await _sendMessage(
+            'Bitte schlage eine kuerzere Tagesetappe fuer meine aktuelle Route vor.');
+        break;
+      case 'food_stop_30km':
+        await _handleLocationBasedQuery(
+            'Empfiehl mir einen Essensstopp in meiner Naehe');
+        break;
+      case 'compare_alternatives':
+        await _sendMessage(
+            'Bitte gib mir eine Alternative zu den aktuellen Empfehlungen.');
+        break;
+      default:
+        await _sendMessage(
+            'Bitte hilf mir bei der Optimierung meiner aktuellen Route.');
+    }
   }
 
   @override
@@ -119,7 +255,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       final location = result.position!;
 
-      // Reverse Geocoding fÃƒÂ¼r Ortsname
+      // Reverse Geocoding fÃÆÃÂ¼r Ortsname
       String? locationName;
       try {
         final geocodingRepo = ref.read(geocodingRepositoryProvider);
@@ -159,16 +295,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final aiService = ref.read(aiServiceProvider);
       final isHealthy = await aiService.checkHealth();
+      _healthFailureCount = isHealthy ? 0 : _healthFailureCount + 1;
       if (mounted) {
         setState(() {
-          _backendAvailable = isHealthy;
+          if (isHealthy) {
+            _backendAvailable = true;
+          } else if (_healthFailureCount >= 2) {
+            _backendAvailable = false;
+          }
         });
       }
     } catch (e) {
       debugPrint('[AI-Chat] Backend Health-Check fehlgeschlagen: $e');
+      _healthFailureCount++;
       if (mounted) {
         setState(() {
-          _backendAvailable = false;
+          if (_healthFailureCount >= 2) {
+            _backendAvailable = false;
+          }
         });
       }
     }
@@ -189,11 +333,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Add welcome message on first build (needs context for l10n)
     if (!_welcomeMessageAdded) {
       _welcomeMessageAdded = true;
-      _messages.add({
-        'content': context.l10n.chatWelcome,
-        'isUser': false,
-        'type': ChatMessageType.text,
-      });
+      _messages.add(TextMessage(
+        content: context.l10n.chatWelcome,
+        isUser: false,
+      ));
     }
 
     return Scaffold(
@@ -215,7 +358,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Status Banner (nur wenn Backend nicht verfÃƒÂ¼gbar)
+          // Status Banner (nur wenn Backend nicht verfÃÆÃÂ¼gbar)
           _buildStatusBanner(colorScheme),
 
           // Location Header mit Standort und Radius
@@ -239,48 +382,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       }
 
                       final message = _messages[index];
-                      final messageType = message['type'] as ChatMessageType? ??
-                          ChatMessageType.text;
 
-                      // POI-Liste anzeigen
-                      if (messageType == ChatMessageType.poiList) {
-                        final pois = message['pois'] as List<POI>?;
-                        final headerText = message['content'] as String?;
-                        final aiMetaRaw = message['aiMeta'];
-                        final aiMeta = aiMetaRaw is Map
-                            ? Map<String, Map<String, dynamic>>.from(
-                                aiMetaRaw.map(
-                                  (key, value) => MapEntry(
-                                    key.toString(),
-                                    Map<String, dynamic>.from(
-                                      (value as Map?) ?? const {},
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : const <String, Map<String, dynamic>>{};
+                      if (message is PoiListMessage) {
                         return _buildPOIListMessage(
-                          pois: pois ?? [],
-                          headerText: headerText,
+                          pois: message.pois,
+                          headerText: message.content,
                           colorScheme: colorScheme,
-                          aiMeta: aiMeta,
+                          aiMeta: message.aiMeta,
                         );
                       }
 
-                      // Standard Text-Nachricht
+                      if (message is SystemMessage) {
+                        return _buildSystemMessageCard(
+                          message: message,
+                          colorScheme: colorScheme,
+                        );
+                      }
+
                       return ChatMessageBubble(
-                        content: message['content'],
-                        isUser: message['isUser'],
+                        content: message.content,
+                        isUser: message.isUser,
                       );
                     },
                   ),
           ),
 
-          // VorschlÃƒÂ¤ge
+          // VorschlÃÆÃÂ¤ge
           if (_messages.length <= 2)
             SuggestionChips(
               suggestions: _getSuggestions(context),
-              onSelected: _handleSuggestionTap,
+              onSelected: (value) => _handleSuggestionTap(value),
             ),
 
           // Eingabefeld
@@ -293,7 +424,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildStatusBanner(ColorScheme colorScheme) {
     if (_backendAvailable) return const SizedBox.shrink();
 
-    // PrÃƒÂ¼fe ob Backend ÃƒÂ¼berhaupt konfiguriert ist
+    // PrÃÆÃÂ¼fe ob Backend ÃÆÃÂ¼berhaupt konfiguriert ist
     final isConfigured = ApiConfig.isConfigured;
     final message = isConfigured
         ? context.l10n.chatDemoBackendNotReachable
@@ -651,12 +782,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<POI> pois,
     String? headerText,
     required ColorScheme colorScheme,
-    Map<String, Map<String, dynamic>> aiMeta = const {},
+    Map<String, AiPoiMeta> aiMeta = const {},
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header-Text (z.B. "Ã°Å¸â€œÂ POIs in deiner NÃƒÂ¤he:")
+        // Header-Text (z.B. "ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ POIs in deiner NÃÆÃÂ¤he:")
         if (headerText != null && headerText.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -719,33 +850,86 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Widget _buildSystemMessageCard({
+    required SystemMessage message,
+    required ColorScheme colorScheme,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: colorScheme.secondaryContainer.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.tips_and_updates_outlined,
+                    size: 16, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'AI Copilot',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message.content,
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            if (message.actions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: message.actions
+                      .map(
+                        (action) => OutlinedButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => _runCopilotAction(action.id),
+                          child: Text(action.label),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Einzelne POI-Karte (anklickbar)
   Widget _buildPOICard(
     POI poi,
     ColorScheme colorScheme,
-    Map<String, dynamic>? aiMeta,
+    AiPoiMeta? aiMeta,
   ) {
     // Distanz zum aktuellen Standort berechnen
     double? distanceKm;
     if (_currentLocation != null) {
-      final Distance distance = const Distance();
+      const Distance distance = Distance();
       distanceKm = distance.as(
-            LengthUnit.Kilometer,
-            _currentLocation!,
-            poi.location,
-          ) /
-          1000;
+        LengthUnit.Kilometer,
+        _currentLocation!,
+        poi.location,
+      );
     }
 
-    final highlights = ((aiMeta?['highlights'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .toList();
-    final aiPhotoUrls = ((aiMeta?['photoUrls'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .where((url) => url.isNotEmpty)
-        .toList();
-    final longDescription = (aiMeta?['longDescription'] as String?)?.trim();
-    final aiReason = (aiMeta?['reason'] as String?)?.trim();
+    final highlights = aiMeta?.highlights ?? const <String>[];
+    final aiPhotoUrls = aiMeta?.photoUrls ?? const <String>[];
+    final longDescription = aiMeta?.longDescription?.trim();
+    final aiReason = aiMeta?.reason?.trim();
     final cardImageUrl =
         aiPhotoUrls.isNotEmpty ? aiPhotoUrls.first : poi.imageUrl;
     final showPhotoFallbackHint = cardImageUrl == null;
@@ -976,7 +1160,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  /// Icon fÃƒÂ¼r POI-Kategorie
+  /// Icon fÃÆÃÂ¼r POI-Kategorie
   IconData _getCategoryIcon(String categoryId) {
     switch (categoryId) {
       case 'museum':
@@ -1008,7 +1192,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Navigation zu POI-Details
   void _navigateToPOI(POI poi) {
-    // POI zum State hinzufÃƒÂ¼gen (damit POI-Detail-Screen ihn findet)
+    // POI zum State hinzufÃÆÃÂ¼gen (damit POI-Detail-Screen ihn findet)
     ref.read(pOIStateNotifierProvider.notifier).addPOI(poi);
 
     // Enrichment starten falls kein Bild
@@ -1108,7 +1292,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ]);
   }
 
-  /// PrÃƒÂ¼ft ob die Anfrage standortbasiert ist
+  /// PrÃÆÃÂ¼ft ob die Anfrage standortbasiert ist
   bool _isLocationBasedQuery(String query) {
     final lowerQuery = _normalizeText(query);
     final locationKeywords = [
@@ -1195,49 +1379,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Standortbasierte POI-Anfrage verarbeiten
   Future<void> _handleLocationBasedQuery(String query) async {
+    if (_isLoading) return;
+
+    final requestToken = _startRequest(ChatRequestKind.nearby);
     final l10n = context.l10n;
     final responseLanguage = Localizations.localeOf(context).languageCode;
 
     setState(() {
-      _messages.add({
-        'content': query,
-        'isUser': true,
-        'type': ChatMessageType.text,
-      });
+      _addTextMessage(content: query, isUser: true);
       _isLoading = true;
     });
     _messageController.clear();
     _scrollToBottom();
 
-    if (_currentLocation == null) {
-      await _initializeLocation();
-
+    try {
       if (_currentLocation == null) {
-        final serviceEnabled = await LocationHelper.isServiceEnabled();
-        if (!serviceEnabled) {
-          final shouldOpen = await _showGpsDialog();
-          if (shouldOpen) {
-            await LocationHelper.openSettings();
-          }
-        }
+        await _initializeLocation();
 
-        if (mounted) {
+        if (_currentLocation == null) {
+          final serviceEnabled = await LocationHelper.isServiceEnabled();
+          if (!serviceEnabled) {
+            final shouldOpen = await _showGpsDialog();
+            if (shouldOpen) {
+              await LocationHelper.openSettings();
+            }
+          }
+
+          if (!mounted || !_isCurrentRequest(requestToken)) return;
           setState(() {
             _isLoading = false;
-            _messages.add({
-              'content': '**${l10n.chatLocationNotAvailable}**\n\n'
+            _addTextMessage(
+              content: '**${l10n.chatLocationNotAvailable}**\n\n'
                   '${l10n.chatLocationNotAvailableMessage}',
-              'isUser': false,
-              'type': ChatMessageType.text,
-            });
+              isUser: false,
+            );
           });
           _scrollToBottom();
+          return;
         }
-        return;
       }
-    }
 
-    try {
       final currentLocation = _currentLocation!;
       debugPrint(
           '[AI-Chat] Suche POIs um ${currentLocation.latitude}, ${currentLocation.longitude} mit Radius ${_searchRadius}km');
@@ -1278,7 +1459,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (!mounted) return;
       debugPrint('[AI-Chat] ${pois.length} POIs gefunden');
 
-      final distanceCalculator = const Distance();
+      const distanceCalculator = Distance();
       var sortedPOIs = List<POI>.from(pois);
       sortedPOIs.sort((a, b) {
         final distA = distanceCalculator.as(
@@ -1298,7 +1479,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
 
-      final aiMeta = <String, Map<String, dynamic>>{};
+      final aiMeta = <String, AiPoiMeta>{};
       String aiSummary = '';
 
       if (_backendAvailable && sortedPOIs.isNotEmpty) {
@@ -1349,12 +1530,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             final poi = byId[suggestion.poiId];
             if (poi == null) continue;
             prioritized.add(poi);
-            aiMeta[poi.id] = {
-              'reason': suggestion.reason,
-              'highlights': suggestion.highlights,
-              'longDescription': suggestion.longDescription,
-              'photoUrls': <String>[],
-            };
+            aiMeta[poi.id] = AiPoiMeta(
+              reason: suggestion.reason,
+              highlights: suggestion.highlights,
+              longDescription: suggestion.longDescription,
+              photoUrls: const [],
+            );
           }
 
           if (prioritized.isNotEmpty) {
@@ -1414,15 +1595,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             for (final entry in photoResults) {
               final meta = aiMeta[entry.key];
               if (meta == null) continue;
-              meta['photoUrls'] = entry.value;
-              if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
+              var nextMeta = meta.copyWith(photoUrls: entry.value);
+              if ((nextMeta.longDescription ?? '').trim().isEmpty) {
                 final poi = byId[entry.key];
                 if (poi != null) {
-                  meta['longDescription'] = poi.description ??
-                      poi.wikidataDescription ??
-                      poi.shortDescription;
+                  nextMeta = nextMeta.copyWith(
+                    longDescription: poi.description ??
+                        poi.wikidataDescription ??
+                        poi.shortDescription,
+                  );
                 }
               }
+              aiMeta[entry.key] = nextMeta;
             }
           } catch (e) {
             debugPrint('[AI-Chat] Media-Enrichment fehlgeschlagen: $e');
@@ -1443,15 +1627,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         headerText = '$headerText\n$aiSummary';
       }
 
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
       setState(() {
         _isLoading = false;
-        _messages.add({
-          'content': headerText,
-          'isUser': false,
-          'type': ChatMessageType.poiList,
-          'pois': sortedPOIs,
-          if (aiMeta.isNotEmpty) 'aiMeta': aiMeta,
-        });
+        _addPoiListMessage(
+          content: headerText,
+          pois: sortedPOIs,
+          aiMeta: aiMeta,
+        );
+        _maybeAddCopilotCard(
+          sourceQuery: query,
+          suggestedPOIs: sortedPOIs.take(8).toList(),
+        );
       });
       _scrollToBottom();
 
@@ -1468,46 +1655,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final enrichedMap =
             await enrichmentService.enrichPOIsBatch(poisToEnrich);
 
-        if (mounted && messageIndex < _messages.length) {
+        if (mounted &&
+            _isCurrentRequest(requestToken) &&
+            messageIndex < _messages.length) {
           final updatedPOIs =
               sortedPOIs.map((poi) => enrichedMap[poi.id] ?? poi).toList();
           setState(() {
-            final existingMetaRaw = _messages[messageIndex]['aiMeta'];
-            final existingMeta = existingMetaRaw is Map
-                ? Map<String, Map<String, dynamic>>.from(
-                    existingMetaRaw.map(
-                      (key, value) => MapEntry(
-                        key.toString(),
-                        Map<String, dynamic>.from((value as Map?) ?? const {}),
-                      ),
-                    ),
-                  )
-                : <String, Map<String, dynamic>>{};
+            final currentMessage = _messages[messageIndex];
+            if (currentMessage is! PoiListMessage) {
+              return;
+            }
+            final existingMeta = Map<String, AiPoiMeta>.from(
+              currentMessage.aiMeta,
+            );
 
             for (final poi in updatedPOIs) {
               final meta = existingMeta[poi.id];
               if (meta == null) continue;
-              final currentPhotos = ((meta['photoUrls'] as List?) ?? const [])
-                  .map((e) => e.toString())
+              final currentPhotos = meta.photoUrls
+                  .map((url) => url.toString().trim())
                   .where((url) => url.isNotEmpty)
                   .toList();
+              var nextMeta = meta;
               if (currentPhotos.isEmpty &&
                   poi.imageUrl != null &&
                   poi.imageUrl!.isNotEmpty) {
-                meta['photoUrls'] = [poi.imageUrl!];
+                nextMeta = nextMeta.copyWith(photoUrls: [poi.imageUrl!]);
               }
-              if (((meta['longDescription'] as String?) ?? '').trim().isEmpty) {
-                meta['longDescription'] = poi.description ??
-                    poi.wikidataDescription ??
-                    poi.shortDescription;
+              if ((nextMeta.longDescription ?? '').trim().isEmpty) {
+                nextMeta = nextMeta.copyWith(
+                  longDescription: poi.description ??
+                      poi.wikidataDescription ??
+                      poi.shortDescription,
+                );
               }
+              existingMeta[poi.id] = nextMeta;
             }
 
-            _messages[messageIndex] = {
-              ..._messages[messageIndex],
-              'pois': updatedPOIs,
-              if (existingMeta.isNotEmpty) 'aiMeta': existingMeta,
-            };
+            _messages[messageIndex] = currentMessage.copyWith(
+              pois: updatedPOIs,
+              aiMeta: existingMeta,
+            );
           });
           debugPrint('[AI-Chat] Hintergrund-Enrichment abgeschlossen');
         }
@@ -1518,15 +1706,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _messages.add({
-            'content': '**${l10n.chatPoisSearchError}**\n\n'
-                '${l10n.chatPoisSearchErrorMessage}',
-            'isUser': false,
-            'type': ChatMessageType.text,
-          });
+          _addTextMessage(
+            content:
+                '**${l10n.chatPoisSearchError}**\n\n${l10n.chatPoisSearchErrorMessage}',
+            isUser: false,
+          );
         });
         _scrollToBottom();
       }
+    } finally {
+      _finishRequest(requestToken);
     }
   }
 
@@ -1534,87 +1723,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (text.trim().isEmpty) return;
     if (_isLoading) return;
 
+    final requestToken = _startRequest(ChatRequestKind.chat);
     final userMessage = text.trim();
     final normalizedMessage = _normalizeText(userMessage);
 
     if (_isRouteCreationIntent(normalizedMessage)) {
       setState(() {
-        _messages.add({
-          'content': userMessage,
-          'isUser': true,
-          'type': ChatMessageType.text,
-        });
-        _messages.add({
-          'content':
-              'Ich Ã¶ffne den Routen-Generator. Gib dort Ziel/Start ein und ich Ã¼bergebe die Route direkt an deine Planung.',
-          'isUser': false,
-          'type': ChatMessageType.text,
-        });
+        _addTextMessage(content: userMessage, isUser: true);
+        _addTextMessage(
+          content:
+              'Ich ÃÂ¶ffne den Routen-Generator. Gib dort Ziel/Start ein und ich ÃÂ¼bergebe die Route direkt an deine Planung.',
+          isUser: false,
+        );
       });
       _messageController.clear();
       _scrollToBottom();
       _showTripGeneratorDialog();
+      _finishRequest(requestToken);
       return;
     }
 
     if (_isRestaurantIntent(normalizedMessage)) {
       final localRestaurantQuery = _isLocationBasedQuery(userMessage)
           ? userMessage
-          : '$userMessage in meiner NÃ¤he';
+          : '$userMessage in meiner NÃÂ¤he';
       await _handleLocationBasedQuery(localRestaurantQuery);
+      _finishRequest(requestToken);
       return;
     }
 
-    // PrÃ¼fe ob standortbasierte Anfrage
     if (_isLocationBasedQuery(userMessage)) {
       await _handleLocationBasedQuery(userMessage);
+      _finishRequest(requestToken);
       return;
     }
 
     setState(() {
-      _messages.add({
-        'content': userMessage,
-        'isUser': true,
-        'type': ChatMessageType.text,
-      });
+      _addTextMessage(content: userMessage, isUser: true);
       _isLoading = true;
     });
+    _rememberTripMessage(content: userMessage, isUser: true);
 
     _messageController.clear();
     _scrollToBottom();
 
     try {
-      // PrÃ¼fe ob Backend verfÃ¼gbar ist
       if (!_backendAvailable) {
         await Future.delayed(const Duration(milliseconds: 500));
-        if (!mounted) return;
+        if (!mounted || !_isCurrentRequest(requestToken)) return;
 
         setState(() {
           _isLoading = false;
-          _messages.add({
-            'content': _generateSmartDemoResponse(userMessage),
-            'isUser': false,
-            'type': ChatMessageType.text,
-          });
+          _addTextMessage(
+            content: _generateSmartDemoResponse(userMessage),
+            isUser: false,
+          );
         });
         _scrollToBottom();
         return;
       }
 
-      // Echte API-Anfrage mit Chat-History
       final aiService = ref.read(aiServiceProvider);
       debugPrint('[AI-Chat] Sende Anfrage an Backend...');
 
-      // Chat-History fÃ¼r Kontext aufbereiten
-      final history = _messages
-          .where((m) => m['content'] != null)
-          .map((m) => ChatMessage(
-                content: m['content'] as String,
-                isUser: m['isUser'] as bool,
-              ))
-          .toList();
+      final tripScopedHistory = List<ChatMessage>.from(
+        _tripScopedHistory[_activeTripKey()] ?? const <ChatMessage>[],
+      );
+      final history = tripScopedHistory.isNotEmpty
+          ? tripScopedHistory
+          : _messages
+              .where((m) => m.content.trim().isNotEmpty)
+              .map((m) => ChatMessage(
+                    content: m.content,
+                    isUser: m.isUser,
+                  ))
+              .toList();
 
-      // Trip-Kontext abrufen (mit Standort fÃ¼r standortbasierte Empfehlungen)
       final tripState = ref.read(tripStateProvider);
       final tripContext = TripContext(
         route: tripState.route,
@@ -1627,62 +1811,73 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final response = await aiService.chat(
         message: userMessage,
         context: tripContext,
-        history: history.take(10).toList(), // Letzte 10 Nachrichten
+        history: history.take(10).toList(),
       );
 
-      if (!mounted) return;
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
 
       setState(() {
         _isLoading = false;
-        _messages.add({
-          'content': response.isNotEmpty
+        _addTextMessage(
+          content: response.isNotEmpty
               ? response
               : context.l10n.chatNoResponseGenerated,
-          'isUser': false,
-        });
+          isUser: false,
+        );
+        _maybeAddCopilotCard(sourceQuery: userMessage);
       });
+      _rememberTripMessage(
+        content: response.isNotEmpty
+            ? response
+            : context.l10n.chatNoResponseGenerated,
+        isUser: false,
+      );
       _scrollToBottom();
     } catch (e) {
       debugPrint('[AI-Chat] Fehler: $e');
 
-      if (!mounted) return;
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
+      final fallbackMessage = e is AIException
+          ? e.message
+          : _generateSmartDemoResponse(userMessage);
 
-      // Bei Fehler auf Demo-Modus wechseln
       setState(() {
-        _backendAvailable = false;
+        if (e is! AIException || !e.isRetryable) {
+          _backendAvailable = false;
+        }
         _isLoading = false;
-        _messages.add({
-          'content': _generateSmartDemoResponse(userMessage),
-          'isUser': false,
-        });
+        _addTextMessage(content: fallbackMessage, isUser: false);
       });
+      _rememberTripMessage(content: fallbackMessage, isUser: false);
       _scrollToBottom();
+    } finally {
+      _finishRequest(requestToken);
     }
   }
 
-  /// Intelligente Demo-Antworten basierend auf SchlÃƒÂ¼sselwÃƒÂ¶rtern
+  /// Intelligente Demo-Antworten basierend auf SchlÃÆÃÂ¼sselwÃÆÃÂ¶rtern
   String _generateSmartDemoResponse(String query) {
     final lowerQuery = query.toLowerCase();
 
-    // SehenswÃƒÂ¼rdigkeiten
-    if (lowerQuery.contains('sehenswÃƒÂ¼rd') ||
+    // SehenswÃÆÃÂ¼rdigkeiten
+    if (lowerQuery.contains('sehenswÃÆÃÂ¼rd') ||
         lowerQuery.contains('sightseeing') ||
         lowerQuery.contains('besichtigen')) {
       final tripState = ref.read(tripStateProvider);
       if (tripState.hasRoute && tripState.stops.isNotEmpty) {
         final stopList = tripState.stops
             .take(5)
-            .map((s) => 'Ã¢â‚¬Â¢ ${s.name} (${s.categoryLabel})')
+            .map((s) => 'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ${s.name} (${s.categoryLabel})')
             .join('\n');
-        return 'Ã°Å¸â€œÂ **SehenswÃƒÂ¼rdigkeiten auf deiner Route:**\n\n'
+        return 'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ **SehenswÃÆÃÂ¼rdigkeiten auf deiner Route:**\n\n'
             '$stopList\n\n'
-            'Tippe auf einen Stop im Trip-Screen fÃƒÂ¼r Details!';
+            'Tippe auf einen Stop im Trip-Screen fÃÆÃÂ¼r Details!';
       }
-      return 'Ã°Å¸â€”ÂºÃ¯Â¸Â **Top SehenswÃƒÂ¼rdigkeiten:**\n\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸ÂÂ° Schloss Neuschwanstein - Bayerns MÃƒÂ¤rchenschloss\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Ââ€Ã¯Â¸Â Zugspitze - Deutschlands hÃƒÂ¶chster Gipfel\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Å’Â² Partnachklamm - Beeindruckende Schlucht\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Ââ€ºÃ¯Â¸Â Marienplatz MÃƒÂ¼nchen - Historisches Zentrum\n\n'
+      return 'ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ **Top SehenswÃÆÃÂ¼rdigkeiten:**\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃÂ° Schloss Neuschwanstein - Bayerns MÃÆÃÂ¤rchenschloss\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃ¢â¬ÂÃÂ¯ÃÂ¸ÃÂ Zugspitze - Deutschlands hÃÆÃÂ¶chster Gipfel\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃâÃÂ² Partnachklamm - Beeindruckende Schlucht\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃ¢â¬ÂºÃÂ¯ÃÂ¸ÃÂ Marienplatz MÃÆÃÂ¼nchen - Historisches Zentrum\n\n'
           'Erstelle eine Route, um personalisierte Empfehlungen zu erhalten!';
     }
 
@@ -1691,34 +1886,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('park') ||
         lowerQuery.contains('wald') ||
         lowerQuery.contains('see')) {
-      return 'Ã°Å¸Å’Â² **Naturhighlights:**\n\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸ÂÅ¾Ã¯Â¸Â **KÃƒÂ¶nigssee** - Kristallklarer Bergsee\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Å’Â² **Nationalpark Berchtesgaden** - UnberÃƒÂ¼hrte Natur\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Ââ€Ã¯Â¸Â **Partnachklamm** - SpektakulÃƒÂ¤re Schlucht\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Å’Â³ **Englischer Garten** - MÃƒÂ¼nchens grÃƒÂ¼ne Oase\n\n'
-          'WÃƒÂ¤hle "Ã°Å¸Â¤â€“ AI-Trip generieren" mit Interesse "Natur" fÃƒÂ¼r eine personalisierte Route!';
+      return 'ÃÂ°ÃÂ¸ÃâÃÂ² **Naturhighlights:**\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃÂ¾ÃÂ¯ÃÂ¸ÃÂ **KÃÆÃÂ¶nigssee** - Kristallklarer Bergsee\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃâÃÂ² **Nationalpark Berchtesgaden** - UnberÃÆÃÂ¼hrte Natur\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃ¢â¬ÂÃÂ¯ÃÂ¸ÃÂ **Partnachklamm** - SpektakulÃÆÃÂ¤re Schlucht\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃâÃÂ³ **Englischer Garten** - MÃÆÃÂ¼nchens grÃÆÃÂ¼ne Oase\n\n'
+          'WÃÆÃÂ¤hle "ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â AI-Trip generieren" mit Interesse "Natur" fÃÆÃÂ¼r eine personalisierte Route!';
     }
 
     // Restaurants
     if (lowerQuery.contains('restaurant') ||
         lowerQuery.contains('essen') ||
         lowerQuery.contains('imbiss') ||
-        lowerQuery.contains('kÃƒÂ¼che')) {
-      return 'Ã°Å¸ÂÂ½Ã¯Â¸Â **Restaurant-Empfehlungen:**\n\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Â¥Â¨ **HofbrÃƒÂ¤uhaus MÃƒÂ¼nchen** - Bayerische Klassiker (4.5Ã¢Ëœâ€¦)\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Ââ€“ **Augustiner BrÃƒÂ¤ustuben** - Traditionell & gemÃƒÂ¼tlich (4.4Ã¢Ëœâ€¦)\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Â¥â€” **Prinz Myshkin** - Vegetarisch & modern (4.3Ã¢Ëœâ€¦)\n\n'
-          'Tipp: Nutze die POI-Liste mit Filter "Restaurant" fÃƒÂ¼r mehr Optionen!';
+        lowerQuery.contains('kÃÆÃÂ¼che')) {
+      return 'ÃÂ°ÃÂ¸ÃÂÃÂ½ÃÂ¯ÃÂ¸ÃÂ **Restaurant-Empfehlungen:**\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ¥ÃÂ¨ **HofbrÃÆÃÂ¤uhaus MÃÆÃÂ¼nchen** - Bayerische Klassiker (4.5ÃÂ¢ÃÅÃ¢â¬Â¦)\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃ¢â¬â **Augustiner BrÃÆÃÂ¤ustuben** - Traditionell & gemÃÆÃÂ¼tlich (4.4ÃÂ¢ÃÅÃ¢â¬Â¦)\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ¥Ã¢â¬â **Prinz Myshkin** - Vegetarisch & modern (4.3ÃÂ¢ÃÅÃ¢â¬Â¦)\n\n'
+          'Tipp: Nutze die POI-Liste mit Filter "Restaurant" fÃÆÃÂ¼r mehr Optionen!';
     }
 
     // Hotels
     if (lowerQuery.contains('hotel') ||
-        lowerQuery.contains('ÃƒÂ¼bernacht') ||
+        lowerQuery.contains('ÃÆÃÂ¼bernacht') ||
         lowerQuery.contains('schlafen')) {
-      return 'Ã°Å¸ÂÂ¨ **Unterkunft-Tipps:**\n\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸ÂÂ¨ Hotels findest du ÃƒÂ¼ber die POI-Suche\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸â€™Â¡ Filtere nach "Hotel" in der POI-Liste\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸â€œÂ Auf der Karte siehst du Hotels in der NÃƒÂ¤he\n\n'
+      return 'ÃÂ°ÃÂ¸ÃÂÃÂ¨ **Unterkunft-Tipps:**\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃÂ¨ Hotels findest du ÃÆÃÂ¼ber die POI-Suche\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬â¢ÃÂ¡ Filtere nach "Hotel" in der POI-Liste\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ Auf der Karte siehst du Hotels in der NÃÆÃÂ¤he\n\n'
           'Erstelle erst deine Route, dann zeige ich dir Hotels entlang des Weges!';
     }
 
@@ -1726,10 +1921,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (lowerQuery.contains('wetter') ||
         lowerQuery.contains('regen') ||
         lowerQuery.contains('sonne')) {
-      return 'Ã¢Ëœâ‚¬Ã¯Â¸Â **Wetter-Info:**\n\n'
+      return 'ÃÂ¢ÃÅÃ¢âÂ¬ÃÂ¯ÃÂ¸ÃÂ **Wetter-Info:**\n\n'
           'Aktuelle Wetterdaten siehst du:\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸â€”ÂºÃ¯Â¸Â Auf dem Map-Screen oben\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Å½Â¯ Bei POIs mit Outdoor-AktivitÃƒÂ¤ten\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ Auf dem Map-Screen oben\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ½ÃÂ¯ Bei POIs mit Outdoor-AktivitÃÆÃÂ¤ten\n\n'
           'Tipp: Bei Regen empfehle ich Museen und Indoor-Attraktionen!';
     }
 
@@ -1739,18 +1934,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('weg')) {
       final tripState = ref.read(tripStateProvider);
       if (tripState.hasRoute) {
-        return 'Ã°Å¸â€ºÂ£Ã¯Â¸Â **Deine aktuelle Route:**\n\n'
-            'Ã°Å¸â€œÂ Start: ${tripState.route!.startAddress}\n'
-            'Ã°Å¸Å½Â¯ Ziel: ${tripState.route!.endAddress}\n'
-            'Ã°Å¸â€œÂ Distanz: ${tripState.route!.distanceKm.toStringAsFixed(0)} km\n'
-            'Ã¢ÂÂ±Ã¯Â¸Â Fahrzeit: ${(tripState.route!.durationMinutes / 60).toStringAsFixed(1)}h\n'
-            'Ã°Å¸Å½Â¯ Stops: ${tripState.stops.length}\n\n'
-            'Gehe zum Trip-Screen fÃƒÂ¼r Details!';
+        return 'ÃÂ°ÃÂ¸Ã¢â¬ÂºÃÂ£ÃÂ¯ÃÂ¸ÃÂ **Deine aktuelle Route:**\n\n'
+            'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ Start: ${tripState.route!.startAddress}\n'
+            'ÃÂ°ÃÂ¸ÃÂ½ÃÂ¯ Ziel: ${tripState.route!.endAddress}\n'
+            'ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ Distanz: ${tripState.route!.distanceKm.toStringAsFixed(0)} km\n'
+            'ÃÂ¢ÃÂÃÂ±ÃÂ¯ÃÂ¸ÃÂ Fahrzeit: ${(tripState.route!.durationMinutes / 60).toStringAsFixed(1)}h\n'
+            'ÃÂ°ÃÂ¸ÃÂ½ÃÂ¯ Stops: ${tripState.stops.length}\n\n'
+            'Gehe zum Trip-Screen fÃÆÃÂ¼r Details!';
       }
-      return 'Ã°Å¸â€”ÂºÃ¯Â¸Â **Route erstellen:**\n\n'
-          '1. Gehe zum Ã°Å¸â€”ÂºÃ¯Â¸Â Karten-Screen\n'
+      return 'ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ **Route erstellen:**\n\n'
+          '1. Gehe zum ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ Karten-Screen\n'
           '2. Tippe auf Start- und Zielpunkt\n'
-          '3. Oder nutze "Ã°Å¸Â¤â€“ AI-Trip generieren"\n\n'
+          '3. Oder nutze "ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â AI-Trip generieren"\n\n'
           'Dann kann ich dir Empfehlungen entlang der Route geben!';
     }
 
@@ -1759,45 +1954,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lowerQuery.contains('help') ||
         lowerQuery.contains('kannst du') ||
         lowerQuery.contains('was kann')) {
-      return 'Ã°Å¸Â¤â€“ **Was ich kann:**\n\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸â€”ÂºÃ¯Â¸Â Routen-Infos geben\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸â€œÂ SehenswÃƒÂ¼rdigkeiten empfehlen\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Å’Â² Naturhighlights zeigen\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸ÂÂ½Ã¯Â¸Â Restaurants vorschlagen\n'
-          'Ã¢â‚¬Â¢ Ã°Å¸Â¤â€“ AI-Trips generieren\n\n'
-          'Frag mich einfach oder wÃƒÂ¤hle einen Vorschlag unten!';
+      return 'ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â **Was ich kann:**\n\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ Routen-Infos geben\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ SehenswÃÆÃÂ¼rdigkeiten empfehlen\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃâÃÂ² Naturhighlights zeigen\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂÃÂ½ÃÂ¯ÃÂ¸ÃÂ Restaurants vorschlagen\n'
+          'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â AI-Trips generieren\n\n'
+          'Frag mich einfach oder wÃÆÃÂ¤hle einen Vorschlag unten!';
     }
 
-    // StÃƒÂ¤dte-spezifisch
+    // StÃÆÃÂ¤dte-spezifisch
     final cities = [
-      'mÃƒÂ¼nchen',
+      'mÃÆÃÂ¼nchen',
       'berlin',
       'hamburg',
-      'kÃƒÂ¶ln',
+      'kÃÆÃÂ¶ln',
       'prag',
       'wien',
       'salzburg'
     ];
     for (final city in cities) {
       if (lowerQuery.contains(city)) {
-        return 'Ã°Å¸Ââ„¢Ã¯Â¸Â **$city erkunden:**\n\n'
-            'Nutze "Ã°Å¸Â¤â€“ AI-Trip generieren" und gib "$city" als Ziel ein!\n\n'
+        return 'ÃÂ°ÃÂ¸ÃÂÃ¢âÂ¢ÃÂ¯ÃÂ¸ÃÂ **$city erkunden:**\n\n'
+            'Nutze "ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â AI-Trip generieren" und gib "$city" als Ziel ein!\n\n'
             'Dort kannst du:\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸â€œâ€¦ Anzahl der Tage wÃƒÂ¤hlen\n'
-            'Ã¢â‚¬Â¢ Ã¢ÂÂ¤Ã¯Â¸Â Interessen angeben (Kultur, Natur, Essen...)\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Å¡â€” Eine optimierte Route erhalten\n\n'
+            'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬ÅÃ¢â¬Â¦ Anzahl der Tage wÃÆÃÂ¤hlen\n'
+            'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ¢ÃÂÃÂ¤ÃÂ¯ÃÂ¸ÃÂ Interessen angeben (Kultur, Natur, Essen...)\n'
+            'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ¡Ã¢â¬â Eine optimierte Route erhalten\n\n'
             'Oder gehe zur POI-Liste und suche nach "$city"!';
       }
     }
 
     // Default-Antwort
-    return 'Ã°Å¸Â¤â€ **Interessante Frage!**\n\n'
-        'Im vollstÃƒÂ¤ndigen Modus mit Backend-Verbindung kann ich dir hier eine detaillierte Antwort geben.\n\n'
+    return 'ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬Â **Interessante Frage!**\n\n'
+        'Im vollstÃÆÃÂ¤ndigen Modus mit Backend-Verbindung kann ich dir hier eine detaillierte Antwort geben.\n\n'
         '**Probiere diese Funktionen:**\n'
-        'Ã¢â‚¬Â¢ Ã°Å¸Â¤â€“ AI-Trip generieren (Button unten)\n'
-        'Ã¢â‚¬Â¢ Ã°Å¸â€”ÂºÃ¯Â¸Â Route auf der Karte erstellen\n'
-        'Ã¢â‚¬Â¢ Ã°Å¸â€œÂ POI-Liste durchsuchen\n\n'
-        '_Tipp: Frage nach SehenswÃƒÂ¼rdigkeiten, Restaurants oder Natur!_';
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â AI-Trip generieren (Button unten)\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ Route auf der Karte erstellen\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ ÃÂ°ÃÂ¸Ã¢â¬ÅÃÂ POI-Liste durchsuchen\n\n'
+        '_Tipp: Frage nach SehenswÃÆÃÂ¼rdigkeiten, Restaurants oder Natur!_';
   }
 
   void _scrollToBottom() {
@@ -1831,10 +2026,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Navigator.pop(context);
               setState(() {
                 _messages.clear();
-                _messages.add({
-                  'content': l10n.chatWelcome,
-                  'isUser': false,
-                });
+                _tripScopedHistory.clear();
+                _addTextMessage(content: l10n.chatWelcome, isUser: false);
               });
             },
             child: Text(l10n.clear),
@@ -1844,131 +2037,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  void _handleSuggestionTap(String suggestion) {
+  Future<void> _handleSuggestionTap(String suggestion) async {
+    if (_isLoading) return;
+
     final l10n = context.l10n;
     if (suggestion.contains(l10n.chatPoisNearMe)) {
-      _handleLocationBasedQuery('Zeig mir POIs in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery('Zeig mir POIs in meiner NÃÂ¤he');
     } else if (suggestion.contains(l10n.chatAttractions)) {
-      _handleLocationBasedQuery(
-          'Zeig mir SehenswÃƒÂ¼rdigkeiten in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery(
+        'Zeig mir SehenswÃÂ¼rdigkeiten in meiner NÃÂ¤he',
+      );
     } else if (suggestion.contains(l10n.chatNatureParks)) {
-      _handleLocationBasedQuery('Zeig mir Natur und Parks in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery(
+          'Zeig mir Natur und Parks in meiner NÃÂ¤he');
     } else if (suggestion.contains(l10n.chatRestaurants)) {
-      _handleLocationBasedQuery('Zeig mir Restaurants in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery('Zeig mir Restaurants in meiner NÃÂ¤he');
     } else if (suggestion.contains(l10n.chatIndoorTips)) {
-      _handleLocationBasedQuery(
-          'Zeig mir Indoor-Tipps bei Regen in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery(
+        'Zeig mir Indoor-Tipps bei Regen in meiner NÃÂ¤he',
+      );
     } else if (suggestion.contains(l10n.chatOutdoorHighlights)) {
-      _handleLocationBasedQuery(
-          'Zeig mir Outdoor-Highlights in meiner NÃƒÂ¤he');
+      await _handleLocationBasedQuery(
+        'Zeig mir Outdoor-Highlights in meiner NÃÂ¤he',
+      );
     } else {
-      _sendMessage(suggestion);
+      await _sendMessage(suggestion);
     }
-  }
-
-  void _handleSehenswuerdigkeitenRequest() {
-    final tripState = ref.read(tripStateProvider);
-
-    if (tripState.hasRoute && tripState.stops.isNotEmpty) {
-      // Zeige aktuelle Stops
-      final stopList = tripState.stops
-          .map((s) => 'Ã¢â‚¬Â¢ **${s.name}** (${s.categoryLabel})')
-          .join('\n');
-
-      setState(() {
-        _messages.add({
-          'content':
-              'Ã°Å¸â€”ÂºÃ¯Â¸Â Zeige mir SehenswÃƒÂ¼rdigkeiten auf meiner Route',
-          'isUser': true,
-        });
-        _messages.add({
-          'content': 'Ã°Å¸â€œÂ **SehenswÃƒÂ¼rdigkeiten auf deiner Route:**\n\n'
-              '$stopList\n\n'
-              'Ã°Å¸â€™Â¡ Gehe zum Trip-Screen fÃƒÂ¼r Details oder tippe auf einen POI!',
-          'isUser': false,
-        });
-      });
-      _scrollToBottom();
-    } else if (tripState.hasRoute) {
-      // Route vorhanden, aber keine Stops
-      setState(() {
-        _messages.add({
-          'content':
-              'Ã°Å¸â€”ÂºÃ¯Â¸Â Zeige mir SehenswÃƒÂ¼rdigkeiten auf meiner Route',
-          'isUser': true,
-        });
-        _messages.add({
-          'content': 'Ã°Å¸â€œÂ **Noch keine Stops auf deiner Route!**\n\n'
-              'Deine Route:\n'
-              'Ã¢â‚¬Â¢ Start: ${tripState.route!.startAddress}\n'
-              'Ã¢â‚¬Â¢ Ziel: ${tripState.route!.endAddress}\n\n'
-              'Ã°Å¸â€™Â¡ Gehe zur POI-Liste und fÃƒÂ¼ge SehenswÃƒÂ¼rdigkeiten hinzu!',
-          'isUser': false,
-        });
-      });
-      _scrollToBottom();
-    } else {
-      // Keine Route
-      setState(() {
-        _messages.add({
-          'content':
-              'Ã°Å¸â€”ÂºÃ¯Â¸Â Zeige mir SehenswÃƒÂ¼rdigkeiten auf meiner Route',
-          'isUser': true,
-        });
-        _messages.add({
-          'content': 'Ã°Å¸â€”ÂºÃ¯Â¸Â **Erstelle zuerst eine Route!**\n\n'
-              '1. Gehe zum Karten-Screen Ã°Å¸â€”ÂºÃ¯Â¸Â\n'
-              '2. WÃƒÂ¤hle Start- und Zielpunkt\n'
-              '3. Oder nutze "Ã°Å¸Â¤â€“ AI-Trip generieren"\n\n'
-              'Dann zeige ich dir alle SehenswÃƒÂ¼rdigkeiten entlang deiner Route!',
-          'isUser': false,
-        });
-      });
-      _scrollToBottom();
-    }
-  }
-
-  void _handleNaturhighlightsRequest() {
-    setState(() {
-      _messages.add({
-        'content': 'Ã°Å¸Å’Â² Zeige mir Naturhighlights',
-        'isUser': true,
-      });
-      _messages.add({
-        'content': 'Ã°Å¸Å’Â² **Naturhighlights entdecken:**\n\n'
-            '**Top Empfehlungen:**\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸ÂÅ¾Ã¯Â¸Â KÃƒÂ¶nigssee - Kristallklarer Bergsee\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Ââ€Ã¯Â¸Â Partnachklamm - SpektakulÃƒÂ¤re Schlucht\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Å’Â³ Nationalpark Berchtesgaden\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Ââ€Ã¯Â¸Â Zugspitze - Deutschlands hÃƒÂ¶chster Gipfel\n\n'
-            'Ã°Å¸â€™Â¡ **Tipp:** Gehe zur POI-Liste und filtere nach "Natur" Ã°Å¸Å’Â²\n\n'
-            'Oder generiere einen AI-Trip mit Interesse "Natur"!',
-        'isUser': false,
-      });
-    });
-    _scrollToBottom();
-  }
-
-  void _handleRestaurantRequest() {
-    setState(() {
-      _messages.add({
-        'content': 'Ã°Å¸ÂÂ½Ã¯Â¸Â Empfehle mir Restaurants',
-        'isUser': true,
-      });
-      _messages.add({
-        'content': 'Ã°Å¸ÂÂ½Ã¯Â¸Â **Restaurant-Empfehlungen:**\n\n'
-            '**Bayerische Klassiker:**\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Â¥Â¨ HofbrÃƒÂ¤uhaus MÃƒÂ¼nchen (4.5Ã¢Ëœâ€¦)\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Ââ€“ Augustiner BrÃƒÂ¤ustuben (4.4Ã¢Ëœâ€¦)\n\n'
-            '**Modern & International:**\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸Â¥â€” Prinz Myshkin - Vegetarisch (4.3Ã¢Ëœâ€¦)\n'
-            'Ã¢â‚¬Â¢ Ã°Å¸ÂÂ Brenner - Italienisch (4.2Ã¢Ëœâ€¦)\n\n'
-            'Ã°Å¸â€™Â¡ **Tipp:** Nutze die POI-Liste mit Filter "Restaurant" fÃƒÂ¼r Lokale auf deiner Route!\n\n'
-            'Oder frag mich nach einem bestimmten KÃƒÂ¼chenstil!',
-        'isUser': false,
-      });
-    });
-    _scrollToBottom();
   }
 
   void _showTripGeneratorDialog() {
@@ -1993,13 +2087,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('Ã°Å¸Â¤â€“ ${l10n.chatGenerateAiTrip}'),
+          title: Text('ÃÂ°ÃÂ¸ÃÂ¤Ã¢â¬â ${l10n.chatGenerateAiTrip}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Ziel (optional fÃƒÂ¼r Random Route)
+                // Ziel (optional fÃÆÃÂ¼r Random Route)
                 TextField(
                   controller: destinationController,
                   decoration: InputDecoration(
@@ -2098,12 +2192,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 final interestsList = selectedInterests.toList();
                 final daysInt = days.round();
 
-                // Dialog schlieÃƒÅ¸en
+                // Dialog schlieÃÆÃÂ¸en
                 Navigator.pop(context);
 
                 // HYBRID-LOGIK:
-                // Wenn Ziel angegeben Ã¢â€ â€™ AI-Text-Plan (wie bisher)
-                // Wenn Ziel leer Ã¢â€ â€™ Random Route um Startpunkt/GPS
+                // Wenn Ziel angegeben ÃÂ¢Ã¢â¬Â Ã¢â¬â¢ AI-Text-Plan (wie bisher)
+                // Wenn Ziel leer ÃÂ¢Ã¢â¬Â Ã¢â¬â¢ Random Route um Startpunkt/GPS
 
                 if (destination.isNotEmpty) {
                   // ============ MIT ZIEL: AI-Text-Plan ============
@@ -2122,12 +2216,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                   if (location == null) {
                     // Fehler wurde bereits in _getLocationIfNeeded angezeigt
+                    if (!mounted) return;
                     setState(() {
-                      _messages.add({
-                        'content': 'Ã¢ÂÅ’ Konnte keinen Standort ermitteln.\n\n'
+                      _addTextMessage(
+                        content:
+                            'ÃÂ¢ÃÂÃâ Konnte keinen Standort ermitteln.\n\n'
                             'Bitte gib einen Startpunkt ein oder aktiviere GPS.',
-                        'isUser': false,
-                      });
+                        isUser: false,
+                      );
                     });
                     return;
                   }
@@ -2159,37 +2255,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<String> interests,
     String? startLocation,
   }) async {
-    // User-Nachricht hinzufÃƒÂ¼gen
+    if (_isLoading) return;
+    final requestToken = _startRequest(ChatRequestKind.tripPlan);
+
     setState(() {
-      _messages.add({
-        'content':
+      _addTextMessage(
+        content:
             'Generiere einen $days-Tage Trip nach $destination\n${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : ""}',
-        'isUser': true,
-      });
+        isUser: true,
+      );
       _isLoading = true;
     });
     _scrollToBottom();
 
     try {
       if (!_backendAvailable) {
-        // Demo-Response
         await Future.delayed(const Duration(seconds: 1));
-        if (!mounted) return;
+        if (!mounted || !_isCurrentRequest(requestToken)) return;
 
         setState(() {
           _isLoading = false;
-          _messages.add({
-            'content': _generateDemoTripPlan(destination, days, interests),
-            'isUser': false,
-          });
+          _addTextMessage(
+            content: _generateDemoTripPlan(destination, days, interests),
+            isUser: false,
+          );
         });
         _scrollToBottom();
         return;
       }
 
       final aiService = ref.read(aiServiceProvider);
-
-      // Echte AI-Anfrage
       final plan = await aiService.generateTripPlan(
         destination: destination,
         days: days,
@@ -2197,23 +2292,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         startLocation: startLocation,
       );
 
-      if (!mounted) return;
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
 
-      // Formatiere den Plan
       final planText = StringBuffer();
-      planText.writeln('Ã°Å¸â€”ÂºÃ¯Â¸Â ${plan.title}\n');
+      planText.writeln('${plan.title}\n');
       if (plan.description != null && plan.description!.isNotEmpty) {
         planText.writeln('${plan.description}\n');
       }
 
-      for (var day in plan.days) {
+      for (final day in plan.days) {
         planText.writeln('**${day.title}**');
         if (day.description != null) {
           planText.writeln(day.description);
         }
-        for (var stop in day.stops) {
+        for (final stop in day.stops) {
           planText.writeln(
-              'Ã¢â‚¬Â¢ ${stop.name} ${stop.duration != null ? "(${stop.duration})" : ""}');
+              ' ${stop.name} ${stop.duration != null ? "(${stop.duration})" : ""}');
           if (stop.description != null) {
             planText.writeln('  ${stop.description}');
           }
@@ -2223,31 +2317,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       setState(() {
         _isLoading = false;
-        _messages.add({
-          'content': planText.toString(),
-          'isUser': false,
-        });
+        _addTextMessage(
+          content: planText.toString(),
+          isUser: false,
+        );
       });
       _scrollToBottom();
     } catch (e) {
       debugPrint('[Trip Generator] Fehler: $e');
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
 
-      if (!mounted) return;
-
-      // Bei Fehler Demo-Modus aktivieren
       setState(() {
         _backendAvailable = false;
         _isLoading = false;
-        _messages.add({
-          'content': _generateDemoTripPlan(destination, days, interests),
-          'isUser': false,
-        });
+        _addTextMessage(
+          content: _generateDemoTripPlan(destination, days, interests),
+          isUser: false,
+        );
       });
       _scrollToBottom();
+    } finally {
+      _finishRequest(requestToken);
     }
   }
 
-  /// GPS-Standort oder Geocoding fÃƒÂ¼r manuelle Eingabe abrufen
+  /// GPS-Standort oder Geocoding fÃÆÃÂ¼r manuelle Eingabe abrufen
   Future<({double lat, double lng, String address})?> _getLocationIfNeeded(
       String? startText) async {
     // Wenn manueller Text eingegeben, Geocoding verwenden
@@ -2260,7 +2354,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           return (
             lat: result.location.latitude,
             lng: result.location.longitude,
-            address: result.displayName ?? startText
+            address: result.displayName
           );
         }
       } catch (e) {
@@ -2286,13 +2380,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final position = gpsResult.position!;
     if (!mounted) return null;
 
-    // Reverse Geocoding fÃƒÂ¼r Adresse
+    // Reverse Geocoding fÃÆÃÂ¼r Adresse
     String address = context.l10n.chatMyLocation;
     try {
       final geocodingRepo = ref.read(geocodingRepositoryProvider);
       final result = await geocodingRepo.reverseGeocode(position);
       if (result != null) {
-        address = result.shortName ?? result.displayName ?? address;
+        address = result.shortName ?? result.displayName;
       }
     } catch (e) {
       debugPrint('[AI-Trip] Reverse Geocoding Fehler: $e');
@@ -2321,7 +2415,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     }
 
-    // Wenn keine Interessen gewÃƒÂ¤hlt, alle Kategorien verwenden (auÃƒÅ¸er Hotel)
+    // Wenn keine Interessen gewÃÆÃÂ¤hlt, alle Kategorien verwenden (auÃÆÃÂ¸er Hotel)
     if (categoryIds.isEmpty) {
       return POICategory.values.where((c) => c != POICategory.hotel).toList();
     }
@@ -2329,7 +2423,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return POICategory.values.where((c) => categoryIds.contains(c.id)).toList();
   }
 
-  /// Random Trip generieren und an Trip-Screen ÃƒÂ¼bergeben
+  /// Random Trip generieren und an Trip-Screen ÃÆÃÂ¼bergeben
   Future<void> _generateRandomTripFromLocation({
     required double lat,
     required double lng,
@@ -2337,22 +2431,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     required List<String> interests,
     required int days,
   }) async {
-    // User-Nachricht hinzufÃƒÂ¼gen
+    if (_isLoading) return;
+    final requestToken = _startRequest(ChatRequestKind.randomTrip);
+
     setState(() {
-      _messages.add({
-        'content': 'Ã°Å¸Å½Â² Generiere zufÃƒÂ¤llige Route um "$address"\n'
+      _addTextMessage(
+        content: 'Generiere zufaellige Route um "$address"\n'
             '${interests.isNotEmpty ? "Interessen: ${interests.join(', ')}" : "Alle Kategorien"}',
-        'isUser': true,
-      });
+        isUser: true,
+      );
       _isLoading = true;
     });
     _scrollToBottom();
 
     try {
-      // Interessen zu Kategorien mappen
       final categories = _mapInterestsToCategories(interests);
-
-      // TripGenerator aufrufen
       final tripGenerator = ref.read(tripGeneratorRepositoryProvider);
       final result = await tripGenerator.generateDayTrip(
         startLocation: LatLng(lat, lng),
@@ -2362,52 +2455,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         poiCount: (days * 3).clamp(3, 8),
       );
 
-      if (!mounted) return;
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
 
-      // Erfolgsmeldung im Chat
       setState(() {
         _isLoading = false;
-        _messages.add({
-          'content': 'Ã¢Å“â€¦ Route generiert!\n\n'
-              'Ã°Å¸â€œÂ **${result.trip.name}**\n'
-              'Ã°Å¸â€œÂ ${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
-              'Ã¢ÂÂ±Ã¯Â¸Â ${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
-              'Ã°Å¸Å½Â¯ ${result.selectedPOIs.length} Stops\n\n'
-              'Ãƒâ€“ffne Trip-Screen...',
-          'isUser': false,
-        });
+        _addTextMessage(
+          content: 'Route generiert!\n\n'
+              '${result.trip.name}\n'
+              '${result.trip.route.distanceKm.toStringAsFixed(0)} km\n'
+              '${(result.trip.route.durationMinutes / 60).toStringAsFixed(1)}h Fahrzeit\n'
+              '${result.selectedPOIs.length} Stops\n\n'
+              'Oeffne Trip-Screen...',
+          isUser: false,
+        );
       });
       _scrollToBottom();
 
-      // Alte Route-Session stoppen und POIs lÃƒÂ¶schen
       ref.read(routeSessionProvider.notifier).stopRoute();
       ref.read(pOIStateNotifierProvider.notifier).clearPOIs();
-      debugPrint('[AI-Chat] Alte Route-Session und POIs gelÃƒÂ¶scht');
 
-      // Route an TripStateProvider ÃƒÂ¼bergeben
       final tripState = ref.read(tripStateProvider.notifier);
       tripState.setRoute(result.trip.route);
       tripState.setStops(result.selectedPOIs);
 
-      // Kurz warten, dann zum Trip-Screen navigieren
       await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
+      if (mounted && _isCurrentRequest(requestToken)) {
         context.go('/trip');
       }
     } catch (e) {
       debugPrint('[AI-Trip] Random Trip Fehler: $e');
-
-      if (!mounted) return;
+      if (!mounted || !_isCurrentRequest(requestToken)) return;
 
       setState(() {
         _isLoading = false;
-        _messages.add({
-          'content': 'Ã¢ÂÅ’ Fehler beim Generieren der Route:\n$e\n\n'
+        _addTextMessage(
+          content: 'Fehler beim Generieren der Route:\n$e\n\n'
               'Bitte versuche es erneut oder gib ein konkretes Ziel ein.',
-          'isUser': false,
-        });
+          isUser: false,
+        );
       });
       _scrollToBottom();
+    } finally {
+      _finishRequest(requestToken);
     }
   }
 
@@ -2417,18 +2506,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? 'Basierend auf deinen Interessen (${interests.join(', ')}):\n\n'
         : '';
 
-    return 'Ã°Å¸â€”ÂºÃ¯Â¸Â **$days Tage in $destination**\n\n'
+    return 'ÃÂ°ÃÂ¸Ã¢â¬âÃÂºÃÂ¯ÃÂ¸ÃÂ **$days Tage in $destination**\n\n'
         '$interestsText'
         '**Tag 1: Ankunft & Stadterkundung**\n'
-        'Ã¢â‚¬Â¢ Hauptbahnhof (1h) - Ankunft und Check-in\n'
-        'Ã¢â‚¬Â¢ Altstadt (2h) - Historisches Zentrum erkunden\n'
-        'Ã¢â‚¬Â¢ Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
-        '**Tag 2: Kultur & SehenswÃƒÂ¼rdigkeiten**\n'
-        'Ã¢â‚¬Â¢ Schloss/Burg (2h) - Wahrzeichen der Stadt\n'
-        'Ã¢â‚¬Â¢ Kunstgalerie (1.5h) - Lokale Kunstszene\n'
-        'Ã¢â‚¬Â¢ Lokales Restaurant (1h) - Traditionelle KÃƒÂ¼che\n\n'
-        '${days > 2 ? "**Tag 3: Natur & Entspannung**\nÃ¢â‚¬Â¢ Park/Garten (2h) - GrÃƒÂ¼ne Oase\nÃ¢â‚¬Â¢ Aussichtspunkt (1h) - Panoramablick\nÃ¢â‚¬Â¢ CafÃƒÂ© (1h) - Kaffee und Kuchen\n\n" : ""}'
-        'Ã°Å¸â€™Â¡ _Dies ist ein Demo-Plan. Mit Backend-Verbindung erhÃƒÂ¤ltst du personalisierte Empfehlungen!_\n\n'
-        '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel fÃƒÂ¼r eine echte Route mit POIs!';
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Hauptbahnhof (1h) - Ankunft und Check-in\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Altstadt (2h) - Historisches Zentrum erkunden\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Stadtmuseum (1.5h) - Geschichte kennenlernen\n\n'
+        '**Tag 2: Kultur & SehenswÃÆÃÂ¼rdigkeiten**\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Schloss/Burg (2h) - Wahrzeichen der Stadt\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Kunstgalerie (1.5h) - Lokale Kunstszene\n'
+        'ÃÂ¢Ã¢âÂ¬ÃÂ¢ Lokales Restaurant (1h) - Traditionelle KÃÆÃÂ¼che\n\n'
+        '${days > 2 ? "**Tag 3: Natur & Entspannung**\nÃÂ¢Ã¢âÂ¬ÃÂ¢ Park/Garten (2h) - GrÃÆÃÂ¼ne Oase\nÃÂ¢Ã¢âÂ¬ÃÂ¢ Aussichtspunkt (1h) - Panoramablick\nÃÂ¢Ã¢âÂ¬ÃÂ¢ CafÃÆÃÂ© (1h) - Kaffee und Kuchen\n\n" : ""}'
+        'ÃÂ°ÃÂ¸Ã¢â¬â¢ÃÂ¡ _Dies ist ein Demo-Plan. Mit Backend-Verbindung erhÃÆÃÂ¤ltst du personalisierte Empfehlungen!_\n\n'
+        '**Tipp:** Nutze "AI-Trip generieren" ohne Ziel fÃÆÃÂ¼r eine echte Route mit POIs!';
   }
 }
