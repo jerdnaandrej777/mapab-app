@@ -385,7 +385,33 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               dayForecast: dayForecast,
               dayWeather: dayWeather,
               onOpenCorridorBrowser: () {
-                setState(() => _isCorridorBrowserActive = true);
+                CorridorBrowserSheet.show(
+                  context: context,
+                  route: trip.route,
+                  existingStopIds: trip.stops.map((s) => s.poiId).toSet(),
+                  onAddPOI: (poi) async {
+                    final success = await ref
+                        .read(randomTripNotifierProvider.notifier)
+                        .addPOIToDay(poi, selectedDay);
+                    if (success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              '"${poi.name}" ${context.l10n.dayEditorAddedToDay(selectedDay)}'),
+                          duration: const Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                    return success;
+                  },
+                  onRemovePOI: (poi) async {
+                    final success = await ref
+                        .read(randomTripNotifierProvider.notifier)
+                        .removePOIFromDay(poi.id, selectedDay);
+                    return success;
+                  },
+                );
               },
               onSaveToFavorites: state.isLoading
                   ? null
@@ -1112,7 +1138,7 @@ class _BottomActions extends ConsumerWidget {
                       onPressed: onOpenCorridorBrowser,
                       icon:
                           const Icon(Icons.add_location_alt_rounded, size: 18),
-                      label: const Text('Weitere POIs hinzufügen'),
+                      label: const Text('POIs hinzufügen'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(

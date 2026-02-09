@@ -82,7 +82,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     _focusNode.unfocus();
   }
 
-  /// Suche für Ziel-Adresse
+  /// Suche fÃ¼r Ziel-Adresse
   Future<void> _searchDestination(String query) async {
     final notifier = ref.read(randomTripNotifierProvider.notifier);
     final tripState = ref.read(randomTripNotifierProvider);
@@ -133,9 +133,9 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
   }
 
   /// Stellt sicher, dass GPS bereit ist (Services + Berechtigungen)
-  /// Gibt true zurück wenn GPS nutzbar ist
+  /// Gibt true zurÃ¼ck wenn GPS nutzbar ist
   Future<bool> _ensureGPSReady() async {
-    // 1. Location Services prüfen
+    // 1. Location Services prÃ¼fen
     final serviceEnabled = await LocationHelper.isServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return false;
@@ -169,7 +169,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
       }
     }
 
-    // 2. Berechtigungen prüfen
+    // 2. Berechtigungen prÃ¼fen
     final permission = await LocationHelper.checkAndRequestPermission();
     if (permission == LocationPermission.denied) {
       if (mounted) {
@@ -219,12 +219,12 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
     await notifier.useCurrentLocation();
   }
 
-  /// Handelt "Überrasch mich!" Klick - prüft GPS wenn kein Startpunkt
+  /// Handelt "Ãœberrasch mich!" Klick - prÃ¼ft GPS wenn kein Startpunkt
   Future<void> _handleGenerateTrip() async {
     final state = ref.read(randomTripNotifierProvider);
     final notifier = ref.read(randomTripNotifierProvider.notifier);
 
-    // Prüfen ob ein aktiver Trip existiert, der überschrieben wird
+    // PrÃ¼fen ob ein aktiver Trip existiert, der Ã¼berschrieben wird
     final activeTripData = ref.read(activeTripNotifierProvider).value;
     if (activeTripData != null && !activeTripData.allDaysCompleted) {
       final confirmed = await showDialog<bool>(
@@ -260,7 +260,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
       // GPS-Standort ermitteln
       await notifier.useCurrentLocation();
 
-      // Prüfen ob Standort jetzt gesetzt ist
+      // PrÃ¼fen ob Standort jetzt gesetzt ist
       final newState = ref.read(randomTripNotifierProvider);
       if (!newState.hasValidStart) {
         // Standort konnte nicht ermittelt werden
@@ -488,7 +488,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                       ),
                       onChanged: _searchAddress,
                     ),
-                    // Vorschläge
+                    // VorschlÃ¤ge
                     if (_suggestions.isNotEmpty)
                       Container(
                         constraints: const BoxConstraints(maxHeight: 150),
@@ -538,7 +538,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
 
         Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
 
-        // Ziel-Eingabe (kompakt - öffnet BottomSheet)
+        // Ziel-Eingabe (kompakt - Ã¶ffnet BottomSheet)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: InkWell(
@@ -622,35 +622,55 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
         // Generate Button oder Navigation starten (wenn Route aus Favoriten geladen)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: SizedBox(
-            width: double.infinity,
-            child: tripHasRoute
-                // Navigation starten Button (wenn Route aus Favoriten geladen)
-                ? FilledButton.icon(
-                    onPressed: () => context.push(
-                      '/navigation',
-                      extra: {
-                        'route': tripState.route,
-                        'stops': tripState.stops
-                            .asMap()
-                            .entries
-                            .map((e) => TripStop.fromPOI(e.value, order: e.key))
-                            .toList(),
-                      },
-                    ),
-                    icon: const Icon(Icons.navigation),
-                    label: Text(context.l10n.tripInfoStartNavigation),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+          child: tripHasRoute
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/trip'),
+                        icon: const Icon(Icons.edit),
+                        label: Text(context.l10n.tripInfoEditTrip),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
-                  )
-                // Überrasch mich! Button (wenn keine Route geladen)
-                : ElevatedButton(
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/navigation',
+                          extra: {
+                            'route': tripState.route,
+                            'stops': tripState.stops
+                                .asMap()
+                                .entries
+                                .map((e) =>
+                                    TripStop.fromPOI(e.value, order: e.key))
+                                .toList(),
+                          },
+                        ),
+                        icon: const Icon(Icons.navigation),
+                        label: Text(context.l10n.tripInfoStartNavigation),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              // Überrasch mich! Button (wenn keine Route geladen)
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
                     onPressed: state.isLoading ? null : _handleGenerateTrip,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colorScheme.primary,
@@ -675,10 +695,10 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                       ],
                     ),
                   ),
-          ),
+                ),
         ),
 
-        // Route löschen Button (v1.7.25 - ins Panel verschoben, damit nicht abgeschnitten)
+        // Route lÃ¶schen Button (v1.7.25 - ins Panel verschoben, damit nicht abgeschnitten)
         if (state.step == RandomTripStep.preview ||
             state.step == RandomTripStep.confirmed ||
             tripHasRoute) ...[
@@ -726,7 +746,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
   }
 }
 
-/// Route löschen Button
+/// Route lÃ¶schen Button
 class RouteClearButton extends StatelessWidget {
   final VoidCallback onClear;
 
@@ -801,7 +821,7 @@ class _CompactRadiusSlider extends StatelessWidget {
     return _buildRadiusSlider(context);
   }
 
-  /// Euro Trip: Tage-Auswahl als primärer Input
+  /// Euro Trip: Tage-Auswahl als primÃ¤rer Input
   Widget _buildDaysSelector(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final currentDays = state.days.clamp(
@@ -918,7 +938,7 @@ class _CompactRadiusSlider extends StatelessWidget {
     );
   }
 
-  /// Tagestrip: Radius-Slider (unverändert)
+  /// Tagestrip: Radius-Slider (unverÃ¤ndert)
   Widget _buildRadiusSlider(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     const minRadius = 30.0;
@@ -1205,7 +1225,7 @@ class _CompactCategorySelector extends StatelessWidget {
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-                    // Schließen Button
+                    // SchlieÃŸen Button
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -1237,7 +1257,7 @@ class _CompactCategorySelector extends StatelessWidget {
 
     return Column(
       children: [
-        // Header - öffnet Modal statt Inline-Expand
+        // Header - Ã¶ffnet Modal statt Inline-Expand
         InkWell(
           onTap: () => _showCategoryModal(context),
           borderRadius: BorderRadius.circular(12),
@@ -1268,7 +1288,7 @@ class _CompactCategorySelector extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Größerer, auffälligerer Button
+                // GrÃ¶ÃŸerer, auffÃ¤lligerer Button
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -1290,7 +1310,7 @@ class _CompactCategorySelector extends StatelessWidget {
   }
 }
 
-/// BottomSheet-Inhalt für Ziel-Eingabe
+/// BottomSheet-Inhalt fÃ¼r Ziel-Eingabe
 class _DestinationSheetContent extends StatelessWidget {
   final TextEditingController destinationController;
   final FocusNode destinationFocusNode;
@@ -1410,7 +1430,7 @@ class _DestinationSheetContent extends StatelessWidget {
                 onChanged: onSearch,
               ),
             ),
-            // Vorschläge - füllt den restlichen Platz
+            // VorschlÃ¤ge - fÃ¼llt den restlichen Platz
             Expanded(
               child: suggestions.isNotEmpty
                   ? Container(

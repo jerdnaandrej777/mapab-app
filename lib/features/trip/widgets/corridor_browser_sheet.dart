@@ -72,9 +72,10 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
         return Container(
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius: widget.initialChildSize < 1.0
-                ? const BorderRadius.vertical(top: Radius.circular(20))
-                : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
             boxShadow: [
               BoxShadow(
                 color: colorScheme.shadow.withValues(alpha: 0.15),
@@ -85,20 +86,18 @@ class _CorridorBrowserSheetState extends ConsumerState<CorridorBrowserSheet> {
           ),
           child: Column(
             children: [
-              // Drag-Handle bei Partial-Height
-              if (widget.initialChildSize < 1.0)
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8, bottom: 4),
-                    width: 32,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color:
-                          colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+              // Einheitlicher Drag-Handle analog zu anderen Vollbild-Modals
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
+              ),
               Expanded(
                 child: CorridorBrowserContent(
                   route: widget.route,

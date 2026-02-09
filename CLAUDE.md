@@ -5,13 +5,13 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fÃ¼r interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.42 - AI-Assistent lokal/intenter + Bottom-Sheet Konsistenz | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.42)
+Version: 1.10.43 - Favoriten/Trip-Bearbeiten vereinheitlicht + AI-Stabilisiert | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.43)
 
-- AI-Assistent erkennt Restaurant-Anfragen robuster und zeigt lokale Treffer im Standort-Radius.
-- AI-POI-Karten haben neue Aktion `Zur Route` (Uebergabe an aktive oder neue Route).
-- Route/Trip-Planungsintents im Chat oeffnen direkt den Routen-Generator.
-- Bottom-up Modale in den betroffenen Flows nutzen einheitlich den POI-Kategorien-Hoehenvertrag (`1.0/0.9/1.0`).
+- Favoriten-Routen zeigen im Trip-Panel jetzt `Trip bearbeiten` und `Navigation starten`.
+- Trip-Bearbeiten Footer nutzt den Button `POIs hinzufügen` (statt `Weitere POIs hinzufügen`).
+- `POIs hinzufügen` oeffnet den Korridor-Browser als konsistentes Bottom-Sheet-Modal im selben UI-Konzept.
+- AI-Assistent gegen Crash-Pfade gehaertet (Sende-Guard, mounted-Checks, robustere Umlaute/Intent-Normalisierung).
 
 
 ## Tech Stack
@@ -504,6 +504,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.43.md` (Favoriten-Route wie AI-Route mit `Trip bearbeiten`+`Navigation starten`, Trip-Bearbeiten-Button `POIs hinzufügen`, konsistentes POI-Hinzufuegen-Modal und AI-Assistent-Crash-Haertung)
 - `Dokumentation/CHANGELOG-v1.10.42.md` (AI-Assistent: robuste lokale Restaurant-Erkennung, direkte `Zur Route`-Aktion aus AI-POI-Karten, Route/Trip-Intent im Chat und vereinheitlichte Bottom-Sheet-Hoehen in den betroffenen Flows)
 - `Dokumentation/CHANGELOG-v1.10.41.md` (Trip-Bearbeiten vereinfacht: Footer mit `Weitere POIs hinzufügen` + `Fertig`, neuer Übersichts-Modal mit Karte/Stats und Abschlussaktionen, dynamisches Google-Maps-Label für Tagestrip vs. Euro Trip)
 - `Dokumentation/CHANGELOG-v1.10.40.md` (UI-Refactor Modale: Theme-Kontrast vereinheitlicht, lesbare AI-Radius/POI-Filter-Chips, Trip-Bearbeiten Header entschlackt und alle 6 Aktionen im priorisierten Sticky-Footer)

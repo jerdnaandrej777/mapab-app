@@ -7,6 +7,32 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.43] - 2026-02-09
+
+### Favoriten-Flow angeglichen + Trip-Bearbeiten UI + AI-Assistent Stabilisierung
+
+#### Geaendert
+- **Favoriten-Routen verhalten sich wie berechnete AI-Routen**
+  - Bei geladener Favoriten-Route zeigt das Trip-Panel jetzt beide Kernaktionen:
+    - `Trip bearbeiten`
+    - `Navigation starten`
+- **Trip-Bearbeiten Footer angepasst**
+  - Button-Text von `Weitere POIs hinzufügen` auf **`POIs hinzufügen`** umbenannt.
+  - `POIs hinzufügen` oeffnet den POI-Browser jetzt als Bottom-Sheet-Modal (statt chaotischem Inline-Flow), im selben Design-/Hoehenkonzept.
+- **POI-Hinzufuegen-Modal visuell an Trip-Bearbeiten angeglichen**
+  - Konsistente Handle-Bar, Rahmen und Vollbild-Charakter.
+- **AI-Assistent gegen Abstuerze gehaertet**
+  - Schutz gegen paralleles Senden (`_isLoading`-Guard).
+  - Zusätzliche Lifecycle-Sicherheit bei Scroll/Async-Location (`mounted`-Checks).
+  - Robustere Text-Normalisierung fuer Intent-Erkennung (u.a. Umlaute) bei Nearby/Kategorie-Matching.
+
+#### Technisch
+- Geaenderte Dateien:
+  - `lib/features/map/widgets/trip_config_panel.dart`
+  - `lib/features/trip/widgets/day_editor_overlay.dart`
+  - `lib/features/trip/widgets/corridor_browser_sheet.dart`
+  - `lib/features/ai_assistant/chat_screen.dart`
+
 ## [1.10.42] - 2026-02-09
 
 ### AI-Assistent verbessert + Bottom-Sheet Konsistenz

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.42 - Download</title>
+    <title>MapAB v1.10.43 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.42 (Build 225)</div>
-        <span class="release-tag">AI-Assistent & Modal Konsistenz</span>
+        <div class="version">Version 1.10.43 (Build 226)</div>
+        <span class="release-tag">Favoriten + Trip UI + AI Stabilität</span>
         <p class="subtitle">
-            Der AI-Assistent erkennt Restaurants lokal zuverlässiger, kann POIs direkt an die Route übergeben und die relevanten Bottom-Modale öffnen jetzt einheitlich wie das POI-Kategorien-Modal.
+            Favoriten-Routen verhalten sich jetzt wie berechnete Trips, das Trip-Bearbeiten UI ist klarer beim POI-Hinzufügen und der AI-Assistent läuft stabiler bei Chat- und Nearby-Intents.
         </p>
 
         <div class="qr-container">
@@ -213,32 +213,32 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.42/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.43/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~126 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.42:</h3>
+            <h3>&#x2728; Neu in v1.10.43:</h3>
             <ul>
-                <li class="highlight">Restaurant-Intents im AI-Chat liefern lokale Treffer rund um den aktuellen Standort</li>
-                <li class="highlight">Neue Aktion `Zur Route` in AI-POI-Karten (aktive/neue Route wird direkt aktualisiert)</li>
-                <li class="highlight">Route-/Trip-Anfragen im Chat öffnen direkt den Routen-Generator</li>
-                <li>Bottom-up Modale in den betroffenen Flows nutzen einheitlich 1.0/0.9/1.0 Höhe</li>
-                <li>Trip-Bearbeiten bleibt aufgeräumt mit `Weitere POIs hinzufügen` + `Fertig`</li>
+                <li class="highlight">Geladene Favoriten-Routen zeigen jetzt `Trip bearbeiten` und `Navigation starten` wie AI-Routen</li>
+                <li class="highlight">Trip-Bearbeiten Footer nutzt nun `POIs hinzufügen`</li>
+                <li class="highlight">POI-Hinzufügen öffnet ein konsistentes Bottom-Sheet im selben UI-Design</li>
+                <li>AI-Assistent wurde gegen Absturzpfade im Sende-/Async-Flow gehärtet</li>
+                <li>Nearby- und Kategorie-Erkennung (inkl. Umlaute) ist robuster</li>
             </ul>
         </div>
 
         <div class="stats">
             <div class="stat">
-                <div class="stat-value">4</div>
-                <div class="stat-label">Flows verbessert</div>
+                <div class="stat-value">3</div>
+                <div class="stat-label">Kernflows</div>
             </div>
             <div class="stat">
                 <div class="stat-value">5</div>
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">225</div>
+                <div class="stat-value">226</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.42/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.43/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
