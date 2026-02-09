@@ -18,12 +18,13 @@ class TripModeSelector extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    // Ausblenden wenn ein Trip generiert wurde
+    // Ausblenden waehrend Generierung und sobald ein Trip generiert wurde
+    final isGenerating = randomTripState.step == RandomTripStep.generating;
     final hasGeneratedTrip = (randomTripState.step == RandomTripStep.preview ||
             randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null;
 
-    if (hasGeneratedTrip) return const SizedBox.shrink();
+    if (isGenerating || hasGeneratedTrip) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(

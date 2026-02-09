@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.47 - Download</title>
+    <title>MapAB v1.10.48 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.47 (Build 230)</div>
-        <span class="release-tag">Routing + POI Stabilitaet</span>
+        <div class="version">Version 1.10.48 (Build 231)</div>
+        <span class="release-tag">AI Assistant Stabilitaet</span>
         <p class="subtitle">
-            Dieses Release fokussiert Stabilitaet: Day-Editor-Routing folgt wieder sauber den Tages-POIs, Near-Duplicate-POIs werden reduziert und Ladeanimationen laufen ruhiger mit konsistentem 1% bis 100%-Progress.
+            Dieses Release haertet den AI Assistant: keine haengenden Ladezustaende mehr, bessere Restaurant- und Hotelsuche sowie bereinigte Vorschlags- und Antworttexte.
         </p>
 
         <div class="qr-container">
@@ -213,18 +213,18 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.47/app-release.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.48/app-release.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~126 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.47:</h3>
+            <h3>&#x2728; Neu in v1.10.48:</h3>
             <ul>
-                <li class="highlight">Day-Editor Segment-Routing nutzt geordnete Wegpunkte und bleibt auch am letzten Tag korrekt</li>
-                <li class="highlight">Semantische POI-Deduplizierung reduziert Mehrfach-POIs (z. B. Altstadt-Varianten)</li>
-                <li class="highlight">AI Tagestrip und Euro Trip haben getrennte, reduzierte Animationen mit klarerem Feedback</li>
-                <li>Progress beginnt sichtbar bei 1% und endet deterministisch bei 100%</li>
-                <li>CI-Gates erweitert: Flutter Test/Analyze plus Backend Typecheck/Lint</li>
+                <li class="highlight">AI-Assistant-Requests mit Timeouts und stabiler Finalisierung gegen Hänger</li>
+                <li class="highlight">Restaurants und Hotels werden intent-basiert erkannt und konsistent gefiltert</li>
+                <li class="highlight">Vorschläge und Demo-Antworten ohne fehlerhafte Sonderzeichen</li>
+                <li>Suggestion-Chips mit direkter Hotel-Suche in der Nähe</li>
+                <li>Release-APK auf Build 231 aktualisiert</li>
             </ul>
         </div>
 
@@ -238,7 +238,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">230</div>
+                <div class="stat-value">231</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.47/app-release.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.48/app-release.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

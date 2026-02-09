@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.48 - AI Assistant Stabilitaet + Hotel/Restaurant Ausbau (9. Februar 2026)
+- **AI-Assistant Freeze-Fix** - Timeouts und robustere Request-Finalisierung verhindern haengende Ladezustaende.
+- **Restaurant + Hotel Suche erweitert** - Intent-Erkennung und Nearby-Filter liefern konsistentere Treffer fuer Unterkuenfte und Essen.
+- **Text-/Encoding-Fixes im Chat** - Vorschlaege und Fallback-Texte wurden bereinigt (keine kaputten Sonderzeichen mehr).
+- **Suggestion-Flow verbessert** - Direkte Hotel-Quick-Aktion im Assistant sowie stabilere Nearby-Routing-Pfade.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 231.
+
 ### v1.10.47 - Routing-/POI-Stabilisierung + Progress-Animationen (9. Februar 2026)
 - **Day-Editor Routing stabilisiert** - Tagessegment wird ueber geordnete Wegpunkte extrahiert und laeuft auch am letzten Tag wieder ueber die POIs.
 - **POI-Duplikate reduziert** - Deduplizierung arbeitet jetzt semantisch (Name + Distanz), nicht nur ueber IDs.
@@ -453,6 +460,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.10.47
+**Version:** 1.10.48
 **Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙

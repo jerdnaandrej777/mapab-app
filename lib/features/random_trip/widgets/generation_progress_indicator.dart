@@ -185,17 +185,7 @@ class GenerationProgressIndicator extends ConsumerWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 14),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 12,
-            backgroundColor: colorScheme.primary.withValues(alpha: 0.18),
-            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
-          ),
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
           '$percent%',
           style: theme.textTheme.titleLarge?.copyWith(
@@ -252,27 +242,27 @@ class GenerationProgressIndicator extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 4,
-                    backgroundColor:
-                        colorScheme.primary.withValues(alpha: 0.18),
-                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                const SizedBox(height: 4),
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            '$percent%',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 2.8,
+              backgroundColor: colorScheme.primary.withValues(alpha: 0.18),
+              valueColor: AlwaysStoppedAnimation(colorScheme.primary),
             ),
           ),
         ],

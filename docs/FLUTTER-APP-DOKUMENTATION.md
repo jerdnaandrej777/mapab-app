@@ -46,30 +46,30 @@ Die MapAB Flutter App ist eine Cross-Platform Reiseplanungs-App für iOS, Androi
 
 ### Download & Installation
 
-**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.7.21
+**GitHub Release:** https://github.com/jerdnaandrej777/mapab-app/releases/tag/v1.10.48
 
 **Direkter APK-Download:**
 ```
-https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.7.21/MapAB-v1.7.21.apk
+https://github.com/jerdnaandrej777/mapab-app/releases/download/v1.10.48/app-release.apk
 ```
 
 **Installationsschritte:**
-1. APK herunterladen (58 MB)
+1. APK herunterladen (~126 MB)
 2. "Aus unbekannten Quellen installieren" erlauben
 3. APK öffnen und Installation bestätigen
 4. App öffnen und loslegen
 
 ---
 
-## Neu in v1.7.21
+## Neu in v1.10.48
 
-**Release-Datum:** 31. Januar 2026
-**Typ:** UI/UX Major Update
-**APK-Größe:** 57.6 MB
+**Release-Datum:** 9. Februar 2026
+**Typ:** Stabilitaets- und AI-Assistant-Update
+**APK-Groesse:** 126.3 MB
 
 ### 🎨 Haupt-Feature: Unified Panel Design
 
-Version 1.7.21 bringt ein konsistentes Panel-Design für beide Modi (Schnell & AI Trip) mit verbesserter Scrollbarkeit und einheitlichen Abständen.
+Version 1.10.48 stabilisiert den AI Assistant, verbessert die Nearby-Erkennung für Restaurants/Hotels und bereinigt fehlerhafte Texte in Vorschlägen und Fallback-Antworten.
 
 #### 📜 Scrollbares Panel in beiden Modi
 

@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.47 - Routing-/POI-Stabilisierung + Ladeanimationen gehaertet | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.47)
+Version: 1.10.48 - AI Assistant Stabilitaet + Hotel/Restaurant Ausbau | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.48)
 
-- Day-Editor Routing stabilisiert: Segment-Extraktion folgt geordneten Wegpunkten und bleibt auch am letzten Tag korrekt.
-- POI-Deduplizierung erweitert: semantisch + geographisch statt nur ID-basiert.
-- Progress-Animationen optimiert: getrennte Visuals fuer AI Tagestrip und Euro Trip, konsistenter 1% -> 100% Verlauf.
-- Trip-Generator und Day-Edit-Flows verhindern Re-Introduktion von Near-Duplicate-POIs.
-- Neuer CI-Workflow aktiviert (Flutter Test/Analyze + Backend Typecheck/Lint).
+- AI-Assistant stabilisiert: Request-Timeouts und robustere Finalisierung verhindern haengende Ladezustaende.
+- Nearby-Suche erweitert: Restaurants und Hotels werden intent-basiert und konsistent gefiltert.
+- Chat-Texte bereinigt: fehlerhafte Sonderzeichen/Mojibake in Vorschlaegen und Fallbacks entfernt.
+- Suggestion-Flow verbessert: direkte Hotel-Aktionen + stabilere standortbasierte Anfragepfade.
+- Android Release aktualisiert: APK Build 231 (v1.10.48).
 
 
 ## Tech Stack
@@ -505,6 +505,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.48.md` (AI-Assistant Stabilisierung: Freeze-Fixes via Timeouts/Finalisierung, Hotel+Restaurant Intent/Filter-Ausbau, Textbereinigung in Vorschlaegen/Fallbacks, aktualisierte Release-APK Build 231)
 - `Dokumentation/CHANGELOG-v1.10.47.md` (Routing-/POI-Stabilisierung: waypoint-basierte Tagessegment-Extraktion, semantische POI-Deduplizierung, optimierte Ladeanimationen, CI-Gates)
 - `Dokumentation/CHANGELOG-v1.10.43.md` (Favoriten-Route wie AI-Route mit `Trip bearbeiten`+`Navigation starten`, Trip-Bearbeiten-Button `POIs hinzufügen`, konsistentes POI-Hinzufuegen-Modal und AI-Assistent-Crash-Haertung)
 - `Dokumentation/CHANGELOG-v1.10.42.md` (AI-Assistent: robuste lokale Restaurant-Erkennung, direkte `Zur Route`-Aktion aus AI-POI-Karten, Route/Trip-Intent im Chat und vereinheitlichte Bottom-Sheet-Hoehen in den betroffenen Flows)
