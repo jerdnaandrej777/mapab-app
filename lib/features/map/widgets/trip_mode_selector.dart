@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../providers/app_ui_mode_provider.dart';
+import '../providers/map_controller_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
 
@@ -14,6 +15,7 @@ class TripModeSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(appUIModeNotifierProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
+    final isRouteFocusMode = ref.watch(mapRouteFocusModeProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -24,7 +26,9 @@ class TripModeSelector extends ConsumerWidget {
             randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null;
 
-    if (isGenerating || hasGeneratedTrip) return const SizedBox.shrink();
+    if (isGenerating || hasGeneratedTrip || isRouteFocusMode) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       decoration: BoxDecoration(

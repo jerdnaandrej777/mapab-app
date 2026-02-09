@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.51 - Download</title>
+    <title>MapAB v1.10.52 - Download</title>
     <style>
         * {
             margin: 0;
@@ -202,10 +202,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.51 (Build 234)</div>
-        <span class="release-tag">Social Import + Standortstart</span>
+        <div class="version">Version 1.10.52 (Build 235)</div>
+        <span class="release-tag">Routenfokus + Modal-UX</span>
         <p class="subtitle">
-            Dieses Release stabilisiert den Social-Flow: Galerie-Import landet verlässlich in Favoriten und Trips/POIs starten direkt ab deinem aktuellen Standort.
+            Dieses Release vereinfacht den Kartenfluss fuer fertige Trips: fokussierte Kartenansicht, reduzierte Aktionen und einheitliches Verhalten fuer Favoriten-Routen.
         </p>
 
         <div class="qr-container">
@@ -213,18 +213,18 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.51.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.52.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~126.4 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.51:</h3>
+            <h3>&#x2728; Neu in v1.10.52:</h3>
             <ul>
-                <li class="highlight">Trip-Import aus Galerie speichert jetzt sicher in Favoriten</li>
-                <li class="highlight">Public Trips koennen direkt ab aktuellem Standort gestartet werden</li>
-                <li class="highlight">POIs in der Trip-Vorschau starten direkt ab Standort</li>
-                <li>Robustes Parsing fuer Legacy- und aktuelle trip_data Payloads</li>
-                <li>Release-APK auf Build 234 aktualisiert</li>
+                <li class="highlight">"Auf Karte anzeigen" oeffnet einen fokussierten Kartenmodus</li>
+                <li class="highlight">Footer im Fokusmodus: Trip bearbeiten, Navigation starten, Route loeschen</li>
+                <li class="highlight">Google Maps + Route teilen aus "Deine Route" entfernt</li>
+                <li>Favoriten-Routen verwenden denselben Fokus-Flow inklusive Auto-Zoom</li>
+                <li>Release-APK auf Build 235 aktualisiert</li>
             </ul>
         </div>
 
@@ -238,7 +238,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">234</div>
+                <div class="stat-value">235</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -255,7 +255,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.51.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.52.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

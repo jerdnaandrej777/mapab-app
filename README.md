@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.52 - Routenfokus im Karten-Modal (9. Februar 2026)
+- **Fokussierte Kartenansicht fuer "Auf Karte anzeigen"** - Die Karte zeigt im Routenmodus nur noch die Route ohne planungsbezogene Overlays.
+- **Footer vereinfacht** - Im Fokusmodus sind nur `Trip bearbeiten`, `Navigation starten` und `Route loeschen` sichtbar.
+- **"Deine Route" bereinigt** - Die Buttons `Google Maps` und `Route teilen` wurden aus dem Modal entfernt.
+- **Favoriten konsistent** - Geladene Favoriten-Routen nutzen denselben Fokus-Flow inkl. Auto-Zoom.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 235.
+
 ### v1.10.51 - Social Import + Standort-Start (9. Februar 2026)
 - **Trip-Galerie Import gefixt** - Importierte Trips werden jetzt wirklich in den lokalen Favoriten gespeichert.
 - **Public Trips ab Standort starten** - Galerie-Trips lassen sich direkt vom aktuellen GPS-Standort starten.
@@ -481,6 +488,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.10.50
+**Version:** 1.10.52
 **Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙

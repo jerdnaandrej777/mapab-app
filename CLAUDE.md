@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.51 - Social Import + Standort-Start | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.51)
+Version: 1.10.52 - Routenfokus-Modal + Favoriten-Konsistenz | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.52)
 
-- Trip-Galerie-Import speichert Public Trips jetzt verlässlich in lokale Favoriten.
-- Public Trips koennen direkt ab aktuellem Standort gestartet werden (inkl. Connector-Segment zur Originalroute).
-- POIs in der Public-Trip-Vorschau koennen direkt ab Standort gestartet werden.
-- Public-`trip_data` Parsing gehaertet (Legacy-kompatibel, robustes Koordinaten-/Kategorie-Mapping).
-- Android Release aktualisiert: APK Build 234 (v1.10.51).
+- "Auf Karte anzeigen" aktiviert jetzt einen fokussierten Kartenmodus ohne Planungs-Overlays.
+- Der Karten-Footer im Fokusmodus zeigt nur noch: `Trip bearbeiten`, `Navigation starten`, `Route loeschen`.
+- Im Modal "Deine Route" wurden die Buttons `Google Maps` und `Route teilen` entfernt.
+- Geladene Favoriten-Routen verhalten sich identisch und starten im selben Fokus-Flow inklusive Auto-Zoom.
+- Android Release aktualisiert: APK Build 235 (v1.10.52).
 
 
 ## Tech Stack
@@ -505,6 +505,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.52.md` (Routenfokus-Modal: "Auf Karte anzeigen" mit reduziertem Kartenmodus, nur 3 Fokus-Aktionen im Footer, Entfernen von Google-Maps/Teilen im "Deine Route"-Modal, Favoriten-Routen mit identischem Fokus-Flow)
 - `Dokumentation/CHANGELOG-v1.10.48.md` (AI-Assistant Stabilisierung: Freeze-Fixes via Timeouts/Finalisierung, Hotel+Restaurant Intent/Filter-Ausbau, Textbereinigung in Vorschlaegen/Fallbacks, aktualisierte Release-APK Build 231)
 - `Dokumentation/CHANGELOG-v1.10.47.md` (Routing-/POI-Stabilisierung: waypoint-basierte Tagessegment-Extraktion, semantische POI-Deduplizierung, optimierte Ladeanimationen, CI-Gates)
 - `Dokumentation/CHANGELOG-v1.10.43.md` (Favoriten-Route wie AI-Route mit `Trip bearbeiten`+`Navigation starten`, Trip-Bearbeiten-Button `POIs hinzufügen`, konsistentes POI-Hinzufuegen-Modal und AI-Assistent-Crash-Haertung)

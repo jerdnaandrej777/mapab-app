@@ -64,7 +64,7 @@ Nachschlagewerke und Hilfestellung.
 | [SECURITY](SECURITY.md) | Credentials und Sicherheit |
 | [FLUTTER-APP-DOKUMENTATION](FLUTTER-APP-DOKUMENTATION.md) | Vollstaendige Feature-Doku |
 | [LARAVEL-MIGRATION](LARAVEL-MIGRATION.md) | Geplante Backend-Migration |
-| [CHANGELOG v1.10.51](../Dokumentation/CHANGELOG-v1.10.51.md) | Release-Details Social-Import + Standort-Start |
+| [CHANGELOG v1.10.52](../Dokumentation/CHANGELOG-v1.10.52.md) | Release-Details Routenfokus-Modal + Favoriten-Konsistenz |
 
 ---
 
@@ -89,5 +89,5 @@ Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) fuer Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.51  
+**Version:** 1.10.52  
 **Stand:** Februar 2026

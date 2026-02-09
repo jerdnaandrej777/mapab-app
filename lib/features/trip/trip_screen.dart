@@ -271,66 +271,16 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   /// Veröffentlicht einen Trip in der öffentlichen Galerie
   Future<void> _publishTrip(BuildContext context, Trip trip) async {
     final published = await PublishTripSheet.show(context, trip);
-    if (published && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.publishSuccess),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  /// Öffnet die Route in Google Maps mit Start, Ziel und Waypoints
-  Future<void> _openInGoogleMaps(
-      BuildContext context, TripStateData tripState) async {
-    final route = tripState.route;
-    if (route == null) return;
-
-    // Google Maps URL mit Waypoints
-    final origin =
-        '${route.start.latitude.toStringAsFixed(6)},${route.start.longitude.toStringAsFixed(6)}';
-    final destination =
-        '${route.end.latitude.toStringAsFixed(6)},${route.end.longitude.toStringAsFixed(6)}';
-
-    var url = 'https://www.google.com/maps/dir/?api=1'
-        '&origin=$origin'
-        '&destination=$destination'
-        '&travelmode=driving';
-
-    // Waypoints hinzufügen (max 9 für Google Maps)
-    if (tripState.stops.isNotEmpty) {
-      final waypoints = tripState.stops
-          .take(TripConstants.maxPoisPerDay)
-          .map((poi) =>
-              '${poi.latitude.toStringAsFixed(6)},${poi.longitude.toStringAsFixed(6)}')
-          .join('|');
-      url += '&waypoints=$waypoints';
+    if (!mounted || !published) {
+      return;
     }
 
-    debugPrint('[GoogleMaps] Opening URL: $url');
-
-    try {
-      final success = await launchUrlSafe(Uri.parse(url));
-      if (!success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.tripGoogleMapsError),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('[GoogleMaps] Error: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.tripGoogleMapsError),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
+    ScaffoldMessenger.of(this.context).showSnackBar(
+      SnackBar(
+        content: Text(this.context.l10n.publishSuccess),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   /// Öffnet einen bestimmten Tag in Google Maps (für Mehrtages-Trips)
@@ -483,8 +433,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final shareText = '''
 🗺️ Meine Route mit MapAB
 
-📍 Start: ${route.startAddress ?? 'Unbekannt'}
-🏁 Ziel: ${route.endAddress ?? 'Unbekannt'}
+📍 Start: ${route.startAddress}
+🏁 Ziel: ${route.endAddress}
 📏 Distanz: ${tripState.totalDistance.toStringAsFixed(1)} km
 ⏱️ Dauer: ${tripState.totalDuration} Min
 
@@ -726,6 +676,8 @@ $mapsUrl
                             // Flag setzen für Auto-Zoom beim Tab-Wechsel
                             ref.read(shouldFitToRouteProvider.notifier).state =
                                 true;
+                            ref.read(mapRouteFocusModeProvider.notifier).state =
+                                true;
                             context.go('/');
                           }
                         : null,
@@ -775,30 +727,6 @@ $mapsUrl
                       ),
                     ),
                   ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: route != null
-                            ? () => _openInGoogleMaps(context, tripState)
-                            : null,
-                        icon: const Icon(Icons.open_in_new),
-                        label: Text(context.l10n.tripGoogleMaps),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: route != null
-                            ? () => _shareRoute(context, tripState)
-                            : null,
-                        icon: const Icon(Icons.share),
-                        label: Text(context.l10n.tripShareRoute),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -911,6 +839,7 @@ $mapsUrl
                     onPressed: () {
                       // Flag setzen für Auto-Zoom beim Tab-Wechsel
                       ref.read(shouldFitToRouteProvider.notifier).state = true;
+                      ref.read(mapRouteFocusModeProvider.notifier).state = true;
                       context.go('/');
                     },
                     icon: const Icon(Icons.map_outlined),
@@ -1161,8 +1090,9 @@ $mapsUrl
               onTap: () {
                 Navigator.pop(ctx);
                 final tripState = ref.read(tripStateProvider);
-                if (tripState.route == null || tripState.stops.length < 3)
+                if (tripState.route == null || tripState.stops.length < 3) {
                   return;
+                }
                 final optimizer = RouteOptimizer();
                 final optimized = optimizer.optimizeRoute(
                   pois: tripState.stops,

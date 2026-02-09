@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/utils/location_helper.dart';
 import '../../data/models/route.dart';
+import '../../data/models/trip.dart';
 import '../../data/repositories/geocoding_repo.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../random_trip/providers/random_trip_provider.dart';
@@ -181,6 +182,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final routePlanner = ref.watch(routePlannerProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
     final tripState = ref.watch(tripStateProvider);
+    final mapRouteFocusMode = ref.watch(mapRouteFocusModeProvider);
 
     // Auto-Zoom auf Route bei Tab-Wechsel (v1.7.0)
     final shouldFitToRoute = ref.watch(shouldFitToRouteProvider);
@@ -245,6 +247,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final hasGeneratedTrip = (randomTripState.step == RandomTripStep.preview ||
             randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null;
+    final hasAnyRouteLoaded =
+        routePlanner.hasRoute || tripState.hasRoute || hasGeneratedTrip;
+    final activeRoute =
+        _resolveActiveRoute(routePlanner, tripState, randomTripState);
+    final activeStops = _resolveActiveStops(tripState, randomTripState);
+
+    if (mapRouteFocusMode && !hasAnyRouteLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(mapRouteFocusModeProvider.notifier).state = false;
+      });
+    }
 
     return Scaffold(
       extendBodyBehindAppBar: false,
@@ -284,63 +298,64 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // Karte (Hintergrund)
           const MapView(),
 
-          // Such-Header (kein SafeArea top nötig - AppBar übernimmt)
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // === AKTIVER TRIP BANNER (Fortsetzen) ===
-                  if (isConfigStep && !isGenerating)
-                    ActiveTripResumeBanner(
-                      onRestore: () {
-                        ref
-                            .read(appUIModeNotifierProvider.notifier)
-                            .setMode(MapPlanMode.aiEuroTrip);
-                      },
-                    ),
+          // Such-Header (kein SafeArea top noetig - AppBar uebernimmt)
+          if (!mapRouteFocusMode)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // === AKTIVER TRIP BANNER (Fortsetzen) ===
+                    if (isConfigStep && !isGenerating)
+                      ActiveTripResumeBanner(
+                        onRestore: () {
+                          ref
+                              .read(appUIModeNotifierProvider.notifier)
+                              .setMode(MapPlanMode.aiEuroTrip);
+                        },
+                      ),
 
-                  // === TRIP CONFIG PANEL (Konfigurationsphase) ===
-                  if (isConfigStep && !isGenerating) ...[
-                    const SizedBox(height: 12),
-                    TripConfigPanel(
-                      mode: ref.watch(appUIModeNotifierProvider),
-                    ),
-                  ],
+                    // === TRIP CONFIG PANEL (Konfigurationsphase) ===
+                    if (isConfigStep && !isGenerating) ...[
+                      const SizedBox(height: 12),
+                      TripConfigPanel(
+                        mode: ref.watch(appUIModeNotifierProvider),
+                      ),
+                    ],
 
-                  // === POST-GENERIERUNG: Kompakte Info-Leiste ===
-                  if (hasGeneratedTrip) ...[
-                    const SizedBox(height: 12),
-                    TripInfoBar(
-                      randomTripState: randomTripState,
-                      onEdit: () => _openDayEditor(),
-                      onStartNavigation: () {
-                        final trip = randomTripState.generatedTrip?.trip;
-                        if (trip != null) {
-                          context.push(
-                            '/navigation',
-                            extra: {
-                              'route': trip.route,
-                              'stops': trip.stops,
-                            },
-                          );
-                        }
-                      },
-                      onClearRoute: () {
-                        ref.read(randomTripNotifierProvider.notifier).reset();
-                        ref.read(routePlannerProvider.notifier).clearRoute();
-                        ref.read(tripStateProvider.notifier).clearAll();
-                      },
-                    ),
+                    // === POST-GENERIERUNG: Kompakte Info-Leiste ===
+                    if (hasGeneratedTrip) ...[
+                      const SizedBox(height: 12),
+                      TripInfoBar(
+                        randomTripState: randomTripState,
+                        onEdit: () => _openDayEditor(),
+                        onStartNavigation: () {
+                          final trip = randomTripState.generatedTrip?.trip;
+                          if (trip != null) {
+                            context.push(
+                              '/navigation',
+                              extra: {
+                                'route': trip.route,
+                                'stops': trip.stops,
+                              },
+                            );
+                          }
+                        },
+                        onClearRoute: () {
+                          ref.read(randomTripNotifierProvider.notifier).reset();
+                          ref.read(routePlannerProvider.notifier).clearRoute();
+                          ref.read(tripStateProvider.notifier).clearAll();
+                        },
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
           // Lade-Widget auf gleicher Hoehe wie das AI-Trip-Konfigurationspanel
-          if (isGenerating)
+          if (isGenerating && !mapRouteFocusMode)
             const SafeArea(
               top: false,
               child: Padding(
@@ -354,9 +369,70 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
               ),
             ),
+          if (mapRouteFocusMode && hasAnyRouteLoaded)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: _RouteFocusFooter(
+                onEditTrip: () {
+                  ref.read(mapRouteFocusModeProvider.notifier).state = false;
+                  context.go('/trip');
+                },
+                onStartNavigation: activeRoute == null
+                    ? null
+                    : () {
+                        ref.read(mapRouteFocusModeProvider.notifier).state =
+                            false;
+                        context.push(
+                          '/navigation',
+                          extra: {
+                            'route': activeRoute,
+                            'stops': activeStops,
+                          },
+                        );
+                      },
+                onDeleteRoute: () {
+                  ref.read(mapRouteFocusModeProvider.notifier).state = false;
+                  ref.read(randomTripNotifierProvider.notifier).reset();
+                  ref.read(routePlannerProvider.notifier).clearRoute();
+                  ref.read(tripStateProvider.notifier).clearAll();
+                },
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  AppRoute? _resolveActiveRoute(
+    RoutePlannerData routePlanner,
+    TripStateData tripState,
+    RandomTripState randomTripState,
+  ) {
+    if ((randomTripState.step == RandomTripStep.preview ||
+            randomTripState.step == RandomTripStep.confirmed) &&
+        randomTripState.generatedTrip != null) {
+      return randomTripState.generatedTrip!.trip.route;
+    }
+    if (tripState.hasRoute) return tripState.route;
+    if (routePlanner.hasRoute) return routePlanner.route;
+    return null;
+  }
+
+  List<TripStop> _resolveActiveStops(
+    TripStateData tripState,
+    RandomTripState randomTripState,
+  ) {
+    if ((randomTripState.step == RandomTripStep.preview ||
+            randomTripState.step == RandomTripStep.confirmed) &&
+        randomTripState.generatedTrip != null) {
+      return randomTripState.generatedTrip!.trip.stops;
+    }
+
+    return tripState.stops
+        .asMap()
+        .entries
+        .map((e) => TripStop.fromPOI(e.value, order: e.key))
+        .toList();
   }
 
   /// Zentriert die Karte still auf aktuelle GPS-Position (ohne UI-Feedback)
@@ -417,6 +493,78 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => const DayEditorOverlay(),
+      ),
+    );
+  }
+}
+
+class _RouteFocusFooter extends StatelessWidget {
+  final VoidCallback onEditTrip;
+  final VoidCallback? onStartNavigation;
+  final VoidCallback onDeleteRoute;
+
+  const _RouteFocusFooter({
+    required this.onEditTrip,
+    required this.onStartNavigation,
+    required this.onDeleteRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onEditTrip,
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(context.l10n.tripInfoEditTrip),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onStartNavigation,
+                icon: const Icon(Icons.navigation),
+                label: Text(context.l10n.tripInfoStartNavigation),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onDeleteRoute,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(context.l10n.tripConfigDeleteRoute),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                  side: BorderSide(
+                      color: colorScheme.error.withValues(alpha: 0.6)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

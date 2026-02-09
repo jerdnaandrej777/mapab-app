@@ -447,6 +447,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 
     // Auto-Zoom auf Route aktivieren
     ref.read(shouldFitToRouteProvider.notifier).state = true;
+    // Karte im fokussierten Routenmodus anzeigen
+    ref.read(mapRouteFocusModeProvider.notifier).state = true;
 
     // Zur Karte navigieren
     context.go('/');
@@ -485,7 +487,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 SnackBar(content: Text(context.l10n.favRouteRemoved)),
               );
             },
-            child: Text(context.l10n.remove, style: const TextStyle(color: Colors.red)),
+            child: Text(context.l10n.remove,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -511,7 +514,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 SnackBar(content: Text(context.l10n.favPoiRemoved)),
               );
             },
-            child: Text(context.l10n.remove, style: const TextStyle(color: Colors.red)),
+            child: Text(context.l10n.remove,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -537,7 +541,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 SnackBar(content: Text(context.l10n.favAllDeleted)),
               );
             },
-            child: Text(context.l10n.delete, style: const TextStyle(color: Colors.red)),
+            child: Text(context.l10n.delete,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

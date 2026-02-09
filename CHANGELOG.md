@@ -7,6 +7,37 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.52] - 2026-02-09
+
+### Route-Fokus-Modal + Favoriten-Konsistenz
+
+#### Geaendert
+- **"Auf Karte anzeigen" nutzt jetzt einen fokussierten Kartenmodus**
+  - Bei berechneten Routen und AI-Trip-Preview wird beim Wechsel zur Karte ein Route-Fokusmodus aktiviert.
+  - In diesem Modus werden Planungs-Overlays ausgeblendet, damit die Karte im Vordergrund steht.
+- **Map-Footer fuer Route-Fokus eingefuehrt**
+  - Im Fokusmodus sind nur noch drei Aktionen sichtbar:
+    - `Trip bearbeiten`
+    - `Navigation starten`
+    - `Route loeschen`
+- **"Deine Route" Modal bereinigt**
+  - Die unteren Buttons `Google Maps` und `Route teilen` wurden aus dem Modal entfernt.
+- **Favoriten-Routen verhalten sich jetzt identisch**
+  - Geladene Favoriten-Routen aktivieren denselben Route-Fokusmodus inkl. Auto-Zoom.
+
+#### Behoben
+- **UI-Regressionen beim Wechsel Trip -> Karte reduziert**
+  - Keine konkurrierenden Footer-/Panel-Elemente mehr bei aktiver Routenansicht auf der Karte.
+
+#### Release
+- **Release-APK aktualisiert**
+  - Android Build auf **235** angehoben.
+  - Neue Datei: `docs/mapab-v1.10.52.apk`.
+
+#### Tests
+- `dart analyze` auf den geaenderten Map/Trip/Favoriten-Dateien erfolgreich (nur bestehende Info-Lints).
+- `flutter test` (komplette Suite) erfolgreich.
+
 ## [1.10.51] - 2026-02-09
 
 ### Social-Galerie Import + Standort-Start
