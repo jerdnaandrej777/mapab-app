@@ -160,6 +160,13 @@ flutter test
 
 ## Recent Updates (Februar 2026)
 
+### v1.10.51 - Social Import + Standort-Start (9. Februar 2026)
+- **Trip-Galerie Import gefixt** - Importierte Trips werden jetzt wirklich in den lokalen Favoriten gespeichert.
+- **Public Trips ab Standort starten** - Galerie-Trips lassen sich direkt vom aktuellen GPS-Standort starten.
+- **POIs ab Standort starten** - Einzelne POIs in der Trip-Vorschau können direkt als Ziel gestartet werden.
+- **TripData-Parsing gehaertet** - Route/Stop-Daten werden robust aus Legacy- und aktuellen Payload-Formaten gelesen.
+- **Release-APK aktualisiert** - Neues Android-Release mit Build 234.
+
 ### v1.10.50 - POI-Dichte + Ladeperformance (9. Februar 2026)
 - **Mehr POIs auf Tagesrouten** - Daytrip-Fallbacks sammeln und mergen POIs ueber mehrere Versuche, statt beim ersten kleinen Treffer zu stoppen.
 - **Dynamische Kategorien-Limits** - `maxPerCategory` wird aus Zielmenge und Verfuegbarkeit berechnet; dadurch weniger Unterbelegung bei engen Kategorien.

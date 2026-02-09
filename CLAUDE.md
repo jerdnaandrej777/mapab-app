@@ -5,14 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.50 - POI-Dichte + Ladeperformance | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.50)
+Version: 1.10.51 - Social Import + Standort-Start | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.51)
 
-- Daytrip-Fallbacks mergen POI-Treffer ueber mehrere Versuche (stabilere Mindestmenge).
-- Dynamisches `maxPerCategory` verhindert Unterbelegung bei engen Kategorien.
-- Daytrip-/AI-POI-Zielmenge auf `4..9` angehoben.
-- Curated-POI-Katalog wird lazy geladen und im Speicher gecacht.
-- Android Release aktualisiert: APK Build 233 (v1.10.50).
+- Trip-Galerie-Import speichert Public Trips jetzt verlässlich in lokale Favoriten.
+- Public Trips koennen direkt ab aktuellem Standort gestartet werden (inkl. Connector-Segment zur Originalroute).
+- POIs in der Public-Trip-Vorschau koennen direkt ab Standort gestartet werden.
+- Public-`trip_data` Parsing gehaertet (Legacy-kompatibel, robustes Koordinaten-/Kategorie-Mapping).
+- Android Release aktualisiert: APK Build 234 (v1.10.51).
 
 
 ## Tech Stack
@@ -147,7 +147,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/templates/trip_templates_screen.dart` | Trip-Vorlagen-Auswahl: 12 vordefinierte Reisetypen, Zielgruppen-Filter (Alle/Paare/Familien/etc.), Tage-Stepper, direkte AI-Trip-Generierung (v1.9.30) |
 | `lib/features/social/gallery_screen.dart` | Oeffentliche Trip-Galerie: Featured-Trips horizontal, Grid-Ansicht, Filter-Sheet (Vollbild, v1.10.0), Suche, Sortierung (Beliebt/Neueste/Likes), Trip-Typ-Filter, Tags, Infinite Scroll (v1.10.0) + FilterChip/ChoiceChip explizite Textfarben colorScheme.onPrimary/onSurface (v1.10.1) + _FilterSheet ref.watch() statt state-Parameter fuer sofortige Button-Updates (v1.10.7) + Owner-Aktionen fuer POI-Posts (Bearbeiten/Loeschen) direkt in der Galerie (v1.10.49) |
 | `lib/features/social/widgets/public_trip_card.dart` | Trip-Karte in Galerie: Thumbnail, Statistiken, Like-Button, Author-Info (v1.10.0) |
-| `lib/features/social/trip_detail_public_screen.dart` | Trip-Detail-Ansicht: Route auf Karte, Stops, Author-Profil, Like/Import-Buttons (v1.10.0) + "Auf Karte"-Button zeigt Trip auf Hauptkarte: Route-Parsing aus tripData, POI-Erstellung, tripStateProvider.setRouteAndStops(), Auto-Zoom (v1.10.17) + robuste Stop-Normalisierung (poiId/lat/lng/category/tags), klickbare POI-Vorschau mit korrektem Detail-Linking (v1.10.35) + Highlight-Mapping (highlights -> tags), Must-See-Erkennung und Highlight-Anzeige in POI-Vorschau (v1.10.37) + Owner-Menue fuer Bearbeiten/Loeschen des veroeffentlichten Trips (v1.10.49) |
+| `lib/features/social/trip_detail_public_screen.dart` | Trip-Detail-Ansicht: Route auf Karte, Stops, Author-Profil, Like/Import-Buttons (v1.10.0) + "Auf Karte"-Button zeigt Trip auf Hauptkarte: Route-Parsing aus tripData, POI-Erstellung, tripStateProvider.setRouteAndStops(), Auto-Zoom (v1.10.17) + robuste Stop-Normalisierung (poiId/lat/lng/category/tags), klickbare POI-Vorschau mit korrektem Detail-Linking (v1.10.35) + Highlight-Mapping (highlights -> tags), Must-See-Erkennung und Highlight-Anzeige in POI-Vorschau (v1.10.37) + Owner-Menue fuer Bearbeiten/Loeschen des veroeffentlichten Trips (v1.10.49) + Import speichert in Favoriten und Start von Trip/POI ab Standort inkl. Connector-Route (v1.10.51) |
 | `lib/features/social/widgets/publish_trip_sheet.dart` | Bottom Sheet zum Veroeffentlichen: Name, Beschreibung, Tags, Sichtbarkeit (v1.10.0) + FilterChip-Farben-Fix: explizite labelStyle/selectedColor/backgroundColor/checkmarkColor fuer sichtbare Tag-Buttons (v1.10.16) + Source-POI-Merge aus tripState/randomTrip fuer vollstaendige Publish-Stopdaten (v1.10.35) |
 | `lib/features/leaderboard/leaderboard_screen.dart` | Globale Rangliste: 4 Sortieroptionen (XP/km/Trips/Likes), eigene Position immer sichtbar, Gold/Silber/Bronze Badges, Streak-Anzeige, Pagination (v1.10.23) |
 | `lib/features/challenges/challenges_screen.dart` | WÃ¶chentliche Challenges: 9 Challenge-Typen, Streak-Karte mit Flammen-Gradient, Fortschrittsbalken, XP-Belohnungen, HIGHLIGHT-Badges, Timer bis Ablauf (v1.10.23) |

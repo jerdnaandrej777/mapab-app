@@ -5,12 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../core/constants/categories.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/utils/geo_utils.dart';
+import '../../core/utils/location_helper.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/public_trip.dart';
 import '../../data/models/route.dart';
+import '../../data/models/trip.dart';
 import '../../data/providers/auth_provider.dart';
+import '../../data/providers/favorites_provider.dart';
 import '../../data/providers/gallery_provider.dart';
+import '../../data/repositories/routing_repo.dart';
 import '../../data/services/sharing_service.dart';
 import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
@@ -517,7 +523,13 @@ class _TripDetailPublicScreenState
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: null,
+      trailing: IconButton(
+        icon: const Icon(Icons.navigation_rounded),
+        tooltip: 'Ab Standort starten',
+        onPressed: _poiFromStop(stop) == null
+            ? null
+            : () => _startPoiFromCurrentLocation(stop),
+      ),
       onTap: poiId == null ? null : () => _openPOIDetailFromStop(stop),
     );
   }
@@ -536,27 +548,44 @@ class _TripDetailPublicScreenState
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Import Button
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: trip.isImportedByMe ? null : () => _importTrip(trip),
-                icon: Icon(
-                  trip.isImportedByMe ? Icons.check : Icons.download,
+            Row(
+              children: [
+                // Import Button
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed:
+                        trip.isImportedByMe ? null : () => _importTrip(trip),
+                    icon: Icon(
+                      trip.isImportedByMe ? Icons.check : Icons.download,
+                    ),
+                    label: Text(
+                      trip.isImportedByMe
+                          ? 'Importiert'
+                          : context.l10n.galleryImportToFavorites,
+                    ),
+                  ),
                 ),
-                label: Text(
-                  trip.isImportedByMe ? 'Importiert' : 'In Favoriten',
+                const SizedBox(width: 12),
+                // Auf Karte anzeigen
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showOnMap(trip),
+                    icon: const Icon(Icons.map),
+                    label: Text(context.l10n.galleryShowOnMap),
+                  ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(width: 12),
-            // Auf Karte anzeigen
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showOnMap(trip),
-                icon: const Icon(Icons.map),
-                label: Text(context.l10n.galleryShowOnMap),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: () => _startTripFromCurrentLocation(trip),
+                icon: const Icon(Icons.navigation_rounded),
+                label: const Text('Ab Standort starten'),
               ),
             ),
           ],
@@ -732,77 +761,78 @@ class _TripDetailPublicScreenState
   }
 
   Future<void> _importTrip(PublicTrip trip) async {
-    final tripData = await ref
+    final importedTripData = await ref
         .read(tripDetailNotifierProvider(widget.tripId).notifier)
         .importTrip();
 
     if (!mounted) return;
 
-    if (tripData != null) {
-      AppSnackbar.showSuccess(context, context.l10n.galleryImportSuccess);
-    } else {
+    if (importedTripData == null) {
       AppSnackbar.showError(context, context.l10n.galleryImportError);
+      return;
     }
+
+    final resolvedTripData = _resolveTripData(
+      trip: trip,
+      importedTripData: importedTripData,
+    );
+    if (resolvedTripData == null) {
+      AppSnackbar.showError(context, context.l10n.galleryImportError);
+      return;
+    }
+
+    final parsedTrip = _extractRouteAndStopsFromTripData(
+      trip: trip,
+      tripData: resolvedTripData,
+    );
+    if (parsedTrip == null) {
+      AppSnackbar.showError(context, context.l10n.galleryImportError);
+      return;
+    }
+
+    final favoriteTrip = _buildFavoriteTrip(
+      trip: trip,
+      route: parsedTrip.route,
+      stops: parsedTrip.stops,
+      tripData: resolvedTripData,
+    );
+
+    await ref.read(favoritesNotifierProvider.notifier).saveRoute(favoriteTrip);
+    if (!mounted) return;
+
+    AppSnackbar.showSuccess(context, context.l10n.galleryImportSuccess);
   }
 
   void _showOnMap(PublicTrip trip) {
-    final tripData = trip.tripData;
+    final tripData = _resolveTripData(trip: trip);
     if (tripData == null) {
       AppSnackbar.showError(context, context.l10n.galleryMapNoData);
       return;
     }
 
     try {
-      // Route-Daten extrahieren
-      final routeData = tripData['route'] as Map<String, dynamic>?;
-      if (routeData == null) {
-        AppSnackbar.showError(context, context.l10n.galleryMapNoData);
-        return;
-      }
-
-      // Koordinaten parsen
-      final coordsList = routeData['coordinates'] as List<dynamic>? ?? [];
-      final coordinates = coordsList.map((c) {
-        final map = c as Map<String, dynamic>;
-        return LatLng(
-          (map['lat'] as num).toDouble(),
-          (map['lng'] as num).toDouble(),
-        );
-      }).toList();
-
-      if (coordinates.isEmpty) {
-        AppSnackbar.showError(context, context.l10n.galleryMapNoData);
-        return;
-      }
-
-      // AppRoute erstellen
-      final route = AppRoute(
-        start: coordinates.first,
-        end: coordinates.last,
-        startAddress: trip.tripName,
-        endAddress: trip.tripName,
-        coordinates: coordinates,
-        distanceKm: trip.distanceKm ?? 0,
-        durationMinutes: ((trip.durationHours ?? 0) * 60).round(),
+      final parsedTrip = _extractRouteAndStopsFromTripData(
+        trip: trip,
+        tripData: tripData,
       );
+      if (parsedTrip == null) {
+        AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+        return;
+      }
 
-      // Stops parsen
-      final stopsData = tripData['stops'] as List<dynamic>? ?? [];
-      final stops = stopsData
-          .map(_normalizeTripStop)
-          .whereType<Map<String, dynamic>>()
-          .map(_poiFromStop)
-          .whereType<POI>()
-          .toList();
+      final stops =
+          parsedTrip.stops.map(_poiFromStop).whereType<POI>().toList();
 
       // In tripStateProvider laden
-      ref.read(tripStateProvider.notifier).setRouteAndStops(route, stops);
+      ref
+          .read(tripStateProvider.notifier)
+          .setRouteAndStops(parsedTrip.route, stops);
 
       // Flag setzen für Auto-Zoom
       ref.read(shouldFitToRouteProvider.notifier).state = true;
 
       debugPrint(
-          '[TripDetail] Route auf Karte geladen: ${route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
+          '[TripDetail] Route auf Karte geladen: ${parsedTrip.route.distanceKm.toStringAsFixed(1)} km, ${stops.length} Stops');
 
       // Zur Karte navigieren
       context.go('/');
@@ -810,6 +840,331 @@ class _TripDetailPublicScreenState
       debugPrint('[TripDetail] Fehler beim Anzeigen auf Karte: $e');
       AppSnackbar.showError(context, context.l10n.galleryMapError);
     }
+  }
+
+  Future<void> _startTripFromCurrentLocation(PublicTrip trip) async {
+    final tripData = _resolveTripData(trip: trip);
+    if (tripData == null) {
+      AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+      return;
+    }
+
+    final parsedTrip = _extractRouteAndStopsFromTripData(
+      trip: trip,
+      tripData: tripData,
+    );
+    if (parsedTrip == null) {
+      AppSnackbar.showError(context, context.l10n.galleryMapNoData);
+      return;
+    }
+
+    final locationResult = await LocationHelper.getCurrentPosition();
+    if (!mounted) return;
+
+    if (!locationResult.isSuccess) {
+      await _handleLocationFailure(locationResult);
+      return;
+    }
+
+    final currentLocation = locationResult.position!;
+    var routeToLoad = parsedTrip.route;
+
+    final distanceToStart =
+        GeoUtils.haversineDistance(currentLocation, parsedTrip.route.start);
+
+    if (distanceToStart > 0.05) {
+      try {
+        final connectorRoute =
+            await ref.read(routingRepositoryProvider).calculateFastRoute(
+                  start: currentLocation,
+                  end: parsedTrip.route.start,
+                  startAddress: 'Mein Standort',
+                  endAddress: parsedTrip.route.startAddress,
+                );
+
+        final mergedCoordinates = <LatLng>[...connectorRoute.coordinates];
+        if (parsedTrip.route.coordinates.isNotEmpty) {
+          final shouldSkipFirstPoint = mergedCoordinates.isNotEmpty &&
+              GeoUtils.haversineDistance(
+                    mergedCoordinates.last,
+                    parsedTrip.route.coordinates.first,
+                  ) <=
+                  0.05;
+
+          mergedCoordinates.addAll(
+            shouldSkipFirstPoint
+                ? parsedTrip.route.coordinates.skip(1)
+                : parsedTrip.route.coordinates,
+          );
+        }
+
+        routeToLoad = parsedTrip.route.copyWith(
+          start: currentLocation,
+          startAddress: 'Mein Standort',
+          coordinates: mergedCoordinates,
+          distanceKm: connectorRoute.distanceKm + parsedTrip.route.distanceKm,
+          durationMinutes:
+              connectorRoute.durationMinutes + parsedTrip.route.durationMinutes,
+          calculatedAt: DateTime.now(),
+        );
+      } catch (e) {
+        debugPrint('[TripDetail] Fehler beim Starten ab Standort: $e');
+        if (mounted) {
+          AppSnackbar.showError(context, context.l10n.galleryMapError);
+        }
+        return;
+      }
+    }
+
+    final stops = parsedTrip.stops.map(_poiFromStop).whereType<POI>().toList();
+
+    ref.read(tripStateProvider.notifier).setRouteAndStops(routeToLoad, stops);
+    ref.read(shouldFitToRouteProvider.notifier).state = true;
+
+    if (!mounted) return;
+    context.go('/trip');
+  }
+
+  Future<void> _startPoiFromCurrentLocation(Map<String, dynamic> stop) async {
+    final poi = _poiFromStop(stop);
+    if (poi == null) {
+      AppSnackbar.showError(context, context.l10n.galleryMapError);
+      return;
+    }
+
+    final tripNotifier = ref.read(tripStateProvider.notifier);
+    tripNotifier.clearAll();
+
+    final result = await tripNotifier.addStopWithAutoRoute(poi);
+    if (!mounted) return;
+
+    if (result.success) {
+      ref.read(shouldFitToRouteProvider.notifier).state = true;
+      context.go('/trip');
+      return;
+    }
+
+    if (result.isGpsDisabled || result.isPermissionDenied) {
+      await _handleLocationFailure(
+        LocationResult.failure(
+          result.error ?? 'gps_error',
+          result.message ?? 'Standort konnte nicht ermittelt werden.',
+        ),
+      );
+      return;
+    }
+
+    AppSnackbar.showError(
+        context, result.message ?? context.l10n.galleryMapError);
+  }
+
+  Future<void> _handleLocationFailure(LocationResult result) async {
+    if (!mounted) return;
+
+    if (result.isGpsDisabled) {
+      final shouldOpenSettings = await LocationHelper.showGpsDialog(context);
+      if (shouldOpenSettings) {
+        await LocationHelper.openSettings();
+      }
+      return;
+    }
+
+    AppSnackbar.showError(
+      context,
+      result.message ?? 'Standort konnte nicht ermittelt werden.',
+    );
+
+    if (result.error == 'permission_denied_forever') {
+      await LocationHelper.openAppSettings();
+    }
+  }
+
+  Map<String, dynamic>? _resolveTripData({
+    required PublicTrip trip,
+    Map<String, dynamic>? importedTripData,
+  }) {
+    final candidates = <Map<String, dynamic>?>[
+      importedTripData,
+      trip.tripData,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+
+      if (candidate['trip_data'] is Map) {
+        return Map<String, dynamic>.from(candidate['trip_data'] as Map);
+      }
+      if (candidate['tripData'] is Map) {
+        return Map<String, dynamic>.from(candidate['tripData'] as Map);
+      }
+      if (candidate['route'] is Map || candidate['stops'] is List) {
+        return Map<String, dynamic>.from(candidate);
+      }
+    }
+
+    return null;
+  }
+
+  ({AppRoute route, List<Map<String, dynamic>> stops})?
+      _extractRouteAndStopsFromTripData({
+    required PublicTrip trip,
+    required Map<String, dynamic> tripData,
+  }) {
+    final rawRouteData = tripData['route'];
+    if (rawRouteData is! Map) return null;
+
+    final routeData = Map<String, dynamic>.from(rawRouteData);
+    final coordinates = _parseCoordinates(routeData['coordinates']);
+    if (coordinates.isEmpty) return null;
+
+    final waypoints = _parseCoordinates(routeData['waypoints']);
+    final startAddress =
+        (routeData['startAddress'] ?? routeData['start_address'] ?? '')
+            .toString();
+    final endAddress =
+        (routeData['endAddress'] ?? routeData['end_address'] ?? '').toString();
+    final distanceKm = _asDouble(
+          routeData['distanceKm'] ?? routeData['distance_km'],
+        ) ??
+        trip.distanceKm ??
+        GeoUtils.calculateRouteLength(coordinates);
+    final durationMinutes = _asInt(
+          routeData['durationMinutes'] ?? routeData['duration_minutes'],
+        ) ??
+        ((trip.durationHours ?? 0) * 60).round();
+
+    final route = AppRoute(
+      start: coordinates.first,
+      end: coordinates.last,
+      startAddress:
+          startAddress.isEmpty ? '${trip.tripName} (Start)' : startAddress,
+      endAddress: endAddress.isEmpty ? '${trip.tripName} (Ziel)' : endAddress,
+      coordinates: coordinates,
+      distanceKm: distanceKm,
+      durationMinutes: durationMinutes < 0 ? 0 : durationMinutes,
+      type: _parseRouteType(routeData['type']),
+      waypoints: waypoints,
+    );
+
+    return (
+      route: route,
+      stops: _extractTripStops(tripData),
+    );
+  }
+
+  Trip _buildFavoriteTrip({
+    required PublicTrip trip,
+    required AppRoute route,
+    required List<Map<String, dynamic>> stops,
+    required Map<String, dynamic> tripData,
+  }) {
+    final favoriteStops = <TripStop>[];
+    for (var i = 0; i < stops.length; i++) {
+      final parsedStop = _tripStopFromStop(
+        stop: stops[i],
+        fallbackOrder: i,
+        routeCoordinates: route.coordinates,
+      );
+      if (parsedStop != null) {
+        favoriteStops.add(parsedStop);
+      }
+    }
+
+    final dayCountFromData = _asInt(tripData['actualDays']) ?? trip.dayCount;
+    return Trip(
+      id: trip.id,
+      name: trip.tripName,
+      type: _parseTripType(trip.tripType),
+      route: route,
+      stops: favoriteStops,
+      days: dayCountFromData < 1 ? 1 : dayCountFromData,
+      createdAt: DateTime.now(),
+      notes: trip.description,
+    );
+  }
+
+  TripStop? _tripStopFromStop({
+    required Map<String, dynamic> stop,
+    required int fallbackOrder,
+    required List<LatLng> routeCoordinates,
+  }) {
+    final poi = _poiFromStop(stop);
+    if (poi == null) return null;
+
+    final routePosition = _asDouble(
+          stop['routePosition'] ?? stop['route_position'],
+        ) ??
+        (routeCoordinates.length >= 2
+            ? GeoUtils.calculateRoutePosition(poi.location, routeCoordinates)
+            : null);
+
+    return TripStop(
+      poiId: poi.id,
+      name: poi.name,
+      latitude: poi.latitude,
+      longitude: poi.longitude,
+      categoryId: poi.categoryId,
+      routePosition: routePosition,
+      detourKm: _asDouble(stop['detourKm'] ?? stop['detour_km']),
+      detourMinutes: _asInt(stop['detourMinutes'] ?? stop['detour_minutes']),
+      plannedDurationMinutes: _asInt(
+            stop['plannedDurationMinutes'] ??
+                stop['planned_duration_minutes'] ??
+                stop['durationMinutes'],
+          ) ??
+          30,
+      order: _asInt(stop['order']) ?? fallbackOrder,
+      day: (_asInt(stop['day']) ?? 1).clamp(1, 365),
+      isOvernightStop:
+          _asBool(stop['isOvernightStop'] ?? stop['is_overnight_stop']),
+      notes: stop['notes']?.toString(),
+    );
+  }
+
+  TripType _parseTripType(String rawType) {
+    for (final type in TripType.values) {
+      if (type.name == rawType) return type;
+    }
+    return TripType.daytrip;
+  }
+
+  RouteType _parseRouteType(dynamic rawType) {
+    final normalized = rawType?.toString().trim().toLowerCase();
+    return normalized == RouteType.scenic.name
+        ? RouteType.scenic
+        : RouteType.fast;
+  }
+
+  List<LatLng> _parseCoordinates(dynamic rawCoordinates) {
+    final list = rawCoordinates as List?;
+    if (list == null) return const <LatLng>[];
+
+    return list.map(_parseLatLng).whereType<LatLng>().toList(growable: false);
+  }
+
+  LatLng? _parseLatLng(dynamic rawCoordinate) {
+    if (rawCoordinate is Map) {
+      final map = Map<String, dynamic>.from(rawCoordinate);
+      final lat = _asDouble(map['lat'] ?? map['latitude']);
+      final lng = _asDouble(map['lng'] ?? map['lon'] ?? map['longitude']);
+      if (lat == null || lng == null) return null;
+      return LatLng(lat, lng);
+    }
+
+    if (rawCoordinate is List && rawCoordinate.length >= 2) {
+      final first = _asDouble(rawCoordinate[0]);
+      final second = _asDouble(rawCoordinate[1]);
+      if (first == null || second == null) return null;
+
+      if (second.abs() <= 90 && first.abs() <= 180) {
+        return LatLng(second, first); // [lng, lat]
+      }
+      if (first.abs() <= 90 && second.abs() <= 180) {
+        return LatLng(first, second); // [lat, lng]
+      }
+    }
+
+    return null;
   }
 
   List<Map<String, dynamic>> _extractTripStops(Map<String, dynamic>? tripData) {
@@ -824,25 +1179,22 @@ class _TripDetailPublicScreenState
     if (raw is! Map) return null;
     final map = Map<String, dynamic>.from(raw);
 
-    final poiId =
-        (map['poiId'] ?? map['poi_id'] ?? map['id'])?.toString().trim();
-    if (poiId == null || poiId.isEmpty) return null;
-
     final latitude = _asDouble(map['latitude'] ?? map['lat']);
     final longitude = _asDouble(map['longitude'] ?? map['lng'] ?? map['lon']);
-    final categoryId = (map['categoryId'] ??
-            map['category_id'] ??
-            map['category'] ??
-            'attraction')
-        .toString();
-    final tags = ((map['tags'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    final highlights = ((map['highlights'] as List?) ?? const [])
-        .map((e) => e.toString().trim().toLowerCase())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    if (latitude == null || longitude == null) return null;
+
+    final resolvedPoiId =
+        (map['poiId'] ?? map['poi_id'] ?? map['id'])?.toString().trim();
+    final poiId = (resolvedPoiId == null || resolvedPoiId.isEmpty)
+        ? _fallbackPoiId(map: map, latitude: latitude, longitude: longitude)
+        : resolvedPoiId;
+
+    final categoryId = _normalizeCategoryId(
+      map['categoryId'] ?? map['category_id'] ?? map['category'],
+    );
+    final tags = _asStringList(map['tags']);
+    final highlights =
+        _asStringList(map['highlights']).map((e) => e.toLowerCase()).toList();
     final tagsWithHighlights = <String>{...tags, ...highlights}.toList();
     final isMustSee = _asBool(map['isMustSee'] ?? map['is_must_see']) ||
         tagsWithHighlights.contains('unesco') ||
@@ -869,7 +1221,62 @@ class _TripDetailPublicScreenState
   }
 
   String _stopCategoryId(Map<String, dynamic> stop) {
-    return (stop['categoryId'] ?? 'attraction').toString();
+    return _normalizeCategoryId(stop['categoryId']);
+  }
+
+  String _fallbackPoiId({
+    required Map<String, dynamic> map,
+    required double latitude,
+    required double longitude,
+  }) {
+    final title = (map['name'] ?? map['title'] ?? 'poi')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '-');
+    return 'gallery-$title-${latitude.toStringAsFixed(5)}-${longitude.toStringAsFixed(5)}';
+  }
+
+  List<String> _asStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    if (value is String) {
+      return value
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const <String>[];
+  }
+
+  String _normalizeCategoryId(dynamic rawCategory) {
+    final normalized =
+        (rawCategory ?? 'attraction').toString().trim().toLowerCase();
+    if (normalized.isEmpty) return 'attraction';
+
+    for (final category in POICategory.values) {
+      final byId = category.id.toLowerCase() == normalized;
+      final byName = category.name.toLowerCase() == normalized;
+      final byLabel = category.label.toLowerCase() == normalized;
+      if (byId || byName || byLabel) {
+        return category.id;
+      }
+    }
+
+    if (normalized.contains('restaurant')) return POICategory.restaurant.id;
+    if (normalized.contains('hotel')) return POICategory.hotel.id;
+    if (normalized.contains('stadt') || normalized.contains('city')) {
+      return POICategory.city.id;
+    }
+    if (normalized.contains('museum')) return POICategory.museum.id;
+    if (normalized.contains('unesco')) return POICategory.unesco.id;
+
+    return POICategory.attraction.id;
   }
 
   bool _stopIsMustSee(Map<String, dynamic> stop) {
@@ -877,9 +1284,7 @@ class _TripDetailPublicScreenState
   }
 
   List<String> _stopTags(Map<String, dynamic> stop) {
-    final tags = stop['tags'] as List?;
-    if (tags == null) return const <String>[];
-    return tags.map((e) => e.toString()).toList();
+    return _asStringList(stop['tags']);
   }
 
   List<String> _stopHighlightLabels(Map<String, dynamic> stop) {
@@ -909,7 +1314,14 @@ class _TripDetailPublicScreenState
   double? _asDouble(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
-    return double.tryParse(value.toString());
+    return double.tryParse(value.toString().replaceAll(',', '.'));
+  }
+
+  int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value.toString());
   }
 
   bool _asBool(dynamic value) {

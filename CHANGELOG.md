@@ -7,6 +7,32 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.51] - 2026-02-09
+
+### Social-Galerie Import + Standort-Start
+
+#### Behoben
+- **Trip-Import aus der Galerie landet jetzt verlässlich in Favoriten**
+  - Der Import-Flow speichert den importierten Public-Trip jetzt zusätzlich lokal als Favoriten-Route.
+  - `trip_data` wird robust geparst (inkl. kompatibler Varianten) statt still zu verwerfen.
+- **Starten aus der Trip-Galerie ab aktuellem Standort**
+  - Öffentliche Trips können direkt ab GPS-Standort gestartet werden.
+  - Falls nötig wird ein Connector-Segment vom aktuellen Standort zum Trip-Start berechnet und an die vorhandene Route gemerged.
+- **POI-Start aus der Galerie-Vorschau**
+  - Einzelne POIs im Public-Trip-Detail können direkt als Ziel ab Standort gestartet werden.
+
+#### Geaendert
+- **Public-Trip Parsing und Normalisierung gehaertet**
+  - Robuste Koordinaten-Konvertierung (`{lat,lng}` und Listenformate) für Route/Waypoints.
+  - Fallback-POI-IDs werden erzeugt, wenn Legacy-Daten keine stabile `poiId` enthalten.
+  - Kategorie-Mapping normalisiert uneinheitliche Kategorien auf gültige `POICategory`-IDs.
+- **Release-APK aktualisiert**
+  - Android Build auf **234** angehoben.
+
+#### Tests
+- `dart analyze lib/features/social/trip_detail_public_screen.dart` erfolgreich (nur bestehende Info-Lints).
+- `flutter test test/services/sharing_public_link_test.dart` erfolgreich.
+
 ## [1.10.50] - 2026-02-09
 
 ### POI-Dichte + Ladeperformance
