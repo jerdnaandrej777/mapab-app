@@ -93,13 +93,13 @@ class _PublishPoiSheetState extends ConsumerState<PublishPoiSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'POI veroeffentlichen',
+                      context.l10n.publishTitle,
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Teile diesen Ort mit der Community',
+                      context.l10n.publishSubtitle,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -251,7 +251,7 @@ class _PublishPoiSheetState extends ConsumerState<PublishPoiSheet> {
     if (!auth.isAuthenticated) {
       AppSnackbar.showError(
         context,
-        'Bitte zuerst einloggen, um POIs zu veroeffentlichen.',
+        context.l10n.socialLoginRequired,
       );
       return;
     }
@@ -273,14 +273,14 @@ class _PublishPoiSheetState extends ConsumerState<PublishPoiSheet> {
 
       if (!mounted) return;
       if (result == null) {
-        throw Exception('POI konnte nicht veröffentlicht werden');
+        throw Exception(context.l10n.publishError);
       }
 
-      AppSnackbar.showSuccess(context, 'POI veroeffentlicht');
+      AppSnackbar.showSuccess(context, context.l10n.publishSuccess);
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.showError(context, 'Veröffentlichen fehlgeschlagen: $e');
+      AppSnackbar.showError(context, '${context.l10n.publishError}: $e');
       setState(() => _isPublishing = false);
     }
   }

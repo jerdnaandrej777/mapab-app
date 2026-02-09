@@ -19,6 +19,7 @@ import '../../random_trip/providers/random_trip_state.dart';
 import '../../random_trip/widgets/day_tab_selector.dart';
 import '../../ai/providers/ai_trip_advisor_provider.dart';
 import '../../ai/widgets/ai_suggestion_banner.dart';
+import '../../navigation/models/navigation_launch_args.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/l10n/category_l10n.dart';
 import '../utils/trip_save_helper.dart';
@@ -1460,10 +1461,13 @@ class _BottomActions extends ConsumerWidget {
     // Overlay schliessen und Navigation starten
     Navigator.pop(context);
     if (context.mounted) {
-      context.push('/navigation', extra: {
-        'route': dayRoute,
-        'stops': stopsForDay,
-      });
+      context.push(
+        '/navigation',
+        extra: NavigationLaunchArgs(
+          route: dayRoute,
+          stops: stopsForDay,
+        ),
+      );
     }
   }
 }

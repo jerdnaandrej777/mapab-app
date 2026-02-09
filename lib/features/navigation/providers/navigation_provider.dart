@@ -9,7 +9,7 @@ import '../../../data/models/navigation_step.dart';
 import '../../../data/models/route.dart';
 import '../../../data/models/trip.dart';
 import '../../../data/repositories/routing_repo.dart';
-import '../services/navigation_foreground_service.dart';
+import '../services/navigation_background_service.dart';
 import '../services/route_matcher_service.dart';
 
 part 'navigation_provider.g.dart';
@@ -171,7 +171,8 @@ class _NavThresholds {
   static const double poiApproachMeters = 500;
   static const double poiReachedMeters = 80;
   static const int rerouteDebounceMs = 5000;
-  static const int gpsDistanceFilter = 1; // Meter (haeufigere Updates fuer fluessigere Bewegung)
+  static const int gpsDistanceFilter =
+      1; // Meter (haeufigere Updates fuer fluessigere Bewegung)
 }
 
 /// Navigation Provider - Kernlogik für Turn-by-Turn Navigation
@@ -179,6 +180,8 @@ class _NavThresholds {
 class NavigationNotifier extends _$NavigationNotifier {
   StreamSubscription<Position>? _positionStream;
   final RouteMatcherService _routeMatcher = RouteMatcherService();
+  final NavigationBackgroundService _backgroundService =
+      createNavigationBackgroundService();
   DateTime? _lastRerouteTime;
   int _lastMatchedIndex = 0;
   AppLocalizations? _l10n;
@@ -190,6 +193,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   NavigationState build() {
     ref.onDispose(() {
       _positionStream?.cancel();
+      unawaited(_stopBackgroundService());
     });
     return const NavigationState();
   }
@@ -204,7 +208,7 @@ class NavigationNotifier extends _$NavigationNotifier {
     // Vorherige Navigation sauber stoppen (verhindert doppelte GPS-Streams)
     if (state.isNavigating || state.isRerouting || state.isLoading) {
       debugPrint('[Navigation] Vorherige Navigation wird gestoppt');
-      stopNavigation();
+      await stopNavigation();
     }
 
     debugPrint('[Navigation] Starte Navigation: '
@@ -224,27 +228,23 @@ class NavigationNotifier extends _$NavigationNotifier {
         end: baseRoute.end,
         waypoints: baseRoute.waypoints.isNotEmpty
             ? baseRoute.waypoints
-            : stops
-                ?.map((s) => LatLng(s.latitude, s.longitude))
-                .toList(),
+            : stops?.map((s) => LatLng(s.latitude, s.longitude)).toList(),
         startAddress: baseRoute.startAddress,
         endAddress: baseRoute.endAddress,
         l10n: l10n,
       );
 
       // Ersten Step setzen
-      final firstStep = navRoute.allSteps.isNotEmpty
-          ? navRoute.allSteps.first
-          : null;
-      final secondStep = navRoute.allSteps.length > 1
-          ? navRoute.allSteps[1]
-          : null;
+      final firstStep =
+          navRoute.allSteps.isNotEmpty ? navRoute.allSteps.first : null;
+      final secondStep =
+          navRoute.allSteps.length > 1 ? navRoute.allSteps[1] : null;
 
       // Nächsten POI bestimmen
       final nextPOI = stops != null && stops.isNotEmpty ? stops.first : null;
 
       state = state.copyWith(
-        status: NavigationStatus.navigating,
+        status: NavigationStatus.loading,
         route: navRoute,
         currentStep: firstStep,
         nextStep: secondStep,
@@ -259,10 +259,19 @@ class NavigationNotifier extends _$NavigationNotifier {
       _buildStepRouteIndexCache(navRoute);
 
       // GPS-Stream starten
-      await _startPositionStream();
+      final gpsStarted = await _startPositionStream();
+      if (!gpsStarted) {
+        state = state.copyWith(
+          status: NavigationStatus.error,
+          error: state.error ?? 'GPS nicht verfuegbar',
+        );
+        return;
+      }
 
-      // Foreground Service fuer Hintergrund-Navigation starten
-      await _startForegroundService(
+      state = state.copyWith(status: NavigationStatus.navigating, error: null);
+
+      // Background service fuer Hintergrund-Navigation starten
+      await _startBackgroundService(
         destinationName: baseRoute.endAddress,
         distanceKm: navRoute.baseRoute.distanceKm,
         etaMinutes: navRoute.baseRoute.durationMinutes,
@@ -281,17 +290,18 @@ class NavigationNotifier extends _$NavigationNotifier {
   }
 
   /// Stoppt die Navigation
-  void stopNavigation() {
+  Future<void> stopNavigation() async {
     debugPrint('[Navigation] Navigation gestoppt');
-    _positionStream?.cancel();
+    await _positionStream?.cancel();
     _positionStream = null;
     _lastMatchedIndex = 0;
     _lastRerouteTime = null;
     _stepRouteIndices = null;
+    _lastNotificationUpdateSec = 0;
     state = const NavigationState();
 
-    // Foreground Service stoppen
-    _stopForegroundService();
+    // Background service stoppen
+    await _stopBackgroundService();
   }
 
   /// Schaltet Sprachausgabe ein/aus
@@ -338,7 +348,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   }
 
   /// Startet den GPS-Position-Stream
-  Future<void> _startPositionStream() async {
+  Future<bool> _startPositionStream() async {
     _positionStream?.cancel();
 
     // GPS-Verfuegbarkeit pruefen
@@ -346,9 +356,10 @@ class NavigationNotifier extends _$NavigationNotifier {
     if (!gpsCheck.isSuccess) {
       debugPrint('[Navigation] GPS nicht verfuegbar: ${gpsCheck.error}');
       state = state.copyWith(
+        status: NavigationStatus.error,
         error: gpsCheck.message ?? 'GPS nicht verfuegbar',
       );
-      return;
+      return false;
     }
 
     const locationSettings = LocationSettings(
@@ -363,10 +374,12 @@ class NavigationNotifier extends _$NavigationNotifier {
       onError: (error) {
         debugPrint('[Navigation] GPS-Fehler: $error');
         state = state.copyWith(
+          status: NavigationStatus.error,
           error: 'GPS-Signal verloren',
         );
       },
     );
+    return true;
   }
 
   /// Hauptlogik: Wird bei jedem GPS-Update aufgerufen
@@ -418,20 +431,17 @@ class NavigationNotifier extends _$NavigationNotifier {
         ? _routeMatcher.getDistanceAlongRoute(
             routeCoords,
             matchResult.nearestIndex,
-            stepInfo.nextStepRouteIndex ??
-                (routeCoords.length - 1),
+            stepInfo.nextStepRouteIndex ?? (routeCoords.length - 1),
           )
         : 0.0;
 
     // 5. Verbleibende Distanz und ETA
-    final remainingMeters =
-        _routeMatcher.getRemainingDistance(routeCoords, matchResult.nearestIndex);
+    final remainingMeters = _routeMatcher.getRemainingDistance(
+        routeCoords, matchResult.nearestIndex);
     final remainingKm = remainingMeters / 1000;
-    final completedKm =
-        state.route!.baseRoute.distanceKm - remainingKm;
-    final eta = speedKmh > 5
-        ? (remainingKm / speedKmh * 60).round()
-        : state.etaMinutes;
+    final completedKm = state.route!.baseRoute.distanceKm - remainingKm;
+    final eta =
+        speedKmh > 5 ? (remainingKm / speedKmh * 60).round() : state.etaMinutes;
 
     // 6. POI-Nähe prüfen
     double distToNextPOI = double.infinity;
@@ -440,8 +450,7 @@ class NavigationNotifier extends _$NavigationNotifier {
         state.nextPOIStop!.latitude,
         state.nextPOIStop!.longitude,
       );
-      distToNextPOI = _routeMatcher
-          .distanceBetween(currentPos, poiPos);
+      distToNextPOI = _routeMatcher.distanceBetween(currentPos, poiPos);
 
       // POI erreicht?
       if (distToNextPOI < _NavThresholds.poiReachedMeters) {
@@ -497,18 +506,18 @@ class NavigationNotifier extends _$NavigationNotifier {
       error: null,
     );
 
-    // 10. Foreground-Service-Benachrichtigung aktualisieren (alle ~30 Sekunden)
-    _maybeUpdateForegroundNotification(remainingKm, eta);
+    // 10. Background-Service-Benachrichtigung aktualisieren (alle ~30 Sekunden)
+    _maybeUpdateBackgroundNotification(remainingKm, eta);
   }
 
   int _lastNotificationUpdateSec = 0;
 
-  void _maybeUpdateForegroundNotification(double remainingKm, int etaMinutes) {
+  void _maybeUpdateBackgroundNotification(double remainingKm, int etaMinutes) {
     final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     if (nowSec - _lastNotificationUpdateSec < 30) return;
     _lastNotificationUpdateSec = nowSec;
 
-    NavigationForegroundService.updateNotification(
+    _backgroundService.update(
       destinationName: state.route?.baseRoute.endAddress ?? 'Ziel',
       distanceKm: remainingKm,
       etaMinutes: etaMinutes,
@@ -528,7 +537,7 @@ class NavigationNotifier extends _$NavigationNotifier {
 
     debugPrint('[Navigation] Off-Route erkannt, Neuberechnung...');
     _lastRerouteTime = now;
-    _reroute(currentPos);
+    unawaited(_reroute(currentPos));
   }
 
   /// Berechnet Route neu ab aktueller Position
@@ -551,8 +560,7 @@ class NavigationNotifier extends _$NavigationNotifier {
       final navRoute = await routingRepo.calculateNavigationRoute(
         start: fromPosition,
         end: state.route!.baseRoute.end,
-        waypoints:
-            remainingWaypoints.isNotEmpty ? remainingWaypoints : null,
+        waypoints: remainingWaypoints.isNotEmpty ? remainingWaypoints : null,
         startAddress: 'Aktuelle Position',
         endAddress: state.route!.baseRoute.endAddress,
         l10n: _l10n!,
@@ -560,9 +568,8 @@ class NavigationNotifier extends _$NavigationNotifier {
 
       _lastMatchedIndex = 0;
 
-      final firstStep = navRoute.allSteps.isNotEmpty
-          ? navRoute.allSteps.first
-          : null;
+      final firstStep =
+          navRoute.allSteps.isNotEmpty ? navRoute.allSteps.first : null;
 
       // Step-Index-Cache neu aufbauen
       _buildStepRouteIndexCache(navRoute);
@@ -605,44 +612,44 @@ class NavigationNotifier extends _$NavigationNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Foreground Service (Hintergrund-Navigation)
+  // Background service (Hintergrund-Navigation)
   // ---------------------------------------------------------------------------
 
-  /// Startet den Foreground Service fuer Hintergrund-GPS-Tracking
-  Future<void> _startForegroundService({
+  /// Startet den Background service fuer Hintergrund-GPS-Tracking
+  Future<void> _startBackgroundService({
     required String destinationName,
     required double distanceKm,
     required int etaMinutes,
   }) async {
     try {
-      final success = await NavigationForegroundService.startService(
+      final success = await _backgroundService.start(
         destinationName: destinationName,
         distanceKm: distanceKm,
         etaMinutes: etaMinutes,
       );
       if (success) {
-        debugPrint('[Navigation] Foreground Service gestartet');
+        debugPrint('[Navigation] Background service gestartet');
         // Callback fuer Hintergrund-GPS-Updates registrieren
-        NavigationForegroundService.setDataCallback(_onBackgroundData);
+        _backgroundService.setDataCallback(_onBackgroundData);
       }
     } catch (e) {
-      debugPrint('[Navigation] Foreground Service Fehler: $e');
+      debugPrint('[Navigation] Background service Fehler: $e');
       // Nicht kritisch - Navigation funktioniert weiterhin im Vordergrund
     }
   }
 
-  /// Stoppt den Foreground Service
-  Future<void> _stopForegroundService() async {
+  /// Stoppt den Background service
+  Future<void> _stopBackgroundService() async {
     try {
-      NavigationForegroundService.removeDataCallback(_onBackgroundData);
-      await NavigationForegroundService.stopService();
-      debugPrint('[Navigation] Foreground Service gestoppt');
+      _backgroundService.removeDataCallback(_onBackgroundData);
+      await _backgroundService.stop();
+      debugPrint('[Navigation] Background service gestoppt');
     } catch (e) {
-      debugPrint('[Navigation] Foreground Service Stop-Fehler: $e');
+      debugPrint('[Navigation] Background service Stop-Fehler: $e');
     }
   }
 
-  /// Callback fuer GPS-Updates vom Foreground Service (App im Hintergrund)
+  /// Callback fuer GPS-Updates vom Background service (App im Hintergrund)
   void _onBackgroundData(Object data) {
     if (data is! Map<String, dynamic>) return;
 
@@ -717,11 +724,11 @@ class NavigationNotifier extends _$NavigationNotifier {
       currentStep: allSteps[bestStepIdx],
       nextStep: nextStep,
       globalIndex: bestStepIdx,
-      nextStepLocation:
-          nextStep?.location ?? state.route!.baseRoute.end,
-      nextStepRouteIndex: nextStep != null && nextSignificantIdx < indices.length
-          ? indices[nextSignificantIdx]
-          : null,
+      nextStepLocation: nextStep?.location ?? state.route!.baseRoute.end,
+      nextStepRouteIndex:
+          nextStep != null && nextSignificantIdx < indices.length
+              ? indices[nextSignificantIdx]
+              : null,
     );
   }
 }

@@ -1,6 +1,3 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/supabase/supabase_config.dart';
+import '../../core/supabase/supabase_client.dart' show isSupabaseAvailable;
 import '../models/comment.dart';
 import '../models/poi_photo.dart';
 import '../models/poi_review.dart';
@@ -31,7 +29,8 @@ class POISocialRepository {
   // ============================================
 
   /// Laedt alle Fotos fuer einen POI
-  Future<List<POIPhoto>> loadPhotos(String poiId, {int limit = 20, int offset = 0}) async {
+  Future<List<POIPhoto>> loadPhotos(String poiId,
+      {int limit = 20, int offset = 0}) async {
     debugPrint('[POISocial] Loading photos for POI: $poiId');
 
     final response = await _client.rpc('get_poi_photos', params: {
@@ -70,13 +69,13 @@ class POISocialRepository {
 
       // Upload zu Supabase Storage
       await _client.storage.from(_bucketName).uploadBinary(
-        storagePath,
-        bytes,
-        fileOptions: const FileOptions(
-          contentType: 'image/jpeg',
-          upsert: false,
-        ),
-      );
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
 
       debugPrint('[POISocial] Uploaded to storage: $storagePath');
 
@@ -178,7 +177,8 @@ class POISocialRepository {
   }
 
   /// Laedt alle Bewertungen fuer einen POI
-  Future<List<POIReview>> loadReviews(String poiId, {int limit = 20, int offset = 0}) async {
+  Future<List<POIReview>> loadReviews(String poiId,
+      {int limit = 20, int offset = 0}) async {
     debugPrint('[POISocial] Loading reviews for POI: $poiId');
 
     final response = await _client.rpc('get_poi_reviews', params: {
@@ -206,7 +206,8 @@ class POISocialRepository {
       throw Exception('Not authenticated');
     }
 
-    debugPrint('[POISocial] Submitting review for POI: $poiId, rating: $rating');
+    debugPrint(
+        '[POISocial] Submitting review for POI: $poiId, rating: $rating');
 
     try {
       final response = await _client.rpc('submit_poi_review', params: {
@@ -248,7 +249,8 @@ class POISocialRepository {
   }
 
   /// Bewertung als "Hilfreich" markieren (Toggle)
-  Future<({int helpfulCount, bool isHelpfulByMe})?> voteReviewHelpful(String reviewId) async {
+  Future<({int helpfulCount, bool isHelpfulByMe})?> voteReviewHelpful(
+      String reviewId) async {
     if (_currentUserId == null) {
       throw Exception('Not authenticated');
     }
@@ -284,7 +286,8 @@ class POISocialRepository {
     int limit = 50,
     int offset = 0,
   }) async {
-    debugPrint('[POISocial] Loading comments for ${targetType.name}: $targetId');
+    debugPrint(
+        '[POISocial] Loading comments for ${targetType.name}: $targetId');
 
     final response = await _client.rpc('get_comments', params: {
       'p_target_type': targetType.toJson(),
@@ -402,8 +405,94 @@ class POISocialRepository {
   }
 }
 
+class _UnavailablePOISocialRepository extends POISocialRepository {
+  _UnavailablePOISocialRepository()
+      : super(SupabaseClient('https://offline.mapab.invalid', 'offline'));
+
+  @override
+  Future<List<POIPhoto>> loadPhotos(String poiId,
+          {int limit = 20, int offset = 0}) async =>
+      const [];
+
+  @override
+  Future<POIPhoto?> uploadPhoto({
+    required String poiId,
+    required XFile imageFile,
+    String? caption,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deletePhoto(String photoId) async => false;
+
+  @override
+  Future<POIStats> getStats(String poiId) async => POIStats.empty(poiId);
+
+  @override
+  Future<List<POIReview>> loadReviews(String poiId,
+          {int limit = 20, int offset = 0}) async =>
+      const [];
+
+  @override
+  Future<POIReview?> submitReview({
+    required String poiId,
+    required int rating,
+    String? reviewText,
+    DateTime? visitDate,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deleteReview(String poiId) async => false;
+
+  @override
+  Future<({int helpfulCount, bool isHelpfulByMe})?> voteReviewHelpful(
+    String reviewId,
+  ) async =>
+      null;
+
+  @override
+  Future<List<Comment>> loadComments({
+    required CommentTargetType targetType,
+    required String targetId,
+    int limit = 50,
+    int offset = 0,
+  }) async =>
+      const [];
+
+  @override
+  Future<List<Comment>> loadReplies(String parentId, {int limit = 50}) async =>
+      const [];
+
+  @override
+  Future<Comment?> addComment({
+    required CommentTargetType targetType,
+    required String targetId,
+    required String content,
+    String? parentId,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deleteComment(String commentId) async => false;
+
+  @override
+  Future<bool> flagContent({
+    required String contentType,
+    required String contentId,
+    String? reason,
+  }) async =>
+      false;
+}
+
 @riverpod
 POISocialRepository poiSocialRepository(PoiSocialRepositoryRef ref) {
+  if (!isSupabaseAvailable) {
+    debugPrint(
+      '[POISocial] Supabase nicht verfuegbar - verwende Offline-Repository',
+    );
+    return _UnavailablePOISocialRepository();
+  }
   return POISocialRepository(Supabase.instance.client);
 }
 

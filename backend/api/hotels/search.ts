@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  if (!rateLimitMiddleware(req, res, { maxRequests: 300 })) {
+  if (!(await rateLimitMiddleware(req, res, { maxRequests: 300 }))) {
     return;
   }
 

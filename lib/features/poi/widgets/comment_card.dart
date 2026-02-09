@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +13,8 @@ class CommentCard extends ConsumerStatefulWidget {
   final VoidCallback? onReplyTap;
   final VoidCallback? onDeleteTap;
   final VoidCallback? onFlagTap;
+  final FutureOr<void> Function(String commentId)? onDeleteCommentTap;
+  final FutureOr<void> Function(String commentId)? onFlagCommentTap;
   final Future<List<Comment>> Function()? loadReplies;
 
   const CommentCard({
@@ -19,6 +23,8 @@ class CommentCard extends ConsumerStatefulWidget {
     this.onReplyTap,
     this.onDeleteTap,
     this.onFlagTap,
+    this.onDeleteCommentTap,
+    this.onFlagCommentTap,
     this.loadReplies,
   });
 
@@ -57,7 +63,9 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                       : null,
                   child: widget.comment.authorAvatar == null
                       ? Text(
-                          (widget.comment.authorName ?? 'A').substring(0, 1).toUpperCase(),
+                          (widget.comment.authorName ?? 'A')
+                              .substring(0, 1)
+                              .toUpperCase(),
                           style: TextStyle(
                             color: colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.bold,
@@ -74,16 +82,20 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                         children: [
                           Text(
                             widget.comment.authorName ?? l10n.anonymousUser,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             widget.comment.timeAgo,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                           ),
                         ],
                       ),
@@ -115,7 +127,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                     ),
                   ),
                 // Antworten anzeigen
-                if (widget.comment.hasReplies || (widget.comment.replyCount > 0)) ...[
+                if (widget.comment.hasReplies ||
+                    (widget.comment.replyCount > 0)) ...[
                   TextButton(
                     onPressed: _toggleReplies,
                     style: TextButton.styleFrom(
@@ -133,7 +146,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                         Text(
                           _showReplies
                               ? l10n.commentHideReplies
-                              : l10n.commentShowReplies(widget.comment.replyCount),
+                              : l10n.commentShowReplies(
+                                  widget.comment.replyCount),
                         ),
                       ],
                     ),
@@ -144,7 +158,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                 if (!isOwnComment && widget.onFlagTap != null)
                   IconButton(
                     onPressed: widget.onFlagTap,
-                    icon: Icon(Icons.flag_outlined, size: 18, color: colorScheme.onSurfaceVariant),
+                    icon: Icon(Icons.flag_outlined,
+                        size: 18, color: colorScheme.onSurfaceVariant),
                     tooltip: l10n.reportContent,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -152,7 +167,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                 if (isOwnComment && widget.onDeleteTap != null)
                   IconButton(
                     onPressed: widget.onDeleteTap,
-                    icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                    icon: Icon(Icons.delete_outline,
+                        size: 18, color: colorScheme.error),
                     tooltip: l10n.delete,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -174,8 +190,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
                     children: _replies!
                         .map((reply) => _ReplyCard(
                               comment: reply,
-                              onDeleteTap: widget.onDeleteTap,
-                              onFlagTap: widget.onFlagTap,
+                              onDeleteTap: widget.onDeleteCommentTap,
+                              onFlagTap: widget.onFlagCommentTap,
                             ))
                         .toList(),
                   ),
@@ -231,8 +247,8 @@ class _CommentCardState extends ConsumerState<CommentCard> {
 /// Kompakte Antwort-Karte
 class _ReplyCard extends ConsumerWidget {
   final Comment comment;
-  final VoidCallback? onDeleteTap;
-  final VoidCallback? onFlagTap;
+  final FutureOr<void> Function(String commentId)? onDeleteTap;
+  final FutureOr<void> Function(String commentId)? onFlagTap;
 
   const _ReplyCard({
     required this.comment,
@@ -301,8 +317,21 @@ class _ReplyCard extends ConsumerWidget {
           ),
           if (isOwnComment && onDeleteTap != null)
             IconButton(
-              onPressed: onDeleteTap,
-              icon: Icon(Icons.delete_outline, size: 16, color: colorScheme.error),
+              onPressed: () {
+                onDeleteTap!(comment.id);
+              },
+              icon: Icon(Icons.delete_outline,
+                  size: 16, color: colorScheme.error),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          if (!isOwnComment && onFlagTap != null)
+            IconButton(
+              onPressed: () {
+                onFlagTap!(comment.id);
+              },
+              icon: const Icon(Icons.flag_outlined, size: 16),
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:travel_planner/core/constants/categories.dart';
+import 'package:travel_planner/core/constants/api_config.dart';
 import 'package:travel_planner/data/models/poi.dart';
 import 'package:travel_planner/data/services/ai_service.dart';
 
@@ -38,9 +39,9 @@ void main() {
   });
 
   group('AIService config', () {
-    test('isConfigured stays true with backend proxy', () {
+    test('isConfigured reflects ApiConfig backend state', () {
       final service = AIService();
-      expect(service.isConfigured, isTrue);
+      expect(service.isConfigured, ApiConfig.isConfigured);
     });
   });
 

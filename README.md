@@ -2,6 +2,14 @@
 
 Cross-Platform Reiseplanungs-App für iOS, Android und Desktop.
 
+## Plattform-Status (Februar 2026)
+
+- `android/` aktiv genutzt (APK + Play Store Pfad)
+- `ios/` vorhanden und build-fähig (iOS 15+, TestFlight-Pipeline)
+- `web/` und `windows/` vorhanden
+
+Für iOS Build/Signing/CI siehe: **[docs/guides/IOS-SETUP.md](docs/guides/IOS-SETUP.md)**
+
 ## Features
 
 ✅ **14 Haupt-Features implementiert:**
@@ -31,8 +39,8 @@ Cross-Platform Reiseplanungs-App für iOS, Android und Desktop.
 ## Installation
 
 ### Voraussetzungen
-- Flutter SDK 3.24.5+
-- Dart 3.0+
+- Flutter SDK 3.38.7+
+- Dart 3.10+
 - Android Studio / Xcode (für native Builds)
 - Git
 
@@ -54,6 +62,8 @@ flutter run -d ios
 # App starten (Web)
 flutter run -d chrome
 ```
+
+> Hinweis: `flutter run -d ios` und `flutter build ipa` erfordern macOS + Xcode.
 
 ### API-Keys konfigurieren
 
@@ -93,7 +103,7 @@ lib/
 
 | Technologie | Version | Zweck |
 |-------------|---------|-------|
-| Flutter SDK | 3.24.5 | UI Framework |
+| Flutter SDK | 3.38.7 | UI Framework |
 | Riverpod | 2.4.9 | State Management |
 | GoRouter | 13.0.0 | Navigation |
 | Hive | 2.2.3 | Local Storage |
@@ -129,6 +139,8 @@ flutter build web --release
 # Windows Build
 flutter build windows --release
 ```
+
+CI/TestFlight Workflow: `.github/workflows/ios-testflight.yml`
 
 ## Testing
 
@@ -301,7 +313,11 @@ Dies generiert die notwendigen Freezed-Dateien für das Account-System.
 **Problem:** Build fails mit "Capabilities not configured"
 - **Lösung:**
   - Xcode öffnen → Target → Signing & Capabilities
-  - Hinzufügen: Location When In Use, Background Modes
+  - Hinzufügen: Background Modes (`Location updates`)
+
+**Wichtig für Hintergrundnavigation:**
+- iOS-Berechtigung muss auf **Immer** gesetzt sein
+- Die App zeigt dafür vor Navigationsstart einen Hinweisdialog an
 
 ## API-Abhängigkeiten
 
@@ -430,6 +446,6 @@ Basiert auf den Konzepten einer JavaScript-basierten Progressive Web App für Re
 
 ---
 
-**Version:** 1.7.21
-**Release:** 31. Januar 2026
+**Version:** 1.10.46
+**Release:** 9. Februar 2026
 **Erstellt mit:** Flutter 💙

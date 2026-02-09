@@ -170,10 +170,13 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     if (code == _lastScannedCode) return;
     _lastScannedCode = code;
 
-    debugPrint('[QRScanner] Code erkannt: ${code.substring(0, code.length.clamp(0, 50))}...');
+    debugPrint(
+        '[QRScanner] Code erkannt: ${code.substring(0, code.length.clamp(0, 50))}...');
 
     // Pruefen ob es ein MapAB-Link ist
     if (code.startsWith('mapab://trip?data=')) {
+      _handleMapABLink(code);
+    } else if (code.startsWith('https://mapab.app/gallery/')) {
       _handleMapABLink(code);
     } else if (code.startsWith('https://mapab.app/trip/')) {
       _handleMapABLink(code);
@@ -187,6 +190,12 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     setState(() => _isProcessing = true);
 
     try {
+      final publicTripId = extractPublicTripIdFromLink(link);
+      if (publicTripId != null) {
+        _openPublicTrip(publicTripId);
+        return;
+      }
+
       // Data aus URL extrahieren
       String? encodedData;
       if (link.startsWith('mapab://trip?data=')) {
@@ -214,6 +223,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     try {
       await _importTrip(data);
     } catch (e) {
+      if (!mounted) return;
       _showError(context.l10n.scanInvalidMapabCode);
     } finally {
       if (mounted) {
@@ -242,6 +252,11 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
 
     // Trip importieren
     await _loadTrip(trip);
+  }
+
+  void _openPublicTrip(String tripId) {
+    if (!mounted) return;
+    context.go('/gallery/$tripId');
   }
 
   Future<bool?> _showImportDialog(Trip trip) {
@@ -297,17 +312,15 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
   Future<void> _loadTrip(Trip trip) async {
     try {
       // Route neu berechnen falls Koordinaten fehlen
-      final routeNull = trip.route == null;
-      final routeEmpty = !routeNull && trip.route!.coordinates.isEmpty;
+      final routeEmpty = trip.route.coordinates.isEmpty;
 
-      if (routeNull || routeEmpty) {
+      if (routeEmpty) {
         final routingRepo = ref.read(routingRepositoryProvider);
 
         if (trip.stops.length >= 2) {
           // Waypoints als LatLng-Liste erstellen
-          final stopCoords = trip.stops
-              .map((s) => LatLng(s.latitude, s.longitude))
-              .toList();
+          final stopCoords =
+              trip.stops.map((s) => LatLng(s.latitude, s.longitude)).toList();
 
           final start = stopCoords.first;
           final end = stopCoords.last;
@@ -332,14 +345,15 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       } else {
         // Trip direkt laden
         ref.read(tripStateProvider.notifier).setRouteAndStops(
-              trip.route!,
+              trip.route,
               trip.stops.map((s) => s.toPOI()).toList(),
             );
       }
 
       if (!mounted) return;
 
-      AppSnackbar.showSuccess(context, context.l10n.scanImportSuccess(trip.name));
+      AppSnackbar.showSuccess(
+          context, context.l10n.scanImportSuccess(trip.name));
 
       // Zur Karte navigieren
       context.go('/');
@@ -385,7 +399,8 @@ class _ScannerOverlayPainter extends CustomPainter {
     final overlayPaint = Paint()..color = overlayColor;
     final overlayPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..addRRect(RRect.fromRectAndRadius(scanRect, Radius.circular(borderRadius)))
+      ..addRRect(
+          RRect.fromRectAndRadius(scanRect, Radius.circular(borderRadius)))
       ..fillType = PathFillType.evenOdd;
     canvas.drawPath(overlayPath, overlayPaint);
 
@@ -396,7 +411,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..strokeWidth = borderWidth
       ..strokeCap = StrokeCap.round;
 
-    final cornerLength = 30.0;
+    const cornerLength = 30.0;
 
     // Oben links
     canvas.drawLine(

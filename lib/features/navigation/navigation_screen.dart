@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll2;
+import '../../core/utils/location_helper.dart';
 import '../../core/l10n/l10n.dart';
+import '../../shared/widgets/app_snackbar.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import '../../data/models/navigation_step.dart';
 import '../../data/models/route.dart' hide LatLngConverter;
@@ -14,6 +17,7 @@ import '../trip/utils/trip_save_helper.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/navigation_poi_discovery_provider.dart';
 import 'providers/navigation_tts_provider.dart';
+import 'services/navigation_background_service_ios.dart';
 import 'services/position_interpolator.dart';
 import 'utils/latlong_converter.dart';
 import 'widgets/maneuver_banner.dart';
@@ -93,20 +97,18 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     WidgetsBinding.instance.addObserver(this);
 
     // Interpolation-Stream abonnieren fuer fluessige Updates
-    _interpolationSub = _interpolator.positionStream.listen(_onInterpolatedPosition);
+    _interpolationSub =
+        _interpolator.positionStream.listen(_onInterpolatedPosition);
 
     // Navigation starten
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(navigationNotifierProvider.notifier).startNavigation(
-            baseRoute: widget.route,
-            l10n: context.l10n,
-            stops: widget.stops,
-          );
+      _startNavigationFlow();
       // TTS Provider initialisieren (lauscht automatisch)
       ref.read(navigationTtsProvider);
 
       // Must-See POI Discovery starten
-      ref.read(navigationPOIDiscoveryNotifierProvider.notifier)
+      ref
+          .read(navigationPOIDiscoveryNotifierProvider.notifier)
           .startDiscovery(widget.route, widget.stops ?? []);
     });
   }
@@ -118,7 +120,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     _interpolator.dispose();
     _mapController?.dispose();
     // Alle Navigation-Provider sauber stoppen
-    ref.read(navigationNotifierProvider.notifier).stopNavigation();
+    unawaited(ref.read(navigationNotifierProvider.notifier).stopNavigation());
     ref.read(navigationTtsProvider.notifier).reset();
     ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
     super.dispose();
@@ -129,7 +131,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      // App im Hintergrund: GPS-Stream laeuft weiter (Foreground Service),
+      // App im Hintergrund: GPS-Stream laeuft weiter (Background service),
       // aber TTS und Interpolation pausieren um Batterie zu sparen
       _isPausedByLifecycle = true;
       _interpolator.pause();
@@ -139,9 +141,112 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       if (_isPausedByLifecycle) {
         _isPausedByLifecycle = false;
         _interpolator.resume();
-        debugPrint('[Navigation] App im Vordergrund - Interpolation fortgesetzt');
+        debugPrint(
+            '[Navigation] App im Vordergrund - Interpolation fortgesetzt');
       }
     }
+  }
+
+  Future<void> _startNavigationFlow() async {
+    final permissionReady = await _ensureIosAlwaysLocationPermission();
+    if (!permissionReady || !mounted) {
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          'Navigation im Hintergrund benoetigt iOS-Standortberechtigung "Immer".',
+        );
+      }
+      return;
+    }
+
+    ref.read(navigationNotifierProvider.notifier).startNavigation(
+          baseRoute: widget.route,
+          l10n: context.l10n,
+          stops: widget.stops,
+        );
+  }
+
+  Future<bool> _ensureIosAlwaysLocationPermission() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return true;
+
+    var permission = await LocationHelper.checkAndRequestPermission();
+    if (permission == LocationPermission.denied) {
+      return false;
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      await _showOpenSettingsDialog();
+      return false;
+    }
+
+    if (permission == LocationPermission.always) {
+      return true;
+    }
+
+    final accepted = await _showAlwaysPermissionRationaleDialog();
+    if (!accepted) return false;
+
+    final granted =
+        await IOSNavigationPermissionBridge.requestAlwaysPermission();
+    if (granted) return true;
+
+    permission = await LocationHelper.checkAndRequestPermission();
+    if (permission == LocationPermission.always) {
+      return true;
+    }
+
+    await _showOpenSettingsDialog();
+    return false;
+  }
+
+  Future<bool> _showAlwaysPermissionRationaleDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Standortberechtigung fuer Hintergrundnavigation'),
+        content: const Text(
+          'MapAB braucht auf iOS die Berechtigung "Immer", damit Turn-by-Turn '
+          'Navigation auch bei gesperrtem Display oder im Hintergrund weiterlaeuft.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Nicht jetzt'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Weiter'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _showOpenSettingsDialog() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Berechtigung erforderlich'),
+        content: const Text(
+          'Bitte erlaube fuer MapAB den Standortzugriff auf "Immer" in den iOS-Einstellungen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await LocationHelper.openAppSettings();
+            },
+            child: const Text('Einstellungen oeffnen'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Wird ~60x pro Sekunde vom Interpolator aufgerufen
@@ -245,8 +350,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           if (navState.isRerouting)
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(24),
@@ -335,8 +440,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
                 onDismiss: () {
                   ref
                       .read(navigationPOIDiscoveryNotifierProvider.notifier)
-                      .dismissPOI(
-                          discoveryState.currentApproachingPOI!.id);
+                      .dismissPOI(discoveryState.currentApproachingPOI!.id);
                 },
               ),
             ),
@@ -349,7 +453,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: colorScheme.onInverseSurface),
+                    CircularProgressIndicator(
+                        color: colorScheme.onInverseSurface),
                     const SizedBox(height: 16),
                     Text(
                       'Navigation wird vorbereitet...',
@@ -370,7 +475,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(24),
@@ -410,9 +516,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               isMuted: navState.isMuted,
               isListening: _isListening,
               onToggleMute: () {
-                ref
-                    .read(navigationNotifierProvider.notifier)
-                    .toggleMute();
+                ref.read(navigationNotifierProvider.notifier).toggleMute();
               },
               onStop: _stopNavigation,
               onOverview: _toggleOverview,
@@ -525,9 +629,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
     try {
       // User-Position Marker (native, geo-positioniert)
-      final startPos =
-          ref.read(navigationNotifierProvider).currentPosition ??
-              widget.route.start;
+      final startPos = ref.read(navigationNotifierProvider).currentPosition ??
+          widget.route.start;
       _userCircle = await controller.addCircle(
         ml.CircleOptions(
           geometry: LatLngConverter.toMapLibre(startPos),
@@ -624,8 +727,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   void _updateRouteSources(NavigationState navState) {
     if (!_isStyleLoaded || _mapController == null) return;
 
-    final routeCoords = navState.route?.baseRoute.coordinates ??
-        widget.route.coordinates;
+    final routeCoords =
+        navState.route?.baseRoute.coordinates ?? widget.route.coordinates;
 
     if (routeCoords.isEmpty) return;
 
@@ -667,8 +770,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   List<ll2.LatLng> _getCompletedSegment(
       List<ll2.LatLng> coords, NavigationState navState) {
     final progress = navState.progress;
-    final endIdx =
-        (progress * coords.length).round().clamp(0, coords.length);
+    final endIdx = (progress * coords.length).round().clamp(0, coords.length);
     if (endIdx <= 0) return [];
     return coords.sublist(0, endIdx);
   }
@@ -800,7 +902,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   }
 
   /// Fuehrt den erkannten Sprachbefehl aus
-  Future<void> _executeVoiceCommand(VoiceCommand command, VoiceService voiceService) async {
+  Future<void> _executeVoiceCommand(
+      VoiceCommand command, VoiceService voiceService) async {
     final navState = ref.read(navigationNotifierProvider);
 
     switch (command) {
@@ -849,7 +952,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         // "Navigation beenden"
         await voiceService.speak('Navigation wird beendet.');
         if (mounted) {
-          ref.read(navigationNotifierProvider.notifier).stopNavigation();
+          await ref.read(navigationNotifierProvider.notifier).stopNavigation();
           ref.read(navigationTtsProvider.notifier).reset();
           ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
           if (context.mounted) {
@@ -867,7 +970,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
             '${approachingPOI.category?.label ?? "Sehenswürdigkeit"}.',
           );
         } else {
-          await voiceService.speak('Aktuell keine besonderen Orte in der Nähe.');
+          await voiceService
+              .speak('Aktuell keine besonderen Orte in der Nähe.');
         }
 
       case VoiceCommand.readDescription:
@@ -893,7 +997,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         if (weatherState.weatherPoints.isNotEmpty) {
           final w = weatherState.weatherPoints.first.weather;
           await voiceService.speak(
-            context.l10n.voiceWeatherOnRoute(w.description, w.temperature.round().toString()),
+            context.l10n.voiceWeatherOnRoute(
+                w.description, w.temperature.round().toString()),
           );
         } else {
           await voiceService.speak(context.l10n.voiceNoWeatherData);
@@ -908,7 +1013,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           await voiceService.speak(context.l10n.voiceRecommendPOIs(names));
         } else if (discoveryState.currentApproachingPOI != null) {
           await voiceService.speak(
-            context.l10n.voiceRecommendPOIs(discoveryState.currentApproachingPOI!.name),
+            context.l10n
+                .voiceRecommendPOIs(discoveryState.currentApproachingPOI!.name),
           );
         } else {
           await voiceService.speak(context.l10n.voiceNoRecommendations);
@@ -919,7 +1025,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         final totalStops = widget.stops?.length ?? 0;
         final distKm = widget.route.distanceKm;
         await voiceService.speak(
-          context.l10n.voiceRouteOverview(distKm.toStringAsFixed(1), totalStops.toString()),
+          context.l10n.voiceRouteOverview(
+              distKm.toStringAsFixed(1), totalStops.toString()),
         );
 
       case VoiceCommand.remainingStops:
@@ -928,7 +1035,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         if (remaining == 1) {
           await voiceService.speak(context.l10n.voiceRemainingOne);
         } else {
-          await voiceService.speak(context.l10n.voiceRemainingMultiple(remaining));
+          await voiceService
+              .speak(context.l10n.voiceRemainingMultiple(remaining));
         }
 
       case VoiceCommand.helpCommands:
@@ -967,9 +1075,11 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
             child: Text(context.l10n.cancel),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ref.read(navigationNotifierProvider.notifier).stopNavigation();
+              await ref
+                  .read(navigationNotifierProvider.notifier)
+                  .stopNavigation();
               ref.read(navigationTtsProvider.notifier).reset();
               ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
               if (context.mounted) {
@@ -999,9 +1109,11 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         content: Text(widget.route.endAddress ?? ''),
         actions: [
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ref.read(navigationNotifierProvider.notifier).stopNavigation();
+              await ref
+                  .read(navigationNotifierProvider.notifier)
+                  .stopNavigation();
               ref.read(navigationTtsProvider.notifier).reset();
               ref.read(navigationPOIDiscoveryNotifierProvider.notifier).reset();
               if (context.mounted) {

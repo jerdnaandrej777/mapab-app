@@ -7,6 +7,44 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [1.10.46] - 2026-02-09
+
+### Social-Flow + Navigation-Lifecycle Stabilisierung
+
+#### Behoben
+- **POI-Social Daten werden beim Oeffnen der Detailseite jetzt direkt geladen**
+  - `POIDetailScreen` triggert `loadAll()` verlässlich nach dem initialen POI-Ladevorgang.
+- **Reply-Moderation nutzt korrekte IDs**
+  - Delete/Flag auf Replies verarbeitet jetzt die Reply-ID statt der Parent-Kommentar-ID.
+- **Public Profile Routing repariert**
+  - Neue Route `/profile/:userId` hinzugefuegt.
+  - Auth-Guard so angepasst, dass nur das private `/profile` geschuetzt ist.
+- **Sharing- und QR-Link-Schema vereinheitlicht**
+  - Public-Links nutzen `https://mapab.app/gallery/{id}`.
+  - Decoder bleibt rueckwaertskompatibel mit Legacy-Links (`/trip/{id}`).
+- **Public Trip Detail zeigt echten QR-Code**
+  - Platzhalter in der Social-Detailansicht durch `qr_flutter` QR-Rendering ersetzt.
+- **Navigation-Lifecycle gehaertet**
+  - Robusteres Resume-/Stop-Verhalten im Navigation- und Background-Service-Flow.
+
+#### Technisch
+- Geaenderte Dateien (Auszug):
+  - `lib/app.dart`
+  - `lib/data/services/sharing_service.dart`
+  - `lib/features/poi/poi_detail_screen.dart`
+  - `lib/features/poi/widgets/comment_card.dart`
+  - `lib/features/poi/widgets/poi_comments_section.dart`
+  - `lib/features/sharing/qr_scanner_screen.dart`
+  - `lib/features/social/public_profile_screen.dart`
+  - `lib/features/social/trip_detail_public_screen.dart`
+  - `lib/features/navigation/providers/navigation_provider.dart`
+  - `lib/features/navigation/services/navigation_background_service_android.dart`
+  - `backend/supabase/migrations/013_admin_notifications_trip_photo.sql`
+
+#### Tests
+- `flutter test` (komplette Suite) gruen.
+- Zusatztests fuer Sharing-Public-Links und Navigation-Launch-Args hinzugefuegt.
+
 ## [1.10.43] - 2026-02-09
 
 ### Favoriten-Flow angeglichen + Trip-Bearbeiten UI + AI-Assistent Stabilisierung

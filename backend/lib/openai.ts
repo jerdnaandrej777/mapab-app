@@ -1,5 +1,8 @@
 import OpenAI from 'openai';
 
+type ChatCompletionCreateParams = OpenAI.ChatCompletionCreateParamsNonStreaming;
+type ChatCompletionResponse = OpenAI.ChatCompletion;
+
 // Singleton OpenAI Client
 let openaiClient: OpenAI | null = null;
 
@@ -11,16 +14,66 @@ export function getOpenAIClient(): OpenAI {
       throw new Error('OPENAI_API_KEY environment variable is not set');
     }
 
-    // Debug: log only a safe key preview
-    console.log('[OpenAI] API Key Prefix:', apiKey.substring(0, 20) + '...');
-    console.log('[OpenAI] API Key Length:', apiKey.length);
-
     openaiClient = new OpenAI({
       apiKey,
     });
   }
 
   return openaiClient;
+}
+
+interface ChatCompletionRetryOptions {
+  timeoutMs?: number;
+  maxRetries?: number;
+  initialBackoffMs?: number;
+}
+
+function isRetryableOpenAIError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const status = (error as { status?: number }).status;
+  if (status == 429) return true;
+  if (status != null && status >= 500) return true;
+  return error.name == 'AbortError';
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+export async function createChatCompletionWithRetry(
+  client: OpenAI,
+  params: ChatCompletionCreateParams,
+  options: ChatCompletionRetryOptions = {},
+): Promise<ChatCompletionResponse> {
+  const timeoutMs = options.timeoutMs ?? 15000;
+  const maxRetries = options.maxRetries ?? 2;
+  const initialBackoffMs = options.initialBackoffMs ?? 300;
+
+  let attempt = 0;
+  // maxRetries=2 -> insgesamt 3 Versuche
+  while (true) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await client.chat.completions.create(params, {
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (attempt >= maxRetries || !isRetryableOpenAIError(error)) {
+        throw error;
+      }
+
+      const jitter = Math.floor(Math.random() * 100);
+      const backoff = initialBackoffMs * (1 << attempt) + jitter;
+      attempt++;
+      await wait(backoff);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 // System Prompts

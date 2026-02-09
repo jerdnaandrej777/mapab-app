@@ -164,7 +164,7 @@ Oder Riverpod DevTools aktivieren.
 ## Sonstiges
 
 ### Q: Unterstützt die App iOS?
-**A:** Die Codebasis ist Flutter-basiert und theoretisch iOS-kompatibel. Aktuell wird nur Android aktiv unterstützt.
+**A:** Ja. Das Repository enthält eine iOS-Implementierung mit iOS 15+ Support, nativer Hintergrund-Standortlogik für Navigation und TestFlight-CI-Workflow. Details: `docs/guides/IOS-SETUP.md`.
 
 ### Q: Ist die App Open Source?
 **A:** Das Repository ist auf GitHub verfügbar. Siehe [CONTRIBUTING.md](../../CONTRIBUTING.md) für Beitrags-Richtlinien.

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../../core/supabase/supabase_client.dart' show isSupabaseAvailable;
 import '../models/poi.dart';
 import '../models/public_poi_post.dart';
 import '../models/public_trip.dart';
@@ -887,8 +887,144 @@ class SocialRepository {
   }
 }
 
+class _UnavailableSocialRepository extends SocialRepository {
+  _UnavailableSocialRepository()
+      : super(SupabaseClient('https://offline.mapab.invalid', 'offline'));
+
+  @override
+  Future<List<PublicTrip>> searchPublicTrips({
+    String? query,
+    List<String>? tags,
+    String? countryCode,
+    GalleryTripTypeFilter? tripType,
+    GallerySortBy sortBy = GallerySortBy.popular,
+    int limit = 20,
+    int offset = 0,
+  }) async =>
+      const [];
+
+  @override
+  Future<List<PublicPoiPost>> searchPublicPOIs({
+    String? query,
+    List<String>? categories,
+    bool? mustSeeOnly,
+    String sortBy = 'trending',
+    int limit = 20,
+    int offset = 0,
+  }) async =>
+      const [];
+
+  @override
+  Future<PublicPoiPost?> getPublicPOI(String postId) async => null;
+
+  @override
+  Future<bool> likePOIPost(String postId) async => false;
+
+  @override
+  Future<bool> unlikePOIPost(String postId) async => false;
+
+  @override
+  Future<int?> votePOI(String postId, {required int voteValue}) async => null;
+
+  @override
+  Future<List<PublicTrip>> loadFeaturedTrips({int limit = 5}) async => const [];
+
+  @override
+  Future<PublicTrip?> getPublicTrip(String tripId) async => null;
+
+  @override
+  Future<List<PublicTrip>> loadUserTrips(String userId,
+          {int limit = 20}) async =>
+      const [];
+
+  @override
+  Future<bool> likeTrip(String tripId) async => false;
+
+  @override
+  Future<bool> unlikeTrip(String tripId) async => false;
+
+  @override
+  Future<Map<String, dynamic>?> importTrip(String tripId) async => null;
+
+  @override
+  Future<PublicTrip?> publishTrip({
+    required Trip trip,
+    required String tripName,
+    String? description,
+    List<String>? tags,
+    String? region,
+    String? countryCode,
+    String? coverImagePath,
+    List<POI>? sourcePOIs,
+  }) async =>
+      null;
+
+  @override
+  Future<PublicPoiPost?> publishPOI({
+    required String poiId,
+    required String title,
+    String? content,
+    List<String>? categories,
+    bool isMustSee = false,
+    String? coverPhotoPath,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deletePublishedTrip(String tripId) async => false;
+
+  @override
+  Future<List<PublicTrip>> loadMyPublishedTrips() async => const [];
+
+  @override
+  Future<UserProfile?> loadUserProfile(String userId) async => null;
+
+  @override
+  Future<UserProfile?> loadOrCreateMyProfile() async => null;
+
+  @override
+  Future<UserProfile?> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? bio,
+  }) async =>
+      null;
+
+  @override
+  Future<List<TripPhoto>> loadTripPhotos(String tripId,
+          {int limit = 50, int offset = 0}) async =>
+      const [];
+
+  @override
+  Future<TripPhoto?> uploadTripPhoto({
+    required String tripId,
+    required XFile imageFile,
+    String? caption,
+    int displayOrder = 0,
+  }) async =>
+      null;
+
+  @override
+  Future<String?> uploadTripCoverImage({
+    required String tripId,
+    required XFile imageFile,
+  }) async =>
+      null;
+
+  @override
+  Future<bool> deleteTripPhoto(String photoId) async => false;
+
+  @override
+  String getTripPhotoUrl(String storagePath) => storagePath;
+}
+
 /// Provider fuer SocialRepository
 @riverpod
 SocialRepository socialRepository(SocialRepositoryRef ref) {
+  if (!isSupabaseAvailable) {
+    debugPrint(
+        '[Social] Supabase nicht verfuegbar - verwende Offline-Repository');
+    return _UnavailableSocialRepository();
+  }
   return SocialRepository(Supabase.instance.client);
 }

@@ -90,16 +90,16 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: SegmentedButton<int>(
-                  segments: const [
+                  segments: [
                     ButtonSegment<int>(
                       value: 0,
-                      label: Text('Trips'),
-                      icon: Icon(Icons.route),
+                      label: Text(context.l10n.profileTrips),
+                      icon: const Icon(Icons.route),
                     ),
                     ButtonSegment<int>(
                       value: 1,
-                      label: Text('POIs'),
-                      icon: Icon(Icons.place),
+                      label: Text(context.l10n.profilePois),
+                      icon: const Icon(Icons.place),
                     ),
                   ],
                   selected: {_selectedFeed},
@@ -158,7 +158,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     children: [
                       FilterChip(
                         label: Text(
-                          'Must-See',
+                          context.l10n.poiOnlyMustSee,
                           style: TextStyle(
                             color: poiState.mustSeeOnly
                                 ? colorScheme.onPrimary
@@ -190,7 +190,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       ),
                       ChoiceChip(
                         label: Text(
-                          'Neu',
+                          context.l10n.gallerySortRecent,
                           style: TextStyle(
                             color: poiState.sortBy == 'recent'
                                 ? colorScheme.onPrimary
@@ -206,7 +206,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       ),
                       ChoiceChip(
                         label: Text(
-                          'Trending',
+                          context.l10n.gallerySortPopular,
                           style: TextStyle(
                             color: poiState.sortBy == 'trending'
                                 ? colorScheme.onPrimary
@@ -485,7 +485,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Keine POIs gefunden',
+                        context.l10n.poiNoResultsNearby,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ],
@@ -847,9 +847,9 @@ class _PublicPoiCard extends StatelessWidget {
                         color: Colors.amber.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
-                        'Must-See',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.poiOnlyMustSee,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
@@ -870,10 +870,10 @@ class _PublicPoiCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  _chip('⭐ ${post.ratingAvg?.toStringAsFixed(1) ?? '-'}'),
-                  _chip('🗳 ${post.voteScore}'),
-                  _chip('💬 ${post.commentCount}'),
-                  _chip('📷 ${post.photoCount}'),
+                  _chip('Rating ${post.ratingAvg?.toStringAsFixed(1) ?? '-'}'),
+                  _chip('Votes ${post.voteScore}'),
+                  _chip('Comments ${post.commentCount}'),
+                  _chip('Photos ${post.photoCount}'),
                 ],
               ),
               const SizedBox(height: 10),

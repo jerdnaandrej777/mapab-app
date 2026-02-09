@@ -30,8 +30,18 @@ class AIService {
               },
             ));
 
-  /// Service ist jetzt immer "konfiguriert" da der Key im Backend liegt
-  bool get isConfigured => true;
+  /// Service ist konfiguriert, wenn das Backend erreichbar konfiguriert ist.
+  bool get isConfigured => ApiConfig.isConfigured;
+
+  void _ensureBackendConfigured({required String operation}) {
+    if (isConfigured) return;
+    throw AIException(
+      'Backend nicht konfiguriert (BACKEND_URL fehlt oder ist ungueltig). '
+      'Operation: $operation',
+      code: 'BACKEND_NOT_CONFIGURED',
+      isRetryable: false,
+    );
+  }
 
   Map<String, dynamic> get _clientMeta => {
         'build': _build,
@@ -145,6 +155,7 @@ class AIService {
     List<ChatMessage>? history,
     String? language,
   }) async {
+    _ensureBackendConfigured(operation: 'chat');
     debugPrint('[AI] Sende Chat-Anfrage an Backend...');
     _addRequestBreadcrumb(stage: 'start', requestKind: 'chat');
 
@@ -290,6 +301,7 @@ class AIService {
     String? startLocation,
     String? language,
   }) async {
+    _ensureBackendConfigured(operation: 'trip_plan');
     debugPrint('[AI] Sende Trip-Plan-Anfrage an Backend...');
     debugPrint('[AI] Ziel: $destination, Tage: $days');
     _addRequestBreadcrumb(stage: 'start', requestKind: 'tripPlan');
@@ -531,6 +543,7 @@ Antworte als JSON:
   Future<AIPoiSuggestionResponse> getPoiSuggestionsStructured({
     required AIPoiSuggestionRequest request,
   }) async {
+    _ensureBackendConfigured(operation: 'poi_suggestions');
     debugPrint('[AI] Sende strukturierte POI-Suggestions an Backend...');
     _addRequestBreadcrumb(stage: 'start', requestKind: 'nearby');
 

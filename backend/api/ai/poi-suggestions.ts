@@ -9,6 +9,7 @@ import {
 import {
   getOpenAIClient,
   POI_SUGGESTIONS_SYSTEM_PROMPT,
+  createChatCompletionWithRetry,
 } from "../../lib/openai";
 import { rateLimitMiddleware } from "../../lib/middleware/rateLimit";
 
@@ -215,7 +216,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
   }
 
-  if (!rateLimitMiddleware(req, res, { maxRequests: 60, traceId })) {
+  if (
+    !(await rateLimitMiddleware(req, res, { maxRequests: 60, traceId }))
+  ) {
     logRequest({
       traceId,
       status: 429,
@@ -252,22 +255,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const openai = getOpenAIClient();
-    const completion = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: POI_SUGGESTIONS_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: buildUserPrompt(payload),
-        },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.4,
-      max_tokens: 1800,
-    });
+    const completion = await createChatCompletionWithRetry(
+      openai,
+      {
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: POI_SUGGESTIONS_SYSTEM_PROMPT,
+          },
+          {
+            role: "user",
+            content: buildUserPrompt(payload),
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.4,
+        max_tokens: 1800,
+      },
+      {
+        timeoutMs: 20000,
+        maxRetries: 2,
+      },
+    );
 
     const rawMessage = completion.choices[0]?.message?.content;
     if (!rawMessage) {

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/l10n/l10n.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/public_trip.dart';
@@ -650,24 +651,17 @@ class _TripDetailPublicScreenState
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.qr_code_2,
-                        size: 120,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'QR-Code',
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 180,
+                  eyeStyle: QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: colorScheme.primary,
+                  ),
+                  dataModuleStyle: QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),

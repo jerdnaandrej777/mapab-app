@@ -27,6 +27,16 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
   String? _replyToAuthorName;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialen Ladeimpuls setzen, falls der umgebende Screen die Social-Daten
+    // noch nicht geladen hat.
+    Future.microtask(() {
+      ref.read(pOISocialNotifierProvider(widget.poiId).notifier).loadComments();
+    });
+  }
+
+  @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
@@ -60,13 +70,15 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
 
         // Kommentar-Eingabe
         if (authState.isAuthenticated) ...[
-          _buildCommentInput(context, l10n, colorScheme, socialState.isSubmitting),
+          _buildCommentInput(
+              context, l10n, colorScheme, socialState.isSubmitting),
           const SizedBox(height: 16),
         ],
 
         // Kommentar-Liste
         if (comments.isEmpty)
-          _buildEmptyState(context, l10n, colorScheme, authState.isAuthenticated)
+          _buildEmptyState(
+              context, l10n, colorScheme, authState.isAuthenticated)
         else
           ListView.builder(
             shrinkWrap: true,
@@ -83,6 +95,8 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
                 onFlagTap: !comment.isOwnedBy(authState.user?.id)
                     ? () => _flagComment(comment.id)
                     : null,
+                onDeleteCommentTap: _deleteComment,
+                onFlagCommentTap: _flagComment,
                 loadReplies: () => _loadReplies(comment.id),
               );
             },
@@ -106,7 +120,8 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
@@ -202,7 +217,9 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
             ),
             const SizedBox(height: 8),
             Text(
-              isAuthenticated ? l10n.poiBeFirstComment : l10n.socialLoginRequired,
+              isAuthenticated
+                  ? l10n.poiBeFirstComment
+                  : l10n.socialLoginRequired,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -234,10 +251,12 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
-    final success = await ref.read(pOISocialNotifierProvider(widget.poiId).notifier).addComment(
-      content,
-      parentId: _replyToCommentId,
-    );
+    final success = await ref
+        .read(pOISocialNotifierProvider(widget.poiId).notifier)
+        .addComment(
+          content,
+          parentId: _replyToCommentId,
+        );
 
     if (success && mounted) {
       _commentController.clear();
@@ -269,16 +288,20 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
     );
 
     if (confirmed == true) {
-      await ref.read(pOISocialNotifierProvider(widget.poiId).notifier).deleteComment(commentId);
+      await ref
+          .read(pOISocialNotifierProvider(widget.poiId).notifier)
+          .deleteComment(commentId);
     }
   }
 
   Future<void> _flagComment(String commentId) async {
     final l10n = AppLocalizations.of(context)!;
-    final success = await ref.read(pOISocialNotifierProvider(widget.poiId).notifier).flagContent(
-      contentType: 'comment',
-      contentId: commentId,
-    );
+    final success = await ref
+        .read(pOISocialNotifierProvider(widget.poiId).notifier)
+        .flagContent(
+          contentType: 'comment',
+          contentId: commentId,
+        );
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -290,7 +313,9 @@ class _POICommentsSectionState extends ConsumerState<POICommentsSection> {
   }
 
   Future<List<Comment>> _loadReplies(String parentId) async {
-    return await ref.read(pOISocialNotifierProvider(widget.poiId).notifier).loadReplies(parentId);
+    return await ref
+        .read(pOISocialNotifierProvider(widget.poiId).notifier)
+        .loadReplies(parentId);
   }
 }
 
@@ -304,7 +329,8 @@ class TripCommentsSection extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TripCommentsSection> createState() => _TripCommentsSectionState();
+  ConsumerState<TripCommentsSection> createState() =>
+      _TripCommentsSectionState();
 }
 
 class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
@@ -317,7 +343,9 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
     super.initState();
     // Kommentare laden
     Future.microtask(() {
-      ref.read(tripCommentsNotifierProvider(widget.tripId).notifier).loadComments();
+      ref
+          .read(tripCommentsNotifierProvider(widget.tripId).notifier)
+          .loadComments();
     });
   }
 
@@ -331,7 +359,8 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final commentsState = ref.watch(tripCommentsNotifierProvider(widget.tripId));
+    final commentsState =
+        ref.watch(tripCommentsNotifierProvider(widget.tripId));
     final authState = ref.watch(authNotifierProvider);
     final comments = commentsState.comments;
 
@@ -359,13 +388,15 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
         else ...[
           // Kommentar-Eingabe
           if (authState.isAuthenticated) ...[
-            _buildCommentInput(context, l10n, colorScheme, commentsState.isSubmitting),
+            _buildCommentInput(
+                context, l10n, colorScheme, commentsState.isSubmitting),
             const SizedBox(height: 16),
           ],
 
           // Kommentar-Liste
           if (comments.isEmpty)
-            _buildEmptyState(context, l10n, colorScheme, authState.isAuthenticated)
+            _buildEmptyState(
+                context, l10n, colorScheme, authState.isAuthenticated)
           else
             ListView.builder(
               shrinkWrap: true,
@@ -382,6 +413,8 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
                   onFlagTap: !comment.isOwnedBy(authState.user?.id)
                       ? () => _flagComment(comment.id)
                       : null,
+                  onDeleteCommentTap: _deleteComment,
+                  onFlagCommentTap: _flagComment,
                   loadReplies: () => _loadReplies(comment.id),
                 );
               },
@@ -406,7 +439,8 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
@@ -523,10 +557,12 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
-    final success = await ref.read(tripCommentsNotifierProvider(widget.tripId).notifier).addComment(
-      content,
-      parentId: _replyToCommentId,
-    );
+    final success = await ref
+        .read(tripCommentsNotifierProvider(widget.tripId).notifier)
+        .addComment(
+          content,
+          parentId: _replyToCommentId,
+        );
 
     if (success && mounted) {
       _commentController.clear();
@@ -535,7 +571,9 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
   }
 
   Future<void> _deleteComment(String commentId) async {
-    await ref.read(tripCommentsNotifierProvider(widget.tripId).notifier).deleteComment(commentId);
+    await ref
+        .read(tripCommentsNotifierProvider(widget.tripId).notifier)
+        .deleteComment(commentId);
   }
 
   Future<void> _flagComment(String commentId) async {
@@ -556,6 +594,8 @@ class _TripCommentsSectionState extends ConsumerState<TripCommentsSection> {
   }
 
   Future<List<Comment>> _loadReplies(String parentId) async {
-    return await ref.read(tripCommentsNotifierProvider(widget.tripId).notifier).loadReplies(parentId);
+    return await ref
+        .read(tripCommentsNotifierProvider(widget.tripId).notifier)
+        .loadReplies(parentId);
   }
 }

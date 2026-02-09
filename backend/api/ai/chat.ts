@@ -1,7 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "node:crypto";
 import { ChatRequestSchema } from "../../lib/types";
-import { getOpenAIClient, buildChatSystemPrompt } from "../../lib/openai";
+import {
+  getOpenAIClient,
+  buildChatSystemPrompt,
+  createChatCompletionWithRetry,
+} from "../../lib/openai";
 import { rateLimitMiddleware } from "../../lib/middleware/rateLimit";
 
 const ENDPOINT = "/api/ai/chat";
@@ -72,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
   }
 
-  if (!rateLimitMiddleware(req, res, { traceId })) {
+  if (!(await rateLimitMiddleware(req, res, { traceId }))) {
     logRequest({
       traceId,
       status: 429,
@@ -136,12 +140,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       content: message,
     });
 
-    const completion = await openai.chat.completions.create({
-      model: MODEL,
-      messages,
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
+    const completion = await createChatCompletionWithRetry(
+      openai,
+      {
+        model: MODEL,
+        messages,
+        max_tokens: 1000,
+        temperature: 0.7,
+      },
+      {
+        timeoutMs: 15000,
+        maxRetries: 2,
+      },
+    );
 
     const responseMessage = completion.choices[0]?.message?.content;
 

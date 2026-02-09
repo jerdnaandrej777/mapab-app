@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:travel_planner/l10n/app_localizations.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
-import 'core/supabase/supabase_client.dart' show isAuthenticated, isSupabaseAvailable;
+import 'core/supabase/supabase_client.dart'
+    show isAuthenticated, isSupabaseAvailable;
 import 'core/widgets/gamification_overlay.dart';
 import 'data/providers/settings_provider.dart';
 import 'features/map/map_screen.dart';
@@ -25,16 +25,19 @@ import 'features/auth/forgot_password_screen.dart';
 import 'features/account/splash_screen.dart';
 import 'features/favorites/favorites_screen.dart';
 import 'features/navigation/navigation_screen.dart';
+import 'features/navigation/models/navigation_launch_args.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/journal/journal_screen.dart';
 import 'features/sharing/qr_scanner_screen.dart';
 import 'features/templates/trip_templates_screen.dart';
 import 'features/social/gallery_screen.dart';
 import 'features/social/trip_detail_public_screen.dart';
+import 'features/social/public_profile_screen.dart';
 import 'features/admin/admin_screen.dart';
 import 'features/leaderboard/leaderboard_screen.dart';
 import 'features/challenges/challenges_screen.dart';
 import 'features/ai_assistant/chat_screen.dart';
+import 'shared/widgets/app_snackbar.dart';
 
 /// Haupt-App Widget
 class TravelPlannerApp extends ConsumerWidget {
@@ -45,23 +48,25 @@ class TravelPlannerApp extends ConsumerWidget {
     final settings = ref.watch(settingsNotifierProvider);
     final effectiveThemeMode = ref.watch(effectiveThemeModeProvider);
 
-    // Wähle das richtige Dark Theme (normal oder OLED)
-    final darkTheme = settings.isOledMode
-        ? AppTheme.oledDarkTheme
-        : AppTheme.darkTheme;
+    // WÃ¤hle das richtige Dark Theme (normal oder OLED)
+    final darkTheme =
+        settings.isOledMode ? AppTheme.oledDarkTheme : AppTheme.darkTheme;
 
     // Bestimme ob Dark Mode aktiv ist
     final isDark = effectiveThemeMode == ThemeMode.dark ||
         (effectiveThemeMode == ThemeMode.system &&
-            WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
 
     // System UI Overlay Style dynamisch anpassen
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: isDark ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor:
+            isDark ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
       ),
     );
 
@@ -82,7 +87,7 @@ class TravelPlannerApp extends ConsumerWidget {
       // Router
       routerConfig: _router,
 
-      // Gamification Overlay für XP-Toasts und Achievement-Popups
+      // Gamification Overlay fÃ¼r XP-Toasts und Achievement-Popups
       builder: (context, child) {
         return GamificationOverlay(
           child: child ?? const SizedBox.shrink(),
@@ -92,23 +97,27 @@ class TravelPlannerApp extends ConsumerWidget {
   }
 }
 
+@visibleForTesting
+NavigationLaunchArgs? parseNavigationLaunchArgs(Object? extra) {
+  return NavigationLaunchArgs.fromExtra(extra);
+}
+
 /// GoRouter Konfiguration mit Account-Check
 final _router = GoRouter(
   initialLocation: '/splash',
   debugLogDiagnostics: kDebugMode,
 
-  // Auth-Guard: Geschützte Routen erfordern Login
+  // Auth-Guard: GeschÃ¼tzte Routen erfordern Login
   redirect: (context, state) {
     final path = state.uri.path;
 
     // Routen die Login erfordern
-    const authRequired = ['/profile', '/favorites', '/settings'];
-
-    // Prüfe ob die aktuelle Route Auth braucht
-    final needsAuth = authRequired.any((route) => path.startsWith(route));
+    final needsAuth = path == '/profile' ||
+        path.startsWith('/favorites') ||
+        path.startsWith('/settings');
 
     if (needsAuth && isSupabaseAvailable && !isAuthenticated) {
-      // Nicht eingeloggt → Redirect zu Login
+      // Nicht eingeloggt â†’ Redirect zu Login
       return '/login';
     }
 
@@ -116,14 +125,14 @@ final _router = GoRouter(
   },
 
   routes: [
-    // Splash Screen (prüft Auth-Status)
+    // Splash Screen (prÃ¼ft Auth-Status)
     GoRoute(
       path: '/splash',
       name: 'splash',
       builder: (context, state) => const SplashScreen(),
     ),
 
-    // Onboarding (für neue User)
+    // Onboarding (fÃ¼r neue User)
     GoRoute(
       path: '/onboarding',
       name: 'onboarding',
@@ -211,10 +220,13 @@ final _router = GoRouter(
       path: '/navigation',
       name: 'navigation',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final args = parseNavigationLaunchArgs(state.extra);
+        if (args == null) {
+          return const _NavigationFallbackScreen();
+        }
         return NavigationScreen(
-          route: extra['route'],
-          stops: extra['stops'],
+          route: args.route,
+          stops: args.stops,
         );
       },
     ),
@@ -238,6 +250,14 @@ final _router = GoRouter(
       path: '/profile',
       name: 'profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/profile/:userId',
+      name: 'public_profile',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return PublicProfileScreen(userId: userId);
+      },
     ),
 
     // Favoriten
@@ -357,6 +377,43 @@ class MainShell extends StatelessWidget {
             child: TripModeSelector(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NavigationFallbackScreen extends StatefulWidget {
+  const _NavigationFallbackScreen();
+
+  @override
+  State<_NavigationFallbackScreen> createState() =>
+      _NavigationFallbackScreenState();
+}
+
+class _NavigationFallbackScreenState extends State<_NavigationFallbackScreen> {
+  bool _didRedirect = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didRedirect) return;
+    _didRedirect = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppSnackbar.showWarning(
+        context,
+        'Navigation konnte nicht fortgesetzt werden. Bitte Route neu starten.',
+      );
+      context.go('/trip');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

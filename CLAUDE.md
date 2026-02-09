@@ -5,15 +5,15 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.45 - AI-Assistent stabilisiert + AI-Reise-Copilot + Backend-Resilienz | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.45)
+Version: 1.10.46 - Social-Flow + Navigation-Lifecycle stabilisiert | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.46)
 
-- AI-Assistent auf getypte Chat-Modelle umgestellt (`ChatUiMessage`, `PoiListMessage`, `SystemMessage`) fuer robustere UI-States.
-- Request-Token-Guard + Stale-Response-Schutz in Chat/Nearby/Trip-Generator gegen Mehrfachstarts und setState-after-dispose.
-- Distanzanzeige auf POI-Karten korrigiert (km-Berechnung).
-- AI-Service gehaertet: Response-Validation, `AIException(code, traceId)`, strukturiertes Error-Mapping und Sentry-Breadcrumbs.
-- Backend `/api/ai/*` erweitert um `traceId`, konsistente Error-Codes, strukturierte Request-Logs und optionales `clientMeta`.
-- AI-Reise-Copilot MVP: Proaktive Copilot-Karten, Quick-Actions, "Warum diese Empfehlung?" und trip-bezogener Kurzzeit-Kontext.
+- POI-Social startet im Detailscreen deterministisch (`loadAll()`), Review-Aktion ist direkt angebunden.
+- Reply-Moderation korrigiert: Delete/Flag arbeiten jetzt mit der echten Reply-ID statt Parent-Callback.
+- Public Profile Routing erweitert: `/profile/:userId` ist direkt aufrufbar und nicht vom Auth-Guard blockiert.
+- Sharing auf stabile Public-Links vereinheitlicht (`/gallery/{id}`) inkl. Legacy-Parsing fuer alte `/trip/{id}`-Links.
+- QR-Scanner und Public-Trip-Detail verbessert (konsistenter Link-Flow + echte QR-Render-Ausgabe).
+- Navigation-Background-Lifecycle gehaertet, inkl. robusterem Resume-/Stop-Verhalten.
 
 
 ## Tech Stack
@@ -196,7 +196,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
 | `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
 | `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) |
-| `lib/features/navigation/services/navigation_foreground_service.dart` | Android Foreground Service fuer Hintergrund-Navigation: GPS-Tracking im Hintergrund, Benachrichtigungs-Steuerung, Service-Lifecycle-Management via flutter_foreground_task (v1.9.29) |
+| `lib/features/navigation/services/navigation_background_service.dart` | Plattformabstraktion fuer Hintergrund-Navigation (Android/iOS/Noop): Start/Stop, Notification-Resume und Lifecycle-sicheres State-Management (v1.10.46) |
 
 ### Daten
 
@@ -506,6 +506,7 @@ Bei jedem neuen Feature sicherstellen:
 ### Changelogs
 
 Versionsspezifische Ã„nderungen finden sich in:
+- `Dokumentation/CHANGELOG-v1.10.46.md` (Social + Navigation Stabilisierung: POI-Social Initial-Load, Reply-ID Fix fuer Delete/Flag, oeffentliches Profil-Routing `/profile/:userId`, Gallery-Link-Standardisierung fuer Sharing/QR, robustere Navigation-Lifecycle-Flows)
 - `Dokumentation/CHANGELOG-v1.10.43.md` (Favoriten-Route wie AI-Route mit `Trip bearbeiten`+`Navigation starten`, Trip-Bearbeiten-Button `POIs hinzufügen`, konsistentes POI-Hinzufuegen-Modal und AI-Assistent-Crash-Haertung)
 - `Dokumentation/CHANGELOG-v1.10.42.md` (AI-Assistent: robuste lokale Restaurant-Erkennung, direkte `Zur Route`-Aktion aus AI-POI-Karten, Route/Trip-Intent im Chat und vereinheitlichte Bottom-Sheet-Hoehen in den betroffenen Flows)
 - `Dokumentation/CHANGELOG-v1.10.41.md` (Trip-Bearbeiten vereinfacht: Footer mit `Weitere POIs hinzufügen` + `Fertig`, neuer Übersichts-Modal mit Karte/Stats und Abschlussaktionen, dynamisches Google-Maps-Label für Tagestrip vs. Euro Trip)

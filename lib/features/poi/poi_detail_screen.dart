@@ -22,6 +22,7 @@ import 'widgets/poi_photo_gallery.dart';
 import 'widgets/review_card.dart';
 import 'widgets/poi_comments_section.dart';
 import 'widgets/upload_photo_sheet.dart';
+import 'widgets/submit_review_sheet.dart';
 
 /// POI-Detail-Screen mit dynamischen Daten
 class POIDetailScreen extends ConsumerStatefulWidget {
@@ -63,6 +64,11 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
       if (!poi.isEnriched) {
         await notifier.enrichPOI(widget.poiId);
       }
+
+      // Social-Daten frueh laden, damit Rating/Reviews/Kommentare initial befuellt sind.
+      await ref
+          .read(pOISocialNotifierProvider(widget.poiId).notifier)
+          .loadAll();
     } catch (_) {
       debugPrint('[POIDetail] POI nicht gefunden: ${widget.poiId}');
     }
@@ -236,7 +242,7 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
             ),
             child: Icon(Icons.public, color: colorScheme.onSurface),
           ),
-          tooltip: 'POI veroeffentlichen',
+          tooltip: context.l10n.publishButton,
           onPressed: () => _openPublishPoiSheet(poi),
         ),
         IconButton(
@@ -861,8 +867,8 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     if (!authState.isAuthenticated) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bitte zuerst einloggen, um POIs zu veroeffentlichen.'),
+        SnackBar(
+          content: Text(context.l10n.socialLoginRequired),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -870,6 +876,14 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
     }
 
     await PublishPoiSheet.show(context, poi);
+  }
+
+  Future<void> _openSubmitReviewSheet(POI poi) async {
+    await SubmitReviewSheet.show(
+      context,
+      poiId: poi.id,
+      poiName: poi.name,
+    );
   }
 
   /// Bewertungs-Widget mit Sternen und "Bewerten"-Button
@@ -892,7 +906,10 @@ class _POIDetailScreenState extends ConsumerState<POIDetailScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        POIRatingWidget(poiId: poi.id),
+        POIRatingWidget(
+          poiId: poi.id,
+          onTapRate: () => _openSubmitReviewSheet(poi),
+        ),
       ],
     );
   }

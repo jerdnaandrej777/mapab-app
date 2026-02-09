@@ -87,5 +87,5 @@ Siehe [CONTRIBUTING.md](../CONTRIBUTING.md) für Informationen zum Mitwirken.
 
 ---
 
-**Version:** 1.10.43
+**Version:** 1.10.46
 **Stand:** Februar 2026

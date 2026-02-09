@@ -5,6 +5,7 @@ import {
   getOpenAIClient,
   TRIP_PLAN_SYSTEM_PROMPT,
   buildTripPlanPrompt,
+  createChatCompletionWithRetry,
 } from "../../lib/openai";
 import { rateLimitMiddleware } from "../../lib/middleware/rateLimit";
 
@@ -76,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
   }
 
-  if (!rateLimitMiddleware(req, res, { maxRequests: 20, traceId })) {
+  if (!(await rateLimitMiddleware(req, res, { maxRequests: 20, traceId }))) {
     logRequest({
       traceId,
       status: 429,
@@ -139,21 +140,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       interests,
     });
 
-    const completion = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: TRIP_PLAN_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      max_tokens: 2000,
-      temperature: 0.8,
-    });
+    const completion = await createChatCompletionWithRetry(
+      openai,
+      {
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: TRIP_PLAN_SYSTEM_PROMPT,
+          },
+          {
+            role: "user",
+            content: userPrompt,
+          },
+        ],
+        max_tokens: 2000,
+        temperature: 0.8,
+      },
+      {
+        timeoutMs: 20000,
+        maxRetries: 2,
+      },
+    );
 
     const planContent = completion.choices[0]?.message?.content;
 

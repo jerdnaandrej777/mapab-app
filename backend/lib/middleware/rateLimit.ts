@@ -1,9 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "node:crypto";
-
-// In-Memory Rate Limit Store (wird bei Serverless-Cold-Start zurückgesetzt)
-// Für Produktion: Redis oder Supabase verwenden
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+import { Redis } from "@upstash/redis";
 
 const DEFAULT_MAX_REQUESTS = 100; // Pro Tag
 const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 Stunden
@@ -21,8 +18,30 @@ export interface RateLimitResult {
   limit: number;
 }
 
+// Fallback fuer lokale/dev Nutzung oder wenn Redis nicht konfiguriert ist.
+const inMemoryRateLimitStore = new Map<string, { count: number; resetTime: number }>();
+let redisClient: Redis | null | undefined;
+
+function getRedisClient(): Redis | null {
+  if (redisClient !== undefined) {
+    return redisClient;
+  }
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    redisClient = null;
+    return redisClient;
+  }
+
+  redisClient = new Redis({
+    url,
+    token,
+  });
+  return redisClient;
+}
+
 function getClientId(req: VercelRequest): string {
-  // Priorität: User-ID (Auth) > X-Forwarded-For > x-real-ip > 'anonymous'
   const userId = req.headers["x-user-id"] as string | undefined;
   if (userId) return `user:${userId}`;
 
@@ -40,43 +59,88 @@ function getClientId(req: VercelRequest): string {
   return "anonymous";
 }
 
-export function checkRateLimit(
-  req: VercelRequest,
-  config: RateLimitConfig = {},
-): RateLimitResult {
+function resolveRateLimitConfig(config: RateLimitConfig = {}): {
+  maxRequests: number;
+  windowMs: number;
+} {
   const maxRequests =
     config.maxRequests ??
-    (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "") ||
-      DEFAULT_MAX_REQUESTS);
+    (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "") || DEFAULT_MAX_REQUESTS);
   const windowMs =
     config.windowMs ??
     (parseInt(process.env.RATE_LIMIT_WINDOW_MS || "") || DEFAULT_WINDOW_MS);
 
-  const clientId = getClientId(req);
+  return { maxRequests, windowMs };
+}
+
+function checkRateLimitInMemory(
+  clientId: string,
+  maxRequests: number,
+  windowMs: number,
+): RateLimitResult {
   const now = Date.now();
+  const windowStart = Math.floor(now / windowMs) * windowMs;
+  const resetTime = windowStart + windowMs;
+  const storeKey = `${clientId}:${windowStart}`;
 
-  let record = rateLimitStore.get(clientId);
-
-  // Neuer Client oder Window abgelaufen
-  if (!record || now >= record.resetTime) {
-    record = {
-      count: 0,
-      resetTime: now + windowMs,
-    };
-  }
+  const record = inMemoryRateLimitStore.get(storeKey) ?? {
+    count: 0,
+    resetTime,
+  };
 
   record.count++;
-  rateLimitStore.set(clientId, record);
-
-  const remaining = Math.max(0, maxRequests - record.count);
-  const allowed = record.count <= maxRequests;
+  inMemoryRateLimitStore.set(storeKey, record);
 
   return {
-    allowed,
-    remaining,
-    reset: record.resetTime,
+    allowed: record.count <= maxRequests,
+    remaining: Math.max(0, maxRequests - record.count),
+    reset: resetTime,
     limit: maxRequests,
   };
+}
+
+async function checkRateLimitRedis(
+  clientId: string,
+  maxRequests: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return checkRateLimitInMemory(clientId, maxRequests, windowMs);
+  }
+
+  const now = Date.now();
+  const windowStart = Math.floor(now / windowMs) * windowMs;
+  const resetTime = windowStart + windowMs;
+  const key = `rate_limit:${clientId}:${windowStart}`;
+
+  // INCR ist atomar pro Key.
+  const count = await redis.incr(key);
+  if (count === 1) {
+    await redis.expire(key, Math.ceil(windowMs / 1000));
+  }
+
+  return {
+    allowed: count <= maxRequests,
+    remaining: Math.max(0, maxRequests - count),
+    reset: resetTime,
+    limit: maxRequests,
+  };
+}
+
+export async function checkRateLimit(
+  req: VercelRequest,
+  config: RateLimitConfig = {},
+): Promise<RateLimitResult> {
+  const { maxRequests, windowMs } = resolveRateLimitConfig(config);
+  const clientId = getClientId(req);
+
+  try {
+    return await checkRateLimitRedis(clientId, maxRequests, windowMs);
+  } catch (error) {
+    console.error("[RateLimit] Redis check failed, fallback to in-memory", error);
+    return checkRateLimitInMemory(clientId, maxRequests, windowMs);
+  }
 }
 
 export function applyRateLimitHeaders(
@@ -88,12 +152,12 @@ export function applyRateLimitHeaders(
   res.setHeader("X-RateLimit-Reset", result.reset.toString());
 }
 
-export function rateLimitMiddleware(
+export async function rateLimitMiddleware(
   req: VercelRequest,
   res: VercelResponse,
   config?: RateLimitConfig,
-): boolean {
-  const result = checkRateLimit(req, config);
+): Promise<boolean> {
+  const result = await checkRateLimit(req, config);
   applyRateLimitHeaders(res, result);
 
   if (!result.allowed) {
@@ -116,13 +180,12 @@ export function rateLimitMiddleware(
   return true;
 }
 
-// Cleanup alte Einträge (alle 5 Minuten)
 setInterval(
   () => {
     const now = Date.now();
-    for (const [key, record] of rateLimitStore.entries()) {
+    for (const [key, record] of inMemoryRateLimitStore.entries()) {
       if (now >= record.resetTime) {
-        rateLimitStore.delete(key);
+        inMemoryRateLimitStore.delete(key);
       }
     }
   },

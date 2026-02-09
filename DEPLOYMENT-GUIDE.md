@@ -169,6 +169,27 @@ Viel Spaß beim Testen!
 4. Screenshots, Beschreibung, etc. hinzufügen
 5. Review einreichen (1-7 Tage)
 
+### iOS über TestFlight verteilen
+
+Voraussetzungen:
+1. Mac + Xcode
+2. Apple Developer Account
+3. App Store Connect App mit Bundle ID `com.mapab.app`
+4. Signing-Assets (Zertifikat + Provisioning Profile)
+
+Lokaler Build:
+```bash
+flutter pub get
+cd ios && pod install && cd ..
+flutter build ipa --release --export-method app-store
+```
+
+CI Build + Upload (empfohlen):
+1. GitHub Secrets laut `docs/guides/IOS-SETUP.md` setzen
+2. Workflow `.github/workflows/ios-testflight.yml` ausführen
+3. Build in App Store Connect unter TestFlight prüfen
+4. Interne Tester-Gruppe zuweisen
+
 ### PWA teilen
 
 ```
@@ -234,7 +255,7 @@ Teste es aus!
 
 ### Später:
 - 📱 Google Play Store Veröffentlichung
-- 🍎 iOS App (benötigt Mac + Apple Developer Account)
+- 🍎 Öffentliche iOS App Store Veröffentlichung (nach interner TestFlight-Phase)
 - 🌍 Eigene Domain kaufen (mapab.de)
 - 📊 Analytics hinzufügen (Google Analytics, Plausible)
 - 🚀 Performance optimieren
@@ -313,6 +334,9 @@ Bei jedem `git push` wird automatisch:
 1. APK gebaut
 2. GitHub Release erstellt
 3. PWA auf Netlify deployed
+
+Für iOS/TestFlight gibt es einen separaten Workflow:
+- `.github/workflows/ios-testflight.yml`
 
 ---
 
