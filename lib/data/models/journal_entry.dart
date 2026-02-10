@@ -15,13 +15,21 @@ class JournalEntry with _$JournalEntry {
     String? poiId,
     String? poiName,
     required DateTime createdAt,
-    String? imagePath,
-    String? imageUrl,
+
+    // Photo paths: Local (legacy/offline) vs Cloud (Supabase Storage)
+    String? imagePath,           // LOCAL: Legacy file path
+    String? photoStoragePath,    // CLOUD: Supabase Storage URL
+    String? imageUrl,            // Deprecated: Legacy field
+
     String? note,
     double? latitude,
     double? longitude,
     String? locationName,
     int? dayNumber,
+
+    // Sync metadata for cloud synchronization
+    DateTime? syncedAt,          // Last successful cloud sync timestamp
+    @Default(false) bool needsSync,  // Flag: pending changes need sync
   }) = _JournalEntry;
 
   factory JournalEntry.fromJson(Map<String, dynamic> json) =>
@@ -33,8 +41,14 @@ class JournalEntry with _$JournalEntry {
     return LatLng(latitude!, longitude!);
   }
 
+  /// Get photo URL (cloud first, then local fallback)
+  String? get photoUrl => photoStoragePath ?? imagePath ?? imageUrl;
+
   /// Hat dieses Entry ein Bild
-  bool get hasImage => imagePath != null || imageUrl != null;
+  bool get hasImage => photoUrl != null;
+
+  /// Ist dieses Entry mit der Cloud synchronisiert
+  bool get isSynced => syncedAt != null && !needsSync;
 
   /// Hat dieses Entry eine Notiz
   bool get hasNote => note != null && note!.isNotEmpty;

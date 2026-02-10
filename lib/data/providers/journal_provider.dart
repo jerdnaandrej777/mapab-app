@@ -2,16 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/journal_entry.dart';
+import '../repositories/journal_cloud_repo.dart';
 import '../services/journal_service.dart';
 import 'gamification_provider.dart';
 
 part 'journal_provider.g.dart';
 
-/// Provider fuer den JournalService
+/// Provider fuer den JournalService (mit optionalem CloudRepo)
 @Riverpod(keepAlive: true)
 JournalService journalService(Ref ref) {
-  return JournalService();
+  final supabase = Supabase.instance.client;
+  final cloudRepo = supabase.auth.currentUser != null
+      ? JournalCloudRepo(supabase)
+      : null;
+
+  return JournalService(cloudRepo: cloudRepo);
 }
 
 /// State fuer das aktive Tagebuch
@@ -19,6 +26,7 @@ class JournalState {
   final TripJournal? activeJournal;
   final List<TripJournal> allJournals;
   final bool isLoading;
+  final bool isSyncing;
   final String? error;
   final int? selectedDay;
 
@@ -26,6 +34,7 @@ class JournalState {
     this.activeJournal,
     this.allJournals = const [],
     this.isLoading = false,
+    this.isSyncing = false,
     this.error,
     this.selectedDay,
   });
@@ -34,6 +43,7 @@ class JournalState {
     TripJournal? activeJournal,
     List<TripJournal>? allJournals,
     bool? isLoading,
+    bool? isSyncing,
     String? error,
     int? selectedDay,
     bool clearActiveJournal = false,
@@ -43,6 +53,7 @@ class JournalState {
       activeJournal: clearActiveJournal ? null : (activeJournal ?? this.activeJournal),
       allJournals: allJournals ?? this.allJournals,
       isLoading: isLoading ?? this.isLoading,
+      isSyncing: isSyncing ?? this.isSyncing,
       error: clearError ? null : (error ?? this.error),
       selectedDay: selectedDay ?? this.selectedDay,
     );
@@ -373,5 +384,52 @@ class JournalNotifier extends _$JournalNotifier {
         // Fehler im Hintergrund ignorieren - allJournals bleibt unveraendert
       }
     });
+  }
+
+  // ============================================
+  // CLOUD SYNC METHODS
+  // ============================================
+
+  /// Sync Journal von Cloud (Manual Refresh)
+  Future<void> syncFromCloud(String tripId) async {
+    if (state.activeJournal == null) return;
+
+    state = state.copyWith(isSyncing: true, clearError: true);
+    try {
+      await _service.syncJournalFromCloud(tripId);
+      await _refreshActiveJournal();
+    } catch (e) {
+      debugPrint('[JournalNotifier] Cloud-Sync fehlgeschlagen: $e');
+      state = state.copyWith(
+        isSyncing: false,
+        error: 'Cloud-Sync fehlgeschlagen: $e',
+      );
+    } finally {
+      state = state.copyWith(isSyncing: false);
+    }
+  }
+
+  /// Einmalige Migration aller lokalen Eintraege zur Cloud
+  Future<void> migrateLocalToCloud() async {
+    state = state.copyWith(isSyncing: true, clearError: true);
+    try {
+      await _service.migrateLocalToCloud();
+
+      // Nach Migration: Alle Journals neu laden
+      await loadAllJournals();
+
+      // Aktives Journal aktualisieren falls vorhanden
+      if (state.activeJournal != null) {
+        await _refreshActiveJournal();
+      }
+    } catch (e) {
+      debugPrint('[JournalNotifier] Migration fehlgeschlagen: $e');
+      state = state.copyWith(
+        isSyncing: false,
+        error: 'Migration fehlgeschlagen: $e',
+      );
+    } finally {
+      state = state.copyWith(isSyncing: false);
+    }
   }
 }

@@ -61,6 +61,25 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          // Sync indicator
+          if (journalState.isSyncing)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          // Manual sync button
+          if (journal != null && !journalState.isSyncing)
+            IconButton(
+              icon: const Icon(Icons.cloud_sync),
+              tooltip: 'Mit Cloud synchronisieren',
+              onPressed: () => ref
+                  .read(journalNotifierProvider.notifier)
+                  .syncFromCloud(widget.tripId),
+            ),
           if (journal != null && journal.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_outline),

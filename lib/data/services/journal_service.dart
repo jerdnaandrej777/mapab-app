@@ -5,9 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/journal_entry.dart';
+import '../repositories/journal_cloud_repo.dart';
 
 /// Service fuer die Verwaltung von Reisetagebuch-Eintraegen
+///
+/// Hybrid-Architektur: Hive (lokal, offline) + Supabase (cloud, sync)
 class JournalService {
+  final JournalCloudRepo? cloudRepo;
   /// Rekursiver Deep-Cast: Hive Maps (Map<dynamic, dynamic>) sicher
   /// in Map<String, dynamic> konvertieren, inkl. verschachtelter Maps/Listen.
   static Map<String, dynamic> _deepCast(dynamic data) {
@@ -37,6 +41,9 @@ class JournalService {
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _isInitialized = false;
+
+  /// Konstruktor mit optionalem Cloud-Repo
+  JournalService({this.cloudRepo});
 
   /// Initialisiert den Service
   Future<void> init() async {
@@ -140,7 +147,7 @@ class JournalService {
     return journals;
   }
 
-  /// Fuegt einen neuen Eintrag hinzu
+  /// Fuegt einen neuen Eintrag hinzu (local + cloud sync)
   Future<JournalEntry> addEntry({
     required String tripId,
     String? poiId,
@@ -164,14 +171,22 @@ class JournalService {
       longitude: longitude,
       locationName: locationName,
       dayNumber: dayNumber,
+      needsSync: cloudRepo != null,
     );
 
+    // 1. Save to Hive first (fast, offline-capable)
     await _entriesBox.put(entry.id, entry.toJson());
     debugPrint('[Journal] Eintrag hinzugefuegt: ${entry.id}');
+
+    // 2. Sync to cloud (fire-and-forget)
+    if (cloudRepo != null) {
+      _syncEntryToCloud(entry);
+    }
+
     return entry;
   }
 
-  /// Fuegt einen Eintrag mit Foto hinzu
+  /// Fuegt einen Eintrag mit Foto hinzu (local + cloud sync)
   Future<JournalEntry?> addEntryWithPhoto({
     required String tripId,
     required ImageSource source,
@@ -212,19 +227,37 @@ class JournalService {
       longitude: longitude,
       locationName: locationName,
       dayNumber: dayNumber,
+      needsSync: cloudRepo != null,
     );
 
+    // 1. Save to Hive first (fast, offline-capable)
     await _entriesBox.put(entry.id, entry.toJson());
     debugPrint('[Journal] Eintrag mit Foto hinzugefuegt: ${entry.id}');
+
+    // 2. Upload photo to cloud (fire-and-forget)
+    if (cloudRepo != null) {
+      _uploadPhotoToCloud(entry.id, tripId, File(savedPath));
+    }
+
     return entry;
   }
 
-  /// Aktualisiert einen Eintrag
+  /// Aktualisiert einen Eintrag (local + cloud sync)
   Future<JournalEntry> updateEntry(JournalEntry entry) async {
     await init();
-    await _entriesBox.put(entry.id, entry.toJson());
-    debugPrint('[Journal] Eintrag aktualisiert: ${entry.id}');
-    return entry;
+
+    // Mark as needs sync
+    final updatedEntry = entry.copyWith(needsSync: cloudRepo != null);
+
+    await _entriesBox.put(updatedEntry.id, updatedEntry.toJson());
+    debugPrint('[Journal] Eintrag aktualisiert: ${updatedEntry.id}');
+
+    // Sync to cloud (fire-and-forget)
+    if (cloudRepo != null) {
+      _syncEntryToCloud(updatedEntry);
+    }
+
+    return updatedEntry;
   }
 
   /// Loescht einen Eintrag
@@ -359,5 +392,196 @@ class JournalService {
     }
 
     return totalBytes;
+  }
+
+  // ============================================
+  // CLOUD SYNC METHODS
+  // ============================================
+
+  /// Sync eines Eintrags zur Cloud (fire-and-forget)
+  Future<void> _syncEntryToCloud(JournalEntry entry) async {
+    try {
+      // Hole Journal-Metadaten fuer tripName
+      final journalData = _journalsBox.get(entry.tripId);
+      if (journalData == null) {
+        debugPrint('[Journal] Kein Journal fuer tripId ${entry.tripId} gefunden');
+        return;
+      }
+
+      final journalJson = _deepCast(journalData);
+      final tripName = journalJson['tripName'] as String? ?? 'Unknown Trip';
+
+      // Upload entry to cloud
+      final dto = await cloudRepo!.uploadEntry(
+        entry: entry,
+        tripName: tripName,
+      );
+
+      if (dto != null) {
+        // Update local entry with sync timestamp
+        final synced = entry.copyWith(
+          syncedAt: dto.syncedAt,
+          needsSync: false,
+        );
+        await _entriesBox.put(entry.id, synced.toJson());
+        debugPrint('[Journal] Cloud-Sync erfolgreich: ${entry.id}');
+      }
+    } catch (e) {
+      debugPrint('[Journal] Cloud-Sync fehlgeschlagen: $e');
+      // Mark as needs sync
+      final needsSync = entry.copyWith(needsSync: true);
+      await _entriesBox.put(entry.id, needsSync.toJson());
+    }
+  }
+
+  /// Upload eines Fotos zur Cloud (fire-and-forget)
+  Future<void> _uploadPhotoToCloud(
+    String entryId,
+    String tripId,
+    File imageFile,
+  ) async {
+    try {
+      // First sync the entry metadata
+      final entryData = _entriesBox.get(entryId);
+      if (entryData == null) {
+        debugPrint('[Journal] Entry $entryId nicht gefunden');
+        return;
+      }
+
+      final entry = JournalEntry.fromJson(_deepCast(entryData));
+
+      // Sync entry first (without photo)
+      await _syncEntryToCloud(entry);
+
+      // Then upload photo
+      final photoUrl = await cloudRepo!.uploadPhoto(
+        entryId: entryId,
+        tripId: tripId,
+        imageFile: imageFile,
+      );
+
+      if (photoUrl != null) {
+        // Update entry with cloud photo URL
+        final updated = entry.copyWith(
+          photoStoragePath: photoUrl,
+          syncedAt: DateTime.now(),
+          needsSync: false,
+        );
+        await _entriesBox.put(entryId, updated.toJson());
+        debugPrint('[Journal] Foto-Upload erfolgreich: $entryId');
+      }
+    } catch (e) {
+      debugPrint('[Journal] Foto-Upload fehlgeschlagen: $e');
+    }
+  }
+
+  /// Hilfsmethode: Hole Entry aus Hive
+  Future<JournalEntry?> _getEntryById(String entryId) async {
+    try {
+      final data = _entriesBox.get(entryId);
+      if (data == null) return null;
+      return JournalEntry.fromJson(_deepCast(data));
+    } catch (e) {
+      debugPrint('[Journal] Fehler beim Laden von Entry $entryId: $e');
+      return null;
+    }
+  }
+
+  /// Sync Journal von Cloud (beim App-Start / Manual Refresh)
+  Future<void> syncJournalFromCloud(String tripId) async {
+    if (cloudRepo == null) return;
+
+    try {
+      debugPrint('[Journal] Starte Cloud-Sync fuer Trip $tripId...');
+      final cloudEntries = await cloudRepo!.fetchEntriesForTrip(tripId);
+
+      // Merge mit local (cloud wins bei Konflikten)
+      for (final cloudEntry in cloudEntries) {
+        final localEntry = await _getEntryById(cloudEntry.id);
+
+        if (localEntry == null) {
+          // Neuer entry von cloud
+          await _entriesBox.put(cloudEntry.id, cloudEntry.toJson());
+          debugPrint('[Journal] Neuer Entry von Cloud: ${cloudEntry.id}');
+        } else if (cloudEntry.syncedAt != null &&
+            (localEntry.syncedAt == null ||
+                cloudEntry.syncedAt!.isAfter(localEntry.syncedAt!))) {
+          // Cloud ist neuer
+          await _entriesBox.put(cloudEntry.id, cloudEntry.toJson());
+          debugPrint('[Journal] Entry von Cloud aktualisiert: ${cloudEntry.id}');
+        }
+      }
+
+      debugPrint(
+          '[Journal] Cloud-Sync abgeschlossen: ${cloudEntries.length} Eintraege');
+    } catch (e) {
+      debugPrint('[Journal] Cloud-Sync fehlgeschlagen: $e');
+    }
+  }
+
+  /// Einmalige Migration: Upload aller lokalen Eintraege zur Cloud
+  Future<void> migrateLocalToCloud() async {
+    if (cloudRepo == null) {
+      debugPrint('[Journal] Keine Cloud-Repo verfuegbar fuer Migration');
+      return;
+    }
+
+    try {
+      debugPrint('[Journal] Starte Migration aller lokalen Eintraege...');
+
+      final allEntries = _entriesBox.values.toList();
+      int migratedCount = 0;
+      int errorCount = 0;
+
+      for (final entryData in allEntries) {
+        try {
+          final entry = JournalEntry.fromJson(_deepCast(entryData));
+
+          // Skip already synced
+          if (entry.syncedAt != null && !entry.needsSync) {
+            continue;
+          }
+
+          // Get journal metadata
+          final journalData = _journalsBox.get(entry.tripId);
+          if (journalData == null) continue;
+
+          final journalJson = _deepCast(journalData);
+          final tripName = journalJson['tripName'] as String? ?? 'Unknown Trip';
+
+          // Upload entry
+          await cloudRepo!.uploadEntry(
+            entry: entry,
+            tripName: tripName,
+          );
+
+          // Upload photo if exists
+          if (entry.imagePath != null) {
+            final file = File(entry.imagePath!);
+            if (await file.exists()) {
+              await cloudRepo!.uploadPhoto(
+                entryId: entry.id,
+                tripId: entry.tripId,
+                imageFile: file,
+              );
+            }
+          }
+
+          migratedCount++;
+          debugPrint('[Journal] Migriert: ${entry.id}');
+
+          // Rate limit protection
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          errorCount++;
+          debugPrint('[Journal] Migration fehlgeschlagen fuer Entry: $e');
+        }
+      }
+
+      debugPrint(
+          '[Journal] Migration abgeschlossen: $migratedCount erfolgreich, $errorCount Fehler');
+    } catch (e) {
+      debugPrint('[Journal] Migration fehlgeschlagen: $e');
+    }
   }
 }
