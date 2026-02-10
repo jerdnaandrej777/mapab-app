@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.64 - Download</title>
+    <title>MapAB v1.10.65 - Download</title>
     <style>
         * {
             margin: 0;
@@ -208,10 +208,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.64 (Build 248)</div>
-        <span class="release-tag">Erinnerungspunkt-UX, Wetter-Forecast, POI-Publish</span>
+        <div class="version">Version 1.10.65 (Build 249)</div>
+        <span class="release-tag">Journal-Persistenz Cloud-Restore</span>
         <p class="subtitle">
-            Erinnerungspunkt-Modal mit Abbrechen/Erneut-besuchen-Buttons. Aufklappbarer 7-Tage-Wetter-Forecast im DayEditor. POI-Publish-Modal mit eigenem Titel.
+            Journal-Eintraege verschwinden nicht mehr nach Neustart. Automatischer Cloud-Restore bei leerem Hive. Pending-Sync-Retry und dynamisches CloudRepo.
         </p>
 
         <div class="qr-container">
@@ -219,16 +219,17 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.64.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.65.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~127 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.64:</h3>
+            <h3>&#x2728; Neu in v1.10.65:</h3>
             <ul>
-                <li class="highlight">Erinnerungspunkt-Modal: Abbrechen + Erneut besuchen statt AI-Trip-Buttons</li>
-                <li class="highlight">Aufklappbarer 7-Tage-Wetter-Forecast im DayEditor</li>
-                <li>POI-Publish Modal mit eigenem Titel und Untertitel</li>
+                <li class="highlight">Journal-Eintraege verschwinden nicht mehr nach Neustart</li>
+                <li class="highlight">Automatischer Cloud-Restore wenn Hive-Daten verloren</li>
+                <li>Pending-Sync-Retry fuer ungesynte Eintraege</li>
+                <li>Dynamisches CloudRepo bei Login/Logout</li>
             </ul>
         </div>
 
@@ -242,7 +243,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">248</div>
+                <div class="stat-value">249</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -259,7 +260,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.64.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.65.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

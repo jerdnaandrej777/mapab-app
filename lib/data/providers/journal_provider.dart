@@ -10,7 +10,7 @@ import 'gamification_provider.dart';
 
 part 'journal_provider.g.dart';
 
-/// Provider fuer den JournalService (mit optionalem CloudRepo)
+/// Provider fuer den JournalService (mit dynamischem CloudRepo)
 @Riverpod(keepAlive: true)
 JournalService journalService(Ref ref) {
   final supabase = Supabase.instance.client;
@@ -18,7 +18,25 @@ JournalService journalService(Ref ref) {
       ? JournalCloudRepo(supabase)
       : null;
 
-  return JournalService(cloudRepo: cloudRepo);
+  final service = JournalService(cloudRepo: cloudRepo);
+
+  // Auth-Aenderungen beobachten: CloudRepo aktualisieren bei Login/Logout
+  final subscription = supabase.auth.onAuthStateChange.listen((data) {
+    final newUser = data.session?.user;
+    if (newUser != null && service.cloudRepo == null) {
+      // User hat sich eingeloggt -> CloudRepo aktivieren
+      service.updateCloudRepo(JournalCloudRepo(supabase));
+      debugPrint('[Journal] CloudRepo aktiviert nach Login');
+    } else if (newUser == null && service.cloudRepo != null) {
+      // User hat sich ausgeloggt -> CloudRepo deaktivieren
+      service.updateCloudRepo(null);
+      debugPrint('[Journal] CloudRepo deaktiviert nach Logout');
+    }
+  });
+
+  ref.onDispose(() => subscription.cancel());
+
+  return service;
 }
 
 /// State fuer das aktive Tagebuch
@@ -81,12 +99,45 @@ class JournalNotifier extends _$JournalNotifier {
   JournalState build() {
     _service = ref.watch(journalServiceProvider);
     _initService();
+
+    // Auth-Aenderungen beobachten: Nach Login Cloud-Restore/Sync triggern
+    final subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn && _service.cloudRepo != null) {
+        onAuthChanged();
+      }
+    });
+    ref.onDispose(() => subscription.cancel());
+
     return const JournalState();
   }
 
   Future<void> _initService() async {
     await _service.init();
+
+    // Cloud-Restore: Wenn Hive leer ist und CloudRepo verfuegbar,
+    // alle Journals von Supabase wiederherstellen
+    if (_service.isLocalEmpty && _service.cloudRepo != null) {
+      debugPrint('[Journal] Hive leer - starte Cloud-Restore...');
+      final restored = await _service.restoreAllFromCloud();
+      if (restored > 0) {
+        debugPrint('[Journal] $restored Eintraege von Cloud wiederhergestellt');
+      }
+    }
+
     await loadAllJournals();
+
+    // Pending-Sync im Hintergrund: Ungesynte Eintraege nachtragen
+    if (_service.cloudRepo != null) {
+      // Fire-and-forget, aber mit Fehlerbehandlung
+      _service.retryPendingSync().then((count) {
+        if (count > 0) {
+          debugPrint('[Journal] $count Eintraege nachtraeglich gesynct');
+        }
+      }).catchError((Object e) {
+        debugPrint('[Journal] Pending-Sync Hintergrund-Fehler: $e');
+        return null;
+      });
+    }
   }
 
   /// Laedt alle Tagebuecher
@@ -116,6 +167,28 @@ class JournalNotifier extends _$JournalNotifier {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       var journal = await _service.getJournal(tripId);
+
+      // Falls lokal nichts gefunden: Cloud-Sync versuchen
+      if (journal == null && _service.cloudRepo != null) {
+        debugPrint('[Journal] Journal "$tripId" nicht lokal - versuche Cloud-Sync...');
+        await _service.syncJournalFromCloud(tripId);
+        // Nach Sync nochmal lokal versuchen
+        final hasEntries = await _service.hasEntriesForTrip(tripId);
+        if (hasEntries) {
+          // Entries aus Cloud da, Metadaten erstellen
+          await _service.createJournal(
+            tripId: tripId,
+            tripName: tripName,
+            startDate: startDate,
+          );
+          journal = await _service.getJournal(tripId);
+          if (journal != null) {
+            debugPrint('[Journal] Journal "$tripId" von Cloud wiederhergestellt: '
+                '${journal.entryCount} Eintraege');
+          }
+        }
+      }
+
       if (journal == null) {
         // Pruefen ob Eintraege existieren bevor ein neues Journal erstellt wird
         final existingEntries = await _service.hasEntriesForTrip(tripId);
@@ -398,6 +471,28 @@ class JournalNotifier extends _$JournalNotifier {
     // Sortierung beibehalten
     currentJournals.sort((a, b) => b.startDate.compareTo(a.startDate));
     state = state.copyWith(allJournals: currentJournals);
+  }
+
+  /// Wird nach Login aufgerufen: Pruefen ob Cloud-Daten wiederhergestellt
+  /// werden muessen und ungesynte Eintraege nachtragen
+  Future<void> onAuthChanged() async {
+    if (_service.cloudRepo == null) return;
+
+    // Wenn lokal leer: Cloud-Restore
+    if (_service.isLocalEmpty) {
+      debugPrint('[Journal] Auth-Wechsel: Hive leer -> Cloud-Restore...');
+      final restored = await _service.restoreAllFromCloud();
+      if (restored > 0) {
+        debugPrint('[Journal] $restored Eintraege nach Login wiederhergestellt');
+        await loadAllJournals();
+      }
+    } else {
+      // Pending-Sync im Hintergrund
+      _service.retryPendingSync().then((_) {}).catchError((Object e) {
+        debugPrint('[Journal] Pending-Sync nach Login fehlgeschlagen: $e');
+        return null;
+      });
+    }
   }
 
   // ============================================

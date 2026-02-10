@@ -11,7 +11,7 @@ import '../repositories/journal_cloud_repo.dart';
 ///
 /// Hybrid-Architektur: Hive (lokal, offline) + Supabase (cloud, sync)
 class JournalService {
-  final JournalCloudRepo? cloudRepo;
+  JournalCloudRepo? cloudRepo;
   /// Rekursiver Deep-Cast: Hive Maps (Map<dynamic, dynamic>) sicher
   /// in Map<String, dynamic> konvertieren, inkl. verschachtelter Maps/Listen.
   static Map<String, dynamic> _deepCast(dynamic data) {
@@ -44,6 +44,12 @@ class JournalService {
 
   /// Konstruktor mit optionalem Cloud-Repo
   JournalService({this.cloudRepo});
+
+  /// Aktualisiert das Cloud-Repo (z.B. nach Login)
+  void updateCloudRepo(JournalCloudRepo? repo) {
+    cloudRepo = repo;
+    debugPrint('[Journal] CloudRepo aktualisiert: ${repo != null ? "aktiv" : "null"}');
+  }
 
   /// Initialisiert den Service
   Future<void> init() async {
@@ -178,8 +184,10 @@ class JournalService {
     await _entriesBox.put(entry.id, entry.toJson());
     debugPrint('[Journal] Eintrag hinzugefuegt: ${entry.id}');
 
-    // 2. Sync to cloud (fire-and-forget)
+    // 2. Sync to cloud (best-effort, non-blocking)
     if (cloudRepo != null) {
+      // Nicht blockierend, aber Fehler werden abgefangen und
+      // Entry wird als needsSync markiert fuer spaeteres Retry
       _syncEntryToCloud(entry);
     }
 
@@ -531,6 +539,161 @@ class JournalService {
     } catch (e) {
       debugPrint('[Journal] Cloud-Sync fehlgeschlagen: $e');
     }
+  }
+
+  /// Pruefen ob lokale Hive-Daten leer sind (fuer Cloud-Restore-Entscheidung)
+  bool get isLocalEmpty {
+    if (!_isInitialized) return true;
+    return _journalsBox.isEmpty && _entriesBox.isEmpty;
+  }
+
+  /// Anzahl lokaler Eintraege
+  int get localEntryCount {
+    if (!_isInitialized) return 0;
+    return _entriesBox.length;
+  }
+
+  /// Restore aller Journals von Cloud wenn lokal leer (z.B. nach Hive-Reset)
+  Future<int> restoreAllFromCloud() async {
+    if (cloudRepo == null) {
+      debugPrint('[Journal] Kein CloudRepo - Cloud-Restore nicht moeglich');
+      return 0;
+    }
+
+    await init();
+
+    try {
+      debugPrint('[Journal] Starte Cloud-Restore...');
+
+      // 1. Hole alle Journal-Uebersichten von Cloud
+      final cloudJournals = await cloudRepo!.fetchAllJournals();
+      if (cloudJournals.isEmpty) {
+        debugPrint('[Journal] Keine Cloud-Journals gefunden');
+        return 0;
+      }
+
+      debugPrint('[Journal] ${cloudJournals.length} Cloud-Journals gefunden');
+      int restoredEntries = 0;
+
+      // 2. Fuer jedes Journal: Entries von Cloud holen und lokal speichern
+      for (final journalInfo in cloudJournals) {
+        final tripId = journalInfo['trip_id'] as String?;
+        final tripName = journalInfo['trip_name'] as String? ?? 'Unknown Trip';
+
+        if (tripId == null) continue;
+
+        try {
+          // Journal-Metadaten lokal erstellen falls nicht vorhanden
+          if (_journalsBox.get(tripId) == null) {
+            final journal = TripJournal(
+              tripId: tripId,
+              tripName: tripName,
+              startDate: DateTime.now(),
+              entries: [],
+            );
+            await _journalsBox.put(tripId, journal.toJson());
+            debugPrint('[Journal] Journal-Metadaten wiederhergestellt: "$tripName"');
+          }
+
+          // Entries von Cloud holen
+          final cloudEntries = await cloudRepo!.fetchEntriesForTrip(tripId);
+          for (final entry in cloudEntries) {
+            // Nur speichern wenn lokal nicht vorhanden
+            if (_entriesBox.get(entry.id) == null) {
+              await _entriesBox.put(entry.id, entry.toJson());
+              restoredEntries++;
+            }
+          }
+
+          debugPrint('[Journal] Trip "$tripName": ${cloudEntries.length} Entries von Cloud');
+
+          // Rate-Limit-Schutz
+          await Future.delayed(const Duration(milliseconds: 100));
+        } catch (e) {
+          debugPrint('[Journal] Cloud-Restore fuer Trip "$tripId" fehlgeschlagen: $e');
+        }
+      }
+
+      debugPrint('[Journal] Cloud-Restore abgeschlossen: $restoredEntries Entries wiederhergestellt');
+      return restoredEntries;
+    } catch (e) {
+      debugPrint('[Journal] Cloud-Restore fehlgeschlagen: $e');
+      return 0;
+    }
+  }
+
+  /// Retry fuer alle ungesyncten Eintraege (needsSync == true)
+  Future<int> retryPendingSync() async {
+    if (cloudRepo == null) return 0;
+
+    await init();
+
+    int syncedCount = 0;
+    int errorCount = 0;
+
+    try {
+      for (final key in _entriesBox.keys) {
+        try {
+          final data = _entriesBox.get(key);
+          if (data == null) continue;
+
+          final json = _deepCast(data);
+          final needsSync = json['needsSync'] as bool? ?? false;
+          if (!needsSync) continue;
+
+          final entry = JournalEntry.fromJson(json);
+
+          // Journal-Metadaten fuer tripName holen
+          final journalData = _journalsBox.get(entry.tripId);
+          if (journalData == null) continue;
+
+          final journalJson = _deepCast(journalData);
+          final tripName = journalJson['tripName'] as String? ?? 'Unknown Trip';
+
+          // Upload to cloud
+          final dto = await cloudRepo!.uploadEntry(
+            entry: entry,
+            tripName: tripName,
+          );
+
+          if (dto != null) {
+            // Upload Foto falls vorhanden und noch nicht in Cloud
+            if (entry.imagePath != null && entry.photoStoragePath == null) {
+              final file = File(entry.imagePath!);
+              if (await file.exists()) {
+                await cloudRepo!.uploadPhoto(
+                  entryId: entry.id,
+                  tripId: entry.tripId,
+                  imageFile: file,
+                );
+              }
+            }
+
+            // Lokal als synced markieren
+            final synced = entry.copyWith(
+              syncedAt: dto.syncedAt ?? DateTime.now(),
+              needsSync: false,
+            );
+            await _entriesBox.put(entry.id, synced.toJson());
+            syncedCount++;
+          }
+
+          // Rate-Limit-Schutz
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          errorCount++;
+          debugPrint('[Journal] Retry-Sync fehlgeschlagen fuer Key "$key": $e');
+        }
+      }
+
+      if (syncedCount > 0 || errorCount > 0) {
+        debugPrint('[Journal] Pending-Sync: $syncedCount erfolgreich, $errorCount Fehler');
+      }
+    } catch (e) {
+      debugPrint('[Journal] Pending-Sync fehlgeschlagen: $e');
+    }
+
+    return syncedCount;
   }
 
   /// Einmalige Migration: Upload aller lokalen Eintraege zur Cloud

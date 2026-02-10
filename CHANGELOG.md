@@ -9,6 +9,18 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ## [Unreleased]
 
+## [1.10.65] - 2026-02-10
+
+### Journal-Persistenz Cloud-Restore
+
+#### Behoben
+- **Journal-Eintraege verschwinden nach Neustart**: 5 kritische Persistenz-Probleme im Journal-System behoben
+- **Cloud-Restore beim Start**: Wenn Hive-Boxen leer sind (z.B. nach Korruption/Reset), werden Journal-Eintraege automatisch von Supabase Cloud wiederhergestellt
+- **Pending-Sync-Retry**: Ungesynte Eintraege (needsSync=true) werden beim App-Start automatisch nachtraeglich zur Cloud hochgeladen
+- **Dynamisches CloudRepo**: Auth-State-Listener aktiviert/deaktiviert CloudRepo bei Login/Logout - kein permanentes null mehr wenn User beim Start nicht eingeloggt war
+- **Cloud-Fallback in getOrCreateJournal**: Wenn ein Journal lokal nicht existiert, wird Cloud-Sync versucht bevor ein leeres Journal erstellt wird
+- **Auth-Change-Trigger**: Nach Login wird automatisch Cloud-Restore/Pending-Sync gestartet
+
 ## [1.10.64] - 2026-02-10
 
 ### Erinnerungspunkt-Modal UX, POI-Publish Modal, Wetter-Forecast

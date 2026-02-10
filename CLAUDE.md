@@ -5,13 +5,15 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.64 - Erinnerungspunkt-UX, Wetter-Forecast, POI-Publish | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.64)
+Version: 1.10.65 - Journal-Persistenz Cloud-Restore | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.65)
 
-- Erinnerungspunkt-Modal UX: "Abbrechen" statt "Zurueck" (kehrt zur normalen Karte zurueck), AI-Buttons bei aktivem Erinnerungspunkt ausgeblendet.
-- POI-Publish Modal: Eigene l10n-Keys publishPoiTitle/publishPoiSubtitle in PublishPoiSheet.
-- DayStats aufklappbarer Wetter-Forecast: Wetter-Chip anklickbar, 7-Tage-Vorhersage horizontal scrollbar, AnimatedSize-Toggle.
-- Android Release aktualisiert: APK Build 248 (v1.10.64).
+- Journal-Persistenz Cloud-Restore: 5 kritische Bugs behoben die Journal-Eintraege nach Neustart verschwinden liessen.
+- Automatischer Cloud-Restore wenn Hive-Boxen leer (nach Korruption/Reset).
+- Pending-Sync-Retry: Ungesynte Eintraege werden beim Start automatisch nachgeladen.
+- Dynamisches CloudRepo: Auth-Listener aktiviert/deaktiviert Cloud-Sync bei Login/Logout.
+- Cloud-Fallback in getOrCreateJournal: Cloud-Sync vor leerem Journal.
+- Android Release aktualisiert: APK Build 249 (v1.10.65).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -180,7 +182,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/providers/navigation_poi_discovery_provider.dart` | Must-See POI-Entdeckung entlang der Route: ref.listen auf GPS-Stream, dismissed/announced Sets, goldene Card + TTS (v1.9.14, keepAlive v1.9.27) |
 | `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) + Silent-Catch Logging (v1.9.27) + _l10n Getter via lookupAppLocalizations, VoiceService.setLocale() bei Sprachwechsel, Must-See Announcement lokalisiert (v1.10.3) |
 | `lib/features/map/providers/memory_point_provider.dart` | Erinnerungspunkt-State: MemoryPointData (entryId, tripId, location, poiName, imagePath, note), StateProvider fuer Journal-auf-Karte-Flow mit Revisit-Route (v1.10.55) |
-| `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) + Persistenz-Fix: _refreshActiveJournal() ohne loadAllJournals(), Null-Guards in setActiveJournal(), hasEntriesForTrip()-Check in getOrCreateJournal() (v1.10.58) + Race-Condition-Fix: _loadAllJournalsInBackground() entfernt, synchrone _updateAllJournalsWithActive(), clearSelectedDay Parameter (v1.10.63) |
+| `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) + Persistenz-Fix: _refreshActiveJournal() ohne loadAllJournals(), Null-Guards in setActiveJournal(), hasEntriesForTrip()-Check in getOrCreateJournal() (v1.10.58) + Race-Condition-Fix: _loadAllJournalsInBackground() entfernt, synchrone _updateAllJournalsWithActive(), clearSelectedDay Parameter (v1.10.63) + Cloud-Restore: automatischer Restore bei leerem Hive, Pending-Sync-Retry, dynamisches CloudRepo mit Auth-Listener, Cloud-Fallback in getOrCreateJournal(), onAuthChanged() (v1.10.65) |
 | `lib/data/providers/gallery_provider.dart` | Trip-Galerie-State (keepAlive): GalleryNotifier (Trips, Featured, Filter, Suche, Pagination), TripDetailNotifier (Detail-Ansicht, Import, Update/Delete eigener Trips), ProfileNotifier, MyProfileNotifier (v1.10.0, v1.10.49) |
 | `lib/data/providers/leaderboard_provider.dart` | Leaderboard-State (keepAlive): LeaderboardNotifier mit 4 Sortierkriterien (XP/km/Trips/Likes), eigene Position, Pagination (v1.10.23) |
 | `lib/data/providers/challenges_provider.dart` | Challenges-State (keepAlive): ChallengesNotifier mit 9 Challenge-Typen, Streak-Tracking, wÃ¶chentliche Challenges, XP-Belohnungen (v1.10.23) |
@@ -202,7 +204,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/services/position_interpolator.dart` | 60fps Positions-Interpolation: GPS-Updates zu fluessigem Stream, Dead-Reckoning entlang Route (2500ms/80m), Adaptives Bearing-Smoothing (0.2/0.3/0.4 je nach Speed), Predictive Extension bei >80% Fortschritt (v1.9.14, v1.10.18, v1.10.20) |
 | `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
 | `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
-| `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) + hasEntriesForTrip() ohne volles Parsing, robusterer _deepCast() mit Type-Check, detailliertes Fehler-Logging mit Rohdaten und StackTrace (v1.10.58) + Cloud-Sync: syncJournalFromCloud(), migrateLocalToCloud(), fire-and-forget Upload nach lokalem Save (v1.10.59) |
+| `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) + hasEntriesForTrip() ohne volles Parsing, robusterer _deepCast() mit Type-Check, detailliertes Fehler-Logging mit Rohdaten und StackTrace (v1.10.58) + Cloud-Sync: syncJournalFromCloud(), migrateLocalToCloud(), fire-and-forget Upload nach lokalem Save (v1.10.59) + Cloud-Restore: restoreAllFromCloud(), retryPendingSync(), updateCloudRepo(), isLocalEmpty Getter (v1.10.65) |
 | `lib/data/repositories/journal_cloud_repo.dart` | Journal Cloud-Sync Repository: uploadEntry(), uploadPhoto(), fetchEntriesForTrip(), fetchAllJournals(), deleteEntry(), deleteJournal(), Foto-Komprimierung 1920px/85% JPEG (v1.10.59) |
 | `lib/data/models/journal_entry_dto.dart` | Journal DTO: Supabase snake_case <-> Dart camelCase Mapping, fromJson/toJson/toModel/fromModel (v1.10.59) |
 | `lib/features/journal/widgets/migration_dialog.dart` | Einmaliger Migration-Dialog: lokale Journal-Eintraege in Cloud hochladen, Loading-Indicator, Erfolgs-Snackbar (v1.10.59) |
@@ -518,6 +520,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (keine ausstehenden Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.65.md` (Journal-Persistenz Cloud-Restore: 5 kritische Bugs behoben, automatischer Cloud-Restore bei leerem Hive, Pending-Sync-Retry, dynamisches CloudRepo, Cloud-Fallback in getOrCreateJournal)
 - `Dokumentation/CHANGELOG-v1.10.64.md` (Erinnerungspunkt-Modal UX: Abbrechen statt Zurueck, AI-Buttons ausgeblendet, POI-Publish Modal Titel, DayStats aufklappbarer Wetter-Forecast)
 - `Dokumentation/CHANGELOG-v1.10.63.md` (POI-Publish Backend-Fix: idempotente Migration fuer poi_posts + PGRST205-Fehlerbehandlung, Journal-Persistenz Race-Condition behoben)
 - `Dokumentation/CHANGELOG-v1.10.62.md` (POI-Publish aus Favoriten, Journal-Bug-Fix: stabiles tripId in _openJournalFromMap)
