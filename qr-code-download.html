@@ -208,10 +208,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.58 (Build 242)</div>
-        <span class="release-tag">DayEditor UX + Journal-Persistenz-Fix + PopupMenu</span>
+        <div class="version">Version 1.10.59 (Build 243)</div>
+        <span class="release-tag">Journal Cloud Migration (Supabase, privat, RLS-gesichert)</span>
         <p class="subtitle">
-            AI-Empfehlungen einklappbar, MiniMap-POIs anklickbar, DayStats im Gradient-Design, Journal-Persistenz tiefgreifend gefixt, PopupMenu vereinfacht.
+            Journal-Eintraege und Fotos sicher in Supabase Cloud speichern. Strikte Privatsphaere mit Row-Level-Security. Hybrid-Sync: offline-first mit automatischem Cloud-Upload.
         </p>
 
         <div class="qr-container">
@@ -219,20 +219,20 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.58.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.59.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~127 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.58:</h3>
+            <h3>&#x2728; Neu in v1.10.59:</h3>
             <ul>
-                <li class="highlight">AI-Empfehlungen einklappbar: AnimatedSize-Toggle im DayEditor</li>
-                <li class="highlight">MiniMap-POIs anklickbar: Tap auf Marker oeffnet POI-Details</li>
-                <li class="highlight">DayStats im Gradient-Design: Statistiken im TripSummary-Stil</li>
-                <li class="highlight">Journal-Persistenz-Fix: Null-Guards, Background-Updates, robusteres Logging</li>
-                <li>PopupMenu vereinfacht: Nur noch "Entfernen", kein "Bearbeiten"</li>
-                <li>hasEntriesForTrip() verhindert versehentliches Journal-Ueberschreiben</li>
-                <li>Robusterer _deepCast mit Type-Check und Fehler-Logging</li>
+                <li class="highlight">Journal Cloud Migration: Eintraege und Fotos in Supabase speichern</li>
+                <li class="highlight">Strikte Privatsphaere: Row-Level-Security, nur eigene Daten sichtbar</li>
+                <li class="highlight">Hybrid-Sync: Hive (offline) + Supabase (Cloud) mit fire-and-forget</li>
+                <li class="highlight">Migration-Dialog: Lokale Eintraege mit einem Klick in die Cloud hochladen</li>
+                <li>Sync-Indicator und manueller Cloud-Sync-Button im Journal</li>
+                <li>Foto-Komprimierung: 1920px max, 85% JPEG beim Cloud-Upload</li>
+                <li>Supabase Storage Bucket journal-photos (privat, RLS-gesichert)</li>
             </ul>
         </div>
 
@@ -246,7 +246,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">242</div>
+                <div class="stat-value">243</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -263,7 +263,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.58.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.59.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

@@ -5,15 +5,17 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.58 - DayEditor UX, Journal-Persistenz-Fix, PopupMenu | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.58)
+Version: 1.10.59 - Journal Cloud Migration (Supabase, privat, RLS) | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.59)
 
-- AI-Empfehlungen einklappbar: AnimatedSize-Toggle im DayEditor, analog zum Hoehenprofil-Pattern.
-- MiniMap-POIs anklickbar: `onStopTap` Callback + GestureDetector auf nummerierten Markern, Navigation zu POI-Details.
-- DayStats im Gradient-Design: TripSummary-Stil (LinearGradient, weisse Schrift, vertikale Divider), orange Gradient bei Warnungen.
-- Journal-Persistenz-Fix: `_refreshActiveJournal()` ohne `loadAllJournals()`, Background-Updates, Null-Guards ueberall, `hasEntriesForTrip()`, robusterer `_deepCast()`, detailliertes Fehler-Logging.
-- PopupMenu vereinfacht: Nur noch "Entfernen" im Drei-Punkte-Menu, `onEdit` Parameter entfernt.
-- Android Release aktualisiert: APK Build 242 (v1.10.58).
+- Journal Cloud Migration: Eintraege und Fotos in Supabase speichern mit strikter Row-Level-Security.
+- Supabase Migration 011: journal_entries Tabelle + RLS Policies + RPC Functions + Storage Bucket.
+- JournalCloudRepo: Upload/Download/Delete von Eintraegen und Fotos zu Supabase Storage.
+- JournalEntryDTO: Data Transfer Object fuer Supabase snake_case <-> Dart camelCase Mapping.
+- Hybrid-Sync: Hive (offline) + Supabase (Cloud) mit fire-and-forget Sync.
+- Sync-Indicator + manueller Cloud-Sync-Button im Journal AppBar.
+- Migration-Dialog: Einmaliger Dialog zum Hochladen lokaler Eintraege in die Cloud.
+- Android Release aktualisiert: APK Build 243 (v1.10.59).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -100,6 +102,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `backend/supabase/migrations/006_social_features_reset.sql` | Social Features RESET: Loescht alte Tabellen + erstellt user_profiles, trips, trip_likes, trip_imports + Indexes + RLS Policies + RPC Functions (search_public_trips, like_trip, unlike_trip, publish_trip, import_trip, etc.) (v1.10.9) |
 | `backend/supabase/migrations/009_leaderboard.sql` | Leaderboard: XP, Level, Streak-Felder in user_profiles, get_leaderboard + get_my_leaderboard_position RPC (v1.10.23) |
 | `backend/supabase/migrations/010_challenges.sql` | Challenges: challenge_definitions, user_challenges, streak_history Tabellen, assign_weekly_challenges + update_challenge_progress RPC (v1.10.23) |
+| `backend/supabase/migrations/011_journal_entries.sql` | Journal Cloud: journal_entries Tabelle + RLS Policies + Indexes + RPC Functions (get_user_journals, get_journal_entries_for_trip, delete_journal) + Storage Bucket Setup (v1.10.59) |
 | `supabase/migrations/20260208103000_poi_publish_rpc_fix.sql` | POI Publish RPC-Fix: erstellt/aktualisiert publish_poi_post() und get_public_poi() fuer POI-Posts ohne PGRST202-Fehler (v1.10.35) |
 | `backend/scripts/seed_curated_pois.dart` | Seed-Script: curated_pois.json â†’ Supabase per upsert_poi RPC, idempotent (v1.9.13) |
 | `lib/core/utils/location_helper.dart` | Zentralisiertes GPS-Utility: getCurrentPosition, showGpsDialog, checkPermissions (v1.9.27) |
@@ -201,7 +204,10 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/services/position_interpolator.dart` | 60fps Positions-Interpolation: GPS-Updates zu fluessigem Stream, Dead-Reckoning entlang Route (2500ms/80m), Adaptives Bearing-Smoothing (0.2/0.3/0.4 je nach Speed), Predictive Extension bei >80% Fortschritt (v1.9.14, v1.10.18, v1.10.20) |
 | `lib/data/services/sharing_service.dart` | Route/Trip Sharing: Deep Links (mapab://), Base64-Encoding, Share-Text-Generierung, QR-Daten, Clipboard |
 | `lib/features/sharing/share_trip_sheet.dart` | Share Bottom Sheet: QR-Code + Teilen/Link kopieren/Als Text teilen Buttons |
-| `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) + hasEntriesForTrip() ohne volles Parsing, robusterer _deepCast() mit Type-Check, detailliertes Fehler-Logging mit Rohdaten und StackTrace (v1.10.58) |
+| `lib/data/services/journal_service.dart` | Reisetagebuch-Persistenz: Hive-basiert, ImagePicker fuer Kamera/Galerie, lokale Bildspeicherung in App-Dokumenten-Verzeichnis (v1.9.29) + hasEntriesForTrip() ohne volles Parsing, robusterer _deepCast() mit Type-Check, detailliertes Fehler-Logging mit Rohdaten und StackTrace (v1.10.58) + Cloud-Sync: syncJournalFromCloud(), migrateLocalToCloud(), fire-and-forget Upload nach lokalem Save (v1.10.59) |
+| `lib/data/repositories/journal_cloud_repo.dart` | Journal Cloud-Sync Repository: uploadEntry(), uploadPhoto(), fetchEntriesForTrip(), fetchAllJournals(), deleteEntry(), deleteJournal(), Foto-Komprimierung 1920px/85% JPEG (v1.10.59) |
+| `lib/data/models/journal_entry_dto.dart` | Journal DTO: Supabase snake_case <-> Dart camelCase Mapping, fromJson/toJson/toModel/fromModel (v1.10.59) |
+| `lib/features/journal/widgets/migration_dialog.dart` | Einmaliger Migration-Dialog: lokale Journal-Eintraege in Cloud hochladen, Loading-Indicator, Erfolgs-Snackbar (v1.10.59) |
 | `lib/features/navigation/services/navigation_background_service.dart` | Plattformabstraktion fuer Hintergrund-Navigation (Android/iOS/Noop): Start/Stop, Notification-Resume und Lifecycle-sicheres State-Management (v1.10.47) |
 
 ### Daten
@@ -513,6 +519,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.59.md` (Journal Cloud Migration: Supabase-Speicherung mit RLS, JournalCloudRepo, JournalEntryDTO, Hybrid-Sync, Migration-Dialog, Sync-Indicator)
 - `Dokumentation/CHANGELOG-v1.10.58.md` (Einklappbare AI-Empfehlungen, MiniMap-POIs anklickbar, DayStats Gradient-Design, Journal-Persistenz tiefgreifend gefixt, PopupMenu vereinfacht)
 - `Dokumentation/CHANGELOG-v1.10.57.md` (Journal-Persistenz _deepCast + Null-Guard, POI-Publish 3. Quelle globaler POI-State, Lade-Widget doppelte Prozent-Anzeige entfernt, DayEditor Zurueck-Button + aufklappbares Hoehenprofil)
 - `Dokumentation/CHANGELOG-v1.10.56.md` (POI-Publish-Fix leere RPC-Antwort, Journal Hive-Box-Typ-Mismatch behoben, TripScreen Back-Button mit Route-Fokus-Modal)

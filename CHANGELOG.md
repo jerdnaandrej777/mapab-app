@@ -11,6 +11,30 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 (Keine unreleased Aenderungen)
 
+## [1.10.59] - 2026-02-10
+
+### Journal Cloud Migration (Supabase, privat, RLS-gesichert)
+
+#### Hinzugefuegt
+- **Journal-Eintraege in Supabase Cloud speichern** mit strikter Row-Level-Security (nur eigene Daten sichtbar)
+- **Supabase Migration 011**: journal_entries Tabelle mit RLS Policies, Indexes, RPC Functions (get_user_journals, get_journal_entries_for_trip, delete_journal)
+- **JournalCloudRepo**: Upload/Download von Eintraegen und Fotos zu Supabase Storage (Bucket: journal-photos, privat)
+- **JournalEntryDTO**: Data Transfer Object fuer Supabase snake_case <-> Dart camelCase Mapping
+- **Hybrid-Sync**: Hive (lokal/offline) + Supabase (Cloud) mit fire-and-forget Sync nach lokalem Speichern
+- **Cloud-Sync-Methoden**: syncJournalFromCloud(), migrateLocalToCloud() im JournalService
+- **Sync-Indicator**: CircularProgressIndicator + manueller Cloud-Sync-Button im Journal AppBar
+- **Migration-Dialog**: Einmaliger Dialog zum Hochladen lokaler Journal-Eintraege in die Cloud
+- **Foto-Komprimierung**: 1920px max, 85% JPEG-Qualitaet beim Cloud-Upload via image-Package
+
+#### Geaendert
+- **JournalEntry Model** um Sync-Felder erweitert: photoStoragePath, syncedAt, needsSync
+- **JournalService** mit optionalem cloudRepo-Parameter fuer Cloud-Sync-Integration
+- **JournalNotifier** mit isSyncing-State und CloudRepo-Injection bei authentifizierten Usern
+
+## [1.10.58] - 2026-02-10
+
+### Einklappbare AI-Empfehlungen, MiniMap-POIs anklickbar, DayStats Gradient, Journal-Persistenz-Fix, PopupMenu
+
 ## [1.10.57] - 2026-02-10
 
 ### Journal-Persistenz, POI-Publish, Lade-Widget, DayEditor UX
