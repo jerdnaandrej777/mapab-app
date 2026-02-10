@@ -4502,6 +4502,30 @@ abstract class AppLocalizations {
   /// **'Zurück'**
   String get journalBack;
 
+  /// No description provided for @journalEditEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag bearbeiten'**
+  String get journalEditEntry;
+
+  /// No description provided for @journalReplacePhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto ersetzen'**
+  String get journalReplacePhoto;
+
+  /// No description provided for @journalRemovePhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto entfernen'**
+  String get journalRemovePhoto;
+
+  /// No description provided for @journalSaveChanges.
+  ///
+  /// In de, this message translates to:
+  /// **'Änderungen speichern'**
+  String get journalSaveChanges;
+
   /// No description provided for @galleryTitle.
   ///
   /// In de, this message translates to:

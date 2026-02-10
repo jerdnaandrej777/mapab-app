@@ -362,6 +362,20 @@ class JournalService {
     return savedPath;
   }
 
+  /// Oeffnet ImagePicker und speichert Bild im App-Verzeichnis.
+  /// Gibt den lokalen Pfad zurueck, oder null bei Abbruch.
+  Future<String?> pickAndSavePhoto(String tripId, {required bool fromCamera}) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      imageQuality: 85,
+    );
+    if (pickedFile == null) return null;
+    return _saveImage(pickedFile, tripId);
+  }
+
   /// Loescht ein gespeichertes Bild
   Future<void> _deleteImage(String imagePath) async {
     try {

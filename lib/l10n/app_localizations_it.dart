@@ -2549,6 +2549,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String get journalBack => 'Indietro';
 
   @override
+  String get journalEditEntry => 'Modifica voce';
+
+  @override
+  String get journalReplacePhoto => 'Sostituisci foto';
+
+  @override
+  String get journalRemovePhoto => 'Rimuovi foto';
+
+  @override
+  String get journalSaveChanges => 'Salva modifiche';
+
+  @override
   String get galleryTitle => 'Galleria trip';
 
   @override

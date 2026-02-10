@@ -558,7 +558,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (result.success) {
       ref.read(memoryPointProvider.notifier).state = null;
       ref.read(shouldFitToRouteProvider.notifier).state = true;
-      context.go('/trip');
+      ref.read(mapRouteFocusModeProvider.notifier).state = true;
     } else if (result.isGpsDisabled) {
       await LocationHelper.showGpsDialog(context);
     } else {

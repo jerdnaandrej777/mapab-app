@@ -919,6 +919,10 @@
   "journalMemoryPoint": "Erinnerungspunkt",
   "journalRevisit": "Erneut besuchen",
   "journalBack": "Zurück",
+  "journalEditEntry": "Eintrag bearbeiten",
+  "journalReplacePhoto": "Foto ersetzen",
+  "journalRemovePhoto": "Foto entfernen",
+  "journalSaveChanges": "Änderungen speichern",
 
   "@@_SOCIAL": "--- Social / Galerie ---",
   "galleryTitle": "Trip-Galerie",

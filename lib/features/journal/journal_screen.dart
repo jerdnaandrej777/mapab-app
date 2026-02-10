@@ -10,6 +10,7 @@ import '../map/providers/map_controller_provider.dart';
 import '../map/providers/memory_point_provider.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/add_journal_entry_sheet.dart';
+import 'widgets/edit_journal_entry_sheet.dart';
 
 enum _JournalPeriod { day, month, year }
 
@@ -79,12 +80,6 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
               onPressed: () => ref
                   .read(journalNotifierProvider.notifier)
                   .syncFromCloud(widget.tripId),
-            ),
-          if (journal != null && journal.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _showDeleteConfirmation(context),
-              tooltip: l10n.delete,
             ),
         ],
       ),
@@ -567,7 +562,17 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
         onOpenPoiDetails: entry.poiId == null
             ? null
             : () => this.context.push('/poi/${entry.poiId}'),
+        onEdit: () => _showEditEntrySheet(entry),
       ),
+    );
+  }
+
+  void _showEditEntrySheet(JournalEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => EditJournalEntrySheet(entry: entry),
     );
   }
 
@@ -593,39 +598,6 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
 
     if (confirmed == true && mounted) {
       await ref.read(journalNotifierProvider.notifier).deleteEntry(entryId);
-    }
-  }
-
-  Future<void> _showDeleteConfirmation(BuildContext context) async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.journalDeleteTitle),
-        content: Text(l10n.journalDeleteMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      await ref
-          .read(journalNotifierProvider.notifier)
-          .deleteJournal(widget.tripId);
-      if (context.mounted) {
-        context.pop();
-      }
     }
   }
 
@@ -1007,11 +979,13 @@ class _EntryDetailsSheet extends ConsumerWidget {
   final JournalEntry entry;
   final VoidCallback? onShowOnMap;
   final VoidCallback? onOpenPoiDetails;
+  final VoidCallback? onEdit;
 
   const _EntryDetailsSheet({
     required this.entry,
     this.onShowOnMap,
     this.onOpenPoiDetails,
+    this.onEdit,
   });
 
   @override
@@ -1081,8 +1055,7 @@ class _EntryDetailsSheet extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (onShowOnMap != null || onOpenPoiDetails != null)
-                Padding(
+              Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.md,
                     0,
@@ -1093,6 +1066,15 @@ class _EntryDetailsSheet extends ConsumerWidget {
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: [
+                      if (onEdit != null)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            onEdit?.call();
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: Text(context.l10n.journalEditEntry),
+                        ),
                       if (onShowOnMap != null)
                         OutlinedButton.icon(
                           onPressed: () {

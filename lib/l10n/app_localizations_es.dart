@@ -2555,6 +2555,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get journalBack => 'Volver';
 
   @override
+  String get journalEditEntry => 'Editar entrada';
+
+  @override
+  String get journalReplacePhoto => 'Reemplazar foto';
+
+  @override
+  String get journalRemovePhoto => 'Eliminar foto';
+
+  @override
+  String get journalSaveChanges => 'Guardar cambios';
+
+  @override
   String get galleryTitle => 'Galería de trips';
 
   @override

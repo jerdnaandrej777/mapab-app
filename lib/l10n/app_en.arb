@@ -775,6 +775,10 @@
   "journalMemoryPoint": "Memory Point",
   "journalRevisit": "Revisit",
   "journalBack": "Back",
+  "journalEditEntry": "Edit entry",
+  "journalReplacePhoto": "Replace photo",
+  "journalRemovePhoto": "Remove photo",
+  "journalSaveChanges": "Save changes",
 
   "galleryTitle": "Trip Gallery",
   "gallerySearch": "Search trips...",

@@ -2560,6 +2560,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get journalBack => 'Retour';
 
   @override
+  String get journalEditEntry => 'Modifier l\'entrée';
+
+  @override
+  String get journalReplacePhoto => 'Remplacer la photo';
+
+  @override
+  String get journalRemovePhoto => 'Supprimer la photo';
+
+  @override
+  String get journalSaveChanges => 'Enregistrer les modifications';
+
+  @override
   String get galleryTitle => 'Galerie de trips';
 
   @override

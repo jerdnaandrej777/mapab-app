@@ -2553,6 +2553,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get journalBack => 'Zurück';
 
   @override
+  String get journalEditEntry => 'Eintrag bearbeiten';
+
+  @override
+  String get journalReplacePhoto => 'Foto ersetzen';
+
+  @override
+  String get journalRemovePhoto => 'Foto entfernen';
+
+  @override
+  String get journalSaveChanges => 'Änderungen speichern';
+
+  @override
   String get galleryTitle => 'Trip-Galerie';
 
   @override

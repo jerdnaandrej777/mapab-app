@@ -5,18 +5,16 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.60 - Favoriten Bidirektionaler Cloud-Sync | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.60)
+Version: 1.10.61 - Journal editierbar, Erneut-besuchen-Flow | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.61)
 
-- Favoriten Bidirektionaler Cloud-Sync: Routen und POIs werden mit Supabase synchronisiert.
-- Dedizierte `favorite_trips` Tabelle: Trip als JSONB, getrennt von Social-Trips.
-- FavoritesCloudRepo: Upload/Download/Delete von Trips und POIs zu Supabase.
-- Bidirektionaler Sync: Cloud-Daten beim Start laden + mit lokalen Hive-Daten mergen.
-- Cloud-Sync-Button + Sync-Indicator in Favoriten-AppBar.
-- Fix: Route-Upload war seit v1.10.9 kaputt (altes DB-Schema nach Migration 006).
-- Fix: Route-Loeschung wird jetzt auch in Cloud gesynct.
-- Supabase Migration 012: favorite_trips + RLS + RPC Functions.
-- Android Release aktualisiert: APK Build 244 (v1.10.60).
+- Journal-Eintraege editierbar: Notiz aendern, Foto ersetzen oder entfernen via EditJournalEntrySheet.
+- Tagebuch-Loeschung entfernt: Nur einzelne Eintraege koennen geloescht werden, nicht das ganze Tagebuch.
+- Bearbeiten-Button im Entry-Details-Sheet neben "Auf Karte anzeigen" und "Details".
+- Erneut-besuchen-Flow: Route auf Karte mit Fokus-Footer (Trip bearbeiten/Navigation/Loeschen) statt direkter /trip-Navigation.
+- pickAndSavePhoto() in JournalService: Wiederverwendbare Methode fuer Foto-Auswahl und Speicherung.
+- 4 neue l10n-Keys in 5 Sprachen (journalEditEntry, journalReplacePhoto, journalRemovePhoto, journalSaveChanges).
+- Android Release aktualisiert: APK Build 245 (v1.10.61).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -522,6 +520,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.61.md` (Journal editierbar: EditJournalEntrySheet, Tagebuch-Loeschung entfernt, Bearbeiten-Button, Erneut-besuchen Fokus-Flow, pickAndSavePhoto)
 - `Dokumentation/CHANGELOG-v1.10.60.md` (Favoriten Bidirektionaler Cloud-Sync: favorite_trips Tabelle, FavoritesCloudRepo, bidirektionaler Merge, Route-Upload-Fix, Cloud-Sync-Button)
 - `Dokumentation/CHANGELOG-v1.10.59.md` (Journal Cloud Migration: Supabase-Speicherung mit RLS, JournalCloudRepo, JournalEntryDTO, Hybrid-Sync, Migration-Dialog, Sync-Indicator)
 - `Dokumentation/CHANGELOG-v1.10.58.md` (Einklappbare AI-Empfehlungen, MiniMap-POIs anklickbar, DayStats Gradient-Design, Journal-Persistenz tiefgreifend gefixt, PopupMenu vereinfacht)

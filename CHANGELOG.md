@@ -11,6 +11,22 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 (Keine unreleased Aenderungen)
 
+## [1.10.61] - 2026-02-10
+
+### Journal editierbar, Erneut-besuchen-Flow
+
+#### Hinzugefuegt
+- **EditJournalEntrySheet**: Neues Vollbild-Widget zum Bearbeiten bestehender Tagebuch-Eintraege (Notiz aendern, Foto ersetzen/entfernen)
+- **Bearbeiten-Button**: Im Entry-Details-Sheet neben "Auf Karte anzeigen" und "Details"
+- **pickAndSavePhoto()**: Wiederverwendbare Methode in JournalService fuer Foto-Auswahl und Speicherung
+- **4 neue l10n-Keys** in 5 Sprachen: journalEditEntry, journalReplacePhoto, journalRemovePhoto, journalSaveChanges
+
+#### Geaendert
+- **Erneut-besuchen-Flow**: Aktiviert jetzt mapRouteFocusModeProvider statt Navigation zu /trip - Route wird auf Karte mit Fokus-Footer angezeigt (Trip bearbeiten, Navigation starten, Route loeschen)
+
+#### Entfernt
+- **Tagebuch-Loeschung**: Delete-IconButton aus der Journal-AppBar entfernt, nur einzelne Eintraege koennen geloescht werden
+
 ## [1.10.60] - 2026-02-10
 
 ### Favoriten Bidirektionaler Cloud-Sync
