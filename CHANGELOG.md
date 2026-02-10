@@ -9,6 +9,14 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ## [Unreleased]
 
+(Keine unreleased Aenderungen)
+
+## [1.10.57] - 2026-02-10
+
+### Journal-Persistenz, POI-Publish, Lade-Widget, DayEditor UX
+
+## [1.10.56] - 2026-02-09
+
 ### AI-Empfehlungen + Journal-Timeline Stabilisierung
 
 #### Geaendert

@@ -5,13 +5,14 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.56 - POI-Publish-Fix + Journal-Box-Fix + Route-Fokus-Modal | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.56)
+Version: 1.10.57 - Journal-Persistenz, POI-Publish-Daten, Lade-Widget, DayEditor UX | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.57)
 
-- POI-Veroeffentlichung repariert: Leere RPC-Antwort wird als Erfolg behandelt statt Fehler, null-Check im PublishPoiSheet entfernt.
-- Journal Hive-Box-Typ-Fix: `Box<Map>` durch `Box` (dynamic) ersetzt in journal_service.dart, behebt Typ-Mismatch mit main.dart Box-Oeffnung.
-- TripScreen Zurueck-Button aktiviert Route-Fokus-Modus: shouldFitToRoute + mapRouteFocusMode werden gesetzt, Map zeigt Fokus-Footer mit 3 Aktionen.
-- Android Release aktualisiert: APK Build 240 (v1.10.56).
+- Journal-Persistenz-Fix: Rekursiver `_deepCast()` in journal_service.dart fuer Hive Map-Konvertierung, Null-Guard in `_refreshActiveJournal()` behaelt vorherigen Wert bei Ladefehler.
+- POI-Publish-Datenfix: Globaler POI-State als 3. Quelle in `_collectSourcePOIs()`, angereicherte Daten (Bilder, Beschreibungen, Tags) bleiben beim Veroeffentlichen erhalten.
+- Lade-Widget: Doppelte Prozent-Anzeige entfernt, nur noch im Ring sichtbar.
+- DayEditor UX: Einheitlicher Zurueck-Button (arrow_back statt close), aufklappbares Hoehenprofil mit ElevationChart + TripStatisticsCard.
+- Android Release aktualisiert: APK Build 241 (v1.10.57).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -123,7 +124,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/widgets/maneuver_banner.dart` | Manoever-Banner oben: Icon + Distanz + Instruktion (v1.9.0) |
 | `lib/features/navigation/widgets/navigation_bottom_bar.dart` | Bottom Bar: Distanz, ETA, Tempo, Mute/Uebersicht/Beenden/Mikrofon Buttons (v1.9.0) + Sprachbefehl-Button mit aktiver Listening-Animation (v1.9.29) + onSave Callback fuer Route-Speichern-Button (v1.10.9) |
 | `lib/features/navigation/widgets/poi_approach_card.dart` | Floating Card bei POI-Annaeherung: Kategorie-Icon, Name, Distanz, Besucht-Button (v1.9.0) |
-| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) + Fahrzeit-Chip in DayStats (v1.9.6) + Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent inline statt Modal-Sheet, Auto-Close bei Tageswechsel (v1.9.7) + AI-POI-Empfehlungen als actionable Karten (_AIRecommendedPOICard), POI-Entfernen via onRemovePOI-Callback (v1.9.8) + Smart-Empfehlungen Button wetterunabhaengig, MiniMap recommendedPOIs Vorschau-Marker (v1.9.9) + _isIndoorCategory konsolidiert durch POICategory.isIndoor, Auto-Trigger AI bei bad/danger Wetter (v1.9.12) + context.mounted-Check bei doppeltem Navigator.pop (v1.9.22) + Waypoints auf AppRoute gesetzt, context.mounted Guard bei Navigation-Push (v1.9.23) + mounted-Guard in addPostFrameCallback, startLocation Null-Safety (v1.9.28) + AppBar Speichern-Button via TripSaveHelper (v1.10.9) + TextButton.icon "Veroeffentlichen" in AppBar fuer direktes Trip-Publishing (v1.10.16) |
+| `lib/features/trip/widgets/day_editor_overlay.dart` | Vollbild-Editor fuer Trip-Tage mit Mini-Map, POI-Karten, Tages-Wetter, AI-Vorschlaege-Section, Korridor-Browser-Button (v1.8.0) + echte Distanz-Anzeige (v1.8.1) + MiniMap ValueKey + ~km Label (v1.8.2) + "Navigation starten" Button fuer tagesspezifische In-App Navigation (v1.9.0) + Button-Redesign: 3-Ebenen Layout mit dominantem Navi-Button, Route Teilen, OutlinedButton Google Maps (v1.9.4) + Fahrzeit-Chip in DayStats (v1.9.6) + Korridor-Browser Inline-Integration: MiniMap+Stats fixiert oben, CorridorBrowserContent inline statt Modal-Sheet, Auto-Close bei Tageswechsel (v1.9.7) + AI-POI-Empfehlungen als actionable Karten (_AIRecommendedPOICard), POI-Entfernen via onRemovePOI-Callback (v1.9.8) + Smart-Empfehlungen Button wetterunabhaengig, MiniMap recommendedPOIs Vorschau-Marker (v1.9.9) + _isIndoorCategory konsolidiert durch POICategory.isIndoor, Auto-Trigger AI bei bad/danger Wetter (v1.9.12) + context.mounted-Check bei doppeltem Navigator.pop (v1.9.22) + Waypoints auf AppRoute gesetzt, context.mounted Guard bei Navigation-Push (v1.9.23) + mounted-Guard in addPostFrameCallback, startLocation Null-Safety (v1.9.28) + AppBar Speichern-Button via TripSaveHelper (v1.10.9) + TextButton.icon "Veroeffentlichen" in AppBar fuer direktes Trip-Publishing (v1.10.16) + Einheitlicher Zurueck-Button (arrow_back statt close) + aufklappbares Hoehenprofil mit ElevationChart + TripStatisticsCard via elevationNotifierProvider (v1.10.57) |
 | `lib/features/trip/widgets/editable_poi_card.dart` | POI-Karte im DayEditor mit Reroll/Delete + WeatherBadgeUnified (v1.9.12: konsolidiert, Dark-Mode-Fix) |
 | `lib/features/trip/widgets/corridor_browser_sheet.dart` | Sheet zum Entdecken von POIs entlang der Route mit Slider + Kategorie-Filter (v1.8.0) + onAddPOI-Callback (v1.9.5) + CorridorBrowserContent als wiederverwendbares Widget extrahiert, DraggableScrollableSheet fuer TripScreen-Vollbild beibehalten (v1.9.7) + onRemovePOI-Callback mit Bestaetigungs-Dialog + markAsRemoved (v1.9.8) + Wetter-Sortierung, Header-Info, Indoor Quick-Filter Chip (v1.9.12) + Slider onChanged/onChangeEnd Debounce, Indoor-Toggle setCategoriesBatch, dispose() mit reset() (v1.9.20) + Weather-Watch Deduplizierung (einmal in build() statt doppelt in Header+Liste), Wetter-Sortier-Cache mit identical()-Check, ValueKey(poi.id) auf CompactPOICard (v1.9.21) + Modal-aehnliche `_CorridorPOICard` mit groesserem Layout, Bild-Caching und klaren Add/Remove-States (v1.10.53) |
 | `lib/features/map/widgets/compact_poi_card.dart` | Kompakte 64px POI-Karte fuer Listen-Ansicht im Korridor-Browser (v1.8.0) + onRemove-Callback mit Minus-Icon (rot) fuer hinzugefuegte POIs (v1.9.8) + weatherCondition-Parameter fuer Wetter-Badges (v1.9.12) |
@@ -511,6 +512,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.57.md` (Journal-Persistenz _deepCast + Null-Guard, POI-Publish 3. Quelle globaler POI-State, Lade-Widget doppelte Prozent-Anzeige entfernt, DayEditor Zurueck-Button + aufklappbares Hoehenprofil)
 - `Dokumentation/CHANGELOG-v1.10.56.md` (POI-Publish-Fix leere RPC-Antwort, Journal Hive-Box-Typ-Mismatch behoben, TripScreen Back-Button mit Route-Fokus-Modal)
 - `Dokumentation/CHANGELOG-v1.10.55.md` (Erinnerungspunkt auf Karte mit Revisit-Route, Journal-Persistenz-Fix, Foto-Upload-Fix, Hoehenprofil ohne doppelten Header, doppelter Journal-Button entfernt)
 - `Dokumentation/CHANGELOG-v1.10.53.md` (Public-Trip Kartenfluss stabilisiert: stale State Reset vor "Auf Karte"/Standort-Start, Journal-Shortcut im Header, Korridor-POI-Karten im Modal-Stil, Elevation-Request-Deduplizierung)

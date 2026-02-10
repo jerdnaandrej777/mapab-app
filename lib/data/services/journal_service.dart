@@ -8,6 +8,21 @@ import '../models/journal_entry.dart';
 
 /// Service fuer die Verwaltung von Reisetagebuch-Eintraegen
 class JournalService {
+  /// Rekursiver Deep-Cast: Hive Maps (Map<dynamic, dynamic>) sicher
+  /// in Map<String, dynamic> konvertieren, inkl. verschachtelter Maps/Listen.
+  static Map<String, dynamic> _deepCast(dynamic data) {
+    final map = Map<String, dynamic>.from(data as Map);
+    for (final key in map.keys) {
+      final value = map[key];
+      if (value is Map) {
+        map[key] = _deepCast(value);
+      } else if (value is List) {
+        map[key] = value.map((e) => e is Map ? _deepCast(e) : e).toList();
+      }
+    }
+    return map;
+  }
+
   static const String _boxName = 'journals';
   static const String _entriesBoxName = 'journal_entries';
   late Box _journalsBox;
@@ -70,7 +85,7 @@ class JournalService {
       if (data == null) return null;
 
       final entries = await _getEntriesForTrip(tripId);
-      final json = Map<String, dynamic>.from(data);
+      final json = _deepCast(data);
       json['entries'] = entries.map((e) => e.toJson()).toList();
 
       return TripJournal.fromJson(json);
@@ -189,7 +204,7 @@ class JournalService {
 
     final data = _entriesBox.get(entryId);
     if (data != null) {
-      final json = Map<String, dynamic>.from(data);
+      final json = _deepCast(data);
       final imagePath = json['imagePath'] as String?;
       if (imagePath != null) {
         await _deleteImage(imagePath);
@@ -223,7 +238,7 @@ class JournalService {
       try {
         final data = _entriesBox.get(key);
         if (data == null) continue;
-        final json = Map<String, dynamic>.from(data);
+        final json = _deepCast(data);
         if (json['tripId'] == tripId) {
           entries.add(JournalEntry.fromJson(json));
         }

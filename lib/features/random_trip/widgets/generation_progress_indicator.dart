@@ -185,14 +185,6 @@ class GenerationProgressIndicator extends ConsumerWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 12),
-        Text(
-          '$percent%',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
         const SizedBox(height: 10),
         _FunLoadingTicker(
           key: ValueKey('${mode.name}-${phase.name}'),

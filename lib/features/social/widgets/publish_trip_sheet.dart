@@ -9,6 +9,7 @@ import '../../../data/models/trip.dart';
 import '../../../data/providers/gamification_provider.dart';
 import '../../../data/repositories/social_repo.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../poi/providers/poi_state_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../trip/providers/trip_state_provider.dart';
 
@@ -423,6 +424,14 @@ class _PublishTripSheetState extends ConsumerState<PublishTripSheet> {
         ref.read(randomTripNotifierProvider).generatedTrip?.selectedPOIs ??
             const <POI>[];
     for (final poi in generatedStops) {
+      if (stopIds.contains(poi.id)) {
+        byId.putIfAbsent(poi.id, () => poi);
+      }
+    }
+
+    // Quelle 3: Globaler POI-State (Fallback fuer angereicherte Daten)
+    final globalPOIs = ref.read(pOIStateNotifierProvider).pois;
+    for (final poi in globalPOIs) {
       if (stopIds.contains(poi.id)) {
         byId.putIfAbsent(poi.id, () => poi);
       }

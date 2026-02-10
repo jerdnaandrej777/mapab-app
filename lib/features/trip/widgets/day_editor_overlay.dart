@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
 import '../../../core/constants/categories.dart';
+import '../providers/elevation_provider.dart';
+import 'elevation_chart.dart';
+import 'trip_statistics_card.dart';
 import '../../../core/utils/url_utils.dart';
 import '../../../core/constants/trip_constants.dart';
 import '../../../data/models/poi.dart';
@@ -42,6 +45,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   bool _isCorridorBrowserActive = false;
   int _lastAutoTriggeredDay = -1;
   bool _isFooterCollapsed = false;
+  bool _elevationExpanded = false;
   Timer? _footerExpandTimer;
 
   void _collapseFooterWhileScrolling() {
@@ -100,6 +104,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
     final notifier = ref.read(randomTripNotifierProvider.notifier);
     final poiState = ref.watch(pOIStateNotifierProvider);
     final routeWeather = ref.watch(routeWeatherNotifierProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     final trip = state.generatedTrip?.trip;
 
@@ -140,6 +145,16 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
         ),
       );
     }
+
+    // Hoehenprofil laden (Provider cached intern, Deduplizierung aktiv)
+    if (routeSegment.length >= 2) {
+      Future.microtask(() {
+        ref
+            .read(elevationNotifierProvider.notifier)
+            .loadElevation(routeSegment);
+      });
+    }
+    final elevationState = ref.watch(elevationNotifierProvider);
 
     // Wetter fuer den Tag (nutzt echte Vorhersage wenn verfuegbar)
     final dayWeather = _getDayWeather(
@@ -184,7 +199,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
             ? context.l10n.dayEditorEditDay(selectedDay)
             : context.l10n.dayEditorTitle),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -225,6 +240,112 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
             ),
           ),
           const SizedBox(height: 8),
+
+          // Aufklappbares Hoehenprofil (gleiches Pattern wie TripScreen)
+          if (elevationState.hasProfile) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: InkWell(
+                onTap: () =>
+                    setState(() => _elevationExpanded = !_elevationExpanded),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.terrain,
+                          size: 18, color: colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Höhenprofil',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_upward,
+                          size: 12, color: colorScheme.tertiary),
+                      const SizedBox(width: 2),
+                      Text(
+                        elevationState.profile!.formattedAscent,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.tertiary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.arrow_downward,
+                          size: 12, color: colorScheme.error),
+                      const SizedBox(width: 2),
+                      Text(
+                        elevationState.profile!.formattedDescent,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.error,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        _elevationExpanded
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                        size: 20,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: _elevationExpanded
+                  ? Column(
+                      children: [
+                        ElevationChart(
+                          profile: elevationState.profile!,
+                          showHeader: false,
+                        ),
+                        const SizedBox(height: 8),
+                        TripStatisticsCard(
+                            profile: elevationState.profile!),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 8),
+          ] else if (elevationState.isLoading) ...[
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation(colorScheme.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    context.l10n.tripElevationLoading,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           // Wechselbarer Bereich: Normal-Modus oder Korridor-Browser
           if (_isCorridorBrowserActive)

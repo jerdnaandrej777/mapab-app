@@ -329,7 +329,7 @@ class JournalNotifier extends _$JournalNotifier {
 
     final journal = await _service.getJournal(state.activeJournal!.tripId);
     state = state.copyWith(
-      activeJournal: journal,
+      activeJournal: journal ?? state.activeJournal,
       isLoading: false,
     );
     await loadAllJournals();
