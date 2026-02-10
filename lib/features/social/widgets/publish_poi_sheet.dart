@@ -93,13 +93,13 @@ class _PublishPoiSheetState extends ConsumerState<PublishPoiSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.l10n.publishTitle,
+                      context.l10n.publishPoiTitle,
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      context.l10n.publishSubtitle,
+                      context.l10n.publishPoiSubtitle,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

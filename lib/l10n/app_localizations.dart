@@ -4742,6 +4742,18 @@ abstract class AppLocalizations {
   /// **'Teile deinen Trip mit der Community'**
   String get publishSubtitle;
 
+  /// No description provided for @publishPoiTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'POI veröffentlichen'**
+  String get publishPoiTitle;
+
+  /// No description provided for @publishPoiSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Teile diesen Ort mit der Community'**
+  String get publishPoiSubtitle;
+
   /// No description provided for @publishTripName.
   ///
   /// In de, this message translates to:
@@ -4897,6 +4909,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wetter'**
   String get dayEditorWeather;
+
+  /// No description provided for @dayEditorForecastDestination.
+  ///
+  /// In de, this message translates to:
+  /// **'Ziel: {name}'**
+  String dayEditorForecastDestination(String name);
 
   /// No description provided for @dayEditorDay.
   ///

@@ -817,6 +817,8 @@
 
   "publishTitle": "Pubblica trip",
   "publishSubtitle": "Condividi il tuo trip con la community",
+  "publishPoiTitle": "Pubblica POI",
+  "publishPoiSubtitle": "Condividi questo luogo con la community",
   "publishTripName": "Nome del trip",
   "publishTripNameHint": "es. Road trip Sud della Francia",
   "publishTripNameRequired": "Inserisci un nome",
@@ -844,6 +846,8 @@
 
   "dayEditorDriveTime": "Tempo di guida",
   "dayEditorWeather": "Meteo",
+  "dayEditorForecastDestination": "Destinazione: {name}",
+  "@dayEditorForecastDestination": { "placeholders": { "name": { "type": "String" } } },
   "dayEditorDay": "Giorno",
   "dayEditorNoStopsForDay": "Nessuna tappa per il giorno {day}",
   "dayEditorDayInGoogleMaps": "Giorno {day} in Google Maps",

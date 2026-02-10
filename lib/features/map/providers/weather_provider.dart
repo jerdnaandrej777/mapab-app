@@ -193,6 +193,29 @@ class RouteWeatherState {
     return result;
   }
 
+  /// 7-Tage-Vorhersage fuer das Tagesziel
+  /// Findet den naechsten WeatherPoint zur Zielposition des Tages
+  /// und gibt dessen komplette dailyForecast-Liste zurueck.
+  List<DailyForecast>? getDestinationForecast(int day, int totalDays) {
+    if (weatherPoints.isEmpty || day < 1) return null;
+
+    // Zielposition auf der Route (letzter Tag = Ende, sonst anteilig)
+    final dayEndPosition = totalDays > 1 ? day / totalDays : 1.0;
+
+    WeatherPoint? closest;
+    double minDist = double.infinity;
+    for (final wp in weatherPoints) {
+      if (wp.dailyForecast == null || wp.dailyForecast!.isEmpty) continue;
+      final dist = (wp.routePosition - dayEndPosition).abs();
+      if (dist < minDist) {
+        minDist = dist;
+        closest = wp;
+      }
+    }
+
+    return closest?.dailyForecast;
+  }
+
   /// Forecast als String-Map fuer AI Service (mit Temperatur)
   Map<int, String> getForecastPerDayAsStrings(int totalDays) {
     final result = <int, String>{};

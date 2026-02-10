@@ -5,6 +5,7 @@ import '../providers/app_ui_mode_provider.dart';
 import '../providers/map_controller_provider.dart';
 import '../../random_trip/providers/random_trip_provider.dart';
 import '../../random_trip/providers/random_trip_state.dart';
+import '../providers/memory_point_provider.dart';
 
 /// 2 große Buttons am unteren Bildschirmrand: AI Tagestrip / AI Euro Trip
 /// Ersetzt die alte 4-Tab Bottom Navigation
@@ -16,6 +17,7 @@ class TripModeSelector extends ConsumerWidget {
     final currentMode = ref.watch(appUIModeNotifierProvider);
     final randomTripState = ref.watch(randomTripNotifierProvider);
     final isRouteFocusMode = ref.watch(mapRouteFocusModeProvider);
+    final memoryPoint = ref.watch(memoryPointProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -26,7 +28,7 @@ class TripModeSelector extends ConsumerWidget {
             randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null;
 
-    if (isGenerating || hasGeneratedTrip || isRouteFocusMode) {
+    if (isGenerating || hasGeneratedTrip || isRouteFocusMode || memoryPoint != null) {
       return const SizedBox.shrink();
     }
 

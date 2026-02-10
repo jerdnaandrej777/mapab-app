@@ -9,7 +9,15 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ## [Unreleased]
 
-(Keine unreleased Aenderungen)
+## [1.10.64] - 2026-02-10
+
+### Erinnerungspunkt-Modal UX, POI-Publish Modal, Wetter-Forecast
+
+#### Verbessert
+- **Erinnerungspunkt-Modal**: "Zurueck"-Button durch "Abbrechen"-Button ersetzt - schliesst jetzt den Erinnerungspunkt und kehrt zur normalen Kartenansicht zurueck (statt ins Journal)
+- **Erinnerungspunkt: AI-Buttons ausgeblendet**: TripModeSelector (AI Tagestrip / AI Euro Trip) wird bei aktivem Erinnerungspunkt ausgeblendet, nur "Abbrechen" und "Erneut besuchen" verfuegbar
+- **POI-Publish Modal Titel**: PublishPoiSheet zeigt jetzt "POI veröffentlichen" statt "Trip veröffentlichen", 2 neue l10n-Keys (publishPoiTitle, publishPoiSubtitle) in 5 Sprachen
+- **DayStats aufklappbarer Wetter-Forecast**: Wetter-Chip in DayStats anklickbar mit Chevron-Icon, klappt 7-Tage-Vorhersage fuer Zieladresse auf (horizontal scrollbar), AnimatedSize-Toggle, Auto-Close bei Tageswechsel, neue Methode `getDestinationForecast()` in RouteWeatherState, neuer l10n-Key `dayEditorForecastDestination` in 5 Sprachen
 
 ## [1.10.63] - 2026-02-10
 

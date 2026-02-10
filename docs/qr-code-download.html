@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.63 - Download</title>
+    <title>MapAB v1.10.64 - Download</title>
     <style>
         * {
             margin: 0;
@@ -208,10 +208,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.63 (Build 247)</div>
-        <span class="release-tag">POI-Publish Backend-Fix, Journal-Persistenz</span>
+        <div class="version">Version 1.10.64 (Build 248)</div>
+        <span class="release-tag">Erinnerungspunkt-UX, Wetter-Forecast, POI-Publish</span>
         <p class="subtitle">
-            POI-Publish Backend repariert (fehlende Tabelle). Journal-Eintraege verschwinden nicht mehr dank Race-Condition-Fix.
+            Erinnerungspunkt-Modal mit Abbrechen/Erneut-besuchen-Buttons. Aufklappbarer 7-Tage-Wetter-Forecast im DayEditor. POI-Publish-Modal mit eigenem Titel.
         </p>
 
         <div class="qr-container">
@@ -219,16 +219,16 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.63.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.64.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~127 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.63:</h3>
+            <h3>&#x2728; Neu in v1.10.64:</h3>
             <ul>
-                <li class="highlight">POI-Publish Backend-Fix: Fehlende poi_posts Tabelle + Migration</li>
-                <li class="highlight">Journal-Persistenz: Race Condition behoben, Eintraege verschwinden nicht mehr</li>
-                <li>PGRST205-Fehlerbehandlung mit klarer Migrations-Anleitung</li>
+                <li class="highlight">Erinnerungspunkt-Modal: Abbrechen + Erneut besuchen statt AI-Trip-Buttons</li>
+                <li class="highlight">Aufklappbarer 7-Tage-Wetter-Forecast im DayEditor</li>
+                <li>POI-Publish Modal mit eigenem Titel und Untertitel</li>
             </ul>
         </div>
 
@@ -242,7 +242,7 @@
                 <div class="stat-label">Sprachen</div>
             </div>
             <div class="stat">
-                <div class="stat-value">247</div>
+                <div class="stat-value">248</div>
                 <div class="stat-label">Build</div>
             </div>
         </div>
@@ -259,7 +259,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.63.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.64.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",

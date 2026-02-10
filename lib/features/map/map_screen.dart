@@ -423,12 +423,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               alignment: Alignment.bottomCenter,
               child: _MemoryPointFooter(
                 memoryPoint: memoryPoint,
-                onBack: () {
-                  final tripId = memoryPoint.tripId;
-                  final tripName = memoryPoint.tripName;
+                onCancel: () {
                   ref.read(memoryPointProvider.notifier).state = null;
-                  context.push(
-                      '/journal/$tripId?name=${Uri.encodeComponent(tripName)}');
                 },
                 onRevisit: () => _handleRevisitMemoryPoint(memoryPoint),
               ),
@@ -671,12 +667,12 @@ class _RouteFocusFooter extends StatelessWidget {
 /// Footer fuer Erinnerungspunkt aus dem Reisetagebuch
 class _MemoryPointFooter extends StatelessWidget {
   final MemoryPointData memoryPoint;
-  final VoidCallback onBack;
+  final VoidCallback onCancel;
   final VoidCallback onRevisit;
 
   const _MemoryPointFooter({
     required this.memoryPoint,
-    required this.onBack,
+    required this.onCancel,
     required this.onRevisit,
   });
 
@@ -751,9 +747,9 @@ class _MemoryPointFooter extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back, size: 18),
-                    label: Text(l10n.journalBack),
+                    onPressed: onCancel,
+                    icon: const Icon(Icons.close, size: 18),
+                    label: Text(l10n.cancel),
                   ),
                 ),
                 const SizedBox(width: 8),

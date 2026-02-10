@@ -2702,6 +2702,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get publishSubtitle => 'Teile deinen Trip mit der Community';
 
   @override
+  String get publishPoiTitle => 'POI veröffentlichen';
+
+  @override
+  String get publishPoiSubtitle => 'Teile diesen Ort mit der Community';
+
+  @override
   String get publishTripName => 'Name des Trips';
 
   @override
@@ -2780,6 +2786,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dayEditorWeather => 'Wetter';
+
+  @override
+  String dayEditorForecastDestination(String name) {
+    return 'Ziel: $name';
+  }
 
   @override
   String get dayEditorDay => 'Tag';

@@ -246,6 +246,10 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
               trip: trip,
               dayForecast: dayForecast,
               dayWeather: dayWeather,
+              destinationForecast: routeWeather.getDestinationForecast(
+                  selectedDay, trip.actualDays),
+              destinationName: trip.getDayEndLabel(selectedDay,
+                  defaultStartAddress: state.startAddress ?? ''),
             ),
           ),
           const SizedBox(height: 8),
@@ -615,13 +619,15 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   }
 }
 
-class _DayStats extends StatelessWidget {
+class _DayStats extends StatefulWidget {
   final List<TripStop> stopsForDay;
   final int selectedDay;
   final bool isMultiDay;
   final Trip trip;
   final DailyForecast? dayForecast;
   final WeatherCondition dayWeather;
+  final List<DailyForecast>? destinationForecast;
+  final String? destinationName;
 
   const _DayStats({
     required this.stopsForDay,
@@ -630,14 +636,36 @@ class _DayStats extends StatelessWidget {
     required this.trip,
     this.dayForecast,
     this.dayWeather = WeatherCondition.unknown,
+    this.destinationForecast,
+    this.destinationName,
   });
+
+  @override
+  State<_DayStats> createState() => _DayStatsState();
+}
+
+class _DayStatsState extends State<_DayStats> {
+  bool _isWeatherExpanded = false;
+
+  @override
+  void didUpdateWidget(covariant _DayStats oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Bei Tageswechsel zuklappen
+    if (oldWidget.selectedDay != widget.selectedDay) {
+      _isWeatherExpanded = false;
+    }
+  }
+
+  bool get _hasForecastData =>
+      widget.destinationForecast != null &&
+      widget.destinationForecast!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final stopCount = stopsForDay.length;
+    final stopCount = widget.stopsForDay.length;
     final isStopOverLimit = stopCount > TripConstants.maxPoisPerDay;
-    final dayDistance = trip.getDistanceForDay(selectedDay);
+    final dayDistance = widget.trip.getDistanceForDay(widget.selectedDay);
     final isDistanceOverLimit = dayDistance > TripConstants.maxDisplayKmPerDay;
     final hasAnyWarning = isStopOverLimit || isDistanceOverLimit;
 
@@ -653,6 +681,28 @@ class _DayStats extends StatelessWidget {
     }
 
     final onPrimary = colorScheme.onPrimary;
+
+    // Wetter-Chip: anklickbar wenn Forecast-Daten vorhanden
+    Widget? weatherChip;
+    if (widget.dayForecast != null) {
+      weatherChip = _StatChip(
+        emojiIcon: widget.dayForecast!.icon,
+        value: widget.dayForecast!.temperatureRange,
+        label: widget.dayForecast!.weekday,
+        onPrimary: onPrimary,
+        showChevron: _hasForecastData,
+        isExpanded: _isWeatherExpanded,
+      );
+    } else if (widget.dayWeather != WeatherCondition.unknown) {
+      weatherChip = _StatChip(
+        emojiIcon: widget.dayWeather.icon,
+        value: widget.dayWeather.label,
+        label: context.l10n.dayEditorWeather,
+        onPrimary: onPrimary,
+        showChevron: _hasForecastData,
+        isExpanded: _isWeatherExpanded,
+      );
+    }
 
     // Stats sammeln (dynamisch je nach verfuegbaren Daten)
     final stats = <Widget>[
@@ -676,24 +726,18 @@ class _DayStats extends StatelessWidget {
         label: context.l10n.dayEditorDriveTime,
         onPrimary: onPrimary,
       ),
-      if (dayForecast != null)
-        _StatChip(
-          emojiIcon: dayForecast!.icon,
-          value: dayForecast!.temperatureRange,
-          label: dayForecast!.weekday,
-          onPrimary: onPrimary,
-        )
-      else if (dayWeather != WeatherCondition.unknown)
-        _StatChip(
-          emojiIcon: dayWeather.icon,
-          value: dayWeather.label,
-          label: context.l10n.dayEditorWeather,
-          onPrimary: onPrimary,
-        ),
-      if (isMultiDay)
+      if (weatherChip != null)
+        _hasForecastData
+            ? GestureDetector(
+                onTap: () =>
+                    setState(() => _isWeatherExpanded = !_isWeatherExpanded),
+                child: weatherChip,
+              )
+            : weatherChip,
+      if (widget.isMultiDay)
         _StatChip(
           icon: Icons.calendar_today,
-          value: '$selectedDay/${trip.actualDays}',
+          value: '${widget.selectedDay}/${widget.trip.actualDays}',
           label: context.l10n.dayEditorDay,
           onPrimary: onPrimary,
         ),
@@ -712,36 +756,168 @@ class _DayStats extends StatelessWidget {
       }
     }
 
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: hasAnyWarning
+                ? LinearGradient(
+                    colors: [Colors.orange.shade600, Colors.orange.shade800],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : LinearGradient(
+                    colors: [
+                      AppTheme.primaryColor,
+                      AppTheme.primaryDark,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            borderRadius: _isWeatherExpanded
+                ? const BorderRadius.vertical(top: Radius.circular(16))
+                : BorderRadius.circular(16),
+            boxShadow: _isWeatherExpanded
+                ? []
+                : [
+                    BoxShadow(
+                      color:
+                          (hasAnyWarning ? Colors.orange : AppTheme.primaryColor)
+                              .withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: children,
+          ),
+        ),
+        // Aufklappbarer 7-Tage-Forecast
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: _isWeatherExpanded && _hasForecastData
+              ? _buildForecastPanel(context, colorScheme)
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildForecastPanel(BuildContext context, ColorScheme colorScheme) {
+    final forecast = widget.destinationForecast!;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        gradient: hasAnyWarning
-            ? LinearGradient(
-                colors: [Colors.orange.shade600, Colors.orange.shade800],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [
-                  AppTheme.primaryColor,
-                  AppTheme.primaryDark,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(16),
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius:
+            const BorderRadius.vertical(bottom: Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: (hasAnyWarning ? Colors.orange : AppTheme.primaryColor)
-                .withValues(alpha: 0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: children,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Zieladresse
+          if (widget.destinationName != null &&
+              widget.destinationName!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on,
+                      size: 14, color: colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      context.l10n.dayEditorForecastDestination(
+                          widget.destinationName!),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          // Horizontale 7-Tage-Karten
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: forecast.length,
+              itemBuilder: (context, index) {
+                final day = forecast[index];
+                final isToday = index == 0;
+
+                return Container(
+                  width: 64,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                        : colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isToday
+                        ? Border.all(
+                            color: colorScheme.primary.withValues(alpha: 0.3))
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        isToday ? context.l10n.weatherToday : day.weekday,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              isToday ? FontWeight.bold : FontWeight.normal,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(day.icon,
+                          style: const TextStyle(fontSize: 24)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${day.temperatureMax.round()}°',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${day.temperatureMin.round()}°',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
@@ -754,6 +930,8 @@ class _StatChip extends StatelessWidget {
   final String label;
   final bool isWarning;
   final Color onPrimary;
+  final bool showChevron;
+  final bool isExpanded;
 
   const _StatChip({
     this.icon,
@@ -762,6 +940,8 @@ class _StatChip extends StatelessWidget {
     required this.label,
     this.isWarning = false,
     required this.onPrimary,
+    this.showChevron = false,
+    this.isExpanded = false,
   });
 
   @override
@@ -776,13 +956,26 @@ class _StatChip extends StatelessWidget {
         else if (icon != null)
           Icon(icon, size: 18, color: color),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: color,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: color,
+              ),
+            ),
+            if (showChevron) ...[
+              const SizedBox(width: 2),
+              Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
+                size: 16,
+                color: color.withValues(alpha: 0.8),
+              ),
+            ],
+          ],
         ),
         Text(
           label,

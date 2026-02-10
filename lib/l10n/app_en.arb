@@ -817,6 +817,8 @@
 
   "publishTitle": "Publish Trip",
   "publishSubtitle": "Share your trip with the community",
+  "publishPoiTitle": "Publish POI",
+  "publishPoiSubtitle": "Share this place with the community",
   "publishTripName": "Trip name",
   "publishTripNameHint": "e.g. South France Road Trip",
   "publishTripNameRequired": "Please enter a name",
@@ -844,6 +846,8 @@
 
   "dayEditorDriveTime": "Drive time",
   "dayEditorWeather": "Weather",
+  "dayEditorForecastDestination": "Destination: {name}",
+  "@dayEditorForecastDestination": { "placeholders": { "name": { "type": "String" } } },
   "dayEditorDay": "Day",
   "dayEditorNoStopsForDay": "No stops for day {day}",
   "dayEditorDayInGoogleMaps": "Day {day} in Google Maps",
