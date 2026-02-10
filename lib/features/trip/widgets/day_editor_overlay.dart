@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
 import '../../../core/constants/categories.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/elevation_provider.dart';
 import 'elevation_chart.dart';
 import 'trip_statistics_card.dart';
@@ -46,6 +47,7 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
   int _lastAutoTriggeredDay = -1;
   bool _isFooterCollapsed = false;
   bool _elevationExpanded = false;
+  bool _aiRecommendationsExpanded = false;
   Timer? _footerExpandTimer;
 
   void _collapseFooterWhileScrolling() {
@@ -225,6 +227,13 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                   .watch(aITripAdvisorNotifierProvider)
                   .getRecommendedPOIsForDay(selectedDay),
               onMarkerTap: _openRecommendedPoiDetail,
+              onStopTap: (stop) {
+                final poiNotifier =
+                    ref.read(pOIStateNotifierProvider.notifier);
+                poiNotifier.addPOI(stop.toPOI());
+                unawaited(poiNotifier.enrichPOI(stop.poiId));
+                context.push('/poi/${stop.poiId}');
+              },
             ),
           ),
           const SizedBox(height: 12),
@@ -427,10 +436,14 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                         },
                       ),
 
-                    // AI-Vorschlaege / Empfehlungen-Button
-                    _AISuggestionsSection(
+                    // AI-Vorschlaege / Empfehlungen (einklappbar)
+                    _CollapsibleAISuggestions(
                       dayNumber: selectedDay,
                       trip: trip,
+                      isExpanded: _aiRecommendationsExpanded,
+                      onToggle: () => setState(() =>
+                          _aiRecommendationsExpanded =
+                              !_aiRecommendationsExpanded),
                       onLoadRecommendations: () {
                         ref
                             .read(aITripAdvisorNotifierProvider.notifier)
@@ -442,6 +455,8 @@ class _DayEditorOverlayState extends ConsumerState<DayEditorOverlay> {
                               existingStopIds:
                                   trip.stops.map((s) => s.poiId).toSet(),
                             );
+                        setState(
+                            () => _aiRecommendationsExpanded = true);
                       },
                     ),
                     const SizedBox(height: 4),
@@ -637,56 +652,96 @@ class _DayStats extends StatelessWidget {
       formattedTime = mins == 0 ? '~${hours}h' : '~${hours}h ${mins}m';
     }
 
+    final onPrimary = colorScheme.onPrimary;
+
+    // Stats sammeln (dynamisch je nach verfuegbaren Daten)
+    final stats = <Widget>[
+      _StatChip(
+        icon: Icons.place,
+        value: '$stopCount',
+        label: context.l10n.tripInfoStops,
+        isWarning: isStopOverLimit,
+        onPrimary: onPrimary,
+      ),
+      _StatChip(
+        icon: Icons.straighten,
+        value: '~${dayDistance.toStringAsFixed(0)} km',
+        label: context.l10n.tripInfoDistance,
+        isWarning: isDistanceOverLimit,
+        onPrimary: onPrimary,
+      ),
+      _StatChip(
+        icon: Icons.access_time,
+        value: formattedTime,
+        label: context.l10n.dayEditorDriveTime,
+        onPrimary: onPrimary,
+      ),
+      if (dayForecast != null)
+        _StatChip(
+          emojiIcon: dayForecast!.icon,
+          value: dayForecast!.temperatureRange,
+          label: dayForecast!.weekday,
+          onPrimary: onPrimary,
+        )
+      else if (dayWeather != WeatherCondition.unknown)
+        _StatChip(
+          emojiIcon: dayWeather.icon,
+          value: dayWeather.label,
+          label: context.l10n.dayEditorWeather,
+          onPrimary: onPrimary,
+        ),
+      if (isMultiDay)
+        _StatChip(
+          icon: Icons.calendar_today,
+          value: '$selectedDay/${trip.actualDays}',
+          label: context.l10n.dayEditorDay,
+          onPrimary: onPrimary,
+        ),
+    ];
+
+    // Divider zwischen Stats einfuegen
+    final children = <Widget>[];
+    for (int i = 0; i < stats.length; i++) {
+      children.add(stats[i]);
+      if (i < stats.length - 1) {
+        children.add(Container(
+          width: 1,
+          height: 36,
+          color: onPrimary.withValues(alpha: 0.3),
+        ));
+      }
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: hasAnyWarning
-            ? Colors.orange.withValues(alpha: 0.1)
-            : colorScheme.primaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        gradient: hasAnyWarning
+            ? LinearGradient(
+                colors: [Colors.orange.shade600, Colors.orange.shade800],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  AppTheme.primaryColor,
+                  AppTheme.primaryDark,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: (hasAnyWarning ? Colors.orange : AppTheme.primaryColor)
+                .withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _StatChip(
-            icon: Icons.place,
-            value: '$stopCount',
-            label: context.l10n.tripInfoStops,
-            isWarning: isStopOverLimit,
-          ),
-          _StatChip(
-            icon: Icons.straighten,
-            value: '~${dayDistance.toStringAsFixed(0)} km',
-            label: context.l10n.tripInfoDistance,
-            isWarning: isDistanceOverLimit,
-          ),
-          _StatChip(
-            icon: Icons.access_time,
-            value: formattedTime,
-            label: context.l10n.dayEditorDriveTime,
-          ),
-          // Wetter fuer den Tag (Vorhersage oder aktuell)
-          if (dayForecast != null)
-            _StatChip(
-              icon: null,
-              emojiIcon: dayForecast!.icon,
-              value: dayForecast!.temperatureRange,
-              label: dayForecast!.weekday,
-            )
-          else if (dayWeather != WeatherCondition.unknown)
-            _StatChip(
-              icon: null,
-              emojiIcon: dayWeather.icon,
-              value: dayWeather.label,
-              label: context.l10n.dayEditorWeather,
-            ),
-          if (isMultiDay)
-            _StatChip(
-              icon: Icons.calendar_today,
-              value: '$selectedDay/${trip.actualDays}',
-              label: context.l10n.dayEditorDay,
-            ),
-        ],
+        children: children,
       ),
     );
   }
@@ -698,6 +753,7 @@ class _StatChip extends StatelessWidget {
   final String value;
   final String label;
   final bool isWarning;
+  final Color onPrimary;
 
   const _StatChip({
     this.icon,
@@ -705,13 +761,12 @@ class _StatChip extends StatelessWidget {
     required this.value,
     required this.label,
     this.isWarning = false,
+    required this.onPrimary,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final color =
-        isWarning ? Colors.orange.shade700 : colorScheme.onPrimaryContainer;
+    final color = isWarning ? Colors.yellow.shade200 : onPrimary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -720,7 +775,7 @@ class _StatChip extends StatelessWidget {
           Text(emojiIcon!, style: const TextStyle(fontSize: 18))
         else if (icon != null)
           Icon(icon, size: 18, color: color),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
@@ -733,7 +788,7 @@ class _StatChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: color.withValues(alpha: 0.7),
+            color: color.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -741,16 +796,22 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-/// Zeigt AI-generierte Vorschlaege fuer den ausgewaehlten Tag
-/// Bei keinen Suggestions: "Empfehlungen laden" Button (wetterunabhaengig)
-class _AISuggestionsSection extends ConsumerWidget {
+/// Einklappbare AI-Empfehlungen (analog zum Hoehenprofil)
+/// - Keine Suggestions: "Empfehlungen laden" Button
+/// - Loading: Spinner im Header
+/// - Suggestions vorhanden: einklappbarer Header + AnimatedSize Body
+class _CollapsibleAISuggestions extends ConsumerWidget {
   final int dayNumber;
   final Trip trip;
+  final bool isExpanded;
+  final VoidCallback onToggle;
   final VoidCallback onLoadRecommendations;
 
-  const _AISuggestionsSection({
+  const _CollapsibleAISuggestions({
     required this.dayNumber,
     required this.trip,
+    required this.isExpanded,
+    required this.onToggle,
     required this.onLoadRecommendations,
   });
 
@@ -758,32 +819,31 @@ class _AISuggestionsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final advisorState = ref.watch(aITripAdvisorNotifierProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final suggestions = advisorState.getSuggestionsForDay(dayNumber);
 
-    // Loading-Zustand
+    // Loading-Zustand: Spinner im Header
     if (advisorState.isLoading) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
+            Icon(Icons.auto_awesome, size: 18, color: colorScheme.primary),
+            const SizedBox(width: 6),
             Text(
               context.l10n.dayEditorSearchRecommendations,
               style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.primary,
               ),
             ),
           ],
@@ -791,9 +851,8 @@ class _AISuggestionsSection extends ConsumerWidget {
       );
     }
 
-    final suggestions = advisorState.getSuggestionsForDay(dayNumber);
+    // Keine Suggestions: "Empfehlungen laden" Button
     if (suggestions.isEmpty) {
-      // "Empfehlungen laden" Button (wetterunabhaengig)
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: OutlinedButton.icon(
@@ -802,107 +861,157 @@ class _AISuggestionsSection extends ConsumerWidget {
           label: Text(context.l10n.dayEditorLoadRecommendations),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 40),
-            side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+            side: BorderSide(
+                color: colorScheme.primary.withValues(alpha: 0.3)),
           ),
         ),
       );
     }
 
+    // Suggestions vorhanden: einklappbarer Header + Body
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 6),
-              Text(
-                context.l10n.dayEditorAiRecommendations,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Fehler-Hinweis wenn AI nicht erreichbar
-        if (advisorState.error != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              advisorState.error!,
-              style: TextStyle(
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-        ...suggestions.map((suggestion) {
-          // Actionable POI-Karte wenn alternativePOI vorhanden
-          if (suggestion.alternativePOI != null) {
-            return _AIRecommendedPOICard(
-              poi: suggestion.alternativePOI!,
-              reasoning: suggestion.aiReasoning ?? suggestion.message,
-              actionType: suggestion.actionType ?? 'add',
-              targetPOIId: suggestion.targetPOIId,
-              dayNumber: dayNumber,
-              highlights: suggestion.highlights,
-              longDescription: suggestion.longDescription,
-              photoUrls: suggestion.photoUrls,
-            );
-          }
-
-          // Text-Vorschlag (bestehend)
-          final isWeather = suggestion.type == SuggestionType.weather;
-          final isAlternative = suggestion.type == SuggestionType.alternative;
-
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 3),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isWeather
-                  ? colorScheme.tertiaryContainer.withValues(alpha: 0.3)
-                  : isAlternative
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                      : colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.1),
-              ),
-            ),
+        // Header (immer sichtbar, klickbar)
+        InkWell(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  isWeather
-                      ? Icons.cloud
-                      : isAlternative
-                          ? Icons.swap_horiz_rounded
-                          : Icons.lightbulb_outline,
-                  size: 16,
-                  color: isWeather ? colorScheme.tertiary : colorScheme.primary,
+                Icon(Icons.auto_awesome,
+                    size: 18, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  context.l10n.dayEditorAiRecommendations,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Text(
-                    suggestion.message,
+                    '${suggestions.length}',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
+                const Spacer(),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ],
             ),
-          );
-        }),
+          ),
+        ),
+
+        // Body (einklappbar)
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: isExpanded
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Fehler-Hinweis wenn AI nicht erreichbar
+                    if (advisorState.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          advisorState.error!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: colorScheme.onSurface
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    ...suggestions.map((suggestion) {
+                      if (suggestion.alternativePOI != null) {
+                        return _AIRecommendedPOICard(
+                          poi: suggestion.alternativePOI!,
+                          reasoning:
+                              suggestion.aiReasoning ?? suggestion.message,
+                          actionType: suggestion.actionType ?? 'add',
+                          targetPOIId: suggestion.targetPOIId,
+                          dayNumber: dayNumber,
+                          highlights: suggestion.highlights,
+                          longDescription: suggestion.longDescription,
+                          photoUrls: suggestion.photoUrls,
+                        );
+                      }
+
+                      final isWeather =
+                          suggestion.type == SuggestionType.weather;
+                      final isAlternative =
+                          suggestion.type == SuggestionType.alternative;
+
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isWeather
+                              ? colorScheme.tertiaryContainer
+                                  .withValues(alpha: 0.3)
+                              : isAlternative
+                                  ? colorScheme.primaryContainer
+                                      .withValues(alpha: 0.3)
+                                  : colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: colorScheme.outline
+                                .withValues(alpha: 0.1),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              isWeather
+                                  ? Icons.cloud
+                                  : isAlternative
+                                      ? Icons.swap_horiz_rounded
+                                      : Icons.lightbulb_outline,
+                              size: 16,
+                              color: isWeather
+                                  ? colorScheme.tertiary
+                                  : colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                suggestion.message,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurface
+                                      .withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }

@@ -731,11 +731,6 @@ $mapsUrl
                     SnackBar(content: Text(context.l10n.tripStopRemoved)),
                   );
                 },
-                onEdit: () {
-                  // v1.6.8: POI zum State hinzufügen bevor Navigation
-                  ref.read(pOIStateNotifierProvider.notifier).addPOI(stop);
-                  context.push('/poi/${stop.id}');
-                },
               );
             },
           ),

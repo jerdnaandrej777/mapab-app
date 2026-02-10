@@ -17,6 +17,7 @@ class DayMiniMap extends ConsumerStatefulWidget {
   final List<LatLng>? routeSegment;
   final List<POI> recommendedPOIs;
   final ValueChanged<POI>? onMarkerTap;
+  final ValueChanged<TripStop>? onStopTap;
   final bool showTileLayer;
 
   const DayMiniMap({
@@ -27,6 +28,7 @@ class DayMiniMap extends ConsumerStatefulWidget {
     this.routeSegment,
     this.recommendedPOIs = const [],
     this.onMarkerTap,
+    this.onStopTap,
     this.showTileLayer = true,
   });
 
@@ -229,49 +231,52 @@ class _DayMiniMapState extends ConsumerState<DayMiniMap> {
                       point: stop.location,
                       width: 40,
                       height: 40,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            left: 2,
-                            top: 2,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: colorScheme.surface,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.shadow
-                                        .withValues(alpha: 0.2),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    color: colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (isFavorite)
+                      child: GestureDetector(
+                        onTap: () => widget.onStopTap?.call(stop),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
                             Positioned(
-                              right: 0,
-                              top: 0,
-                              child: _FavoriteBadge(colorScheme: colorScheme),
+                              left: 2,
+                              top: 2,
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: colorScheme.surface,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: colorScheme.shadow
+                                          .withValues(alpha: 0.2),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      color: colorScheme.onPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                        ],
+                            if (isFavorite)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: _FavoriteBadge(colorScheme: colorScheme),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   }),

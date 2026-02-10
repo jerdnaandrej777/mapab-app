@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -86,6 +87,7 @@ class JournalNotifier extends _$JournalNotifier {
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[Journal] Fehler beim Laden aller Tagebuecher: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Laden der Tagebuecher: $e',
@@ -103,19 +105,30 @@ class JournalNotifier extends _$JournalNotifier {
     try {
       var journal = await _service.getJournal(tripId);
       if (journal == null) {
+        // Pruefen ob Eintraege existieren bevor ein neues Journal erstellt wird
+        final existingEntries = await _service.hasEntriesForTrip(tripId);
+        if (existingEntries) {
+          // Eintraege vorhanden aber Journal-Metadaten kaputt -> nur Metadaten neu erstellen
+          debugPrint('[Journal] Metadaten fuer "$tripId" fehlen, '
+              'aber Eintraege existieren - erstelle Metadaten neu');
+        }
         journal = await _service.createJournal(
           tripId: tripId,
           tripName: tripName,
           startDate: startDate,
         );
+        // Nochmal laden um Eintraege mitzubekommen
+        journal = await _service.getJournal(tripId) ?? journal;
       }
       state = state.copyWith(
         activeJournal: journal,
         isLoading: false,
       );
-      await loadAllJournals();
+      // allJournals im Hintergrund aktualisieren (non-blocking)
+      _loadAllJournalsInBackground();
       return journal;
     } catch (e) {
+      debugPrint('[Journal] Fehler in getOrCreateJournal: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Erstellen des Tagebuchs: $e',
@@ -129,11 +142,13 @@ class JournalNotifier extends _$JournalNotifier {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final journal = await _service.getJournal(tripId);
+      // Null-Guard: bei Ladefehler vorherigen Wert beibehalten
       state = state.copyWith(
-        activeJournal: journal,
+        activeJournal: journal ?? state.activeJournal,
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[Journal] Fehler in setActiveJournal: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Laden des Tagebuchs: $e',
@@ -174,6 +189,7 @@ class JournalNotifier extends _$JournalNotifier {
       await _refreshActiveJournal();
       return entry;
     } catch (e) {
+      debugPrint('[Journal] Fehler in addTextEntry: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Hinzufuegen des Eintrags: $e',
@@ -262,6 +278,7 @@ class JournalNotifier extends _$JournalNotifier {
       }
       return entry;
     } catch (e) {
+      debugPrint('[Journal] Fehler in _addPhotoEntry: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Hinzufuegen des Fotos: $e',
@@ -277,6 +294,7 @@ class JournalNotifier extends _$JournalNotifier {
       await _service.updateEntry(entry);
       await _refreshActiveJournal();
     } catch (e) {
+      debugPrint('[Journal] Fehler in updateEntry: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Aktualisieren: $e',
@@ -291,6 +309,7 @@ class JournalNotifier extends _$JournalNotifier {
       await _service.deleteEntry(entryId);
       await _refreshActiveJournal();
     } catch (e) {
+      debugPrint('[Journal] Fehler in deleteEntry: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Loeschen: $e',
@@ -308,6 +327,7 @@ class JournalNotifier extends _$JournalNotifier {
       }
       await loadAllJournals();
     } catch (e) {
+      debugPrint('[Journal] Fehler in deleteJournal: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Fehler beim Loeschen des Tagebuchs: $e',
@@ -320,18 +340,38 @@ class JournalNotifier extends _$JournalNotifier {
     state = state.copyWith(clearActiveJournal: true, selectedDay: null);
   }
 
-  /// Aktualisiert das aktive Tagebuch
+  /// Aktualisiert nur das aktive Tagebuch (OHNE loadAllJournals)
   Future<void> _refreshActiveJournal() async {
     if (state.activeJournal == null) {
       state = state.copyWith(isLoading: false);
       return;
     }
 
-    final journal = await _service.getJournal(state.activeJournal!.tripId);
-    state = state.copyWith(
-      activeJournal: journal ?? state.activeJournal,
-      isLoading: false,
-    );
-    await loadAllJournals();
+    try {
+      final journal = await _service.getJournal(state.activeJournal!.tripId);
+      state = state.copyWith(
+        activeJournal: journal ?? state.activeJournal,
+        isLoading: false,
+      );
+      // allJournals im Hintergrund aktualisieren (non-blocking)
+      _loadAllJournalsInBackground();
+    } catch (e) {
+      debugPrint('[Journal] Fehler in _refreshActiveJournal: $e');
+      // Bei Fehler: vorherigen State beibehalten
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  /// Laedt allJournals im Hintergrund ohne den UI-State zu blockieren
+  void _loadAllJournalsInBackground() {
+    Future(() async {
+      try {
+        final journals = await _service.getAllJournals();
+        state = state.copyWith(allJournals: journals);
+      } catch (e) {
+        debugPrint('[Journal] Hintergrund-Laden fehlgeschlagen: $e');
+        // Fehler im Hintergrund ignorieren - allJournals bleibt unveraendert
+      }
+    });
   }
 }

@@ -12,7 +12,6 @@ class TripStopTile extends StatelessWidget {
   final int durationMinutes;
   final int index;
   final VoidCallback onRemove;
-  final VoidCallback onEdit;
   final VoidCallback? onTap;
   final WeatherCondition? weatherCondition;
   final bool isWeatherResilient;
@@ -25,7 +24,6 @@ class TripStopTile extends StatelessWidget {
     required this.durationMinutes,
     required this.index,
     required this.onRemove,
-    required this.onEdit,
     this.onTap,
     this.weatherCondition,
     this.isWeatherResilient = false,
@@ -143,26 +141,11 @@ class TripStopTile extends StatelessWidget {
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: theme.textTheme.bodySmall?.color),
             onSelected: (value) {
-              switch (value) {
-                case 'edit':
-                  onEdit();
-                  break;
-                case 'remove':
-                  onRemove();
-                  break;
+              if (value == 'remove') {
+                onRemove();
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 20),
-                    SizedBox(width: 8),
-                    Text('Bearbeiten'),
-                  ],
-                ),
-              ),
               PopupMenuItem(
                 value: 'remove',
                 child: Row(

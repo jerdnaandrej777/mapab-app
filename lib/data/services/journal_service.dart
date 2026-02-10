@@ -11,13 +11,20 @@ class JournalService {
   /// Rekursiver Deep-Cast: Hive Maps (Map<dynamic, dynamic>) sicher
   /// in Map<String, dynamic> konvertieren, inkl. verschachtelter Maps/Listen.
   static Map<String, dynamic> _deepCast(dynamic data) {
-    final map = Map<String, dynamic>.from(data as Map);
-    for (final key in map.keys) {
-      final value = map[key];
+    if (data is! Map) {
+      debugPrint('[Journal] _deepCast: Erwartet Map, erhalten ${data.runtimeType}');
+      throw TypeError();
+    }
+    final map = <String, dynamic>{};
+    for (final entry in data.entries) {
+      final key = entry.key.toString();
+      final value = entry.value;
       if (value is Map) {
         map[key] = _deepCast(value);
       } else if (value is List) {
         map[key] = value.map((e) => e is Map ? _deepCast(e) : e).toList();
+      } else {
+        map[key] = value;
       }
     }
     return map;
@@ -82,15 +89,28 @@ class JournalService {
 
     try {
       final data = _journalsBox.get(tripId);
-      if (data == null) return null;
+      if (data == null) {
+        debugPrint('[Journal] Kein Journal-Metadaten fuer "$tripId" gefunden');
+        return null;
+      }
 
       final entries = await _getEntriesForTrip(tripId);
       final json = _deepCast(data);
       json['entries'] = entries.map((e) => e.toJson()).toList();
 
-      return TripJournal.fromJson(json);
-    } catch (e) {
+      final journal = TripJournal.fromJson(json);
+      debugPrint('[Journal] Journal "$tripId" geladen: '
+          '${entries.length} Eintraege, '
+          'Name="${journal.tripName}"');
+      return journal;
+    } catch (e, stackTrace) {
       debugPrint('[Journal] Fehler beim Laden von Journal "$tripId": $e');
+      debugPrint('[Journal] StackTrace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
+      // Rohdaten loggen
+      try {
+        final rawData = _journalsBox.get(tripId);
+        debugPrint('[Journal] Rohdaten-Typ: ${rawData.runtimeType}');
+      } catch (_) {}
       return null;
     }
   }
@@ -100,12 +120,21 @@ class JournalService {
     await init();
 
     final journals = <TripJournal>[];
+    int errorCount = 0;
     for (final key in _journalsBox.keys) {
       final journal = await getJournal(key as String);
       if (journal != null) {
         journals.add(journal);
+      } else {
+        errorCount++;
       }
     }
+
+    if (errorCount > 0) {
+      debugPrint('[Journal] getAllJournals: $errorCount von '
+          '${_journalsBox.length} Journals konnten nicht geladen werden');
+    }
+    debugPrint('[Journal] ${journals.length} Tagebuecher geladen');
 
     journals.sort((a, b) => b.startDate.compareTo(a.startDate));
     return journals;
@@ -230,9 +259,29 @@ class JournalService {
     debugPrint('[Journal] Tagebuch geloescht: $tripId');
   }
 
+  /// Prueeft ob Eintraege fuer einen Trip existieren (ohne voll zu parsen)
+  Future<bool> hasEntriesForTrip(String tripId) async {
+    await init();
+
+    for (final key in _entriesBox.keys) {
+      try {
+        final data = _entriesBox.get(key);
+        if (data == null) continue;
+        // Nur tripId pruefen, nicht voll parsen
+        if (data is Map && data['tripId'] == tripId) {
+          return true;
+        }
+      } catch (e) {
+        // Fehler ignorieren, weitersuchen
+      }
+    }
+    return false;
+  }
+
   /// Hilfsmethode: Laedt alle Eintraege fuer einen Trip
   Future<List<JournalEntry>> _getEntriesForTrip(String tripId) async {
     final entries = <JournalEntry>[];
+    int errorCount = 0;
 
     for (final key in _entriesBox.keys) {
       try {
@@ -243,8 +292,20 @@ class JournalService {
           entries.add(JournalEntry.fromJson(json));
         }
       } catch (e) {
+        errorCount++;
         debugPrint('[Journal] Fehler beim Laden von Eintrag "$key": $e');
+        // Rohdaten loggen fuer Debugging
+        try {
+          final rawData = _entriesBox.get(key);
+          debugPrint('[Journal] Rohdaten fuer "$key": '
+              'type=${rawData.runtimeType}, keys=${rawData is Map ? rawData.keys.toList() : "N/A"}');
+        } catch (_) {}
       }
+    }
+
+    if (errorCount > 0) {
+      debugPrint('[Journal] $errorCount Eintraege konnten nicht geladen werden '
+          '(Trip: $tripId, Gesamt geparst: ${entries.length})');
     }
 
     entries.sort((a, b) => a.createdAt.compareTo(b.createdAt));
