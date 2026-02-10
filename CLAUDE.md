@@ -5,16 +5,12 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.61 - Journal editierbar, Erneut-besuchen-Flow | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.61)
+Version: 1.10.62 - POI-Publish Favoriten, Journal-Bug-Fix | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.62)
 
-- Journal-Eintraege editierbar: Notiz aendern, Foto ersetzen oder entfernen via EditJournalEntrySheet.
-- Tagebuch-Loeschung entfernt: Nur einzelne Eintraege koennen geloescht werden, nicht das ganze Tagebuch.
-- Bearbeiten-Button im Entry-Details-Sheet neben "Auf Karte anzeigen" und "Details".
-- Erneut-besuchen-Flow: Route auf Karte mit Fokus-Footer (Trip bearbeiten/Navigation/Loeschen) statt direkter /trip-Navigation.
-- pickAndSavePhoto() in JournalService: Wiederverwendbare Methode fuer Foto-Auswahl und Speicherung.
-- 4 neue l10n-Keys in 5 Sprachen (journalEditEntry, journalReplacePhoto, journalRemovePhoto, journalSaveChanges).
-- Android Release aktualisiert: APK Build 245 (v1.10.61).
+- POI-Publish aus Favoriten: Publish-Button (Globe-Icon) auf jeder POI-Card mit Auth-Check und PublishPoiSheet.
+- Journal-Bug-Fix: Eintraege bleiben unabhaengig vom Route-Status sichtbar (_openJournalFromMap nutzt stabiles tripId).
+- Android Release aktualisiert: APK Build 246 (v1.10.62).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -520,6 +516,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.62.md` (POI-Publish aus Favoriten, Journal-Bug-Fix: stabiles tripId in _openJournalFromMap)
 - `Dokumentation/CHANGELOG-v1.10.61.md` (Journal editierbar: EditJournalEntrySheet, Tagebuch-Loeschung entfernt, Bearbeiten-Button, Erneut-besuchen Fokus-Flow, pickAndSavePhoto)
 - `Dokumentation/CHANGELOG-v1.10.60.md` (Favoriten Bidirektionaler Cloud-Sync: favorite_trips Tabelle, FavoritesCloudRepo, bidirektionaler Merge, Route-Upload-Fix, Cloud-Sync-Button)
 - `Dokumentation/CHANGELOG-v1.10.59.md` (Journal Cloud Migration: Supabase-Speicherung mit RLS, JournalCloudRepo, JournalEntryDTO, Hybrid-Sync, Migration-Dialog, Sync-Indicator)

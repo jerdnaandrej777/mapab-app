@@ -13,6 +13,7 @@ import '../poi/providers/poi_state_provider.dart';
 import '../random_trip/providers/random_trip_provider.dart';
 import '../trip/providers/trip_state_provider.dart';
 import '../social/widgets/publish_trip_sheet.dart';
+import '../social/widgets/publish_poi_sheet.dart';
 
 /// Favoriten-Screen für gespeicherte Routen und POIs
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -406,6 +407,30 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
               ],
             ),
 
+            // Publish-Button
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.public_outlined, color: colorScheme.primary, size: 20),
+                  onPressed: () => _publishPOI(poi),
+                  tooltip: context.l10n.publishButton,
+                ),
+              ),
+            ),
+
             // Favorit-Button
             Positioned(
               top: 8,
@@ -482,6 +507,21 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   /// Veroeffentlicht einen Trip in der Galerie
   Future<void> _publishTrip(Trip trip) async {
     final published = await PublishTripSheet.show(context, trip);
+    if (published && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.publishSuccess)),
+      );
+    }
+  }
+
+  Future<void> _publishPOI(POI poi) async {
+    if (!isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.socialLoginRequired)),
+      );
+      return;
+    }
+    final published = await PublishPoiSheet.show(context, poi);
     if (published && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.publishSuccess)),

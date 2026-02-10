@@ -578,20 +578,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     String tripId;
     String tripName;
 
+    // Nur bei einem echten AI Trip die Trip-ID nutzen,
+    // sonst immer 'journal-home' damit Eintraege unabhaengig
+    // vom Route-Status sichtbar bleiben.
     if ((randomTripState.step == RandomTripStep.preview ||
             randomTripState.step == RandomTripStep.confirmed) &&
         randomTripState.generatedTrip != null) {
       final trip = randomTripState.generatedTrip!.trip;
       tripId = trip.id;
       tripName = trip.name;
-    } else if (tripState.hasRoute && tripState.route != null) {
-      final route = tripState.route!;
-      tripId = 'route-${route.hashCode}';
-      tripName = '${route.startAddress} -> ${route.endAddress}';
-    } else if (routePlanner.hasRoute && routePlanner.route != null) {
-      final route = routePlanner.route!;
-      tripId = 'route-${route.hashCode}';
-      tripName = '${route.startAddress} -> ${route.endAddress}';
     } else {
       tripId = 'journal-home';
       tripName = context.l10n.journalTitle;

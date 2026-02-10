@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapAB v1.10.61 - Download</title>
+    <title>MapAB v1.10.62 - Download</title>
     <style>
         * {
             margin: 0;
@@ -208,10 +208,10 @@
     <div class="card">
         <div class="logo">&#x1F5FA;&#xFE0F;</div>
         <h1>MapAB</h1>
-        <div class="version">Version 1.10.61 (Build 245)</div>
-        <span class="release-tag">Journal editierbar, Erneut-besuchen-Flow</span>
+        <div class="version">Version 1.10.61 (Build 246)</div>
+        <span class="release-tag">POI-Publish Favoriten, Journal-Bug-Fix</span>
         <p class="subtitle">
-            Tagebuch-Eintraege bearbeitbar (Notiz, Foto ersetzen/entfernen). Nur einzelne Eintraege loeschbar. "Erneut besuchen" zeigt Route auf Karte mit Fokus-Footer.
+            POIs aus Favoriten veroeffentlichen. Journal-Eintraege bleiben jetzt unabhaengig vom Route-Status sichtbar.
         </p>
 
         <div class="qr-container">
@@ -219,19 +219,16 @@
             <p class="scan-hint">Scanne den QR-Code mit deinem Handy</p>
         </div>
 
-        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.61.apk" class="download-btn" download>
+        <a href="https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.62.apk" class="download-btn" download>
             &#x1F4F1; APK herunterladen (~127 MB)
         </a>
 
         <div class="features">
-            <h3>&#x2728; Neu in v1.10.61:</h3>
+            <h3>&#x2728; Neu in v1.10.62:</h3>
             <ul>
-                <li class="highlight">Journal-Eintraege editierbar: Notiz aendern, Foto ersetzen oder entfernen</li>
-                <li class="highlight">Erneut-besuchen-Flow: Route auf Karte mit Fokus-Footer statt direkter /trip-Navigation</li>
-                <li class="highlight">Tagebuch-Loeschung entfernt: Nur einzelne Eintraege koennen geloescht werden</li>
-                <li>EditJournalEntrySheet: Neues Vollbild-Widget zum Bearbeiten von Eintraegen</li>
-                <li>Bearbeiten-Button im Entry-Details-Sheet neben Karte/POI-Details</li>
-                <li>4 neue l10n-Keys in 5 Sprachen (DE/EN/FR/IT/ES)</li>
+                <li class="highlight">POI-Publish aus Favoriten: Publish-Button auf jeder POI-Card mit Auth-Check</li>
+                <li class="highlight">Journal-Bug-Fix: Eintraege bleiben unabhaengig vom Route-Status sichtbar</li>
+                <li>PublishPoiSheet wiederverwendbar aus allen Modulen aufrufbar</li>
             </ul>
         </div>
 
@@ -262,7 +259,7 @@
         // QR-Code generieren
         document.addEventListener('DOMContentLoaded', function() {
             new QRCode(document.getElementById("qrcode"), {
-                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.61.apk",
+                text: "https://github.com/jerdnaandrej777/mapab-app/raw/main/docs/mapab-v1.10.62.apk",
                 width: 200,
                 height: 200,
                 colorDark: "#1a1a2e",
