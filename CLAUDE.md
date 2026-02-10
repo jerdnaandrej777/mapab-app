@@ -5,17 +5,18 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.59 - Journal Cloud Migration (Supabase, privat, RLS) | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.59)
+Version: 1.10.60 - Favoriten Bidirektionaler Cloud-Sync | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.60)
 
-- Journal Cloud Migration: Eintraege und Fotos in Supabase speichern mit strikter Row-Level-Security.
-- Supabase Migration 011: journal_entries Tabelle + RLS Policies + RPC Functions + Storage Bucket.
-- JournalCloudRepo: Upload/Download/Delete von Eintraegen und Fotos zu Supabase Storage.
-- JournalEntryDTO: Data Transfer Object fuer Supabase snake_case <-> Dart camelCase Mapping.
-- Hybrid-Sync: Hive (offline) + Supabase (Cloud) mit fire-and-forget Sync.
-- Sync-Indicator + manueller Cloud-Sync-Button im Journal AppBar.
-- Migration-Dialog: Einmaliger Dialog zum Hochladen lokaler Eintraege in die Cloud.
-- Android Release aktualisiert: APK Build 243 (v1.10.59).
+- Favoriten Bidirektionaler Cloud-Sync: Routen und POIs werden mit Supabase synchronisiert.
+- Dedizierte `favorite_trips` Tabelle: Trip als JSONB, getrennt von Social-Trips.
+- FavoritesCloudRepo: Upload/Download/Delete von Trips und POIs zu Supabase.
+- Bidirektionaler Sync: Cloud-Daten beim Start laden + mit lokalen Hive-Daten mergen.
+- Cloud-Sync-Button + Sync-Indicator in Favoriten-AppBar.
+- Fix: Route-Upload war seit v1.10.9 kaputt (altes DB-Schema nach Migration 006).
+- Fix: Route-Loeschung wird jetzt auch in Cloud gesynct.
+- Supabase Migration 012: favorite_trips + RLS + RPC Functions.
+- Android Release aktualisiert: APK Build 244 (v1.10.60).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -103,6 +104,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `backend/supabase/migrations/009_leaderboard.sql` | Leaderboard: XP, Level, Streak-Felder in user_profiles, get_leaderboard + get_my_leaderboard_position RPC (v1.10.23) |
 | `backend/supabase/migrations/010_challenges.sql` | Challenges: challenge_definitions, user_challenges, streak_history Tabellen, assign_weekly_challenges + update_challenge_progress RPC (v1.10.23) |
 | `backend/supabase/migrations/011_journal_entries.sql` | Journal Cloud: journal_entries Tabelle + RLS Policies + Indexes + RPC Functions (get_user_journals, get_journal_entries_for_trip, delete_journal) + Storage Bucket Setup (v1.10.59) |
+| `backend/supabase/migrations/012_favorite_trips.sql` | Favoriten Cloud-Sync: favorite_trips Tabelle (Trip als JSONB) + RLS Policies + RPC Functions (get_user_favorite_trips, get_user_favorite_pois) (v1.10.60) |
 | `supabase/migrations/20260208103000_poi_publish_rpc_fix.sql` | POI Publish RPC-Fix: erstellt/aktualisiert publish_poi_post() und get_public_poi() fuer POI-Posts ohne PGRST202-Fehler (v1.10.35) |
 | `backend/scripts/seed_curated_pois.dart` | Seed-Script: curated_pois.json â†’ Supabase per upsert_poi RPC, idempotent (v1.9.13) |
 | `lib/core/utils/location_helper.dart` | Zentralisiertes GPS-Utility: getCurrentPosition, showGpsDialog, checkPermissions (v1.9.27) |
@@ -165,7 +167,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | Datei | Beschreibung |
 |-------|--------------|
 | `lib/data/providers/account_provider.dart` | Account State (keepAlive) |
-| `lib/data/providers/favorites_provider.dart` | Favoriten State (keepAlive) |
+| `lib/data/providers/favorites_provider.dart` | Favoriten State (keepAlive) + Bidirektionaler Cloud-Sync via FavoritesCloudRepo, isSyncing-Flag, syncFromCloud(), Union-Merge-Strategie (v1.10.60) |
 | `lib/data/providers/auth_provider.dart` | Auth State (keepAlive) |
 | `lib/features/trip/providers/trip_state_provider.dart` | Trip State (keepAlive) + Auto-Routenberechnung (v1.7.2) + setRouteAndStops (v1.7.10) |
 | `lib/features/poi/providers/poi_state_provider.dart` | POI State (keepAlive, v1.5.3 Filter-Fix, v1.7.9 2-Stufen-Batch) + ensurePOIById() fuer on-demand Nachladen und sichere selectPOIById()-Rueckgabe ohne Exception (v1.10.35) |
@@ -223,6 +225,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/data/models/trip_template.dart` | TripTemplate Model (Freezed): 12 vordefinierte Reisevorlagen mit id, name, description, emoji, recommendedDays, categories, tags, targetAudience + TripTemplates.all statische Liste + forAudience()/findById() Helper (v1.9.30) |
 | `lib/data/models/public_trip.dart` | PublicTrip + UserProfile Models (Freezed): Oeffentliche Trip-Daten mit Author-Info, Statistiken, Like-Status + GallerySortBy/GalleryTripTypeFilter Enums (v1.10.0) |
 | `lib/data/models/challenge.dart` | Challenge Model (Freezed): ChallengeType (9 Typen), ChallengeFrequency, UserChallenge, UserStreak + XP-Belohnungen (v1.10.23) |
+| `lib/data/repositories/favorites_cloud_repo.dart` | Favoriten Cloud-Sync Repository: uploadTrip/POI, deleteTrip/POI, fetchAllTrips/POIs, Batch-Upload - Supabase favorite_trips (JSONB) + favorite_pois Integration (v1.10.60) |
 | `lib/data/repositories/social_repo.dart` | Social Features Repository: loadFeaturedTrips, searchPublicTrips, likeTrip, loadUserProfile, publishTrip, importTrip - Supabase RPC Integration (v1.10.0) + Tabellenname-Fix public_trips->trips (v1.10.1) + POI Publish RPC-Fallback (PGRST202) via Direct-Insert und angereicherte tripData.stops beim Publish (v1.10.35) + Owner-gebundene Update/Delete-Methoden fuer Trips und POI-Posts (v1.10.49) |
 | `lib/data/repositories/leaderboard_repo.dart` | Leaderboard Repository: getLeaderboard() mit Sortierung (XP/km/Trips/Likes), getMyPosition(), Pagination (v1.10.23) |
 | `lib/data/repositories/poi_repo.dart` | POI-Laden: Supabase-first Hybrid (PostGIS -> Client-Fallback -> Upload), 3-Layer parallel + Region-Cache + Overpass-Query (v1.7.23) + Kategorie-Inference (v1.7.9) + Supabase PostGIS Integration (v1.9.13) + Kategorisierung-Fix: Stadt-Suffixe, See-Suffix-RegExp, Coast/Bay/Marina, erweiterte Overpass-Queries (v1.9.13) + maxResults-Parameter (default 200) verhindert POI-Explosion bei grossen Bounding-Boxes (v1.9.17) + Future.wait 12s-Timeout in loadPOIsInBounds verhindert ANR bei haengenden APIs (v1.9.21) + Future.wait 12s-Timeout auch in loadPOIsInRadius + loadAllPOIs (v1.9.22) + Individuelle Timeouts pro API-Quelle statt globaler Future.wait-Timeout (v1.9.24) + Wikipedia-Grid 4er-Batches mit 200ms Pause + 8s Timeout + 200-POI-Cap, globaler 20s Future.wait-Timeout (v1.9.28) + minScore-Parameter in Radius/Bounds sowie loadPOIById() (Supabase+curated Fallback) (v1.10.35) |
@@ -519,6 +522,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.60.md` (Favoriten Bidirektionaler Cloud-Sync: favorite_trips Tabelle, FavoritesCloudRepo, bidirektionaler Merge, Route-Upload-Fix, Cloud-Sync-Button)
 - `Dokumentation/CHANGELOG-v1.10.59.md` (Journal Cloud Migration: Supabase-Speicherung mit RLS, JournalCloudRepo, JournalEntryDTO, Hybrid-Sync, Migration-Dialog, Sync-Indicator)
 - `Dokumentation/CHANGELOG-v1.10.58.md` (Einklappbare AI-Empfehlungen, MiniMap-POIs anklickbar, DayStats Gradient-Design, Journal-Persistenz tiefgreifend gefixt, PopupMenu vereinfacht)
 - `Dokumentation/CHANGELOG-v1.10.57.md` (Journal-Persistenz _deepCast + Null-Guard, POI-Publish 3. Quelle globaler POI-State, Lade-Widget doppelte Prozent-Anzeige entfernt, DayEditor Zurueck-Button + aufklappbares Hoehenprofil)

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/supabase/supabase_client.dart' show isAuthenticated;
 import '../../data/providers/favorites_provider.dart';
 import '../../data/models/poi.dart';
 import '../../data/models/trip.dart';
@@ -75,6 +76,26 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
           ],
         ),
         actions: [
+          // Cloud-Sync Indicator + Button
+          if (isAuthenticated) ...[
+            if (favoritesAsync.value?.isSyncing == true)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.cloud_sync),
+                onPressed: () => ref
+                    .read(favoritesNotifierProvider.notifier)
+                    .syncFromCloud(),
+                tooltip: 'Cloud-Sync',
+              ),
+          ],
           IconButton(
             icon: const Icon(Icons.delete_sweep),
             onPressed: () => _showClearAllDialog(),

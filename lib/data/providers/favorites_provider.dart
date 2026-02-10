@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../core/supabase/supabase_client.dart' show isAuthenticated;
+import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import '../../core/supabase/supabase_client.dart'
+    show isAuthenticated, isSupabaseAvailable;
 import '../models/poi.dart';
 import '../models/trip.dart';
-import '../services/sync_service.dart';
+import '../repositories/favorites_cloud_repo.dart';
 import 'gamification_provider.dart';
 
 part 'favorites_provider.g.dart';
@@ -14,11 +16,25 @@ part 'favorites_provider.g.dart';
 @Riverpod(keepAlive: true)
 class FavoritesNotifier extends _$FavoritesNotifier {
   late Box _favoritesBox;
+  FavoritesCloudRepo? _cloudRepo;
 
   @override
   Future<FavoritesState> build() async {
     _favoritesBox = await Hive.openBox('favorites');
-    return await _loadFavorites();
+
+    // Cloud-Repo initialisieren wenn authentifiziert
+    if (isAuthenticated && isSupabaseAvailable) {
+      _cloudRepo = FavoritesCloudRepo(Supabase.instance.client);
+    }
+
+    final localState = await _loadFavorites();
+
+    // Automatischer Cloud-Sync im Hintergrund (fire-and-forget)
+    if (_cloudRepo != null) {
+      _syncFromCloudInBackground(localState);
+    }
+
+    return localState;
   }
 
   /// Lädt Favoriten aus Hive
@@ -27,16 +43,26 @@ class FavoritesNotifier extends _$FavoritesNotifier {
       // Gespeicherte Routen
       final routesData =
           _favoritesBox.get('saved_routes', defaultValue: <dynamic>[]);
-      final routes = (routesData as List)
-          .map((json) => Trip.fromJson(Map<String, dynamic>.from(json as Map)))
-          .toList();
+      final routes = <Trip>[];
+      for (final json in (routesData as List)) {
+        try {
+          routes.add(Trip.fromJson(Map<String, dynamic>.from(json as Map)));
+        } catch (e) {
+          debugPrint('[Favorites] Route parse error: $e');
+        }
+      }
 
       // Favorisierte POIs
       final poisData =
           _favoritesBox.get('favorite_pois', defaultValue: <dynamic>[]);
-      final pois = (poisData as List)
-          .map((json) => POI.fromJson(Map<String, dynamic>.from(json as Map)))
-          .toList();
+      final pois = <POI>[];
+      for (final json in (poisData as List)) {
+        try {
+          pois.add(POI.fromJson(Map<String, dynamic>.from(json as Map)));
+        } catch (e) {
+          debugPrint('[Favorites] POI parse error: $e');
+        }
+      }
 
       debugPrint(
           '[Favorites] Geladen: ${routes.length} Routen, ${pois.length} POIs');
@@ -66,6 +92,130 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     return currentState;
   }
 
+  // ============================================
+  // CLOUD SYNC
+  // ============================================
+
+  /// Hintergrund-Sync: Cloud-Daten laden und mit lokalen mergen
+  void _syncFromCloudInBackground(FavoritesState localState) {
+    Future(() async {
+      try {
+        await _syncFromCloud(localState);
+      } catch (e) {
+        debugPrint('[Favorites] Background sync failed: $e');
+      }
+    });
+  }
+
+  /// Bidirektionaler Sync mit Cloud
+  Future<void> _syncFromCloud(FavoritesState localState) async {
+    if (_cloudRepo == null) return;
+
+    debugPrint('[Favorites] Cloud-Sync gestartet...');
+    state = AsyncValue.data(localState.copyWith(isSyncing: true));
+
+    try {
+      // 1. Cloud-Daten laden
+      final cloudTrips = await _cloudRepo!.fetchAllTrips();
+      final cloudPOIs = await _cloudRepo!.fetchAllPOIs();
+
+      debugPrint(
+          '[Favorites] Cloud: ${cloudTrips.length} Trips, ${cloudPOIs.length} POIs');
+
+      // 2. Merge: Trips
+      final mergedRoutes = _mergeTrips(localState.savedRoutes, cloudTrips);
+
+      // 3. Merge: POIs
+      final mergedPOIs = _mergePOIs(localState.favoritePOIs, cloudPOIs);
+
+      // 4. Lokal speichern
+      await _favoritesBox.put(
+        'saved_routes',
+        mergedRoutes.map((r) => r.toJson()).toList(),
+      );
+      await _favoritesBox.put(
+        'favorite_pois',
+        mergedPOIs.map((p) => p.toJson()).toList(),
+      );
+
+      // 5. State aktualisieren
+      state = AsyncValue.data(FavoritesState(
+        savedRoutes: mergedRoutes,
+        favoritePOIs: mergedPOIs,
+        isSyncing: false,
+      ));
+
+      // 6. Lokale Daten hochladen die in Cloud fehlen
+      final cloudTripIds = cloudTrips.map((t) => t.id).toSet();
+      final localOnlyTrips =
+          localState.savedRoutes.where((t) => !cloudTripIds.contains(t.id));
+      for (final trip in localOnlyTrips) {
+        await _cloudRepo!.uploadTrip(trip);
+      }
+
+      final cloudPOIIds = cloudPOIs.map((p) => p.id).toSet();
+      final localOnlyPOIs =
+          localState.favoritePOIs.where((p) => !cloudPOIIds.contains(p.id));
+      for (final poi in localOnlyPOIs) {
+        await _cloudRepo!.uploadPOI(poi);
+      }
+
+      debugPrint(
+          '[Favorites] Sync abgeschlossen: ${mergedRoutes.length} Routen, ${mergedPOIs.length} POIs');
+    } catch (e) {
+      debugPrint('[Favorites] Cloud-Sync Fehler: $e');
+      // State ohne Sync-Flag zuruecksetzen
+      state = AsyncValue.data(localState.copyWith(isSyncing: false));
+    }
+  }
+
+  /// Merge lokale und Cloud-Trips (Union, lokal hat Vorrang bei Duplikaten)
+  List<Trip> _mergeTrips(List<Trip> local, List<Trip> cloud) {
+    final localIds = local.map((t) => t.id).toSet();
+    final merged = List<Trip>.from(local);
+
+    for (final cloudTrip in cloud) {
+      if (!localIds.contains(cloudTrip.id)) {
+        merged.add(cloudTrip);
+      }
+    }
+
+    return merged;
+  }
+
+  /// Merge lokale und Cloud-POIs (Union, lokal hat Vorrang bei Duplikaten)
+  List<POI> _mergePOIs(List<POI> local, List<POI> cloud) {
+    final localIds = local.map((p) => p.id).toSet();
+    final merged = List<POI>.from(local);
+
+    for (final cloudPOI in cloud) {
+      if (!localIds.contains(cloudPOI.id)) {
+        merged.add(cloudPOI);
+      }
+    }
+
+    return merged;
+  }
+
+  /// Manueller Cloud-Sync (fuer UI-Button)
+  Future<void> syncFromCloud() async {
+    final current = await _ensureLoaded();
+    if (_cloudRepo == null) {
+      // Versuche Repo neu zu initialisieren (falls User sich gerade eingeloggt hat)
+      if (isAuthenticated && isSupabaseAvailable) {
+        _cloudRepo = FavoritesCloudRepo(Supabase.instance.client);
+      } else {
+        debugPrint('[Favorites] Cloud-Sync nicht moeglich: nicht authentifiziert');
+        return;
+      }
+    }
+    await _syncFromCloud(current);
+  }
+
+  // ============================================
+  // TRIP OPERATIONS
+  // ============================================
+
   /// Speichert Route zu Favoriten
   Future<void> saveRoute(Trip trip) async {
     final current = await _ensureLoaded();
@@ -89,15 +239,12 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     // XP fuer Trip-Erstellung vergeben
     await ref.read(gamificationNotifierProvider.notifier).onTripCreated();
 
-    // Cloud-Sync (wenn authentifiziert)
-    if (isAuthenticated) {
-      final syncService = ref.read(syncServiceProvider);
-      await syncService.saveTrip(
-        name: trip.name,
-        route: trip.route,
-        stops: trip.stops,
-        isFavorite: true,
-      );
+    // Cloud-Sync (fire-and-forget)
+    if (_cloudRepo != null) {
+      _cloudRepo!.uploadTrip(trip).catchError((e) {
+        debugPrint('[Favorites] Cloud upload trip failed: $e');
+        return false;
+      });
     }
   }
 
@@ -113,6 +260,14 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 
     state = AsyncValue.data(current.copyWith(savedRoutes: updated));
     debugPrint('[Favorites] Route entfernt: $tripId');
+
+    // Cloud-Sync: auch aus Cloud loeschen
+    if (_cloudRepo != null) {
+      _cloudRepo!.deleteTrip(tripId).catchError((e) {
+        debugPrint('[Favorites] Cloud delete trip failed: $e');
+        return false;
+      });
+    }
   }
 
   /// Löscht alle gespeicherten Routen (für Migration nach Bugfix v1.7.13)
@@ -130,6 +285,10 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     if (current == null) return false;
     return current.savedRoutes.any((r) => r.id == tripId);
   }
+
+  // ============================================
+  // POI OPERATIONS
+  // ============================================
 
   /// Speichert POI zu Favoriten
   Future<void> addPOI(POI poi) async {
@@ -151,10 +310,12 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     state = AsyncValue.data(current.copyWith(favoritePOIs: updated));
     debugPrint('[Favorites] POI favorisiert: ${poi.name}');
 
-    // Cloud-Sync (wenn authentifiziert)
-    if (isAuthenticated) {
-      final syncService = ref.read(syncServiceProvider);
-      await syncService.saveFavoritePOI(poi);
+    // Cloud-Sync (fire-and-forget)
+    if (_cloudRepo != null) {
+      _cloudRepo!.uploadPOI(poi).catchError((e) {
+        debugPrint('[Favorites] Cloud upload POI failed: $e');
+        return false;
+      });
     }
   }
 
@@ -171,10 +332,12 @@ class FavoritesNotifier extends _$FavoritesNotifier {
     state = AsyncValue.data(current.copyWith(favoritePOIs: updated));
     debugPrint('[Favorites] POI entfernt: $poiId');
 
-    // Cloud-Sync (wenn authentifiziert)
-    if (isAuthenticated) {
-      final syncService = ref.read(syncServiceProvider);
-      await syncService.removeFavoritePOI(poiId);
+    // Cloud-Sync: auch aus Cloud loeschen
+    if (_cloudRepo != null) {
+      _cloudRepo!.deletePOI(poiId).catchError((e) {
+        debugPrint('[Favorites] Cloud delete POI failed: $e');
+        return false;
+      });
     }
   }
 
@@ -206,19 +369,23 @@ class FavoritesNotifier extends _$FavoritesNotifier {
 class FavoritesState {
   final List<Trip> savedRoutes;
   final List<POI> favoritePOIs;
+  final bool isSyncing;
 
   const FavoritesState({
     this.savedRoutes = const [],
     this.favoritePOIs = const [],
+    this.isSyncing = false,
   });
 
   FavoritesState copyWith({
     List<Trip>? savedRoutes,
     List<POI>? favoritePOIs,
+    bool? isSyncing,
   }) {
     return FavoritesState(
       savedRoutes: savedRoutes ?? this.savedRoutes,
       favoritePOIs: favoritePOIs ?? this.favoritePOIs,
+      isSyncing: isSyncing ?? this.isSyncing,
     );
   }
 

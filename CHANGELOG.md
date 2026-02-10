@@ -11,6 +11,23 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 (Keine unreleased Aenderungen)
 
+## [1.10.60] - 2026-02-10
+
+### Favoriten Bidirektionaler Cloud-Sync
+
+#### Hinzugefuegt
+- **Dedizierte `favorite_trips` Tabelle**: Eigene Supabase-Tabelle fuer gespeicherte Routen (getrennt von Social-Trips), Trip als JSONB gespeichert
+- **FavoritesCloudRepo**: Upload/Download/Delete von Trips und POIs zu Supabase mit RLS
+- **Bidirektionaler Sync**: Beim App-Start Cloud-Daten laden + mit lokalen Hive-Daten mergen (Union-Strategie)
+- **Automatischer Upload**: Lokale Favoriten die in Cloud fehlen werden im Hintergrund hochgeladen
+- **Cloud-Sync-Button**: Manueller Sync-Button und Sync-Indicator in der Favoriten-AppBar
+- **Supabase Migration 012**: favorite_trips Tabelle + RLS Policies + RPC Functions (get_user_favorite_trips, get_user_favorite_pois)
+
+#### Gefixt
+- **Route-Upload war kaputt**: syncService.saveTrip() nutzte altes DB-Schema (Migration 001), aber Migration 006 hatte `trips`-Tabelle komplett neu erstellt - Upload schlug seit v1.10.9 fehl
+- **Route-Loeschung nicht gesynct**: removeRoute() loeschte nur lokal, jetzt auch aus Cloud
+- **Kein Download von Cloud-Favoriten**: Bei Neuinstallation waren alle Favoriten weg, obwohl sie in Supabase lagen
+
 ## [1.10.59] - 2026-02-10
 
 ### Journal Cloud Migration (Supabase, privat, RLS-gesichert)
