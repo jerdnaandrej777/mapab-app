@@ -2546,6 +2546,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String get journalRevisit => 'Rivisitare';
 
   @override
+  String get journalLocationPreview => 'Anteprima posizione';
+
+  @override
+  String get journalPlanRoute => 'Pianifica percorso';
+
+  @override
+  String get journalCalculateRoute => 'Calcola percorso';
+
+  @override
+  String get journalStartPoint => 'Punto di partenza';
+
+  @override
+  String get journalCurrentLocation => 'Posizione attuale (GPS)';
+
+  @override
+  String get journalDestination => 'Destinazione';
+
+  @override
   String get journalBack => 'Indietro';
 
   @override

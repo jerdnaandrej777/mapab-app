@@ -9,6 +9,19 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ## [Unreleased]
 
+## [1.10.66] - 2026-02-10
+
+### Journal Karten-Modal, Startadresse löschbar
+
+#### Hinzugefuegt
+- **Journal "Auf Karte" Modal**: Neues `_LocationPreviewSheet` zeigt Journal-POI auf eingebetteter Karte (FlutterMap) statt zur Hauptkarte zu navigieren
+- **Journal "Wieder besuchen" Flow**: Neues `_RoutePlanSheet` mit GPS-Startpunkt (default) oder manueller Adresseingabe + Geocoding-Autocomplete, Route-Berechnung zum Journal-POI
+- **Modal-Ketten-Flow**: Entry Details → Karten-Modal → Route-Modal → Hauptkarte mit Fokus-Modus (kein Sheet-Stacking)
+- **6 neue l10n-Keys**: journalLocationPreview, journalPlanRoute, journalCalculateRoute, journalStartPoint, journalCurrentLocation, journalDestination in 5 Sprachen
+
+#### Behoben
+- **Startadresse Clear-Button**: Manuell eingetragene Startadresse im AI-Trip-Panel wird jetzt korrekt geloescht (`notifier.clearStartLocation()` fehlte)
+
 ## [1.10.65] - 2026-02-10
 
 ### Journal-Persistenz Cloud-Restore

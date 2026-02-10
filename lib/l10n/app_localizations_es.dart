@@ -2552,6 +2552,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get journalRevisit => 'Revisitar';
 
   @override
+  String get journalLocationPreview => 'Vista previa';
+
+  @override
+  String get journalPlanRoute => 'Planificar ruta';
+
+  @override
+  String get journalCalculateRoute => 'Calcular ruta';
+
+  @override
+  String get journalStartPoint => 'Punto de partida';
+
+  @override
+  String get journalCurrentLocation => 'Ubicación actual (GPS)';
+
+  @override
+  String get journalDestination => 'Destino';
+
+  @override
   String get journalBack => 'Volver';
 
   @override

@@ -704,6 +704,22 @@ class _DayStatsState extends State<_DayStats> {
       );
     }
 
+    // Wetter-Chip hervorheben wenn Forecast anklickbar
+    if (weatherChip != null && _hasForecastData) {
+      weatherChip = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: _isWeatherExpanded ? 0.25 : 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: weatherChip,
+      );
+    }
+
     // Stats sammeln (dynamisch je nach verfuegbaren Daten)
     final stats = <Widget>[
       _StatChip(
@@ -968,11 +984,15 @@ class _StatChip extends StatelessWidget {
               ),
             ),
             if (showChevron) ...[
-              const SizedBox(width: 2),
-              Icon(
-                isExpanded ? Icons.expand_less : Icons.expand_more,
-                size: 16,
-                color: color.withValues(alpha: 0.8),
+              const SizedBox(width: 3),
+              AnimatedRotation(
+                turns: isExpanded ? 0.5 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: color,
+                ),
               ),
             ],
           ],

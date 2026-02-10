@@ -4496,6 +4496,42 @@ abstract class AppLocalizations {
   /// **'Erneut besuchen'**
   String get journalRevisit;
 
+  /// No description provided for @journalLocationPreview.
+  ///
+  /// In de, this message translates to:
+  /// **'Standort-Vorschau'**
+  String get journalLocationPreview;
+
+  /// No description provided for @journalPlanRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Route planen'**
+  String get journalPlanRoute;
+
+  /// No description provided for @journalCalculateRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Route berechnen'**
+  String get journalCalculateRoute;
+
+  /// No description provided for @journalStartPoint.
+  ///
+  /// In de, this message translates to:
+  /// **'Startpunkt'**
+  String get journalStartPoint;
+
+  /// No description provided for @journalCurrentLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktueller Standort (GPS)'**
+  String get journalCurrentLocation;
+
+  /// No description provided for @journalDestination.
+  ///
+  /// In de, this message translates to:
+  /// **'Ziel'**
+  String get journalDestination;
+
   /// No description provided for @journalBack.
   ///
   /// In de, this message translates to:

@@ -1,13 +1,23 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/location_helper.dart';
 import '../../data/models/journal_entry.dart';
+import '../../data/models/route.dart';
 import '../../data/providers/journal_provider.dart';
+import '../../data/repositories/geocoding_repo.dart';
+import '../../data/repositories/routing_repo.dart';
+import '../../shared/widgets/app_snackbar.dart';
 import '../map/providers/map_controller_provider.dart';
-import '../map/providers/memory_point_provider.dart';
+import '../map/providers/route_planner_provider.dart';
+import '../random_trip/providers/random_trip_provider.dart';
+import '../trip/providers/trip_state_provider.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/add_journal_entry_sheet.dart';
 import 'widgets/edit_journal_entry_sheet.dart';
@@ -545,19 +555,8 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
         onShowOnMap: entry.location == null
             ? null
             : () {
-                ref.read(memoryPointProvider.notifier).state = MemoryPointData(
-                  entryId: entry.id,
-                  tripId: entry.tripId,
-                  tripName: widget.tripName,
-                  location: entry.location!,
-                  poiName: entry.poiName,
-                  imagePath: entry.imagePath,
-                  note: entry.note,
-                  createdAt: entry.createdAt,
-                );
-                ref.read(pendingMapCenterProvider.notifier).state =
-                    entry.location;
-                this.context.go('/');
+                Navigator.pop(context);
+                _showLocationPreview(entry);
               },
         onOpenPoiDetails: entry.poiId == null
             ? null
@@ -565,6 +564,54 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
         onEdit: () => _showEditEntrySheet(entry),
       ),
     );
+  }
+
+  void _showLocationPreview(JournalEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => _LocationPreviewSheet(
+        entry: entry,
+        onCancel: () => Navigator.pop(ctx),
+        onRevisit: () {
+          Navigator.pop(ctx);
+          _showRoutePlanSheet(entry);
+        },
+      ),
+    );
+  }
+
+  void _showRoutePlanSheet(JournalEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => _RoutePlanSheet(
+        entry: entry,
+        onRouteCalculated: (route) {
+          Navigator.pop(ctx);
+          _navigateToMapWithRoute(route);
+        },
+      ),
+    );
+  }
+
+  void _navigateToMapWithRoute(AppRoute route) {
+    // Stale State zuruecksetzen
+    ref.read(randomTripNotifierProvider.notifier).reset();
+    ref.read(routePlannerProvider.notifier).clearRoute();
+    ref.read(tripStateProvider.notifier).clearAll();
+
+    // Berechnete Route setzen
+    ref.read(tripStateProvider.notifier).setRouteAndStops(route, []);
+
+    // Focus-Mode auf Karte aktivieren
+    ref.read(shouldFitToRouteProvider.notifier).state = true;
+    ref.read(mapRouteFocusModeProvider.notifier).state = true;
+
+    // Zur Karte navigieren
+    context.go('/');
   }
 
   void _showEditEntrySheet(JournalEntry entry) {
@@ -975,6 +1022,653 @@ class _MiniStatPill extends StatelessWidget {
 }
 
 /// Detail-Ansicht fuer einen Eintrag
+/// Modal mit Kartenvorschau eines Journal-Eintrags
+class _LocationPreviewSheet extends StatefulWidget {
+  final JournalEntry entry;
+  final VoidCallback onCancel;
+  final VoidCallback onRevisit;
+
+  const _LocationPreviewSheet({
+    required this.entry,
+    required this.onCancel,
+    required this.onRevisit,
+  });
+
+  @override
+  State<_LocationPreviewSheet> createState() => _LocationPreviewSheetState();
+}
+
+class _LocationPreviewSheetState extends State<_LocationPreviewSheet> {
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final location = widget.entry.location!;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 1.0,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: AppSpacing.sm),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Icon(Icons.place, color: colorScheme.primary),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        widget.entry.poiName ??
+                            context.l10n.journalMemoryPoint,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: widget.onCancel,
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Karte
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: location,
+                        initialZoom: 14,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.pinchZoom |
+                              InteractiveFlag.drag,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.travelplanner.app',
+                          maxZoom: 19,
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: location,
+                              width: 40,
+                              height: 40,
+                              child: Icon(
+                                Icons.location_on,
+                                color: colorScheme.primary,
+                                size: 40,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Notiz-Preview
+              if (widget.entry.hasNote)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  child: Text(
+                    widget.entry.note!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color:
+                              colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+              // Buttons
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: widget.onCancel,
+                          icon: const Icon(Icons.close, size: 18),
+                          label: Text(context.l10n.cancel),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: widget.onRevisit,
+                          icon: const Icon(Icons.route, size: 18),
+                          label: Text(context.l10n.journalRevisit),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Modal zum Planen einer Route zum Journal-POI
+class _RoutePlanSheet extends ConsumerStatefulWidget {
+  final JournalEntry entry;
+  final void Function(AppRoute route) onRouteCalculated;
+
+  const _RoutePlanSheet({
+    required this.entry,
+    required this.onRouteCalculated,
+  });
+
+  @override
+  ConsumerState<_RoutePlanSheet> createState() => _RoutePlanSheetState();
+}
+
+class _RoutePlanSheetState extends ConsumerState<_RoutePlanSheet> {
+  bool _useGps = true;
+  LatLng? _startLocation;
+  String? _startAddress;
+  final _addressController = TextEditingController();
+  final _focusNode = FocusNode();
+  List<GeocodingResult> _suggestions = [];
+  bool _isSearching = false;
+  bool _isCalculating = false;
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _addressController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    if (query.length < 3) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _searchAddress(query);
+    });
+  }
+
+  Future<void> _searchAddress(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearching = true);
+
+    try {
+      final geocodingRepo = ref.read(geocodingRepositoryProvider);
+      final results = await geocodingRepo.geocode(query);
+      if (!mounted) return;
+      setState(() {
+        _suggestions = results.take(5).toList();
+        _isSearching = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _suggestions = [];
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _selectSuggestion(GeocodingResult result) {
+    _addressController.text = result.shortName ?? result.displayName;
+    setState(() {
+      _useGps = false;
+      _startLocation = result.location;
+      _startAddress = result.shortName ?? result.displayName;
+      _suggestions = [];
+    });
+    _focusNode.unfocus();
+  }
+
+  Future<void> _calculateRoute() async {
+    setState(() => _isCalculating = true);
+
+    try {
+      LatLng startLatLng;
+      String startName;
+
+      if (_useGps || _startLocation == null) {
+        final result = await LocationHelper.getCurrentPosition();
+        if (!mounted) return;
+        if (result.position == null) {
+          await LocationHelper.showGpsDialog(context);
+          if (mounted) setState(() => _isCalculating = false);
+          return;
+        }
+        startLatLng = result.position!;
+        startName = context.l10n.journalCurrentLocation;
+      } else {
+        startLatLng = _startLocation!;
+        startName = _startAddress ?? '';
+      }
+
+      final destination = widget.entry.location!;
+      final destinationName =
+          widget.entry.poiName ?? context.l10n.journalMemoryPoint;
+
+      final routingRepo = ref.read(routingRepositoryProvider);
+      final route = await routingRepo.calculateFastRoute(
+        start: startLatLng,
+        end: destination,
+        startAddress: startName,
+        endAddress: destinationName,
+      );
+
+      if (!mounted) return;
+      widget.onRouteCalculated(route);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.showError(
+        context,
+        context.l10n.errorRouteCalculation,
+      );
+    } finally {
+      if (mounted) setState(() => _isCalculating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.5,
+      maxChildSize: 1.0,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: AppSpacing.sm),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        context.l10n.journalPlanRoute,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    // Start-Sektion
+                    Row(
+                      children: [
+                        Icon(Icons.location_on,
+                            size: 16, color: colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          context.l10n.journalStartPoint,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // GPS-Button
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _useGps = true;
+                          _startLocation = null;
+                          _startAddress = null;
+                          _addressController.clear();
+                          _suggestions = [];
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _useGps
+                              ? colorScheme.primaryContainer
+                              : colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _useGps
+                                ? colorScheme.primary
+                                : colorScheme.outline
+                                    .withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.my_location,
+                              size: 18,
+                              color: _useGps
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.journalCurrentLocation,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: _useGps
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_useGps)
+                              Icon(
+                                Icons.check_circle,
+                                size: 18,
+                                color: colorScheme.primary,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Adress-Eingabe
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: !_useGps && _startLocation != null
+                              ? colorScheme.primary
+                              : colorScheme.outline
+                                  .withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _addressController,
+                            focusNode: _focusNode,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: context.l10n.mapCityOrAddress,
+                              hintStyle: TextStyle(
+                                  fontSize: 13,
+                                  color: colorScheme.onSurfaceVariant),
+                              prefixIcon: Icon(Icons.search,
+                                  size: 18,
+                                  color: colorScheme.onSurfaceVariant),
+                              suffixIcon: _isSearching
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child:
+                                            CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                      ),
+                                    )
+                                  : _addressController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(
+                                              Icons.clear,
+                                              size: 16),
+                                          onPressed: () {
+                                            _addressController.clear();
+                                            setState(() {
+                                              _suggestions = [];
+                                              _useGps = true;
+                                              _startLocation = null;
+                                              _startAddress = null;
+                                            });
+                                          },
+                                        )
+                                      : null,
+                              border: InputBorder.none,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 8),
+                              isDense: true,
+                            ),
+                            onChanged: _onSearchChanged,
+                          ),
+                          if (_suggestions.isNotEmpty)
+                            Container(
+                              constraints:
+                                  const BoxConstraints(maxHeight: 150),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                      color: colorScheme.outline
+                                          .withValues(alpha: 0.2)),
+                                ),
+                              ),
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: _suggestions.length,
+                                itemBuilder: (context, index) {
+                                  final result = _suggestions[index];
+                                  return InkWell(
+                                    onTap: () =>
+                                        _selectSuggestion(result),
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.location_on,
+                                              size: 14,
+                                              color:
+                                                  colorScheme.primary),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              result.shortName ??
+                                                  result.displayName,
+                                              style: const TextStyle(
+                                                  fontSize: 12),
+                                              maxLines: 1,
+                                              overflow:
+                                                  TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Ziel-Sektion (read-only)
+                    Row(
+                      children: [
+                        Icon(Icons.flag,
+                            size: 16, color: colorScheme.error),
+                        const SizedBox(width: 6),
+                        Text(
+                          context.l10n.journalDestination,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: colorScheme.outline
+                              .withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.place,
+                              size: 18, color: colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.entry.poiName ??
+                                  context.l10n.journalMemoryPoint,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Action-Button
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed:
+                          _isCalculating ? null : _calculateRoute,
+                      icon: _isCalculating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : const Icon(Icons.route, size: 18),
+                      label: Text(
+                          context.l10n.journalCalculateRoute),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _EntryDetailsSheet extends ConsumerWidget {
   final JournalEntry entry;
   final VoidCallback? onShowOnMap;

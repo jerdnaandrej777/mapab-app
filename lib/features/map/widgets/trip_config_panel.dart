@@ -478,6 +478,7 @@ class _TripConfigPanelState extends ConsumerState<TripConfigPanel> {
                                     onPressed: () {
                                       _addressController.clear();
                                       setState(() => _suggestions = []);
+                                      notifier.clearStartLocation();
                                     },
                                   )
                                 : null,
