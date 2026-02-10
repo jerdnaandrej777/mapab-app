@@ -48,6 +48,7 @@ class JournalState {
     int? selectedDay,
     bool clearActiveJournal = false,
     bool clearError = false,
+    bool clearSelectedDay = false,
   }) {
     return JournalState(
       activeJournal: clearActiveJournal ? null : (activeJournal ?? this.activeJournal),
@@ -55,7 +56,7 @@ class JournalState {
       isLoading: isLoading ?? this.isLoading,
       isSyncing: isSyncing ?? this.isSyncing,
       error: clearError ? null : (error ?? this.error),
-      selectedDay: selectedDay ?? this.selectedDay,
+      selectedDay: clearSelectedDay ? null : (selectedDay ?? this.selectedDay),
     );
   }
 
@@ -135,8 +136,8 @@ class JournalNotifier extends _$JournalNotifier {
         activeJournal: journal,
         isLoading: false,
       );
-      // allJournals im Hintergrund aktualisieren (non-blocking)
-      _loadAllJournalsInBackground();
+      // allJournals synchron aktualisieren (kein async Hintergrund-Laden)
+      _updateAllJournalsWithActive(journal);
       return journal;
     } catch (e) {
       debugPrint('[Journal] Fehler in getOrCreateJournal: $e');
@@ -348,7 +349,7 @@ class JournalNotifier extends _$JournalNotifier {
 
   /// Schliesst das aktive Tagebuch
   void closeActiveJournal() {
-    state = state.copyWith(clearActiveJournal: true, selectedDay: null);
+    state = state.copyWith(clearActiveJournal: true, clearSelectedDay: true);
   }
 
   /// Aktualisiert nur das aktive Tagebuch (OHNE loadAllJournals)
@@ -358,14 +359,16 @@ class JournalNotifier extends _$JournalNotifier {
       return;
     }
 
+    final tripId = state.activeJournal!.tripId;
     try {
-      final journal = await _service.getJournal(state.activeJournal!.tripId);
+      final journal = await _service.getJournal(tripId);
       state = state.copyWith(
         activeJournal: journal ?? state.activeJournal,
         isLoading: false,
       );
-      // allJournals im Hintergrund aktualisieren (non-blocking)
-      _loadAllJournalsInBackground();
+      // allJournals synchron aktualisieren, damit das aktive Journal
+      // sofort in der Liste erscheint (verhindert Race Condition)
+      _updateAllJournalsWithActive(journal ?? state.activeJournal);
     } catch (e) {
       debugPrint('[Journal] Fehler in _refreshActiveJournal: $e');
       // Bei Fehler: vorherigen State beibehalten
@@ -373,17 +376,28 @@ class JournalNotifier extends _$JournalNotifier {
     }
   }
 
-  /// Laedt allJournals im Hintergrund ohne den UI-State zu blockieren
-  void _loadAllJournalsInBackground() {
-    Future(() async {
-      try {
-        final journals = await _service.getAllJournals();
-        state = state.copyWith(allJournals: journals);
-      } catch (e) {
-        debugPrint('[Journal] Hintergrund-Laden fehlgeschlagen: $e');
-        // Fehler im Hintergrund ignorieren - allJournals bleibt unveraendert
-      }
-    });
+  /// Aktualisiert das aktive Journal in der allJournals-Liste synchron.
+  /// Verhindert Race Condition: kein async Hintergrund-Laden das veraltete
+  /// Daten ueberschreiben koennte.
+  void _updateAllJournalsWithActive(TripJournal? activeJournal) {
+    if (activeJournal == null) return;
+
+    final currentJournals = List<TripJournal>.from(state.allJournals);
+    final existingIndex = currentJournals.indexWhere(
+      (j) => j.tripId == activeJournal.tripId,
+    );
+
+    if (existingIndex >= 0) {
+      // Aktuelles Journal in der Liste ersetzen
+      currentJournals[existingIndex] = activeJournal;
+    } else {
+      // Neues Journal zur Liste hinzufuegen
+      currentJournals.insert(0, activeJournal);
+    }
+
+    // Sortierung beibehalten
+    currentJournals.sort((a, b) => b.startDate.compareTo(a.startDate));
+    state = state.copyWith(allJournals: currentJournals);
   }
 
   // ============================================

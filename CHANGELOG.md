@@ -11,6 +11,26 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 (Keine unreleased Aenderungen)
 
+## [1.10.63] - 2026-02-10
+
+### POI-Publish Backend-Fix, Journal-Persistenz
+
+#### Behoben
+- **POI-Publish Backend**: Neue idempotente Supabase-Migration fuer fehlende `poi_posts` Tabelle (PGRST205-Fehler behoben)
+- **Journal Race Condition**: `_loadAllJournalsInBackground()` durch synchrone `_updateAllJournalsWithActive()` ersetzt - Eintraege verschwinden nicht mehr
+- **PGRST205-Fehlerbehandlung**: `social_repo.dart` gibt jetzt klare Fehlermeldung bei fehlender Tabelle statt kryptischem Fehler
+- **closeActiveJournal()**: `selectedDay` wird jetzt korrekt auf null gesetzt (neuer `clearSelectedDay` Parameter)
+
+## [1.10.62] - 2026-02-10
+
+### POI-Publish Favoriten, Journal-Bug-Fix
+
+#### Hinzugefuegt
+- **POI-Publish aus Favoriten**: Publish-Button (Globe-Icon) auf jeder POI-Card mit Auth-Check und PublishPoiSheet
+
+#### Behoben
+- **Journal-Bug-Fix**: Eintraege bleiben unabhaengig vom Route-Status sichtbar (_openJournalFromMap nutzt stabiles tripId)
+
 ## [1.10.61] - 2026-02-10
 
 ### Journal editierbar, Erneut-besuchen-Flow

@@ -5,12 +5,12 @@ Diese Datei bietet Orientierung fÃ¼r Claude Code bei der Arbeit mit diesem Flu
 ## ProjektÃ¼bersicht
 
 Flutter-basierte mobile App fuer interaktive Routenplanung und POI-Entdeckung in Europa.
-Version: 1.10.62 - POI-Publish Favoriten, Journal-Bug-Fix | Plattformen: Android, iOS, Desktop
-### Letztes Release (v1.10.62)
+Version: 1.10.63 - POI-Publish Backend-Fix, Journal-Persistenz | Plattformen: Android, iOS, Desktop
+### Letztes Release (v1.10.63)
 
-- POI-Publish aus Favoriten: Publish-Button (Globe-Icon) auf jeder POI-Card mit Auth-Check und PublishPoiSheet.
-- Journal-Bug-Fix: Eintraege bleiben unabhaengig vom Route-Status sichtbar (_openJournalFromMap nutzt stabiles tripId).
-- Android Release aktualisiert: APK Build 246 (v1.10.62).
+- POI-Publish Backend-Fix: Neue idempotente Migration fuer fehlende poi_posts Tabelle + PGRST205-Fehlerbehandlung.
+- Journal-Persistenz: Race Condition in _loadAllJournalsInBackground() behoben, Eintraege verschwinden nicht mehr.
+- Android Release aktualisiert: APK Build 247 (v1.10.63).
 
 ### Aktueller Arbeitsstand (Unreleased)
 
@@ -99,6 +99,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `backend/supabase/migrations/010_challenges.sql` | Challenges: challenge_definitions, user_challenges, streak_history Tabellen, assign_weekly_challenges + update_challenge_progress RPC (v1.10.23) |
 | `backend/supabase/migrations/011_journal_entries.sql` | Journal Cloud: journal_entries Tabelle + RLS Policies + Indexes + RPC Functions (get_user_journals, get_journal_entries_for_trip, delete_journal) + Storage Bucket Setup (v1.10.59) |
 | `backend/supabase/migrations/012_favorite_trips.sql` | Favoriten Cloud-Sync: favorite_trips Tabelle (Trip als JSONB) + RLS Policies + RPC Functions (get_user_favorite_trips, get_user_favorite_pois) (v1.10.60) |
+| `supabase/migrations/20260210140000_poi_gallery_social.sql` | Idempotente POI Social Migration: poi_posts, poi_post_likes, poi_votes, user_reputation Tabellen + poi_social_stats_view + 8 RPC Functions + RLS Policies (v1.10.63) |
 | `supabase/migrations/20260208103000_poi_publish_rpc_fix.sql` | POI Publish RPC-Fix: erstellt/aktualisiert publish_poi_post() und get_public_poi() fuer POI-Posts ohne PGRST202-Fehler (v1.10.35) |
 | `backend/scripts/seed_curated_pois.dart` | Seed-Script: curated_pois.json â†’ Supabase per upsert_poi RPC, idempotent (v1.9.13) |
 | `lib/core/utils/location_helper.dart` | Zentralisiertes GPS-Utility: getCurrentPosition, showGpsDialog, checkPermissions (v1.9.27) |
@@ -178,7 +179,7 @@ Details: [Dokumentation/PROVIDER-GUIDE.md](Dokumentation/PROVIDER-GUIDE.md)
 | `lib/features/navigation/providers/navigation_poi_discovery_provider.dart` | Must-See POI-Entdeckung entlang der Route: ref.listen auf GPS-Stream, dismissed/announced Sets, goldene Card + TTS (v1.9.14, keepAlive v1.9.27) |
 | `lib/features/navigation/providers/navigation_tts_provider.dart` | TTS-Ansagen: Manoever (500/200/50m), Rerouting, POI-Annaeherung, Ziel erreicht (keepAlive, v1.9.0) + Idle-Guard, VoiceService-Stop in reset() (v1.9.23) + Silent-Catch Logging (v1.9.27) + _l10n Getter via lookupAppLocalizations, VoiceService.setLocale() bei Sprachwechsel, Must-See Announcement lokalisiert (v1.10.3) |
 | `lib/features/map/providers/memory_point_provider.dart` | Erinnerungspunkt-State: MemoryPointData (entryId, tripId, location, poiName, imagePath, note), StateProvider fuer Journal-auf-Karte-Flow mit Revisit-Route (v1.10.55) |
-| `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) + Persistenz-Fix: _refreshActiveJournal() ohne loadAllJournals(), Background-Updates via _loadAllJournalsInBackground(), Null-Guards in setActiveJournal(), hasEntriesForTrip()-Check in getOrCreateJournal() (v1.10.58) |
+| `lib/data/providers/journal_provider.dart` | Reisetagebuch-State (keepAlive): activeJournal, allJournals, selectedDay, CRUD-Operationen fuer Eintraege und Tagebuecher (v1.9.29) + Persistenz-Fix: _refreshActiveJournal() ohne loadAllJournals(), Null-Guards in setActiveJournal(), hasEntriesForTrip()-Check in getOrCreateJournal() (v1.10.58) + Race-Condition-Fix: _loadAllJournalsInBackground() entfernt, synchrone _updateAllJournalsWithActive(), clearSelectedDay Parameter (v1.10.63) |
 | `lib/data/providers/gallery_provider.dart` | Trip-Galerie-State (keepAlive): GalleryNotifier (Trips, Featured, Filter, Suche, Pagination), TripDetailNotifier (Detail-Ansicht, Import, Update/Delete eigener Trips), ProfileNotifier, MyProfileNotifier (v1.10.0, v1.10.49) |
 | `lib/data/providers/leaderboard_provider.dart` | Leaderboard-State (keepAlive): LeaderboardNotifier mit 4 Sortierkriterien (XP/km/Trips/Likes), eigene Position, Pagination (v1.10.23) |
 | `lib/data/providers/challenges_provider.dart` | Challenges-State (keepAlive): ChallengesNotifier mit 9 Challenge-Typen, Streak-Tracking, wÃ¶chentliche Challenges, XP-Belohnungen (v1.10.23) |
@@ -516,6 +517,7 @@ Bei jedem neuen Feature sicherstellen:
 
 Versionsspezifische Ã„nderungen finden sich in:
 - `CHANGELOG.md` -> Abschnitt `[Unreleased]` (Keine unreleased Aenderungen)
+- `Dokumentation/CHANGELOG-v1.10.63.md` (POI-Publish Backend-Fix: idempotente Migration fuer poi_posts + PGRST205-Fehlerbehandlung, Journal-Persistenz Race-Condition behoben)
 - `Dokumentation/CHANGELOG-v1.10.62.md` (POI-Publish aus Favoriten, Journal-Bug-Fix: stabiles tripId in _openJournalFromMap)
 - `Dokumentation/CHANGELOG-v1.10.61.md` (Journal editierbar: EditJournalEntrySheet, Tagebuch-Loeschung entfernt, Bearbeiten-Button, Erneut-besuchen Fokus-Flow, pickAndSavePhoto)
 - `Dokumentation/CHANGELOG-v1.10.60.md` (Favoriten Bidirektionaler Cloud-Sync: favorite_trips Tabelle, FavoritesCloudRepo, bidirektionaler Merge, Route-Upload-Fix, Cloud-Sync-Button)

@@ -385,18 +385,31 @@ class SocialRepository {
         createdAt: DateTime.now(),
       );
     } on PostgrestException catch (e) {
-      // Fallback fuer Instanzen ohne Migration 012 (fehlende publish_poi_post RPC).
-      if (e.code != 'PGRST202') rethrow;
-      debugPrint(
-          '[Social] publish_poi_post fehlt, nutze Direct-Insert Fallback');
-      return _publishPOIWithDirectInsert(
-        poiId: poiId,
-        title: title,
-        content: content,
-        categories: categories,
-        isMustSee: isMustSee,
-        coverPhotoPath: coverPhotoPath,
-      );
+      // Fallback fuer Instanzen ohne Migration 011/012:
+      // PGRST202 = fehlende RPC-Funktion
+      // PGRST205 = fehlende Tabelle (poi_posts nicht im Schema-Cache)
+      if (e.code == 'PGRST202') {
+        debugPrint(
+            '[Social] publish_poi_post RPC fehlt, nutze Direct-Insert Fallback');
+        return _publishPOIWithDirectInsert(
+          poiId: poiId,
+          title: title,
+          content: content,
+          categories: categories,
+          isMustSee: isMustSee,
+          coverPhotoPath: coverPhotoPath,
+        );
+      }
+      if (e.code == 'PGRST205') {
+        throw Exception(
+          'POI-Publish Backend unvollstaendig. '
+          'Bitte Supabase-Migration 20260210140000_poi_gallery_social.sql ausfuehren. '
+          'Fehler: Tabelle poi_posts existiert nicht.',
+        );
+      }
+      debugPrint('[Social] POI Veroeffentlichen PostgrestException: '
+          'code=${e.code}, message=${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('[Social] POI Veroeffentlichen FEHLER: $e');
       rethrow;
